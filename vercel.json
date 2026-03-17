@@ -1,3 +1,10 @@
 {
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/sitemap/xml",
+      "destination": "/sitemap.xml",
+      "permanent": true
+    }
+  ]
 }
