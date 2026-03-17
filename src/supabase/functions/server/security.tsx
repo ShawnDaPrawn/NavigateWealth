@@ -8,7 +8,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
+import { sendEmail, sendTwoFactorEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
 import {
   LogActivitySchema,
   ChangePasswordSchema,
@@ -512,8 +512,9 @@ app.post('/:userId/2fa/send-code', async (c) => {
 
     log.info(`🔑 Generated 2FA code for user ${userId}, expires at ${expiresAt}`);
 
-    // Send email with code
-    const { sendTwoFactorEmail } = await import('./email-service.ts');
+    // Use the existing static import here. The dynamic import path has been
+    // failing in production edge runtime, which blocks the login flow for
+    // users who have email-based 2FA enabled.
     await sendTwoFactorEmail(targetEmail, code);
 
     // Log activity

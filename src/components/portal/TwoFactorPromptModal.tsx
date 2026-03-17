@@ -22,6 +22,8 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { ShieldCheck, Mail, Clock, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../auth/AuthContext';
+import { securityService } from '../../utils/auth/securityService';
 
 const SESSION_KEY = 'nw_show_2fa_prompt';
 
@@ -49,15 +51,43 @@ const BENEFITS = [
 export function TwoFactorPromptModal() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     const shouldShow = sessionStorage.getItem(SESSION_KEY);
-    if (shouldShow === 'true') {
-      // Small delay so the dashboard renders first
-      const timer = setTimeout(() => setOpen(true), 800);
-      return () => clearTimeout(timer);
+    if (shouldShow !== 'true' || !user?.id) {
+      return;
     }
-  }, []);
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const verifyPromptEligibility = async () => {
+      const status = await securityService.getSecurityStatus(user.id);
+
+      // If 2FA is already enabled, the login-time session hint is stale.
+      if (cancelled || status?.twoFactorEnabled) {
+        sessionStorage.removeItem(SESSION_KEY);
+        return;
+      }
+
+      // Small delay so the dashboard renders first
+      timer = setTimeout(() => {
+        if (!cancelled) setOpen(true);
+      }, 800);
+    };
+
+    verifyPromptEligibility().catch(() => {
+      // If the security lookup fails, avoid nagging the user with a potentially
+      // stale prompt and let the dedicated Security page remain the source of truth.
+      sessionStorage.removeItem(SESSION_KEY);
+    });
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [user?.id]);
 
   const dismiss = () => {
     sessionStorage.removeItem(SESSION_KEY);

@@ -698,14 +698,18 @@ router.post("/create-default", asyncHandler(async (c) => {
   
   // Create default profile
   const defaultProfile = {
-    firstName,
-    surname,
+    profileType: 'personal',
+    userId,
     email,
     role,
-    accountStatus: isSuperAdmin ? 'approved' : 'pending',
+    accountStatus: isSuperAdmin ? 'approved' : 'no_application',
     accountType: undefined,
-    applicationStatus: 'not_started',
+    applicationStatus: 'incomplete',
     adviserAssigned: isSuperAdmin,
+    personalInformation: {
+      firstName,
+      lastName: surname,
+    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };

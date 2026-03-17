@@ -16,6 +16,32 @@ const PERSONNEL_ROLES = [
 ] as const;
 
 /**
+ * Normalise legacy or malformed account status values into the finite set the
+ * route guards understand. This prevents successful sign-ins from landing in
+ * redirect loops when older profiles contain values like "pending".
+ */
+function normalizeAccountStatus(status?: string | null): AccountStatus | undefined {
+  switch (status) {
+    case 'approved':
+    case 'declined':
+    case 'submitted_for_review':
+    case 'application_in_progress':
+    case 'no_application':
+      return status;
+    case 'pending':
+    case 'not_started':
+      return 'no_application';
+    case 'draft':
+    case 'in_progress':
+      return 'application_in_progress';
+    case 'submitted':
+      return 'submitted_for_review';
+    default:
+      return undefined;
+  }
+}
+
+/**
  * Fetch security status including suspension info
  */
 async function fetchSecurityStatus(userId: string): Promise<UserSuspensionStatus> {
@@ -356,9 +382,11 @@ function mapProfileToAppUser(
   // Self-healing reconciliation (when KV and Supabase metadata diverge after
   // approval/decline) is handled upstream in loadUserProfile — by the time we
   // reach this function, profileData.accountStatus is already corrected.
+  const normalizedProfileStatus = normalizeAccountStatus(profileData.accountStatus);
+  const normalizedSupabaseStatus = normalizeAccountStatus(supabaseUserData?.accountStatus);
   const resolvedAccountStatus: AccountStatus = (
-    profileData.accountStatus ||
-    (supabaseUserData?.accountStatus as AccountStatus) ||
+    normalizedProfileStatus ||
+    normalizedSupabaseStatus ||
     (isSuperAdmin ? 'approved' : DEFAULT_ACCOUNT_STATUS)
   ) as AccountStatus;
 
