@@ -14,9 +14,6 @@ export type { FormDefinition, ResourceCategory, BuilderBlock } from './types';
 // Hooks
 export { useResources } from './hooks/useResources';
 
-// Components consumed by other modules
-export { UniversalKeyManager } from './UniversalKeyManager';
-
 // Legal Documents Registry (consumed by public-facing pages)
 export { LEGAL_DOCUMENTS, LEGAL_DOCUMENTS_BY_SLUG, LEGAL_SLUGS, LEGAL_SECTION_LABELS } from './legal-constants';
 export type { LegalDocumentEntry } from './legal-constants';

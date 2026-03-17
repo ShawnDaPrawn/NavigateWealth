@@ -206,7 +206,8 @@ export function ResourcesModule() {
       isPopular: false,
       fields: [],
       clientTypes: [],
-      component: ClientConsentForm,
+      renderer: 'custom',
+      previewComponent: ClientConsentForm,
     }]);
     setCurrentPreviewIndex(0);
     setShowPdfTemplate(true);
@@ -380,9 +381,9 @@ export function ResourcesModule() {
               ? `${currentPreviewForm?.name || 'Form'} (${currentPreviewIndex + 1} of ${previewingForms.length})`
               : currentPreviewForm?.name || 'Form Preview'
           }
-          isLetter={currentPreviewForm?.component === LetterRenderer}
-          letterMeta={currentPreviewForm?.component === LetterRenderer ? currentPreviewForm.letterMeta : undefined}
-          letterBlocks={currentPreviewForm?.component === LetterRenderer ? currentPreviewForm.blocks : undefined}
+          isLetter={currentPreviewForm?.renderer === 'letter'}
+          letterMeta={currentPreviewForm?.renderer === 'letter' ? currentPreviewForm.letterMeta : undefined}
+          letterBlocks={currentPreviewForm?.renderer === 'letter' ? currentPreviewForm.blocks : undefined}
         >
           {/* Multi-form navigation bar */}
           {hasMultiplePreviews && (
@@ -404,21 +405,21 @@ export function ResourcesModule() {
           )}
 
           {/* Render current form */}
-          {currentPreviewForm && currentPreviewForm.component === DynamicFormRenderer ? (
+          {currentPreviewForm?.renderer === 'dynamic' ? (
             <DynamicFormRenderer
               data={getPrefillData()}
               blocks={currentPreviewForm.blocks}
               formName={currentPreviewForm.name}
             />
-          ) : currentPreviewForm && currentPreviewForm.component === LetterRenderer ? (
+          ) : currentPreviewForm?.renderer === 'letter' ? (
             <LetterRenderer
               data={getPrefillData()}
               blocks={currentPreviewForm.blocks}
               formName={currentPreviewForm.name}
               letterMeta={currentPreviewForm.letterMeta}
             />
-          ) : currentPreviewForm ? (
-            <currentPreviewForm.component
+          ) : currentPreviewForm?.renderer === 'custom' && currentPreviewForm.previewComponent ? (
+            <currentPreviewForm.previewComponent
               data={getPrefillData()}
               blocks={currentPreviewForm.blocks}
             />

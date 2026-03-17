@@ -41,6 +41,7 @@ import {
 import { toast } from 'sonner@2.0.3';
 import { format, startOfDay, addDays } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
+import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -201,8 +202,6 @@ export function ConsultationModal({
     setIsSubmitting(true);
 
     try {
-      const { projectId, publicAnonKey } = await import('../../utils/supabase/info');
-
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/consultation/request`,
         {

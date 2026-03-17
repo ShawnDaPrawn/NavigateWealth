@@ -17,7 +17,7 @@ import {
   PopoverTrigger,
 } from '../../../../../ui/popover';
 import { Badge } from '../../../../../ui/badge';
-import { KeyAPI } from '../../key-manager';
+import { KeyAPI } from '../../key-manager/api';
 import { ProductKey } from '../../../product-management/types';
 
 interface KeySelectorProps {

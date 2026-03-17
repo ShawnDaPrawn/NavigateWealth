@@ -12,8 +12,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner@2.0.3';
 import { resourcesApi } from '../api';
 import { FormDefinition, FormFilters, ResourceResponse } from '../types';
-import DynamicFormRenderer from '../components/DynamicFormRenderer';
-import { LetterRenderer } from '../components/LetterRenderer';
 import { resourceKeys } from './queryKeys';
 
 /** Transform API response into application-level FormDefinition */
@@ -30,7 +28,7 @@ function transformResource(resource: ResourceResponse): FormDefinition {
     isPopular: false,
     fields: [],
     clientTypes: resource.clientTypes || ['Universal'],
-    component: resource.category === 'Letters' ? LetterRenderer : DynamicFormRenderer,
+    renderer: resource.category === 'Letters' ? 'letter' : 'dynamic',
     blocks: resource.blocks || [],
     letterMeta: resource.letterMeta,
     status: resource.status || 'draft',

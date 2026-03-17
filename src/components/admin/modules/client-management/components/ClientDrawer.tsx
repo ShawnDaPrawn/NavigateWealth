@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { 
   Sheet, 
   SheetContent, 
@@ -9,19 +9,38 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../../ui/avatar';
 import { Badge } from '../../../../ui/badge';
-import { ClientProfileViewerFull } from '../../../ClientProfileViewerFull';
-import { PolicyDetailsSection } from '../../../profile-sections/PolicyDetailsSection';
-import { DocumentsTab } from './DocumentsTab';
-import { SecurityTab } from './SecurityTab';
-import { ComplianceTab } from './ComplianceTab';
-import { CommunicationTab } from './CommunicationTab';
-import { EsignTab } from './EsignTab';
-import { ClientOverviewTab } from './ClientOverviewTab';
-import { ClientNotesTab } from './ClientNotesTab';
 import { Client } from '../types';
 import { useQuery } from '@tanstack/react-query';
 import { communicationApi } from '../../communication/api';
 import { clientKeys } from '../hooks/queryKeys';
+
+const ClientProfileViewerFull = React.lazy(() =>
+  import('../../../ClientProfileViewerFull').then((m) => ({ default: m.ClientProfileViewerFull }))
+);
+const PolicyDetailsSection = React.lazy(() =>
+  import('../../../profile-sections/PolicyDetailsSection').then((m) => ({ default: m.PolicyDetailsSection }))
+);
+const DocumentsTab = React.lazy(() =>
+  import('./DocumentsTab').then((m) => ({ default: m.DocumentsTab }))
+);
+const SecurityTab = React.lazy(() =>
+  import('./SecurityTab').then((m) => ({ default: m.SecurityTab }))
+);
+const ComplianceTab = React.lazy(() =>
+  import('./ComplianceTab').then((m) => ({ default: m.ComplianceTab }))
+);
+const CommunicationTab = React.lazy(() =>
+  import('./CommunicationTab').then((m) => ({ default: m.CommunicationTab }))
+);
+const EsignTab = React.lazy(() =>
+  import('./EsignTab').then((m) => ({ default: m.EsignTab }))
+);
+const ClientOverviewTab = React.lazy(() =>
+  import('./ClientOverviewTab').then((m) => ({ default: m.ClientOverviewTab }))
+);
+const ClientNotesTab = React.lazy(() =>
+  import('./ClientNotesTab').then((m) => ({ default: m.ClientNotesTab }))
+);
 
 interface ClientDrawerProps {
   client: Client | null;
@@ -48,6 +67,14 @@ interface ClientDrawerInnerProps {
   onOpenChange: (open: boolean) => void;
   canEdit: boolean;
   canDelete: boolean;
+}
+
+function TabPanelFallback() {
+  return (
+    <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-8 text-sm text-muted-foreground">
+      Loading section...
+    </div>
+  );
 }
 
 /**
@@ -150,54 +177,70 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
 
           {/* 0. Overview — Client-side dashboard view */}
           <TabsContent value="overview" className="space-y-4">
-            <ClientOverviewTab client={client} />
+            <Suspense fallback={<TabPanelFallback />}>
+              <ClientOverviewTab client={client} />
+            </Suspense>
           </TabsContent>
 
           {/* 1. Personal Details Section */}
           <TabsContent value="personal" className="space-y-4 h-[calc(100vh-300px)]">
-            <ClientProfileViewerFull 
-              clientData={client}
-            />
+            <Suspense fallback={<TabPanelFallback />}>
+              <ClientProfileViewerFull clientData={client} />
+            </Suspense>
           </TabsContent>
 
           {/* 2. Policy Details Section */}
           <TabsContent value="policies" className="space-y-4">
-            <PolicyDetailsSection selectedClient={client} />
+            <Suspense fallback={<TabPanelFallback />}>
+              <PolicyDetailsSection selectedClient={client} />
+            </Suspense>
           </TabsContent>
 
           {/* 3. Security Section */}
           <TabsContent value="security" className="space-y-4">
-            <SecurityTab selectedClient={client} />
+            <Suspense fallback={<TabPanelFallback />}>
+              <SecurityTab selectedClient={client} />
+            </Suspense>
           </TabsContent>
 
           {/* 4. Documents Section */}
           <TabsContent value="documents" className="space-y-4">
-            <DocumentsTab selectedClient={client} />
+            <Suspense fallback={<TabPanelFallback />}>
+              <DocumentsTab selectedClient={client} />
+            </Suspense>
           </TabsContent>
 
           {/* 5. E-Sign Section */}
           <TabsContent value="esign" className="space-y-4">
-            <EsignTab selectedClient={client} />
+            <Suspense fallback={<TabPanelFallback />}>
+              <EsignTab selectedClient={client} />
+            </Suspense>
           </TabsContent>
 
           {/* 6. Compliance Section */}
           <TabsContent value="compliance" className="space-y-4">
-            <ComplianceTab 
-              selectedClient={client}
-              sanctionsScreeningRunning={sanctionsScreeningRunning}
-              onRunSanctionsScreening={handleSanctionsScreening}
-              lastSanctionsCheck={lastSanctionsCheck}
-            />
+            <Suspense fallback={<TabPanelFallback />}>
+              <ComplianceTab 
+                selectedClient={client}
+                sanctionsScreeningRunning={sanctionsScreeningRunning}
+                onRunSanctionsScreening={handleSanctionsScreening}
+                lastSanctionsCheck={lastSanctionsCheck}
+              />
+            </Suspense>
           </TabsContent>
 
           {/* 7. Communication Section */}
           <TabsContent value="communication" className="space-y-4">
-            <CommunicationTab client={client} />
+            <Suspense fallback={<TabPanelFallback />}>
+              <CommunicationTab client={client} />
+            </Suspense>
           </TabsContent>
 
           {/* 8. Notes Section */}
           <TabsContent value="notes" className="space-y-4">
-            <ClientNotesTab selectedClient={client} />
+            <Suspense fallback={<TabPanelFallback />}>
+              <ClientNotesTab selectedClient={client} />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </SheetContent>

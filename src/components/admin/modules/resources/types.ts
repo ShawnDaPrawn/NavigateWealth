@@ -50,7 +50,8 @@ export interface FormDefinition {
   isPopular: boolean;
   fields: string[];
   clientTypes: string[];
-  component: React.ComponentType<{ data?: Record<string, unknown> }>;
+  renderer: 'dynamic' | 'letter' | 'custom';
+  previewComponent?: React.ComponentType<{ data?: Record<string, unknown>; blocks?: FormBlock[] }>;
   blocks?: FormBlock[];
   letterMeta?: LetterMeta;
   /** Form lifecycle status — Phase 1 form builder (§9.3 synced with server) */

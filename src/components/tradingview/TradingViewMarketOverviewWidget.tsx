@@ -118,9 +118,7 @@ function TradingViewMarketOverviewWidget() {
             ]
           }
         ],
-        "support_host": "https://www.tradingview.com",
-        "width": dimensions.width,
-        "height": dimensions.height
+        "support_host": "https://www.tradingview.com"
       });
 
       const widgetDiv = document.createElement('div');

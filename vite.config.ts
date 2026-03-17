@@ -1,11 +1,133 @@
 
-  import { defineConfig } from 'vite';
-  import react from '@vitejs/plugin-react-swc';
-  import path from 'path';
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc';
+import path from 'path';
 
-  export default defineConfig({
-    plugins: [react()],
-    resolve: {
+function getManualChunk(id: string): string | undefined {
+  if (!id.includes('node_modules')) {
+    return undefined;
+  }
+
+  if (id.includes('/react/') || id.includes('/react-dom/')) {
+    return 'vendor-react';
+  }
+
+  if (id.includes('/react-router/')) {
+    return 'vendor-router';
+  }
+
+  if (
+    id.includes('/@supabase/supabase-js/') ||
+    id.includes('/@jsr/supabase__supabase-js/')
+  ) {
+    return 'vendor-supabase';
+  }
+
+  if (
+    id.includes('/react-hook-form/') ||
+    id.includes('/@hookform/resolvers/') ||
+    id.includes('/zod/')
+  ) {
+    return 'vendor-forms';
+  }
+
+  if (
+    id.includes('/@tanstack/react-query/') ||
+    id.includes('/@tanstack/react-virtual/')
+  ) {
+    return 'vendor-data';
+  }
+
+  if (
+    id.includes('/motion/') ||
+    id.includes('/sonner/') ||
+    id.includes('/react-toastify/')
+  ) {
+    return 'vendor-feedback';
+  }
+
+  if (
+    id.includes('/@hello-pangea/dnd/') ||
+    id.includes('/react-dnd/') ||
+    id.includes('/react-dnd-html5-backend/')
+  ) {
+    return 'vendor-dnd';
+  }
+
+  if (
+    id.includes('/react-quill-new/') ||
+    id.includes('/quill/')
+  ) {
+    return 'vendor-quill';
+  }
+
+  if (id.includes('/@tiptap/')) {
+    return 'vendor-tiptap';
+  }
+
+  if (
+    id.includes('/pdf-lib/')
+  ) {
+    return 'vendor-pdf-lib';
+  }
+
+  if (id.includes('/node-forge/') || id.includes('/@signpdf/')) {
+    return 'vendor-signpdf';
+  }
+
+  if (id.includes('/pdfjs-dist/')) {
+    return 'vendor-pdf-viewer';
+  }
+
+  if (
+    id.includes('/jspdf/') ||
+    id.includes('/jspdf-autotable/')
+  ) {
+    return 'vendor-jspdf';
+  }
+
+  if (id.includes('/docx/') || id.includes('/@zip.js/zip.js/')) {
+    return 'vendor-docx';
+  }
+
+  if (id.includes('/xlsx/')) {
+    return 'vendor-xlsx';
+  }
+
+  if (id.includes('/recharts/')) {
+    return 'vendor-charts';
+  }
+
+  if (
+    id.includes('/@radix-ui/') ||
+    id.includes('/vaul/') ||
+    id.includes('/cmdk/') ||
+    id.includes('/input-otp/') ||
+    id.includes('/embla-carousel-react/') ||
+    id.includes('/react-resizable-panels/')
+  ) {
+    return 'vendor-ui';
+  }
+
+  if (
+    id.includes('/lucide-react/') ||
+    id.includes('/class-variance-authority/') ||
+    id.includes('/clsx/') ||
+    id.includes('/tailwind-merge/')
+  ) {
+    return 'vendor-foundation';
+  }
+
+  if (id.includes('/date-fns/')) {
+    return 'vendor-date';
+  }
+
+  return undefined;
+}
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
         'sonner@2.0.3': 'sonner',
@@ -108,6 +230,11 @@
   build: {
     target: 'esnext',
     outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks: getManualChunk,
+      },
+    },
   },
     server: {
       port: 3000,
