@@ -1,0 +1,22 @@
+{
+  "imports": {
+    "hono": "npm:hono@4.6.14",
+    "hono/": "npm:hono@4.6.14/",
+    "zod": "npm:zod@3.24.1",
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@2.49.8",
+    "pdf-lib": "npm:pdf-lib@1.17.1",
+    "xlsx": "npm:xlsx@0.18.5",
+    "@/": "./",
+    "@shared/": "./shared-lib/"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window", "deno.unstable"],
+    "types": ["npm:@types/node"],
+    "allowJs": true
+  },
+  "tasks": {
+    "dev": "deno run --allow-all --watch index.tsx",
+    "serve": "deno run --allow-all index.tsx",
+    "sync": "node ../../../scripts/sync-shared.js"
+  }
+}

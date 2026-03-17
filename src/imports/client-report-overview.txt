@@ -1,0 +1,74 @@
+Client Management – Overview Tab
+Executive Summary: This plan proposes a structured monthly PDF report for a South African financial adviser’s client. The report follows professional financial-planning guidelines by covering all major components of a client’s portfolio: personal balance sheet, policies, taxes, investments, retirement and estate plans. It introduces a composite Financial Health Score (a 0–100 index) to summarize overall readiness, with sub-scores for spending, savings, debt and planning (inspired by the Financial Health Network model and Nedbank’s FinHealth study). Each section of the report (Cover, ToC, HealthScore, Policy Summaries, Financial Needs, Recommendations, Charts, Documents, Contact/Disclosures) is explicitly defined. Key metrics (KPI formulas and thresholds) are specified for each policy type and for the HealthScore. Visuals (charts, timelines, icons), suggested fonts/colors, and sample wording ensure clarity. Data should be drawn from authoritative SA sources (FSCA/insurer portals, CMS, SARS, etc.) under POPIA rules. The report is designed as an A4 PDF with a professional layout, metadata and a clear naming convention. Tables compare alternative health-score models and show sample client data. The recommendations below detail each section, required data and calculation methods, with client-friendly explanations.
+Report Structure
+1.	Cover Page: Should include the report title (e.g. “March 2026 Financial Overview”), client name, adviser name/FSP logo, date, and optionally a relevant icon or photo. Keep design clean: a bold sans-serif font (e.g. Arial, Helvetica) for the title (~28–32 pt) and a neutral color palette (e.g. dark blue or grey for headings, teal accent) for trust and readability. The cover may also list the adviser’s FSP number in fine print.
+2.	Table of Contents: Auto-generated based on the section headings. Use clear hierarchy (e.g. Heading 1 = 18 pt, Heading 2 = 14 pt). Keep it simple (no citations needed).
+3.	Financial HealthScore: A composite index (0–100) summarizing the client’s overall financial well-being. It is computed from weighted sub-indicators (e.g. Spending, Saving, Borrowing (Debt), Planning). For example, one can mirror Nedbank’s 8-indicator model by grouping metrics into Spending, Saving, Borrowing and Planning. Each sub-score is scored out of 100 and combined (e.g. equally weighted) to yield the overall HealthScore. Thresholds can be set by analogy to Nedbank’s categories: low ≤44, moderate 45–74, high ≥75.
+•	Data fields: Include monthly income, expenses, total debts (loans, credit cards), savings, emergency fund balance, life/disability cover, retirement fund balance, etc.
+•	Sample KPIs:
+•	Debt Ratio: DTI = (total monthly debt payments) ÷ (gross monthly income). A healthy target is <36%.
+•	Savings Rate: (monthly savings) ÷ (net income). Aim ≥20%.
+•	Emergency Fund: (liquid savings) ÷ (monthly living expenses). Goal ≈ 3–6 months.
+•	Insurance Coverage: (total life/disability cover) ÷ (recommended cover). Common guidance is life cover ~10–12× income; medical aid cover meeting Prescribed Minimum Benefits.
+•	Retirement Progress: (current retirement savings + PV of future contributions) ÷ (target retirement corpus).
+•	Calculation example: “Spending Subscore = 100 – 100×(expenses/income – 0.5), capped 0–100,” or a simpler rule. Financial HealthScore = (Spending + Saving + Borrowing + Planning)/4. These formulas are illustrative.
+•	Sample HealthScore Models:
+Model (Source)	Indicators	Scale & Categories
+FinHealth Score (USA)	8 indicators in 4 categories (Spend, Save, Borrow, Plan)	0–100 (higher = healthier); categories like Financially Healthy/Coping/Vulnerable (based on benchmarks from FinHealth Network).
+Nedbank NedFinHealth	Same 8 indicators (SA study); subscores for day-to-day vs future planning.	0–100; ‘Low’ ≤44, ‘Moderate’ 45–74, ‘High’ ≥75.
+Advisor’s Custom Score	Weighted mix of DTI, savings rate, insurance adequacy, retirement funding, etc.	0–100; custom bands (e.g. Red/Yellow/Green).
+4.	Table: Comparison of example financial health scoring models.
+5.	All Policies Under Management: For each category, list the client’s policies and key figures, plus a summary KPI. Include: provider, policy name/number, cover amounts, premiums, maturity dates, etc. Then highlight any gaps or concerns. Arrange as subsections:
+•	Risk / Long-term Insurance: (Life, disability, dread disease, business assurance, etc.) List each policy, sum assured, and premium. KPI: Coverage Ratio = (total cover) ÷ (recommended cover). For example, if recommended life cover is ~10× income, and client has 8×, Coverage Ratio = 80%. Flag if <100%. Include alerts like “Life cover is only 60% of 10× current income – shortfall R[XX]” or “Future disability cover expires in 6 months.”
+•	Medical Aid: List scheme name, plan tier, dependents covered, monthly contribution, deductible (if any) and gap cover status. KPI: Benefit Ratio = (planned medical needs) ÷ (current cover). For example, if total family usage ~R[5000]/month, and scheme covers it (with out-of-pocket ~R500), note adequacy. Compare to CMS benchmarks if available. Highlight if switching plans would save money or improve benefits.
+•	Estate Planning: List wills, trusts, beneficiary designations. Note executor details, will last review date. KPI: Estate Cover = (estate’s liquid assets) ÷ (estimated estate duty threshold). For example, if estate duty applies above R3.5m, and net estate is R5m, projected duty R[XX] (23% over threshold) should be flagged. If no will, alert “No will in place – legal risks for heirs.”
+•	Tax Planning: Note tax reference, bracket, last assessed year, provisional payments. KPI: Effective Tax Rate: (tax payable) ÷ (gross income). If higher than expected (e.g. >30% on low income), suggest strategies (retirement contributions, deductions). Include SARS deadlines (e.g. provisional return due).
+•	Investment Planning: Summarize investment/retirement accounts (e.g. unit trusts, pension/provident funds, ETF portfolio). List fund balances and current asset allocation (equity vs bonds vs cash). KPI: Portfolio Performance: e.g. YTD return% vs benchmark. Asset Allocation chart (pie) to check diversification. Note contribution rates.
+•	Retirement Planning: Include pension/provident/pension-preservation fund balances and contributions. Projected retirement date and income. KPI: Retirement Funding Ratio = (projected retirement funds) ÷ (target funds needed). For example, if client needs RX to retire comfortably but only has RY saved, show % funded.
+•	Other: Include any additional policies (education funds, short-term savings, etc.) with analogous fields.
+Use brief client-friendly text under each subheading. For example: “Risk cover is adequate for life, but you lack disability cover; consider adding this.” or “Your pension fund is on track (80% of retirement goal).” Keep paragraphs (per sub-section) concise (3–4 sentences) with bullet points for each policy where useful.
+6.	Financial Needs Analysis (Summary): Briefly recap the client’s goals vs current status (concise narrative). E.g.: “You aim to retire at 65 with R8m savings. At current savings rate and returns, you will reach ~R5m by retirement – a 37% shortfall. Also, your life cover meets only 70% of the recommended 10× income level.” Use simple charts or tables (e.g. small bar chart of Current vs Needed for retirement, or text table of Goals vs Status). Explain in non-technical terms.
+7.	Action Items / Recommendations: List next steps as bullet points. Each should reference a specific finding. For example: “Increase life cover by R200k to reach 10× income (see Life Insurance section).” or “Transfer R5,000/mo to investment account to meet retirement goal.” Add urgency/status flags if needed (e.g. Overdue, Due Soon). Keep wording friendly: “It is recommended that…”, “Consider reviewing…”.
+8.	Performance & Cashflow Charts: Include visuals to complement the data. Suggested charts:
+•	Net Worth Over Time (Line Chart): Plots cumulative assets minus liabilities by month. Shows upward trend or dips.
+•	Asset Allocation (Pie Chart): Current split of investments (equity, bonds, cash). Useful for Investments section.
+•	Monthly Cashflow (Bar/Waterfall): Bars showing total income vs expenses each month, or stacked bars (expenses categories). Highlights surplus/deficit.
+•	Insurance Coverage (Bar Chart): Compare Cover vs Needed for life/disability in one chart.
+•	Timeline of Actions (Mermaid Timeline): A timeline diagram for upcoming milestones (policy renewals, estate planning date, etc). For example, a mermaid code snippet:
+2026-04-01Review life insurancecover2026-06-15Update will and trust2026-07-01Rebalanceinvestment portfolio2026-12-01Year-end tax reviewPlanned Actions
+Show code
+This visual shows scheduled tasks chronologically. A flowchart can also show process (e.g. claim process or decision tree) if relevant.
+Place charts near related sections (e.g. allocation pie beside Investment section, net-worth graph near FNA). Ensure captions or callouts explain each. (No external image source needed if you generate charts in-house or via mermaid.)
+9.	Documents & Next Steps: List any documents to obtain or steps to complete. For example: “• Updated Will: Needed to reflect new child’s birth. • Bank Statements: For Jan–Mar 2026 (for cashflow). • Tax Certificate (IRP5): for 2026 filing. • Proof of Residence/ID: if any policy requests are pending.” Use a checklist format.
+10.	Contact & Disclosures: Conclude with the adviser’s contact info (phone, email) and legal disclaimers. Include the FSP license number, FSCA logo (if allowed), and a brief disclaimer such as: “This report is confidential, for [Client Name] only. It is for guidance and does not replace personalized advice. Past returns are not guaranteed.” For guidance, FPI-style plans require linking recommendations to client goals (see Financial Plan Framework) and clearly explaining assumptions.
+Data Sources & Compliance
+•	Regulatory & Data Sources: Use official data where possible. For insurance policies, retrieve policy values from insurer portals. Use the Council for Medical Schemes (CMS) and individual medical scheme websites for benefit details. For investments, use data from financial market sources (JSE, portfolio manager systems). For retirement/pension funds, use fund statements. Tax info should come from SARS/E-filing or Treasury publications (e.g. SARS tax guide). Macro assumptions (inflation, interest rates) should be based on SARB or StatsSA forecasts. Asset valuations may draw on StatsSA CPI, SARB rates, or FSB guidelines.
+•	Privacy (POPIA): Treat all client data as highly confidential. Only collect necessary personal info and use it strictly for the report purpose. Ensure secure data transmission (encrypted e-mail or client portal) and storage. Explicit client consent should be obtained for electronic communication. This report must comply with POPIA: personal identifiers, health and financial data in the report are Personal Information that must be safeguarded. Delete or archive data after use as per POPIA retention rules.
+PDF Layout & Export Specifications
+•	Page Setup: A4 (210×297 mm), portrait orientation. Margins ~20 mm. Use a clear sans-serif font (e.g. Calibri, Arial). Suggested font sizes: Title 28 pt, major headings 18 pt, subheadings 14–16 pt, body text 10–12 pt. Use a two- or three-color palette (e.g. dark blue for headings, medium grey for subheads, accent teal/green for highlights). Use icons for sections (e.g. a shield for insurance, stethoscope for medical aid, chart for investments). Keep paragraphs brief and use bullet lists for clarity.
+•	Metadata: Embed document properties: Title (“Financial Overview – [Client Name]”), Author (Adviser Name/Firm), Subject, and relevant keywords (“insurance, retirement, tax, estate”). Include version/date in footer or header.
+•	File Naming: Use a consistent naming convention, e.g. FSPName_ClientName_FinancialOverview_YYYYMM.pdf. For example ABCAdvisers_JaneDoe_202603.pdf.
+•	Export: The final output should be a flattened PDF (A4) to ensure compatibility. Include page numbers (footer) and date of report generation. Ensure any embedded charts are high-resolution vectors or 300 dpi images.
+Sample Tables
+•	HealthScore Model Comparison: (see table above under Financial HealthScore).
+•	Monthly Summary Table (Example): A possible summary table in the report might look like:
+Category	Current Value	Target/Benchmark	Status
+Net Worth	R1,050,000	–	▲+5% YoY
+Cash Savings	R120,000	6 mo expenses (R240,000)	Below target
+Debt-to-Income	32%	<36% (healthy)	Good
+Insurance Cover	80% of 10×income	100% recommended	Increase cover
+Retirement Fund	R350,000	R800,000 goal (by 65)	Needs top-up
+Investments YTD	+6%	+8% benchmark	Underperforming
+•	This table (with placeholder data) gives a snapshot of key KPIs vs targets. Green/good/✓ or red text can highlight status (e.g. “Below target” in red). Footnotes or mini-icons can clarify abbreviations.
+Visual Guidance & Snippets
+•	Fonts & Colors: Use easy-to-read fonts and maintain contrast (dark text on light background). Limit palette to 2–3 corporate colors. Accent colors (green/red) can flag good/attention-needed items. E.g. navy blue headings (#003366), grey subheadings (#666666), teal accent (#008080) and red (#cc0000) for alerts.
+•	Icons:Use simple icons next to section titles (e.g. 
+, 
+, but ensure they are subtle and consistent.
+•	Sample Snippets:
+•	Client-friendly explanation: “Life Insurance: You have R800k cover, which is 8× your annual income. We recommend 10× (R1,000k) for full protection – consider increasing cover by R200k.”
+•	Alert wording: “Action Needed: Disability cover will lapse next month. Please confirm if you want to renew.”
+•	Success note: “Well done: Your emergency fund now covers 4 months of expenses, up from 2 months last year.”
+Include such short notes in each section to guide the client.
+Sources: This structure aligns with FPI’s financial planning components (assets, cash flow, risk, etc.) and industry best practices (e.g. Nedbank’s FinHealth framework). All recommendations link back to client goals in plain language, per financial plan guidelines, and data assumptions are supported by reputable sources. Compliance with POPIA i
+

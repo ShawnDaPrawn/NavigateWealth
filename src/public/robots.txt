@@ -1,0 +1,55 @@
+# Navigate Wealth - robots.txt
+# This file tells search engines which pages to crawl
+
+User-agent: *
+Allow: /
+
+# Disallow admin and user-specific areas
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /login
+Disallow: /signup
+Disallow: /account-type
+Disallow: /application
+Disallow: /password-reset
+Disallow: /profile
+Disallow: /security
+Disallow: /communication-preferences
+
+# Allow important pages
+Allow: /
+Allow: /about
+Allow: /services
+Allow: /contact
+Allow: /team
+Allow: /resources
+Allow: /careers
+Allow: /press
+Allow: /why-us
+Allow: /legal
+Allow: /sitemap
+
+# Allow all service pages
+Allow: /services/retirement-planning
+Allow: /services/investment-management
+Allow: /services/risk-management
+Allow: /services/tax-planning
+Allow: /services/estate-planning
+Allow: /services/employee-benefits
+Allow: /services/medical-aid
+
+# Allow client type pages
+Allow: /for-individuals
+Allow: /for-businesses
+Allow: /for-advisers
+
+# Sitemap location
+# PLATFORM LIMITATION: Figma Make serves text/html for all SPA routes, and
+# Supabase Edge Functions require auth headers — so there is no way to serve
+# raw application/xml from this domain without an external proxy (e.g. Cloudflare Worker).
+# Google Search Console will report "Sitemap is HTML" for this URL.
+# However, Googlebot's web rendering service DOES execute JavaScript and will
+# discover all URLs through normal crawling and internal links.
+# To resolve fully, add a Cloudflare Worker that proxies /sitemap.xml to the
+# Supabase Storage URL with Content-Type: application/xml.
+Sitemap: https://www.navigatewealth.co/sitemap/xml

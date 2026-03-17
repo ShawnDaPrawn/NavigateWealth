@@ -1,0 +1,918 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 14px;
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #6d28d9;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #000000;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #000000;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: transparent;
+  --input-background: #f8f9fa;
+  --switch-background: #e2e8f0;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #6d28d9;
+  --chart-1: #6d28d9;
+  --chart-2: #06b6d4;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  --radius: 0.625rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #6d28d9;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f8f9fa;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: rgba(0, 0, 0, 0.1);
+  --sidebar-ring: #6d28d9;
+  
+  /* Theme-specific section backgrounds */
+  --section-black: #000000;
+  --section-white: #ffffff;
+  --section-gray: #313653;
+  --section-dark-gray: #313653;
+}
+
+.dark {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #111111;
+  --card-foreground: #ffffff;
+  --popover: #111111;
+  --popover-foreground: #ffffff;
+  --primary: #6d28d9;
+  --primary-foreground: #ffffff;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #ffffff;
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+  --accent: #1f1f1f;
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: transparent;
+  --input-background: #1f1f1f;
+  --switch-background: #404040;
+  --ring: #6d28d9;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: #6d28d9;
+  --chart-2: #06b6d4;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  --sidebar: #111111;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #6d28d9;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1f1f1f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #6d28d9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  
+  --color-section-black: var(--section-black);
+  --color-section-white: var(--section-white);
+  --color-section-gray: var(--section-gray);
+  --color-section-dark-gray: var(--section-dark-gray);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  img {
+    image-rendering: auto;
+    image-rendering: -webkit-optimize-contrast;
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Optimize for modern browsers */
+  img[loading="lazy"] {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 300px;
+  }
+  
+  /* Critical image optimization */
+  img[fetchpriority="high"] {
+    transform: translateZ(0);
+    will-change: auto;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Accessibility — WCAG 2.1 AA compliance utilities
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Skip-to-content link — hidden until focused */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+.skip-to-content:focus {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  padding: 1rem 1.5rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  z-index: 9999;
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 0 0 0.5rem 0;
+}
+
+/* Ensure focus-visible ring on all focusable elements globally */
+@layer base {
+  a:focus-visible,
+  button:focus-visible,
+  [tabindex]:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Remove default outline when focus-visible handles it */
+  a:focus:not(:focus-visible),
+  button:focus:not(:focus-visible),
+  [tabindex]:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+/* Reduced motion: disable animations for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visually hidden — accessible to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Custom section utility classes */
+@layer utilities {
+  .section-black {
+    background-color: var(--color-section-black);
+    color: #ffffff;
+  }
+  
+  .section-white {
+    background-color: var(--color-section-white);
+    color: #000000;
+  }
+  
+  .section-gray {
+    background-color: var(--color-section-gray);
+    color: #000000;
+  }
+  
+  .section-dark-gray {
+    background-color: var(--color-section-dark-gray);
+    color: #ffffff;
+  }
+  
+  /* Hide scrollbar for horizontal scroll areas */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar { 
+    display: none;  /* Safari and Chrome */
+  }
+  
+  /* Smooth scrolling for tab containers */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+  
+  /* Prevent layout shift during horizontal scrolling */
+  .horizontal-scroll-container {
+    contain: layout style;
+    will-change: scroll-position;
+  }
+  
+  /* Sticky table columns */
+  .sticky-column {
+    position: sticky;
+    background: inherit;
+    z-index: 1;
+  }
+  
+  .sticky-left {
+    left: 0;
+  }
+  
+  .sticky-right {
+    right: 0;
+  }
+  
+  /* Standardized H3 styling across all sections */
+  h3 {
+    font-size: 1.25rem !important; /* 20px */
+    font-weight: 600 !important; /* Semi-bold for better prominence */
+    line-height: 1.3 !important;
+  }
+  
+  /* H3 color adjustments for different section backgrounds */
+  .section-white h3,
+  .section-gray h3 {
+    color: #000000 !important; /* Pure black for light backgrounds */
+  }
+  
+  .section-dark-gray h3,
+  .section-black h3 {
+    color: #ffffff !important; /* Pure white for dark backgrounds */
+  }
+  
+  /* Override any existing text color classes on H3 elements */
+  h3.text-black,
+  h3.text-white,
+  h3.text-gray-900,
+  h3[class*="text-"] {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+  }
+  
+  /* Ensure proper contrast in section contexts */
+  .section-white h3[class*="text-"],
+  .section-gray h3[class*="text-"] {
+    color: #000000 !important;
+  }
+  
+  .section-dark-gray h3[class*="text-"],
+  .section-black h3[class*="text-"] {
+    color: #ffffff !important;
+  }
+  
+  /* High-quality image rendering for service cards and logos */
+  .high-quality-image {
+    image-rendering: auto;
+    image-rendering: -webkit-optimize-contrast;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    will-change: transform;
+    filter: contrast(1.02) saturate(1.05);
+  }
+  
+  /* Enhanced SVG rendering for authentication pages */
+  .auth-svg-enhanced {
+    image-rendering: auto;
+    image-rendering: -webkit-optimize-contrast;
+    shape-rendering: geometricPrecision;
+    text-rendering: geometricPrecision;
+    color-rendering: optimizeQuality;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Optimized image containers */
+  .image-container-optimized {
+    contain: layout style paint;
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 400px;
+  }
+  
+  /* Progressive image loading states */
+  .image-loading {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+  }
+  
+  .image-loaded {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  /* Hero carousel animations */
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.8s ease-out;
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out;
+  }
+  
+  .delay-100 {
+    animation-delay: 0.1s;
+  }
+  
+  .delay-200 {
+    animation-delay: 0.2s;
+  }
+  
+  /* Pulse animation for enticing buttons */
+  .pulse-on-hover:hover {
+    animation: slow-pulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes slow-pulse {
+    0%, 100% { 
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(109, 40, 217, 0.4);
+    }
+    50% { 
+      transform: scale(1.02);
+      box-shadow: 0 0 0 8px rgba(109, 40, 217, 0);
+    }
+  }
+  
+  @keyframes bounce-once {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    25% {
+      transform: translateY(-10px);
+    }
+    50% {
+      transform: translateY(0);
+    }
+    75% {
+      transform: translateY(-5px);
+    }
+  }
+  
+  .animate-bounce-once {
+    animation: bounce-once 0.6s ease-in-out;
+  }
+  
+  /* Marquee scroll animation for partner logo strips */
+  @keyframes marquee-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  
+  /* Line clamp utilities for text truncation */
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ */
+@layer base {
+  :where(:not(:has([class*=" text-"]):not([class^="text-"]))) {
+    /* Hero headings - for main page titles */
+    h1 {
+      font-size: 3rem; /* 48px */
+      font-weight: var(--font-weight-medium);
+      line-height: 1.2;
+    }
+
+    /* Section headings - for major content sections */
+    h2 {
+      font-size: 2rem; /* 32px */
+      font-weight: var(--font-weight-medium);
+      line-height: 1.3;
+    }
+
+    /* Subsection headings */
+    h3 {
+      font-size: 1.25rem; /* 20px */
+      font-weight: 600; /* Semi-bold for better prominence */
+      line-height: 1.3;
+      color: #000000; /* Pure black for maximum contrast */
+    }
+
+    /* Content headings */
+    h4 {
+      font-size: 1.25rem; /* 20px */
+      font-weight: var(--font-weight-medium);
+      line-height: 1.4;
+    }
+
+    /* Body text - large */
+    p {
+      font-size: 1.125rem; /* 18px */
+      font-weight: var(--font-weight-normal);
+      line-height: 1.6;
+    }
+
+    /* Labels and form elements */
+    label {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    button {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    input {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+  }
+}
+
+html {
+  font-size: var(--font-size);
+}
+
+/* ============================================================================
+ * Article Body Typography — Magazine-quality spacing for published articles
+ *
+ * The @tailwindcss/typography plugin (prose classes) is not loaded in this
+ * Tailwind v4 setup, so article body spacing must be handled via plain CSS.
+ * Targets both .article-body (public detail page) and .preview-body (admin
+ * preview modal) to keep the two views in sync.
+ * ========================================================================= */
+
+.article-body,
+.preview-body {
+  /* Base */
+  color: #374151;
+  font-size: 16.5px;
+  line-height: 1.85;
+  max-width: none;
+}
+
+/* Headings — generous vertical rhythm */
+.article-body h2,
+.preview-body h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.01em;
+  margin-top: 3rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+  line-height: 1.3;
+}
+
+.article-body h3,
+.preview-body h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.01em;
+  margin-top: 2.25rem;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+
+.article-body h4,
+.preview-body h4 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #111827;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+/* Paragraphs */
+.article-body p,
+.preview-body p {
+  color: #374151;
+  line-height: 1.85;
+  margin-bottom: 1.25rem;
+  font-size: 16.5px;
+}
+
+/* Ensure space between a paragraph and a following heading */
+.article-body p + h2,
+.preview-body p + h2 {
+  margin-top: 3rem;
+}
+.article-body p + h3,
+.preview-body p + h3 {
+  margin-top: 2.25rem;
+}
+
+/* Links */
+.article-body a,
+.preview-body a {
+  color: #7c3aed;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.article-body a:hover,
+.preview-body a:hover {
+  text-decoration: underline;
+}
+
+/* Strong */
+.article-body strong,
+.preview-body strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+/* Lists */
+.article-body ul,
+.preview-body ul {
+  list-style-type: disc;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-left: 1.5rem;
+}
+
+.article-body ol,
+.preview-body ol {
+  list-style-type: decimal;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-left: 1.5rem;
+}
+
+.article-body li,
+.preview-body li {
+  color: #374151;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.7;
+}
+
+/* Nested lists — tighter spacing and different markers */
+.article-body li > ul,
+.preview-body li > ul {
+  list-style-type: circle;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.article-body li > ol,
+.preview-body li > ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Paragraphs inside list items — avoid double spacing */
+.article-body li p,
+.preview-body li p {
+  margin-bottom: 0.25rem;
+}
+
+/* Images */
+.article-body img,
+.preview-body img {
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+/* Blockquotes */
+.article-body blockquote,
+.preview-body blockquote {
+  border-left: 4px solid #7c3aed;
+  padding: 1rem 1.5rem;
+  margin: 1.75rem 0;
+  background: #faf5ff;
+  border-radius: 0 0.5rem 0.5rem 0;
+  font-style: italic;
+  color: #4b5563;
+}
+.article-body blockquote p,
+.preview-body blockquote p {
+  margin-bottom: 0;
+}
+
+/* Code */
+.article-body code,
+.preview-body code {
+  color: #7c3aed;
+  background-color: #faf5ff;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.article-body pre,
+.preview-body pre {
+  background-color: #111827;
+  color: #f3f4f6;
+  border-radius: 0.75rem;
+  padding: 1rem 1.5rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+.article-body pre code,
+.preview-body pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+/* Tables */
+.article-body table,
+.preview-body table {
+  border-collapse: collapse;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  width: 100%;
+  margin: 1.5rem 0;
+}
+.article-body th,
+.preview-body th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+}
+.article-body td,
+.preview-body td {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* Horizontal rules */
+.article-body hr,
+.preview-body hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 2.5rem 0;
+}
+
+/* First paragraph drop-cap (already handled by JS in ArticleDetailPage,
+   but this ensures consistent spacing even if the class is applied) */
+.article-body .drop-cap::first-letter {
+  float: left;
+  font-size: 3.5em;
+  line-height: 0.85;
+  font-weight: 700;
+  margin-right: 0.1em;
+  margin-top: 0.05em;
+  color: #6d28d9;
+}
+
+@media (min-width: 640px) {
+  .article-body h2,
+  .preview-body h2 {
+    font-size: 1.875rem;
+  }
+  .article-body h3,
+  .preview-body h3 {
+    font-size: 1.5rem;
+  }
+}
+
+/* ============================================================================
+ * Markdown Content — AI Chat / Agent Interfaces
+ *
+ * Used by WillChatInterface and the Advice Engine
+ * chat to render AI-generated markdown properly. Scoped to .markdown-content
+ * to avoid polluting global styles.
+ * ========================================================================= */
+
+.markdown-content {
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+/* Lists — restore default markers that Tailwind preflight removes */
+.markdown-content ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.6;
+}
+
+.markdown-content li > ul,
+.markdown-content li > ol {
+  margin-top: 0.125rem;
+  margin-bottom: 0.125rem;
+}
+
+/* Headings inside markdown output */
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.3;
+}
+
+.markdown-content h1 { font-size: 1.125rem; }
+.markdown-content h2 { font-size: 1.05rem; }
+.markdown-content h3 { font-size: 1rem; }
+.markdown-content h4 { font-size: 0.9375rem; }
+
+/* Paragraphs */
+.markdown-content p {
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+  font-size: inherit;
+  line-height: 1.7;
+}
+
+/* Inline code */
+.markdown-content code {
+  background-color: #f1f5f9;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.8125rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Block code */
+.markdown-content pre {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+  font-size: 0.8125rem;
+}
+
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* Blockquotes */
+.markdown-content blockquote {
+  border-left: 3px solid #a78bfa;
+  padding: 0.375rem 0.75rem;
+  margin: 0.5rem 0;
+  background: #faf5ff;
+  border-radius: 0 0.25rem 0.25rem 0;
+  font-style: italic;
+  color: #4b5563;
+}
+
+/* Horizontal rules */
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 0.75rem 0;
+}
+
+/* Strong / em */
+.markdown-content strong {
+  font-weight: 600;
+  color: inherit;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+/* Links */
+.markdown-content a {
+  color: #7c3aed;
+  text-decoration: underline;
+  text-decoration-color: #c4b5fd;
+}
+
+.markdown-content a:hover {
+  text-decoration-color: #7c3aed;
+}
