@@ -223,6 +223,7 @@ export function InvestmentManagementPage() {
           titleLine2: 'Professionally',
           description: 'Expert investment management to build and preserve your wealth over time — with access to South Africa\'s leading fund managers.',
           heroImage: investmentGrowthImage,
+          heroImageKey: 'investment-hero',
           heroImageAlt: 'Investment growth concept showing stacked coins with growing plant representing wealth growth and investment protection',
           statusLabel: 'Investment Status',
           statusValue: 'Individuals & Businesses',

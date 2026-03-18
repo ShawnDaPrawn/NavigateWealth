@@ -198,6 +198,7 @@ export function EmployeeBenefitsPage() {
           titleLine2: 'Greatest Asset',
           description: 'Tailored employee benefits solutions — from group risk cover and retirement funds to medical aid and wellness programmes.',
           heroImage: image_e687c01861aee919fa24cf06bfbd5e069af5249c,
+          heroImageKey: 'employee-benefits-hero',
           heroImageAlt: 'Happy employees representing comprehensive employee benefits and workplace wellbeing',
           statusLabel: 'Benefits Status',
           statusValue: 'Employees & Businesses',

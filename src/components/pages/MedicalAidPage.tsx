@@ -233,6 +233,7 @@ export function MedicalAidPage() {
           titleLine2: 'Our Priority',
           description: 'Comprehensive medical aid solutions to ensure you and your family receive the best healthcare — tailored to your needs and budget.',
           heroImage: medicalHeroImage,
+          heroImageKey: 'medical-hero',
           heroImageAlt: 'Healthcare professionals providing medical consultation representing comprehensive medical aid',
           statusLabel: 'Healthcare Status',
           statusValue: 'Individuals & Businesses',

@@ -29,9 +29,10 @@ const CHECK_INTERVAL = 10 * 1000; // Check every 10 seconds
 const ACTIVITY_EVENTS = [
   'mousedown',
   'mousemove',
-  'keypress',
+  'keydown',
   'scroll',
   'touchstart',
+  'touchmove',
   'click',
 ];
 
@@ -66,18 +67,24 @@ export function InactivityManager() {
     return () => unsubscribe();
   }, []);
 
+  const clearWarningCountdown = useCallback(() => {
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  }, []);
+
   // Update activity timestamp on user interaction
   const handleActivity = useCallback(() => {
     lastActivityRef.current = Date.now();
-    // If warning is showing and user interacts, hide it
-    if (showWarning) {
-      setShowWarning(false);
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
+    setShowWarning((wasShowing) => {
+      if (wasShowing) {
+        clearWarningCountdown();
+        setCountdown(60);
       }
-    }
-  }, [showWarning]);
+      return false;
+    });
+  }, [clearWarningCountdown]);
 
   // Inactivity auto-logout (client users only)
   useEffect(() => {
@@ -115,7 +122,7 @@ export function InactivityManager() {
       if (inactiveTime >= INACTIVITY_TIMEOUT) {
         // User has been inactive for the full timeout (even if computer slept)
         if (checkIntervalRef.current) clearInterval(checkIntervalRef.current);
-        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+        clearWarningCountdown();
         performLogout();
       } else if (inactiveTime >= WARNING_TIME) {
         // Show warning if we are in the warning window and it's not already showing
@@ -126,7 +133,7 @@ export function InactivityManager() {
             setCountdown(secondsLeft);
 
             // Start precise visual countdown
-            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+            clearWarningCountdown();
             countdownIntervalRef.current = window.setInterval(() => {
               setCountdown(prev => {
                 if (prev <= 1) return 0;
@@ -147,9 +154,9 @@ export function InactivityManager() {
         window.removeEventListener(event, handleActivity);
       });
       if (checkIntervalRef.current) clearInterval(checkIntervalRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      clearWarningCountdown();
     };
-  }, [isAuthenticated, user, logout, navigate, handleActivity]);
+  }, [isAuthenticated, user, logout, navigate, handleActivity, clearWarningCountdown]);
 
   // Handle extend session
   const handleExtendSession = () => {

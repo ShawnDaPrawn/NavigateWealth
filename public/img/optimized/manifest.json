@@ -1,0 +1,240 @@
+{
+  "widths": [
+    480,
+    768,
+    1024,
+    1440
+  ],
+  "images": [
+    {
+      "key": "investment-consultation",
+      "source": "src/assets/fc6a85769d1248cdde73b1d2252674e730f0655a.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/investment-consultation-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/investment-consultation-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/investment-consultation-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/investment-consultation-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/investment-consultation-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/investment-consultation-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/investment-consultation-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/investment-consultation-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "estate-planning",
+      "source": "src/assets/482a45127e501f4b3cecd244241cff6024f47011.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/estate-planning-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/estate-planning-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/estate-planning-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/estate-planning-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/estate-planning-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/estate-planning-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/estate-planning-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/estate-planning-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "employee-benefits",
+      "source": "src/assets/dc2935371f93dc2f6da2f85cfa093001ca172d63.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/employee-benefits-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/employee-benefits-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/employee-benefits-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/employee-benefits-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/employee-benefits-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/employee-benefits-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/employee-benefits-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/employee-benefits-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "medical-aid",
+      "source": "src/assets/0e2b917f64eba502a24068ea5244bd25b0dfc9d5.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/medical-aid-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/medical-aid-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/medical-aid-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/medical-aid-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/medical-aid-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/medical-aid-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/medical-aid-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/medical-aid-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "risk-management-family",
+      "source": "src/assets/8a93f2fa219696290136738d0dc439f43b6c6235.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/risk-management-family-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/risk-management-family-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/risk-management-family-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/risk-management-family-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/risk-management-family-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/risk-management-family-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/risk-management-family-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/risk-management-family-1440.webp"
+        }
+      ]
+    }
+  ]
+}

@@ -135,6 +135,7 @@ export function EstatePlanningPage() {
           titleLine2: 'Legacy',
           description: 'Comprehensive estate planning for individuals and businesses — wills, trusts, succession planning, and business continuity from accredited specialists.',
           heroImage: estatePlanningHeroImage,
+          heroImageKey: 'estate-hero',
           heroImageAlt: 'Estate planning consultation representing wealth transfer and legacy protection',
           statusLabel: 'Estate Planning',
           statusValue: 'Individuals & Businesses',

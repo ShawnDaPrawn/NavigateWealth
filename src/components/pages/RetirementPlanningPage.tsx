@@ -215,6 +215,7 @@ export function RetirementPlanningPage() {
           titleLine2: 'Financial Future',
           description: 'Comprehensive retirement planning for individuals and businesses — from retirement annuities to pension funds, tailored to your goals.',
           heroImage: retirementHeroImage,
+          heroImageKey: 'retirement-hero',
           heroImageAlt: 'Happy retired couple enjoying financial freedom representing retirement planning success',
           statusLabel: 'Retirement Status',
           statusValue: 'Individuals & Businesses',

@@ -12,6 +12,7 @@ import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { OptimizedImage } from '../shared/OptimizedImage';
+import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 const VideoModal = React.lazy(() =>
   import('../modals/VideoModal').then((m) => ({ default: m.VideoModal })),
@@ -53,6 +54,8 @@ import teamVideoImage from 'figma:asset/7544a9a9b8dff620a2783be94ba019a570916dc7
 import taxPlanningImage from 'figma:asset/7f33deddff0f6240cb18dcef045f830436c30355.png';
 import southAfricanCurrencyImage from 'figma:asset/1f32a99aadd795f3c7f5c530f916c758d6ccb6f0.png';
 import employeeBenefitsTeamImage from 'figma:asset/dc2935371f93dc2f6da2f85cfa093001ca172d63.png';
+import { useImagePrefetch, prefetchImages } from '../../hooks/useImagePrefetch';
+import { getOptimizedImageUrl } from '../../utils/optimizedImages';
 import {
   ArrowRight,
   Shield,
@@ -168,6 +171,7 @@ export function HomePage() {
       description: "Protect your family's financial future with comprehensive risk management solutions tailored to your needs.",
       icon: Shield,
       image: familyImage,
+      imageKey: 'risk-management-family',
       link: "/risk-management"
     },
     {
@@ -182,6 +186,7 @@ export function HomePage() {
       description: "Grow your wealth with carefully selected local and offshore investments tailored to your risk profile.",
       icon: TrendingUp,
       image: investmentConsultationImage,
+      imageKey: 'investment-consultation',
       link: "/investment-management"
     },
     {
@@ -189,6 +194,7 @@ export function HomePage() {
       description: "Preserve your legacy and minimize taxes with comprehensive wills, trusts, and tailored estate strategies.",
       icon: FileText,
       image: estatePlanningImage,
+      imageKey: 'estate-planning',
       link: "/estate-planning"
     },
     {
@@ -203,6 +209,7 @@ export function HomePage() {
       description: "Attract and retain top talent with comprehensive employee benefit plans that enhance company culture.",
       icon: Briefcase,
       image: employeeBenefitsTeamImage,
+      imageKey: 'employee-benefits',
       link: "/employee-benefits"
     },
     {
@@ -217,9 +224,19 @@ export function HomePage() {
       description: "Access quality healthcare with comprehensive medical aid schemes tailored to your family's needs.",
       icon: Stethoscope,
       image: medicalAidImage,
+      imageKey: 'medical-aid',
       link: "/medical-aid"
     }
   ];
+
+  // Background prefetch: while the user stays on Home, warm the cache for
+  // likely next pages (optimized, right-sized variants only).
+  useImagePrefetch(
+    services
+      .filter((s) => !!s.imageKey)
+      .map((s) => getOptimizedImageUrl(s.imageKey!, 768, 'webp')),
+    { delayMs: 3000, idleTimeoutMs: 4000 },
+  );
 
   const providers = [
     { name: "Discovery", logo: discoveryLogo },
@@ -531,21 +548,43 @@ export function HomePage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {services.map((service, index) => {
               const isPrimaryCard = index === 0;
+              const hoverPrefetch = () => {
+                if (!service.imageKey) return;
+                prefetchImages([getOptimizedImageUrl(service.imageKey, 1024, 'webp')]);
+              };
               return (
-              <Card key={index} className="group bg-white border border-gray-300 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
+              <Card
+                key={index}
+                className="group bg-white border border-gray-300 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
+                onMouseEnter={hoverPrefetch}
+              >
                 {/* Clean Image Section */}
                 <div className="relative aspect-[4/3] overflow-hidden">
-                  <OptimizedImage
-                    src={service.image}
-                    alt={service.title}
-                    width={400}
-                    height={300}
-                    priority={isPrimaryCard}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 high-quality-image"
-                    loading={isPrimaryCard ? "eager" : "lazy"}
-                    fetchPriority={isPrimaryCard ? "high" : "auto"}
-                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                  />
+                  {service.imageKey ? (
+                    <ResponsiveImage
+                      imageKey={service.imageKey}
+                      fallbackSrc={service.image}
+                      alt={service.title}
+                      width={400}
+                      height={300}
+                      loading={isPrimaryCard ? "eager" : "lazy"}
+                      fetchPriority={isPrimaryCard ? "high" : "auto"}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 high-quality-image"
+                    />
+                  ) : (
+                    <OptimizedImage
+                      src={service.image}
+                      alt={service.title}
+                      width={400}
+                      height={300}
+                      priority={isPrimaryCard}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 high-quality-image"
+                      loading={isPrimaryCard ? "eager" : "lazy"}
+                      fetchPriority={isPrimaryCard ? "high" : "auto"}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                    />
+                  )}
                   
                   {/* Simple Icon Badge */}
                   <div className="absolute top-3 left-3 w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center">

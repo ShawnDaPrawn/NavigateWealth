@@ -238,6 +238,7 @@ export function RiskManagementPage() {
           titleLine2: 'Matters Most',
           description: 'Comprehensive risk cover for individuals and businesses. We search the market to find you the best protection at the right price — tailored to your life.',
           heroImage: outdoorFamilyImage,
+          heroImageKey: 'risk-hero',
           heroImageAlt: 'Happy family outdoors representing family protection and financial security',
           statusLabel: 'Cover Status',
           statusValue: 'Individuals & Businesses',

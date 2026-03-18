@@ -182,6 +182,7 @@ export function TaxPlanningPage() {
           titleLine2: 'Tax Efficiency',
           description: 'Expert tax planning strategies to minimize your tax burden and maximize your wealth — for individuals and businesses.',
           heroImage: taxPlanningHeroImage,
+          heroImageKey: 'tax-planning',
           heroImageAlt: 'Professional tax planning consultation representing strategic tax optimisation',
           statusLabel: 'Tax Planning',
           statusValue: 'Individuals & Businesses',

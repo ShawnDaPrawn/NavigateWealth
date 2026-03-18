@@ -34,6 +34,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { TabStrip } from '../shared/TabStrip';
 import { PartnerMarquee, type PartnerLogo } from '../shared/PartnerMarquee';
 import { useTabScroll } from '../shared/useTabScroll';
@@ -76,6 +77,8 @@ export interface ServicePageConfig {
     titleLine2: string;
     description: string;
     heroImage: string;
+    /** Optional optimized image key for ResponsiveImage */
+    heroImageKey?: string;
     heroImageAlt: string;
     /** Floating card text */
     statusLabel: string;
@@ -303,11 +306,25 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
               {/* Right — hero image */}
               <div className="hidden lg:block relative">
                 <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-white/[0.08]">
-                  <ImageWithFallback
-                    src={config.hero.heroImage}
-                    alt={config.hero.heroImageAlt}
-                    className="w-full h-[420px] object-cover object-center"
-                  />
+                  {config.hero.heroImageKey ? (
+                    <ResponsiveImage
+                      imageKey={config.hero.heroImageKey}
+                      fallbackSrc={config.hero.heroImage}
+                      alt={config.hero.heroImageAlt}
+                      className="w-full h-[420px] object-cover object-center"
+                      loading="eager"
+                      fetchPriority="high"
+                      sizes="(min-width: 1024px) 44vw, 100vw"
+                      width={1100}
+                      height={420}
+                    />
+                  ) : (
+                    <ImageWithFallback
+                      src={config.hero.heroImage}
+                      alt={config.hero.heroImageAlt}
+                      className="w-full h-[420px] object-cover object-center"
+                    />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
                   {/* Floating status card */}
                   <div className="absolute bottom-5 left-5 bg-white/90 backdrop-blur-sm rounded-2xl px-5 py-4 shadow-2xl flex items-center gap-4">
@@ -328,11 +345,25 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
         /* ── Classic hero — split-panel with right-side image at 44% ── */
         <section className="relative section-dark-gray overflow-hidden" aria-label={`${config.hero.badgeText} hero`}>
           <div className="hidden lg:block absolute inset-y-0 right-0 w-[44%]">
-            <ImageWithFallback
-              src={config.hero.heroImage}
-              alt={config.hero.heroImageAlt}
-              className="w-full h-full object-cover object-center"
-            />
+            {config.hero.heroImageKey ? (
+              <ResponsiveImage
+                imageKey={config.hero.heroImageKey}
+                fallbackSrc={config.hero.heroImage}
+                alt={config.hero.heroImageAlt}
+                className="w-full h-full object-cover object-center"
+                loading="eager"
+                fetchPriority="high"
+                sizes="(min-width: 1024px) 44vw, 100vw"
+                width={1100}
+                height={700}
+              />
+            ) : (
+              <ImageWithFallback
+                src={config.hero.heroImage}
+                alt={config.hero.heroImageAlt}
+                className="w-full h-full object-cover object-center"
+              />
+            )}
             <div className="absolute inset-y-0 left-0 w-48" style={{ background: 'linear-gradient(to right, #313653 0%, transparent 100%)' }} />
             <div className="absolute inset-0 bg-black/10" />
             <div className="absolute bottom-10 left-8 bg-white rounded-2xl px-5 py-4 shadow-2xl flex items-center gap-4">

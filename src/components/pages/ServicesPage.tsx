@@ -5,7 +5,10 @@ import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { SEO } from '../seo/SEO';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { ConsultationModal } from '../modals/ConsultationModal';
+import { useImagePrefetch, prefetchImages } from '../../hooks/useImagePrefetch';
+import { getOptimizedImageUrl } from '../../utils/optimizedImages';
 import {
   TrendingUp,
   Shield,
@@ -45,6 +48,7 @@ interface ServiceItem {
   description: string;
   highlights: string[];
   image: string;
+  imageKey?: string;
   path: string;
   badge?: string;
   quoteSlug: string;
@@ -59,6 +63,7 @@ const SERVICES: ServiceItem[] = [
       'Risk management is arguably the most important part of robust financial planning. We highlight how much coverage you require and search the market to provide the best option.',
     highlights: ['Life Cover', 'Income Protection', 'Disability Cover', 'Severe Illness Cover'],
     image: familyImage,
+    imageKey: 'risk-management-family',
     path: '/risk-management',
     quoteSlug: 'risk-management',
   },
@@ -70,6 +75,7 @@ const SERVICES: ServiceItem[] = [
       'Access quality healthcare with comprehensive medical aid schemes tailored to your family\'s needs and budget, from major medical to full cover options.',
     highlights: ['Hospital Plans', 'Comprehensive Cover', 'Gap Cover', 'Day-to-day Benefits'],
     image: medicalAidImage,
+    imageKey: 'medical-aid',
     path: '/medical-aid',
     quoteSlug: 'medical-aid',
   },
@@ -81,6 +87,7 @@ const SERVICES: ServiceItem[] = [
       'Secure your future with tailored retirement strategies designed to help you maintain your lifestyle and financial independence in retirement.',
     highlights: ['Retirement Annuities', 'Pension Funds', 'Living Annuities', 'Preservation Funds'],
     image: consultationImage,
+    imageKey: 'retirement-planning',
     path: '/retirement-planning',
     quoteSlug: 'retirement-planning',
   },
@@ -92,6 +99,7 @@ const SERVICES: ServiceItem[] = [
       'We offer a broad range of carefully selected local and offshore investment products for strategic diversification and long-term growth.',
     highlights: ['Unit Trusts', 'Offshore Investments', 'Tax-Free Savings', 'Portfolio Management'],
     image: investmentConsultationImage,
+    imageKey: 'investment-consultation',
     path: '/investment-management',
     badge: 'Most Popular',
     quoteSlug: 'investment-management',
@@ -104,6 +112,7 @@ const SERVICES: ServiceItem[] = [
       'Tailored benefit plans for businesses to attract and retain top talent with group risk, retirement, and healthcare solutions.',
     highlights: ['Group Risk Cover', 'Retirement Funds', 'Healthcare Benefits', 'Wellness Programs'],
     image: employeeBenefitsTeamImage,
+    imageKey: 'employee-benefits',
     path: '/employee-benefits',
     quoteSlug: 'employee-benefits',
   },
@@ -115,6 +124,7 @@ const SERVICES: ServiceItem[] = [
       'Advanced strategies to minimise liabilities and ensure compliance, leveraging tax-efficient structures and allowances.',
     highlights: ['Tax Optimisation', 'Section 12J', 'Tax-Free Savings', 'Estate Duty Planning'],
     image: taxPlanningImage,
+    imageKey: 'tax-planning',
     path: '/tax-planning',
     quoteSlug: 'tax-planning',
   },
@@ -126,6 +136,7 @@ const SERVICES: ServiceItem[] = [
       'Preserve your legacy and minimise taxes through wills, trusts, and tailored strategies to protect your family\'s future.',
     highlights: ['Will Drafting', 'Trust Structures', 'Estate Duty', 'Beneficiary Nominations'],
     image: estatePlanningImage,
+    imageKey: 'estate-planning',
     path: '/estate-planning',
     quoteSlug: 'estate-planning',
   },
@@ -137,6 +148,7 @@ const SERVICES: ServiceItem[] = [
       'Holistic financial planning that aligns all aspects of your financial life with your personal goals through a comprehensive needs analysis.',
     highlights: ['Financial Needs Analysis', 'Goal Setting', 'Cash Flow Planning', 'Debt Management'],
     image: southAfricanCurrencyImage,
+    imageKey: 'financial-planning',
     path: '/financial-planning',
     quoteSlug: 'financial-planning',
   },
@@ -203,6 +215,14 @@ const STATS = [
 
 export function ServicesPage() {
   const [consultationOpen, setConsultationOpen] = React.useState(false);
+
+  // While the user browses Services, warm the cache for likely next navigations.
+  useImagePrefetch(
+    SERVICES
+      .filter((s) => !!s.imageKey)
+      .map((s) => getOptimizedImageUrl(s.imageKey!, 768, 'webp')),
+    { delayMs: 2500, idleTimeoutMs: 4000 },
+  );
 
   return (
     <div className="contents">
@@ -327,6 +347,10 @@ export function ServicesPage() {
                 <Card
                   key={service.id}
                   className="group bg-white border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden relative"
+                  onMouseEnter={() => {
+                    if (!service.imageKey) return;
+                    prefetchImages([getOptimizedImageUrl(service.imageKey, 1024, 'webp')]);
+                  }}
                 >
                   {/* Badge */}
                   {service.badge && (
@@ -337,12 +361,26 @@ export function ServicesPage() {
 
                   {/* Image */}
                   <div className="relative aspect-[4/3] overflow-hidden">
-                    <ImageWithFallback
-                      src={service.image}
-                      alt={service.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      loading={index < 4 ? 'eager' : 'lazy'}
-                    />
+                    {service.imageKey ? (
+                      <ResponsiveImage
+                        imageKey={service.imageKey}
+                        fallbackSrc={service.image}
+                        alt={service.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading={index < 4 ? 'eager' : 'lazy'}
+                        fetchPriority={index === 0 ? 'high' : 'auto'}
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                        width={400}
+                        height={300}
+                      />
+                    ) : (
+                      <ImageWithFallback
+                        src={service.image}
+                        alt={service.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading={index < 4 ? 'eager' : 'lazy'}
+                      />
+                    )}
                     {/* Icon badge */}
                     <div className="absolute top-3 left-3 w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center">
                       <service.icon className="h-5 w-5 text-primary" />
