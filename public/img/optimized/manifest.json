@@ -235,6 +235,420 @@
           "path": "public/img/optimized/risk-management-family-1440.webp"
         }
       ]
+    },
+    {
+      "key": "retirement-planning",
+      "source": "src/assets/b0b37f186d8c48117bede379a79e329626b6ac95.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/retirement-planning-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/retirement-planning-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/retirement-planning-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/retirement-planning-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/retirement-planning-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/retirement-planning-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/retirement-planning-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/retirement-planning-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "tax-planning",
+      "source": "src/assets/7f33deddff0f6240cb18dcef045f830436c30355.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/tax-planning-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/tax-planning-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/tax-planning-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/tax-planning-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/tax-planning-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/tax-planning-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/tax-planning-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/tax-planning-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "financial-planning",
+      "source": "src/assets/1f32a99aadd795f3c7f5c530f916c758d6ccb6f0.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/financial-planning-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/financial-planning-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/financial-planning-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/financial-planning-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/financial-planning-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/financial-planning-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/financial-planning-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/financial-planning-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "investment-hero",
+      "source": "src/assets/7f39ab25c8d51c8647ca73dc5c9126b4df46a0c6.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/investment-hero-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/investment-hero-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/investment-hero-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/investment-hero-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/investment-hero-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/investment-hero-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/investment-hero-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/investment-hero-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "retirement-hero",
+      "source": "src/assets/b6c49e3128a8d7c0869121962a0c8a9836a4fef6.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/retirement-hero-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/retirement-hero-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/retirement-hero-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/retirement-hero-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/retirement-hero-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/retirement-hero-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/retirement-hero-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/retirement-hero-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "estate-hero",
+      "source": "src/assets/5c0f670827aa0d401dd409a6c603459c23b5c4a3.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/estate-hero-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/estate-hero-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/estate-hero-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/estate-hero-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/estate-hero-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/estate-hero-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/estate-hero-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/estate-hero-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "risk-hero",
+      "source": "src/assets/f9768bc43fd98373704bc54f70b3ea6ec0c8f020.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/risk-hero-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/risk-hero-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/risk-hero-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/risk-hero-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/risk-hero-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/risk-hero-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/risk-hero-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/risk-hero-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "medical-hero",
+      "source": "src/assets/d0fa22ed135e395dabc605d8378a0fbcd5642ed7.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/medical-hero-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/medical-hero-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/medical-hero-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/medical-hero-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/medical-hero-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/medical-hero-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/medical-hero-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/medical-hero-1440.webp"
+        }
+      ]
+    },
+    {
+      "key": "employee-benefits-hero",
+      "source": "src/assets/e687c01861aee919fa24cf06bfbd5e069af5249c.png",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/employee-benefits-hero-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/employee-benefits-hero-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/employee-benefits-hero-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/employee-benefits-hero-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/employee-benefits-hero-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/employee-benefits-hero-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/employee-benefits-hero-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/employee-benefits-hero-1440.webp"
+        }
+      ]
     }
   ]
 }
