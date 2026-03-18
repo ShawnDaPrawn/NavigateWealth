@@ -7,6 +7,7 @@ import { Badge } from '../../../../ui/badge';
 import { cn } from '../../../../ui/utils';
 import type { AIAgentConfig, PromptContext, PromptVersion } from '../types';
 import { useAgents, usePromptBundle, useSaveDraftPrompt, usePublishPrompt, useRollbackPrompt, useSeedPrompt } from '../hooks';
+import { getDefaultPrompt } from '../defaultPrompts';
 
 const CONTEXTS: Array<{ id: PromptContext; label: string }> = [
   { id: 'public', label: 'Public' },
@@ -56,6 +57,7 @@ export function PromptStudio() {
 
   const dirty = (data?.draft ?? data?.active ?? '') !== localDraft;
   const needsSeed = !data?.active && !data?.draft;
+  const defaultPrompt = useMemo(() => getDefaultPrompt(agentId, context), [agentId, context]);
 
   if (agentsLoading) {
     return (
@@ -123,6 +125,18 @@ export function PromptStudio() {
             {seed.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sprout className="h-4 w-4" />}
             Seed (if empty)
           </Button>
+
+          {needsSeed && defaultPrompt && (
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={seed.isPending}
+              onClick={() => seed.mutate({ agentId, context, seedPrompt: defaultPrompt })}
+            >
+              {seed.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sprout className="h-4 w-4" />}
+              Seed from default
+            </Button>
+          )}
 
           <Button
             className="gap-2 bg-purple-600 hover:bg-purple-700"

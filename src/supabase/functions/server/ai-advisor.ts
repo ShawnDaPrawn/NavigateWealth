@@ -151,6 +151,20 @@ ${context ? `
 const ADVISOR_AGENT_ID = 'vasco-authenticated';
 const ADVISOR_CONTEXT = 'authenticated' as const;
 
+const DEFAULT_PORTAL_PROMPT = `You are Navigate Wealth’s AI Financial Advisor for logged-in clients.
+
+## Role
+- Explain concepts and help the client understand their situation using the runtime context provided by the system.
+- Be professional, encouraging, and clear. Use South African context (SARS, RAs, TFSAs, etc.).
+
+## Boundaries
+- This is not official financial advice. Always include a brief disclaimer in advice-adjacent responses.
+- Do not promise returns or guarantees.
+
+## Next steps
+- If the user asks for actions (cancel policy, change beneficiary, etc.), direct them to their adviser/support or the appropriate workflow.
+`;
+
 /**
  * Call OpenAI
  */
@@ -241,9 +255,9 @@ app.post('/chat/stream', requireAuth, async (c) => {
 
     // Get context and build system prompt (Phase 3 KV-backed base prompt + context overlay)
     const context = await getUserContext(user.id);
-    const fallback = buildSystemPrompt(context);
-    await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, fallback);
-    const activeBase = (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? fallback;
+    await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, DEFAULT_PORTAL_PROMPT);
+    const activeBase =
+      (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? DEFAULT_PORTAL_PROMPT;
     const systemPrompt = `${activeBase}\n\n## Runtime Client Context\n${buildSystemPrompt(context)}`;
 
     // Build chat messages from history
@@ -368,9 +382,9 @@ app.post('/chat', requireAuth, async (c) => {
 
     // Get context (Phase 3 KV-backed base prompt + context overlay)
     const context = await getUserContext(user.id);
-    const fallback = buildSystemPrompt(context);
-    await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, fallback);
-    const activeBase = (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? fallback;
+    await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, DEFAULT_PORTAL_PROMPT);
+    const activeBase =
+      (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? DEFAULT_PORTAL_PROMPT;
     const systemPrompt = `${activeBase}\n\n## Runtime Client Context\n${buildSystemPrompt(context)}`;
 
     // Call AI
