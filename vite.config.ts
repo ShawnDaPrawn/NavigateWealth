@@ -8,8 +8,6 @@ function resolveFigmaAsset(filename: string): string {
   const assetDirectory = path.resolve(__dirname, './src/assets');
   const parsed = path.parse(filename);
   const candidates = [
-    `${parsed.name}.jpg`,
-    `${parsed.name}.jpeg`,
     `${parsed.name}.webp`,
     filename,
   ];
