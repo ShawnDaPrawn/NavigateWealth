@@ -20,6 +20,7 @@ import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { FeedbackReview } from './components/FeedbackReview';
 import { HandoffQueue } from './components/HandoffQueue';
 import { KnowledgeBase } from './components/KnowledgeBase';
+import { PromptStudio } from './components/PromptStudio';
 import type { AIManagementTab } from './types';
 
 // ── Tab config ─────────────────────────────────────────────────────────────
@@ -31,6 +32,7 @@ const TABS: Array<{
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'agents', label: 'Agents', icon: Bot },
   { id: 'knowledge-base', label: 'Knowledge Base', icon: BookOpen },
+  { id: 'prompt-studio', label: 'Prompt Studio', icon: MessageSquare },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'feedback', label: 'Feedback', icon: MessageSquare },
   { id: 'handoffs', label: 'Handoffs', icon: PhoneForwarded },
@@ -83,6 +85,7 @@ export function AIManagementModule() {
           {activeTab === 'dashboard' && <AgentDashboard />}
           {activeTab === 'agents' && <AgentDashboard />}
           {activeTab === 'knowledge-base' && <KnowledgeBase />}
+          {activeTab === 'prompt-studio' && <PromptStudio />}
           {activeTab === 'analytics' && <AnalyticsDashboard />}
           {activeTab === 'feedback' && <FeedbackReview />}
           {activeTab === 'handoffs' && <HandoffQueue />}

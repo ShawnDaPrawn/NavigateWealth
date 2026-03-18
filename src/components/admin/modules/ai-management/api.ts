@@ -24,6 +24,8 @@ import type {
   CreateKBEntryInput,
   UpdateKBEntryInput,
   KBStats,
+  PromptContext,
+  PromptVersion,
 } from './types';
 
 // ============================================================================
@@ -264,5 +266,29 @@ export const kbApi = {
    */
   async remove(id: string): Promise<void> {
     await api.delete(ENDPOINTS.KB_DETAIL(id));
+  },
+};
+
+// ============================================================================
+// PROMPTS (Phase 3)
+// ============================================================================
+
+export const promptApi = {
+  async getBundle(agentId: string, context: PromptContext): Promise<{ active: string | null; draft: string | null; versions: PromptVersion[] }> {
+    return await api.get(ENDPOINTS.PROMPT_BUNDLE(agentId, context));
+  },
+  async saveDraft(agentId: string, context: PromptContext, prompt: string): Promise<void> {
+    await api.put(ENDPOINTS.PROMPT_DRAFT(agentId, context), { prompt });
+  },
+  async publish(agentId: string, context: PromptContext): Promise<PromptVersion> {
+    const res = await api.post<{ version: PromptVersion }>(ENDPOINTS.PROMPT_PUBLISH(agentId, context), {});
+    return res.version;
+  },
+  async rollback(agentId: string, context: PromptContext, versionId: string): Promise<PromptVersion> {
+    const res = await api.post<{ version: PromptVersion }>(ENDPOINTS.PROMPT_ROLLBACK(agentId, context), { versionId });
+    return res.version;
+  },
+  async seedIfMissing(agentId: string, context: PromptContext, seedPrompt: string): Promise<{ active: string | null; draft: string | null; versions: PromptVersion[] }> {
+    return await api.post(ENDPOINTS.PROMPT_SEED(agentId, context), { seedPrompt });
   },
 };

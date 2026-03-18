@@ -7,6 +7,7 @@ import { Hono } from "npm:hono";
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 import * as kv from "./kv_store.tsx";
 import { createModuleLogger } from "./stderr-logger.ts";
+import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
 
 const app = new Hono();
 const log = createModuleLogger('ai-advisor');
@@ -147,6 +148,9 @@ ${context ? `
 `;
 }
 
+const ADVISOR_AGENT_ID = 'vasco-authenticated';
+const ADVISOR_CONTEXT = 'authenticated' as const;
+
 /**
  * Call OpenAI
  */
@@ -235,9 +239,12 @@ app.post('/chat/stream', requireAuth, async (c) => {
       return c.json({ error: 'messages array is required' }, 400);
     }
 
-    // Get context and build system prompt
+    // Get context and build system prompt (Phase 3 KV-backed base prompt + context overlay)
     const context = await getUserContext(user.id);
-    const systemPrompt = buildSystemPrompt(context);
+    const fallback = buildSystemPrompt(context);
+    await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, fallback);
+    const activeBase = (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? fallback;
+    const systemPrompt = `${activeBase}\n\n## Runtime Client Context\n${buildSystemPrompt(context)}`;
 
     // Build chat messages from history
     const chatMessages: ChatMessage[] = clientMessages
@@ -359,9 +366,12 @@ app.post('/chat', requireAuth, async (c) => {
 
     if (!message) return c.json({ error: 'Message required' }, 400);
 
-    // Get context
+    // Get context (Phase 3 KV-backed base prompt + context overlay)
     const context = await getUserContext(user.id);
-    const systemPrompt = buildSystemPrompt(context);
+    const fallback = buildSystemPrompt(context);
+    await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, fallback);
+    const activeBase = (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? fallback;
+    const systemPrompt = `${activeBase}\n\n## Runtime Client Context\n${buildSystemPrompt(context)}`;
 
     // Call AI
     const reply = await callOpenAI([{ role: 'user', content: message }], systemPrompt);

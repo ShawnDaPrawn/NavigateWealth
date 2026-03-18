@@ -19,3 +19,11 @@ export {
   useUpdateKBEntry,
   useDeleteKBEntry,
 } from './useKnowledgeBase';
+
+export {
+  usePromptBundle,
+  useSaveDraftPrompt,
+  usePublishPrompt,
+  useRollbackPrompt,
+  useSeedPrompt,
+} from './usePromptStudio';

@@ -30,6 +30,13 @@ export const ENDPOINTS = {
   KB_LIST: '/ai-management/kb',
   KB_DETAIL: (id: string) => `/ai-management/kb/${id}`,
   KB_STATS: '/ai-management/kb/stats',
+  // Prompt Studio (Phase 3)
+  PROMPT_BUNDLE: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}`,
+  PROMPT_DRAFT: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}/draft`,
+  PROMPT_PUBLISH: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}/publish`,
+  PROMPT_VERSIONS: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}/versions`,
+  PROMPT_ROLLBACK: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}/rollback`,
+  PROMPT_SEED: (agentId: string, context: string) => `/ai-management/prompts/${agentId}/${context}/seed`,
 } as const;
 
 // ============================================================================

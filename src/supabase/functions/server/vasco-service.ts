@@ -16,6 +16,7 @@
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { retrieveContext, type RetrievedContext } from './vasco-rag-service.ts';
+import { ensureSeeded, getActivePrompt, type PromptContext } from './prompt-service.ts';
 
 const log = createModuleLogger('vasco');
 
@@ -149,6 +150,9 @@ Navigate Wealth provides personalised Financial Needs Analyses (FNAs) across all
 
 ## Compliance Reminder
 Every response you give falls under general financial information, not personal financial advice as defined by FAIS. When in doubt, err on the side of suggesting professional consultation.`;
+
+const VASCO_PROMPT_AGENT_ID = 'vasco-public';
+const VASCO_PROMPT_CONTEXT: PromptContext = 'public';
 
 // ============================================================================
 // SERVICE METHODS
@@ -320,9 +324,14 @@ export async function chat(
     throw new Error('OpenAI API key not configured');
   }
 
+  // Phase 3: KV-backed prompt (with hardcoded fallback)
+  await ensureSeeded(VASCO_PROMPT_AGENT_ID, VASCO_PROMPT_CONTEXT, VASCO_SYSTEM_PROMPT);
+  const activePrompt =
+    (await getActivePrompt(VASCO_PROMPT_AGENT_ID, VASCO_PROMPT_CONTEXT)) ?? VASCO_SYSTEM_PROMPT;
+
   // Build message history with system prompt
   const messages: VascoChatMessage[] = [
-    { role: 'system', content: VASCO_SYSTEM_PROMPT },
+    { role: 'system', content: activePrompt },
   ];
 
   // Add conversation history (limited to last N messages)
@@ -415,9 +424,14 @@ export async function chatStream(
     throw new Error('OpenAI API key not configured');
   }
 
+  // Phase 3: KV-backed prompt (with hardcoded fallback)
+  await ensureSeeded(VASCO_PROMPT_AGENT_ID, VASCO_PROMPT_CONTEXT, VASCO_SYSTEM_PROMPT);
+  const activePrompt =
+    (await getActivePrompt(VASCO_PROMPT_AGENT_ID, VASCO_PROMPT_CONTEXT)) ?? VASCO_SYSTEM_PROMPT;
+
   // Build message history with system prompt
   const messages: VascoChatMessage[] = [
-    { role: 'system', content: VASCO_SYSTEM_PROMPT },
+    { role: 'system', content: activePrompt },
   ];
 
   const history = request.messages.slice(-MAX_CONTEXT_MESSAGES);

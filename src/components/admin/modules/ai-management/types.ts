@@ -151,9 +151,25 @@ export type AIManagementTab =
   | 'dashboard'
   | 'agents'
   | 'knowledge-base'
+  | 'prompt-studio'
   | 'analytics'
   | 'feedback'
   | 'handoffs';
+
+// ============================================================================
+// PROMPT STUDIO (Phase 3)
+// ============================================================================
+
+export type PromptContext = 'public' | 'authenticated' | 'admin';
+
+export interface PromptVersion {
+  id: string;
+  agentId: string;
+  context: PromptContext;
+  prompt: string;
+  publishedAt: string;
+  publishedBy: string;
+}
 
 // ============================================================================
 // FILTERS

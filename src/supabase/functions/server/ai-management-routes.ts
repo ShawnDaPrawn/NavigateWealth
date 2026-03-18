@@ -25,6 +25,7 @@ import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getAllAgents, getAgent } from './ai-management-service.ts';
 import * as kbService from './kb-service.ts';
+import * as promptService from './prompt-service.ts';
 
 const app = new Hono();
 const log = createModuleLogger('ai-management-routes');
@@ -154,6 +155,110 @@ app.delete('/kb/:id', asyncHandler(async (c) => {
 
   log.info('KB entry deleted via admin', { id });
   return c.json({ success: true });
+}));
+
+// ============================================================================
+// PROMPTS (Phase 3)
+// ============================================================================
+
+const VALID_PROMPT_CONTEXTS: promptService.PromptContext[] = ['public', 'authenticated', 'admin'];
+
+function parsePromptContext(raw: string): promptService.PromptContext | null {
+  return VALID_PROMPT_CONTEXTS.includes(raw as promptService.PromptContext)
+    ? (raw as promptService.PromptContext)
+    : null;
+}
+
+app.get('/prompts/:agentId/:context', asyncHandler(async (c) => {
+  const { agentId, context } = c.req.param();
+  const ctx = parsePromptContext(context);
+  if (!ctx) return c.json({ error: 'Invalid context' }, 400);
+
+  const [active, draft, versions] = await Promise.all([
+    promptService.getActivePrompt(agentId, ctx),
+    promptService.getDraftPrompt(agentId, ctx),
+    promptService.listVersions(agentId, ctx),
+  ]);
+
+  return c.json({ active, draft, versions });
+}));
+
+app.put('/prompts/:agentId/:context/draft', asyncHandler(async (c) => {
+  const userId = c.get('userId') as string;
+  const { agentId, context } = c.req.param();
+  const ctx = parsePromptContext(context);
+  if (!ctx) return c.json({ error: 'Invalid context' }, 400);
+
+  const body = await c.req.json() as { prompt?: string };
+  if (!body.prompt || typeof body.prompt !== 'string') {
+    return c.json({ error: 'prompt is required' }, 400);
+  }
+
+  await promptService.setDraftPrompt(agentId, ctx, body.prompt);
+  log.info('Prompt draft updated', { agentId, context: ctx, userId });
+  return c.json({ success: true });
+}));
+
+app.post('/prompts/:agentId/:context/publish', asyncHandler(async (c) => {
+  const userId = c.get('userId') as string;
+  const { agentId, context } = c.req.param();
+  const ctx = parsePromptContext(context);
+  if (!ctx) return c.json({ error: 'Invalid context' }, 400);
+
+  const version = await promptService.publishDraft(agentId, ctx, userId);
+  log.info('Prompt published', { agentId, context: ctx, userId, versionId: version.id });
+  return c.json({ version });
+}));
+
+app.get('/prompts/:agentId/:context/versions', asyncHandler(async (c) => {
+  const { agentId, context } = c.req.param();
+  const ctx = parsePromptContext(context);
+  if (!ctx) return c.json({ error: 'Invalid context' }, 400);
+
+  const versions = await promptService.listVersions(agentId, ctx);
+  return c.json({ versions });
+}));
+
+app.post('/prompts/:agentId/:context/rollback', asyncHandler(async (c) => {
+  const userId = c.get('userId') as string;
+  const { agentId, context } = c.req.param();
+  const ctx = parsePromptContext(context);
+  if (!ctx) return c.json({ error: 'Invalid context' }, 400);
+
+  const body = await c.req.json() as { versionId?: string };
+  if (!body.versionId) return c.json({ error: 'versionId is required' }, 400);
+
+  const version = await promptService.rollbackToVersion(agentId, ctx, body.versionId, userId);
+  if (!version) return c.json({ error: 'version not found' }, 404);
+
+  log.info('Prompt rolled back', { agentId, context: ctx, userId, toVersionId: body.versionId, newVersionId: version.id });
+  return c.json({ version });
+}));
+
+/**
+ * POST /prompts/:agentId/:context/seed — Seed active/draft if missing
+ * Body: { seedPrompt: string }
+ */
+app.post('/prompts/:agentId/:context/seed', asyncHandler(async (c) => {
+  const userId = c.get('userId') as string;
+  const { agentId, context } = c.req.param();
+  const ctx = parsePromptContext(context);
+  if (!ctx) return c.json({ error: 'Invalid context' }, 400);
+
+  const body = await c.req.json() as { seedPrompt?: string };
+  if (!body.seedPrompt || typeof body.seedPrompt !== 'string') {
+    return c.json({ error: 'seedPrompt is required' }, 400);
+  }
+
+  await promptService.ensureSeeded(agentId, ctx, body.seedPrompt);
+  const [active, draft, versions] = await Promise.all([
+    promptService.getActivePrompt(agentId, ctx),
+    promptService.getDraftPrompt(agentId, ctx),
+    promptService.listVersions(agentId, ctx),
+  ]);
+
+  log.info('Prompt seeded (if missing)', { agentId, context: ctx, userId });
+  return c.json({ active, draft, versions });
 }));
 
 export default app;
