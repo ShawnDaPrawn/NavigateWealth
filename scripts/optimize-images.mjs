@@ -35,6 +35,28 @@ const TARGETS = [
 // Responsive widths to generate. Should cover mobile → desktop cards/hero.
 const WIDTHS = [480, 768, 1024, 1440];
 
+async function discoverFigmaAssetPngHashes() {
+  const pagesDir = path.join(PROJECT_ROOT, 'src', 'components', 'pages');
+  const entries = await fs.readdir(pagesDir, { withFileTypes: true });
+  const pageFiles = entries
+    .filter((e) => e.isFile() && e.name.endsWith('Page.tsx'))
+    .map((e) => path.join(pagesDir, e.name));
+
+  const hashes = new Set();
+  const re = /figma:asset\/([a-f0-9]{40})\.png/g;
+
+  for (const filePath of pageFiles) {
+    const content = await fs.readFile(filePath, 'utf8');
+    let m;
+    // eslint-disable-next-line no-cond-assign
+    while ((m = re.exec(content))) {
+      hashes.add(m[1]);
+    }
+  }
+
+  return Array.from(hashes);
+}
+
 function srcPathForHash(hash) {
   // Figma assets appear to exist as .png and .jpg variants; prioritize .png.
   return path.join(SRC_DIR, `${hash}.png`);
@@ -57,13 +79,13 @@ async function fileExists(p) {
   }
 }
 
-async function buildOne({ hash, label }) {
+async function buildOne({ hash, label, key }) {
   const input = srcPathForHash(hash);
   if (!(await fileExists(input))) {
     throw new Error(`Missing source image: ${path.relative(PROJECT_ROOT, input)}`);
   }
 
-  const base = outBase(label);
+  const base = outBase(key ?? label);
   const outManifest = {
     key: base,
     source: path.relative(PROJECT_ROOT, input).replaceAll('\\', '/'),
@@ -102,8 +124,19 @@ async function buildOne({ hash, label }) {
 async function main() {
   await ensureDir(OUT_DIR);
 
+  const discovered = await discoverFigmaAssetPngHashes();
+  const discoveredTargets = discovered.map((hash) => ({ hash, label: `figma-${hash}`, key: hash }));
+
+  // De-duplicate by output key.
+  const allTargets = [...TARGETS, ...discoveredTargets];
+  const seenKeys = new Set();
   const manifests = [];
-  for (const t of TARGETS) {
+
+  for (const t of allTargets) {
+    const outKey = outBase(t.key ?? t.label);
+    if (seenKeys.has(outKey)) continue;
+    seenKeys.add(outKey);
+
     // eslint-disable-next-line no-console
     console.log(`Optimizing ${t.label} (${t.hash})...`);
     manifests.push(await buildOne(t));

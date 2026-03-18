@@ -95,6 +95,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Tax-free payout to beneficiaries', 'Coverage from R100,000 to R50 million', 'Premium can remain level for life', 'Option to increase cover at life events'],
     image: lifeCoverImage,
+    imageKey: '00f21f624e8160ae5a1793de40e7c0e7ba1ee60d',
   },
   'disability': {
     title: 'Disability Cover',
@@ -108,6 +109,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Up to 75% of annual income as lump sum', 'Immediate access to substantial capital', 'Covers both physical and mental disabilities', 'Worldwide coverage available'],
     image: disabilityCoverImage,
+    imageKey: '4edbc4d460d0ae6f679b5227752c118d5306e279',
   },
   'severe-illness': {
     title: 'Severe Illness Cover',
@@ -121,6 +123,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Tax-free lump sum payment', 'No restrictions on how funds are used', 'Covers cancer, heart attack, stroke and more', 'Option for buy-back cover after a claim'],
     image: severeIllnessCoverImage,
+    imageKey: '06a90a7204a3a0765a6ffe95ae6db0a382ea2312',
   },
   'income-protection': {
     title: 'Income Protection',
@@ -134,6 +137,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Up to 75% of gross monthly income', 'Inflation-linked increases available', 'Covers illness and accidental injury', 'Return to work incentives included'],
     image: incomeProtectionImage,
+    imageKey: 'a0ab0fcb56ab81f6626ad7140dbe807624f853ff',
   },
   'other-benefits': {
     title: 'Other Benefits',
@@ -147,6 +151,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Guaranteed insurability at life events', 'No medical questions for increases', 'Immediate access to funeral funds', 'Peace of mind for education costs'],
     image: otherBenefitsImage,
+    imageKey: '4dff620ccf41d937ddc51c69e7668b15889a633c',
   },
 };
 
@@ -179,6 +184,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Automatic valuation and transfer process', 'Prevents external parties gaining control', 'Immediate funds for share purchase', 'Protects surviving partners\' interests', 'Maintains business continuity'],
     image: image_654751ca8be2c3a6b86cd56b21742e6d3ec469ec,
+    imageKey: '654751ca8be2c3a6b86cd56b21742e6d3ec469ec',
   },
   'key-person': {
     title: 'Key Person Insurance',
@@ -192,6 +198,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Compensation for lost revenue and profits', 'Funds for recruitment and training costs', 'Protection against business loan defaults', 'Maintains stakeholder confidence', 'Covers operational disruptions'],
     image: keyPersonImage,
+    imageKey: '47655f7ea49b8154455dbaefe83366869b59cabb',
   },
   'contingent-liability': {
     title: 'Contingent Liability Cover',
@@ -205,6 +212,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Automatic settlement of guaranteed debts', 'Protects surviving owners from liability', 'Maintains business credit rating', 'Prevents forced asset liquidation', 'Ensures business stability'],
     image: contingentLiabilityImage,
+    imageKey: 'd4773239f38262d45a5cc90213a838df6446dc6c',
   },
 };
 

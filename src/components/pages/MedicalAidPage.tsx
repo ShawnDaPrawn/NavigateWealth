@@ -85,6 +85,7 @@ const individualProducts: Record<string, CoverContent> = {
       'Emergency medical cover worldwide',
     ],
     image: image_708b0e7710c401ef95a1826b60aa1fa5c231ef80,
+    imageKey: '708b0e7710c401ef95a1826b60aa1fa5c231ef80',
   },
   'hospital': {
     title: 'Hospital Plans',
@@ -104,6 +105,7 @@ const individualProducts: Record<string, CoverContent> = {
       'Major diagnostic procedures',
     ],
     image: image_0e2b917f64eba502a24068ea5244bd25b0dfc9d5,
+    imageKey: '0e2b917f64eba502a24068ea5244bd25b0dfc9d5',
   },
   'savings': {
     title: 'Medical Savings Plans',
@@ -123,6 +125,7 @@ const individualProducts: Record<string, CoverContent> = {
       'Tax-deductible contributions',
     ],
     image: image_cfc1e439140eb46cc77ba92fad420182d167227d,
+    imageKey: 'cfc1e439140eb46cc77ba92fad420182d167227d',
   },
 };
 
@@ -159,6 +162,7 @@ const businessProducts: Record<string, CoverContent> = {
       'Enhanced wellness programs',
     ],
     image: image_974aab623b920eed5028b31b90f6ad78d88b7922,
+    imageKey: '974aab623b920eed5028b31b90f6ad78d88b7922',
   },
   'wellness': {
     title: 'Corporate Wellness Programs',
@@ -178,6 +182,7 @@ const businessProducts: Record<string, CoverContent> = {
       'Improved employee morale',
     ],
     image: wellnessProgramImage,
+    imageKey: '0a60effb7ee71f5609f910b26a2203fd47255d98',
   },
   'executive': {
     title: 'Executive Health Plans',
@@ -197,6 +202,7 @@ const businessProducts: Record<string, CoverContent> = {
       'Concierge healthcare services',
     ],
     image: image_06f4f0d6aa6b0eb2450e2a43380c2e2d29ad658b,
+    imageKey: '06f4f0d6aa6b0eb2450e2a43380c2e2d29ad658b',
   },
 };
 

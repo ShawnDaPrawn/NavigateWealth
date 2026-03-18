@@ -69,6 +69,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Multiple of annual salary coverage', 'Competitive group rates', 'No individual underwriting required', 'Immediate coverage upon employment', 'Spouse and child cover options'],
     image: lifeCoverImage,
+    imageKey: '95a72733c6fb1b2e130e44b33bbad76a781daa85',
   },
   'medical-aid': {
     title: 'Group Medical Aid',
@@ -82,6 +83,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Group discount rates', 'Comprehensive medical benefits', 'Family coverage options', 'No waiting periods', 'Employer contribution support'],
     image: medicalAidImage,
+    imageKey: '0eb19d8516137ad854c3e1eff7fd832575e13bbe',
   },
   'retirement': {
     title: 'Group Retirement Benefits',
@@ -95,6 +97,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Employer contribution matching', 'Tax-efficient retirement savings', 'Professional fund management', 'Group administrative cost savings', 'Portability on job changes'],
     image: retirementBenefitsImage,
+    imageKey: 'ba894cd523cb809fc58fbe47532929eda12b50da',
   },
   'disability': {
     title: 'Group Disability Benefits',
@@ -108,6 +111,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Income replacement benefits', 'Lump-sum disability payments', 'Group rate advantages', 'Comprehensive disability definitions', 'Rehabilitation support benefits'],
     image: disabilityImage,
+    imageKey: '46902e1b4e7cc612eaf07c17fb1352b7bdb1d876',
   },
   'wellness': {
     title: 'Employee Wellness Programs',
@@ -121,6 +125,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Preventative health screenings', 'Fitness and gym benefits', 'Mental health support', 'Wellness coaching programs', 'Health education resources'],
     image: wellnessImage,
+    imageKey: 'f4dccabf483213a63e0d519849049eacfd949bcb',
   },
 };
 
@@ -149,6 +154,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Customized benefit package design', 'Budget-aligned solutions', 'Employee needs analysis', 'Competitive benchmarking', 'Tax-efficient structure optimization'],
     image: schemeDesignImage,
+    imageKey: 'cd48e241eab530d5767067af7cde123eed9c55d0',
   },
   'administration': {
     title: 'Benefit Administration Services',
@@ -162,6 +168,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Complete enrollment management', 'Claims processing support', 'Compliance monitoring', 'Employee communication', 'Reduced HR administrative burden'],
     image: administrationImage,
+    imageKey: '689d26eedad1e179b7cb6a7e0aeb42b33aac8696',
   },
   'compliance': {
     title: 'Regulatory Compliance',
@@ -175,6 +182,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Employment legislation compliance', 'POPIA data protection compliance', 'Benefit regulation adherence', 'Regular compliance audits', 'Risk mitigation strategies'],
     image: complianceImage,
+    imageKey: '842567497fa9b90bb6a11f4a8cd2092a0355be3e',
   },
 };
 

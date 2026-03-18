@@ -59,6 +59,8 @@ export interface CoverContent {
   features: { title: string; description: string }[];
   benefits: string[];
   image: string;
+  /** Optional optimized image key for ResponsiveImage */
+  imageKey?: string;
 }
 
 export interface ServiceSelectOption {
@@ -436,11 +438,25 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
             <div className="grid lg:grid-cols-5">
               <div className="lg:col-span-2 relative min-h-[260px]">
                 <div className="absolute inset-0">
-                  <ImageWithFallback
-                    src={currentIndividual.image}
-                    alt={config.individuals.imageAltMap[activeIndividual] ?? currentIndividual.title}
-                    className="w-full h-full object-cover"
-                  />
+                  {currentIndividual.imageKey ? (
+                    <ResponsiveImage
+                      imageKey={currentIndividual.imageKey}
+                      fallbackSrc={currentIndividual.image}
+                      alt={config.individuals.imageAltMap[activeIndividual] ?? currentIndividual.title}
+                      className="w-full h-full object-cover"
+                      loading="eager"
+                      fetchPriority="high"
+                      sizes="(min-width: 1024px) 40vw, 100vw"
+                      width={900}
+                      height={600}
+                    />
+                  ) : (
+                    <ImageWithFallback
+                      src={currentIndividual.image}
+                      alt={config.individuals.imageAltMap[activeIndividual] ?? currentIndividual.title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
                 <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow-md flex items-center gap-2">
                   <IndivCardIcon className="h-3.5 w-3.5 text-primary" />
@@ -508,11 +524,25 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
             <div className="grid lg:grid-cols-5">
               <div className="lg:col-span-2 relative min-h-[260px]">
                 <div className="absolute inset-0">
-                  <ImageWithFallback
-                    src={currentBusiness.image}
-                    alt={config.business.imageAltMap[activeBusiness] ?? currentBusiness.title}
-                    className="w-full h-full object-cover"
-                  />
+                  {currentBusiness.imageKey ? (
+                    <ResponsiveImage
+                      imageKey={currentBusiness.imageKey}
+                      fallbackSrc={currentBusiness.image}
+                      alt={config.business.imageAltMap[activeBusiness] ?? currentBusiness.title}
+                      className="w-full h-full object-cover"
+                      loading="eager"
+                      fetchPriority="high"
+                      sizes="(min-width: 1024px) 40vw, 100vw"
+                      width={900}
+                      height={600}
+                    />
+                  ) : (
+                    <ImageWithFallback
+                      src={currentBusiness.image}
+                      alt={config.business.imageAltMap[activeBusiness] ?? currentBusiness.title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
                 <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow-md flex items-center gap-2">
                   <BizCardIcon className="h-3.5 w-3.5 text-primary" />

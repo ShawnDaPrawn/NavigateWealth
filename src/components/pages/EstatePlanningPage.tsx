@@ -47,6 +47,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Legal asset distribution', 'Guardian appointments', 'Executor selection', 'Tax-efficient bequests', 'Regular will updates'],
     image: willsImage,
+    imageKey: '8c5fa58881863a67095e8aa29afc660f5cecd4d5',
   },
   'trusts': {
     title: 'Trust Structures',
@@ -60,6 +61,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Asset protection', 'Tax efficiency', 'Creditor protection', 'Wealth preservation', 'Flexible distribution'],
     image: trustsImage,
+    imageKey: '689d26eedad1e179b7cb6a7e0aeb42b33aac8696',
   },
   'succession': {
     title: 'Succession Planning',
@@ -73,6 +75,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Smooth wealth transfer', 'Tax minimization', 'Family governance', 'Beneficiary preparation', 'Dispute prevention'],
     image: successionImage,
+    imageKey: '793671a4751683b2272084a4fbc7762f16d67490',
   },
 };
 
@@ -99,6 +102,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Business continuity', 'Leadership development', 'Value preservation', 'Stakeholder protection', 'Tax-efficient transfer'],
     image: businessSuccessionImage,
+    imageKey: 'dc7d1f92bcbe7857fe86f217588dc8719ba5a2f9',
   },
   'buy-sell': {
     title: 'Buy-Sell Agreements',
@@ -112,6 +116,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Automatic valuation and transfer', 'Prevents external parties gaining control', 'Immediate funds for share purchase', 'Protects surviving partners', 'Maintains business continuity'],
     image: buySellImage,
+    imageKey: 'c6ebf07ce2d2b7d5973be0c78b41cc2d3efbcf39',
   },
 };
 

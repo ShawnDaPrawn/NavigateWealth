@@ -68,6 +68,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Annual tax deduction up to R350,000', 'Tax-free growth until retirement', 'Flexible contribution options', 'Professional investment management', 'Inflation-beating long-term returns'],
     image: image_9b5a01c260b3e9de54fd63026cbbfdec6cfc0d79,
+    imageKey: '9b5a01c260b3e9de54fd63026cbbfdec6cfc0d79',
   },
   'preservation': {
     title: 'Preservation Funds',
@@ -81,6 +82,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Preserve existing retirement benefits', 'Continue tax-efficient growth', 'No immediate tax implications', 'Professional fund management', 'Option to convert to living annuity'],
     image: image_365200c034a353b5beb7a8f5a03c2a1a537c101b,
+    imageKey: '365200c034a353b5beb7a8f5a03c2a1a537c101b',
   },
   'living-annuities': {
     title: 'Living Annuities',
@@ -94,6 +96,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Flexible withdrawal rates (2.5% - 17.5%)', 'Investment choice and control', 'Capital growth potential', 'Inheritance benefits for heirs', 'No prescribed minimum pension'],
     image: image_ec64cc77fab63db12f681738be6d7e622f955e8c,
+    imageKey: 'ec64cc77fab63db12f681738be6d7e622f955e8c',
   },
   'fixed-annuity': {
     title: 'Fixed / Life Annuity',
@@ -107,6 +110,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Guaranteed income for life', 'Protection against longevity risk', 'Fixed monthly payment amounts', 'Optional inflation-linked increases', 'No investment risk exposure'],
     image: image_c6ebf07ce2d2b7d5973be0c78b41cc2d3efbcf39,
+    imageKey: 'c6ebf07ce2d2b7d5973be0c78b41cc2d3efbcf39',
   },
   'blended-annuity': {
     title: 'Blended Annuity',
@@ -120,6 +124,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Mix of guaranteed and flexible income', 'Partial longevity risk protection', 'Investment growth opportunities', 'Customizable allocation percentages', 'Balance between security and flexibility'],
     image: image_d84d9d4e620a44dabbbe1f028d18b3312e2327c0,
+    imageKey: 'd84d9d4e620a44dabbbe1f028d18b3312e2327c0',
   },
 };
 
@@ -150,6 +155,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Tax-deductible employer contributions', 'Mandatory preservation at resignation', 'Professional trustee governance', 'Competitive investment returns', 'Employee retention benefits'],
     image: image_623b0c66ffd502c662b87b4c531d9fe340d2de88,
+    imageKey: '623b0c66ffd502c662b87b4c531d9fe340d2de88',
   },
   'provident-funds': {
     title: 'Provident Funds',
@@ -163,6 +169,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Full benefit access at retirement', 'Flexible withdrawal options at resignation', 'Tax-efficient employee benefits', 'Optional preservation opportunities', 'Simplified benefit communication'],
     image: image_4660d44f48d1f87bfd648cf720e5e52343bf1111,
+    imageKey: '4660d44f48d1f87bfd648cf720e5e52343bf1111',
   },
   'group-ras': {
     title: 'Group Retirement Annuities (RAs)',
@@ -176,6 +183,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Individual policy ownership', 'Maximum portability between jobs', 'Group discount rates', 'Payroll deduction convenience', 'Annual tax deductions up to R350,000'],
     image: image_eae92cb5e7bd56806577215e734f8b397daa3e46,
+    imageKey: 'eae92cb5e7bd56806577215e734f8b397daa3e46',
   },
   'annuity-products': {
     title: 'Annuity Products',
@@ -189,6 +197,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Multiple income solution options', 'Living annuities with flexibility', 'Life annuities with guarantees', 'Blended annuity combinations', 'Professional retirement income planning'],
     image: image_89c93e439f4cc9d1a730de65d575c3c6f2e060ec,
+    imageKey: '89c93e439f4cc9d1a730de65d575c3c6f2e060ec',
   },
 };
 

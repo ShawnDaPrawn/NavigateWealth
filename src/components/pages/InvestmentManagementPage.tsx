@@ -90,6 +90,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Professional fund management', 'Instant portfolio diversification', 'Low minimum investment amounts', 'Daily liquidity and pricing', 'Access to diverse asset classes'],
     image: unitTrustImage,
+    imageKey: '6c666aace2acbb23684f35d02f79057dd364f5c6',
   },
   'tax-free-savings': {
     title: 'Tax Free Savings',
@@ -103,6 +104,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Zero tax on investment returns', 'R36,000 annual contribution limit', 'R500,000 lifetime contribution limit', 'Flexible investment choices', 'Ideal for long-term wealth building'],
     image: taxFreeSavingsImage,
+    imageKey: '05476d116bd826bed8f620f9ca8ef63eeaa74a6f',
   },
   'offshore-unit-trusts': {
     title: 'Offshore Unit Trusts',
@@ -116,6 +118,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Global market diversification', 'Currency diversification benefits', 'Access to international managers', 'Protection from local volatility', 'Exposure to developed economies'],
     image: offshoreUnitTrustsImage,
+    imageKey: '3a20bd72e539d6d53bb18a444a908939ce9db465',
   },
   'endowments': {
     title: 'Endowments',
@@ -129,6 +132,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Reduced capital gains tax rates', 'Tax-free withdrawals after 5 years', 'Estate planning advantages', 'No executor fees on proceeds', 'Investment flexibility within wrapper'],
     image: endowmentsImage,
+    imageKey: '735ec93e5649f0d2d281ac7aa06355a572058b48',
   },
   'offshore-endowments': {
     title: 'Offshore Endowments',
@@ -142,6 +146,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Global investment exposure', 'Tax-efficient structure', 'Currency diversification', 'Estate planning benefits', 'Exchange control advantages'],
     image: offshoreEndowmentsImage,
+    imageKey: 'cdaed82d69fb87a2a9ba8ab94b6ed69c92ae131f',
   },
 };
 
@@ -172,6 +177,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Enhanced corporate returns', 'Professional fund management', 'Liquidity management solutions', 'Risk-adjusted strategies', 'Regular performance reporting'],
     image: corporateImage,
+    imageKey: '76fc906be4d2c342ff5272cc2c0d901ad65ff7f6',
   },
   'cash-management': {
     title: 'Cash Management',
@@ -185,6 +191,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Maximize returns on idle cash', 'Maintain operational liquidity', 'Short-term investment solutions', 'Daily access to funds', 'Professional cash optimization'],
     image: cashManagementImage,
+    imageKey: 'c9d654dd575becaa809d4d9ce31d124144ee1c67',
   },
   'treasury': {
     title: 'Treasury Management',
@@ -198,6 +205,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Cash flow optimization', 'Working capital efficiency', 'Liquidity risk management', 'Return enhancement strategies', 'Operational support solutions'],
     image: treasuryImage,
+    imageKey: '58e37d5523feb65e353e0ac15275fd8643fc65e9',
   },
 };
 

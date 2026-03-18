@@ -53,6 +53,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Maximize allowable deductions', 'Optimize tax-efficient investments', 'Strategic income and expense timing', 'SARS compliance assurance', 'Year-round tax advisory support'],
     image: personalTaxImage,
+    imageKey: '92b794db8aaf43fddd94915592627908c2f21176',
   },
   'investment': {
     title: 'Investment Tax Strategies',
@@ -79,6 +80,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Maximize retirement deductions', 'Optimize retirement contributions', 'Tax-efficient retirement structuring', 'Future income tax planning', 'Preservation fund strategies'],
     image: retirementTaxImage,
+    imageKey: '3d217dec77363c6bc2c7322ec7ce8c6e59f53f53',
   },
   'estate': {
     title: 'Estate Tax Planning',
@@ -92,6 +94,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Estate duty minimization', 'Trust structure optimization', 'Donation strategy planning', 'Succession planning support', 'Annual exemption utilization'],
     image: estateTaxImage,
+    imageKey: 'e7d418f9f6e2453bebdad7920dc5d338fc768fd4',
   },
   'compliance': {
     title: 'Tax Compliance & Returns',
@@ -105,6 +108,7 @@ const individualProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Professional return preparation', 'Timely submission assurance', 'SARS compliance monitoring', 'Audit support and representation', 'Ongoing regulatory updates'],
     image: individualComplianceImage,
+    imageKey: 'db05bf347ddb2b3ee326a6593ba2e53e220a8b57',
   },
 };
 
@@ -133,6 +137,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Corporate tax liability minimization', 'Strategic expense optimization', 'Deduction maximization strategies', 'Corporate structure optimization', 'SARS compliance management'],
     image: corporateTaxImage,
+    imageKey: 'f418e978309128b782201b6c4f142b6e0a20d482',
   },
   'payroll': {
     title: 'VAT & Payroll Tax Management',
@@ -146,6 +151,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Accurate PAYE calculations', 'VAT return preparation', 'UIF and SDL compliance', 'Monthly submission management', 'Payroll tax optimization'],
     image: payrollTaxImage,
+    imageKey: '74818eb79f7881c1d63c16c0c2426eec343dfd42',
   },
   'structures': {
     title: 'Tax-Efficient Business Structures',
@@ -159,6 +165,7 @@ const businessProducts: Record<string, CoverContent> = {
     ],
     benefits: ['Optimal entity structure design', 'Shareholding optimization', 'Intercompany arrangement planning', 'Operational tax efficiency', 'Future growth tax planning'],
     image: complianceTaxImage,
+    imageKey: '793671a4751683b2272084a4fbc7762f16d67490',
   },
 };
 
