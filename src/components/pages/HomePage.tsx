@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Link } from 'react-router';
 import { SEO, createOrganizationSchema, createWebPageSchema, createFAQSchema } from '../seo/SEO';
 import { getSEOData, commonFAQs } from '../seo/seo-config';
@@ -13,9 +13,15 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dia
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { OptimizedImage } from '../shared/OptimizedImage';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { VideoModal } from '../modals/VideoModal';
-import { ProvidersModal } from '../modals/ProvidersModal';
-import { FeaturedInsights } from '../shared/FeaturedInsights';
+const VideoModal = React.lazy(() =>
+  import('../modals/VideoModal').then((m) => ({ default: m.VideoModal })),
+);
+const ProvidersModal = React.lazy(() =>
+  import('../modals/ProvidersModal').then((m) => ({ default: m.ProvidersModal })),
+);
+const FeaturedInsights = React.lazy(() =>
+  import('../shared/FeaturedInsights').then((m) => ({ default: m.FeaturedInsights })),
+);
 import { toast } from "sonner@2.0.3";
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import saFlag from 'figma:asset/543ae964645db88228743731ee3eebbbc2e3686e.png';
@@ -132,16 +138,11 @@ export function HomePage() {
     ]
   };
 
-  // Preload critical above-the-fold images for better performance
+  // Preload the smallest truly critical above-the-fold asset for better performance
   useEffect(() => {
-    const criticalImages = [
-      saFlag,
-      familyImage, // Risk Management - likely first service visible
-      retirementPlanningImage, // Retirement Planning - second service
-      investmentConsultationImage, // Investment Management - third service
-    ];
+    const criticalImages = [saFlag];
 
-    criticalImages.forEach(src => {
+    criticalImages.forEach((src) => {
       const link = document.createElement('link');
       link.rel = 'preload';
       link.as = 'image';
@@ -152,7 +153,7 @@ export function HomePage() {
 
     // Cleanup preload links on unmount
     return () => {
-      criticalImages.forEach(src => {
+      criticalImages.forEach((src) => {
         const existingLink = document.querySelector(`link[href="${src}"]`);
         if (existingLink) {
           document.head.removeChild(existingLink);
@@ -528,7 +529,9 @@ export function HomePage() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {services.map((service, index) => (
+            {services.map((service, index) => {
+              const isPrimaryCard = index === 0;
+              return (
               <Card key={index} className="group bg-white border border-gray-300 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
                 {/* Clean Image Section */}
                 <div className="relative aspect-[4/3] overflow-hidden">
@@ -537,10 +540,10 @@ export function HomePage() {
                     alt={service.title}
                     width={400}
                     height={300}
-                    priority={index < 4}
+                    priority={isPrimaryCard}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 high-quality-image"
-                    loading={index < 4 ? "eager" : "lazy"}
-                    fetchPriority={index < 2 ? "high" : "auto"}
+                    loading={isPrimaryCard ? "eager" : "lazy"}
+                    fetchPriority={isPrimaryCard ? "high" : "auto"}
                     sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
                   />
                   
@@ -590,7 +593,7 @@ export function HomePage() {
                   </div>
                 </div>
               </Card>
-            ))}
+            )})}
           </div>
         </div>
       </section>
@@ -823,7 +826,9 @@ export function HomePage() {
       </section>
 
       {/* Featured Insights — dynamically populated from published featured articles */}
-      <FeaturedInsights />
+      <Suspense fallback={null}>
+        <FeaturedInsights />
+      </Suspense>
 
       {/* Get Started CTA Section */}
       <section className="relative py-16 sm:py-20 overflow-hidden bg-[#1e2035]">
@@ -1006,21 +1011,23 @@ export function HomePage() {
       </section>
 
       {/* Video Modals */}
-      <VideoModal
-        isOpen={videoModalOpen}
-        onClose={() => setVideoModalOpen(false)}
-        title="Meet Our Team"
-        videoUrl="/videos/team-introduction.mp4"
-        description="Get to know the dedicated team behind Navigate Wealth"
-      />
+      <Suspense fallback={null}>
+        <VideoModal
+          isOpen={videoModalOpen}
+          onClose={() => setVideoModalOpen(false)}
+          title="Meet Our Team"
+          videoUrl="/videos/team-introduction.mp4"
+          description="Get to know the dedicated team behind Navigate Wealth"
+        />
 
-      <VideoModal
-        isOpen={explainerVideoModalOpen}
-        onClose={() => setExplainerVideoModalOpen(false)}
-        title="How Navigate Wealth Works"
-        videoUrl="/videos/explainer.mp4"
-        description="Learn how our comprehensive financial planning process works"
-      />
+        <VideoModal
+          isOpen={explainerVideoModalOpen}
+          onClose={() => setExplainerVideoModalOpen(false)}
+          title="How Navigate Wealth Works"
+          videoUrl="/videos/explainer.mp4"
+          description="Learn how our comprehensive financial planning process works"
+        />
+      </Suspense>
 
       {/* Cashback Modal */}
       <Dialog open={cashbackModalOpen} onOpenChange={setCashbackModalOpen}>
@@ -1053,10 +1060,12 @@ export function HomePage() {
       </Dialog>
 
       {/* Providers Modal */}
-      <ProvidersModal 
-        isOpen={providersModalOpen}
-        onClose={() => setProvidersModalOpen(false)}
-      />
+      <Suspense fallback={null}>
+        <ProvidersModal 
+          isOpen={providersModalOpen}
+          onClose={() => setProvidersModalOpen(false)}
+        />
+      </Suspense>
       </div>
     </div>
     );
