@@ -140,7 +140,7 @@ export function AppRoutes() {
         <Route path="/get-quote/:service" element={<FlexibleRoute><AppLayout forcePublicLayout><ProductQuotePage /></AppLayout></FlexibleRoute>} />
         
         {/* Auth routes */}
-        <Route path="/login" element={<FlexibleRoute><AppLayout showNavAndFooter={true}><LoginPage /></AppLayout></FlexibleRoute>} />
+        <Route path="/login" element={<FlexibleRoute><AppLayout showNavAndFooter={true} forcePublicLayout><LoginPage /></AppLayout></FlexibleRoute>} />
         <Route path="/signup" element={<PublicRoute><AppLayout showNavAndFooter={true}><SignupPage /></AppLayout></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><AppLayout showNavAndFooter={true}><ForgotPasswordPage /></AppLayout></PublicRoute>} />
         <Route path="/reset-password" element={<FlexibleRoute><AppLayout showNavAndFooter={false}><ResetPasswordPage /></AppLayout></FlexibleRoute>} />

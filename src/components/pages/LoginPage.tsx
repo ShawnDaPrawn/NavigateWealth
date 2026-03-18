@@ -21,6 +21,7 @@ import { LOGIN_FEATURES } from './auth/authConstants';
 import { AuthShowcasePanel } from './auth/AuthShowcasePanel';
 import { AuthTrustBar } from './auth/AuthTrustBar';
 import { GoogleAuthButton } from './auth/GoogleAuthButton';
+import { PageLoader } from '../ui/page-loader';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -66,9 +67,13 @@ export function LoginPage() {
     }
   }, [isAuthenticated, user, navigate, isLoading, show2FAModal, returnUrl]);
 
-  // Prevent flicker for already authenticated users who shouldn't see the login form
-  if (isAuthenticated && !isLoading && !show2FAModal) {
-    return null; // The useEffect above will handle the redirect
+  const isRedirectingToAuthenticatedArea = isAuthenticated && user && !show2FAModal;
+
+  // Once auth is confirmed, replace the login form with a transition loader
+  // so the dashboard layout doesn't appear above the login screen while the
+  // destination route finishes loading.
+  if (isRedirectingToAuthenticatedArea) {
+    return <PageLoader />;
   }
 
   const handleResendVerification = async () => {
