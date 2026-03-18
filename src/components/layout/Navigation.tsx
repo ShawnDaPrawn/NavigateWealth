@@ -7,8 +7,8 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '../ui/dropdown-menu';
-import { 
-  Menu, 
+import {
+  Menu,
   X, 
   ChevronDown, 
   LogIn,
@@ -28,12 +28,9 @@ import {
   Heart,
   Compass
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import { UserProfileDropdown } from '../auth/UserProfileDropdown';
 import { Logo } from './Logo';
-import { api } from '../../utils/api';
-import { vascoKeys } from '../../utils/queryKeys';
 
 interface NavigationProps {
   /** When true, render the public website nav regardless of auth state */
@@ -54,15 +51,6 @@ export function Navigation({ forcePublic = false }: NavigationProps) {
   
   // Hide navigation items during application phase
   const isInApplicationPhase = effectivelyAuthenticated && user?.applicationStatus === 'incomplete';
-
-  // Check if Vasco (public AI navigator) is enabled via feature flag
-  const { data: vascoStatus } = useQuery({
-    queryKey: vascoKeys.status(),
-    queryFn: () => api.get<{ enabled: boolean }>('/vasco/status'),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: false,
-  });
-  const isVascoEnabled = vascoStatus?.enabled ?? false;
 
   const navItems = [
     { path: '/', label: 'Home' },
@@ -281,20 +269,17 @@ export function Navigation({ forcePublic = false }: NavigationProps) {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Ask Vasco — conditionally shown based on feature flag */}
-            {isVascoEnabled && (
-              <Link
-                to="/ask-vasco"
-                className={`transition-colors text-base font-medium flex items-center gap-1.5 ${
-                  isActive('/ask-vasco')
-                    ? 'text-primary'
-                    : 'text-black hover:text-primary'
-                }`}
-              >
-                <Compass className="h-4 w-4" />
-                Ask Vasco
-              </Link>
-            )}
+            <Link
+              to="/ask-vasco"
+              className={`transition-colors text-base font-medium flex items-center gap-1.5 ${
+                isActive('/ask-vasco')
+                  ? 'text-primary'
+                  : 'text-black hover:text-primary'
+              }`}
+            >
+              <Compass className="h-4 w-4" />
+              Ask Vasco
+            </Link>
 
             {/* Other Navigation Items */}
             {navItems.slice(1).map((item) => (
@@ -460,21 +445,18 @@ export function Navigation({ forcePublic = false }: NavigationProps) {
                 )}
               </div>
 
-              {/* Mobile Ask Vasco Link — conditionally shown based on feature flag */}
-              {isVascoEnabled && (
-                <Link
-                  to="/ask-vasco"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={`px-2 py-1 transition-colors text-base font-medium flex items-center space-x-2 ${
-                    isActive('/ask-vasco')
-                      ? 'text-primary'
-                      : 'text-black hover:text-primary'
-                  }`}
-                >
-                  <Compass className="h-4 w-4" />
-                  <span>Ask Vasco</span>
-                </Link>
-              )}
+              <Link
+                to="/ask-vasco"
+                onClick={() => setIsMenuOpen(false)}
+                className={`px-2 py-1 transition-colors text-base font-medium flex items-center space-x-2 ${
+                  isActive('/ask-vasco')
+                    ? 'text-primary'
+                    : 'text-black hover:text-primary'
+                }`}
+              >
+                <Compass className="h-4 w-4" />
+                <span>Ask Vasco</span>
+              </Link>
 
               {/* Other Navigation Items */}
               {navItems.slice(1).map((item) => (
