@@ -14,6 +14,12 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { submissionsService } from './submissions-service.ts';
+import {
+  sendContactFormAdminNotification,
+  sendContactFormAcknowledgment,
+} from './email-service.ts';
+import { generateContactPdf } from './contact-pdf-generator.ts';
 
 const log = createModuleLogger('vasco-analytics');
 
@@ -310,6 +316,93 @@ export async function createHandoff(params: {
   }
 
   log.info('Adviser handoff created', { id, topic: params.topic });
+
+  // ----------------------------------------------------------------------------
+  // Create a submissions manager entry + send transactional emails.
+  // We reuse the existing contact/enquiry email templates so the UX matches
+  // the website's brand template standard (admin + client acknowledgment).
+  // ----------------------------------------------------------------------------
+  try {
+    const nameParts = params.name.trim().split(/\s+/).filter(Boolean);
+    const firstName = nameParts[0] || params.name.trim();
+    const lastName = nameParts.slice(1).join(' ');
+
+    const contactData = {
+      firstName,
+      lastName,
+      email: params.email,
+      phone: params.phone || '',
+      service: params.topic,
+      message: params.conversationSummary || '',
+      clientType: 'Ask Vasco',
+    };
+
+    // Create submissions manager entry so the admin board can see the enquiry.
+    // Non-fatal: if this fails, we still proceed with email sending.
+    try {
+      await submissionsService.create({
+        type: 'contact',
+        sourceChannel: 'website_form',
+        payload: {
+          service: params.topic,
+          message: params.conversationSummary || '',
+          clientType: 'Ask Vasco',
+          phone: params.phone || '',
+          contactFormId: id,
+        },
+        submitterName: `${firstName} ${lastName}`.trim(),
+        submitterEmail: params.email,
+      });
+    } catch (subErr) {
+      log.error('Failed to create submissions entry for Vasco handoff (non-fatal)', subErr);
+    }
+
+    // Generate PDF attachment for admin email (best effort; non-fatal).
+    let pdfBase64: string | undefined;
+    try {
+      pdfBase64 = generateContactPdf({
+        formType: 'contact',
+        title: `Ask Vasco Adviser Callback — ${firstName} ${lastName}`.trim(),
+        submittedAt: handoff.createdAt,
+        fields: [
+          { label: 'Name', value: params.name },
+          { label: 'Email', value: params.email },
+          { label: 'Phone', value: params.phone || 'Not provided' },
+          { label: 'Topic', value: params.topic },
+        ],
+        message: params.conversationSummary || undefined,
+      });
+    } catch (pdfErr) {
+      log.error('Failed to generate contact PDF for Vasco handoff (non-blocking)', pdfErr);
+    }
+
+    const emailResults = await Promise.allSettled([
+      sendContactFormAdminNotification(contactData, pdfBase64),
+      sendContactFormAcknowledgment(contactData),
+    ]);
+
+    const adminOk =
+      emailResults[0].status === 'fulfilled' &&
+      emailResults[0].value === true;
+    const clientOk =
+      emailResults[1].status === 'fulfilled' &&
+      emailResults[1].value === true;
+
+    if (!adminOk) {
+      log.error('Failed to send Vasco handoff admin email', {
+        handoffId: id,
+      });
+    }
+    if (!clientOk) {
+      log.error('Failed to send Vasco handoff client acknowledgment email', {
+        handoffId: id,
+      });
+    }
+  } catch (emailErr) {
+    // Lead capture should never fail because of email infrastructure issues.
+    log.error('Vasco handoff transactional email workflow failed (non-blocking)', emailErr);
+  }
+
   return handoff;
 }
 

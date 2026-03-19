@@ -58,6 +58,7 @@ import { api } from '../../utils/api';
 import { useQuery } from '@tanstack/react-query';
 import { vascoKeys } from '../../utils/queryKeys';
 import { toast } from 'sonner@2.0.3';
+import { ConfirmDialog } from '../admin/modules/publications/components/ConfirmDialog';
 
 // Shared Vasco chat components
 import {
@@ -439,6 +440,7 @@ export function AskVascoPage() {
   });
   const [remaining, setRemaining] = useState<number | null>(null);
   const [hasStartedChat, setHasStartedChat] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showHandoff, setShowHandoff] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -622,13 +624,15 @@ export function AskVascoPage() {
     }
   };
 
-  const handleClearChat = () => {
+  const performClearChat = () => {
     setMessages([VASCO_WELCOME]);
     setInput('');
     setError(null);
     setSessionId(null);
     setRemaining(null);
-    setHasStartedChat(false);
+    // Keep user in the conversation view; clearing should reset messages/session only.
+    setHasStartedChat(true);
+    setShowHandoff(false);
     // Clear persisted session
     try {
       localStorage.removeItem('vasco_session_messages');
@@ -636,6 +640,9 @@ export function AskVascoPage() {
     } catch {
       // Ignore localStorage errors
     }
+  };
+  const handleClearChat = () => {
+    setShowClearConfirm(true);
   };
 
   // ── Disabled state ─────────────────────────────────────────────
@@ -964,7 +971,7 @@ export function AskVascoPage() {
             ════════════════════════════════════════════════════════════ */}
         {hasStartedChat && (
           <div
-            className="max-w-screen-xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8"
+            className="max-w-screen-2xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 xl:px-12"
             style={{ height: 'calc(100vh - 64px)' }}
           >
             {/* Experimental Disclaimer Banner */}
@@ -1172,6 +1179,19 @@ export function AskVascoPage() {
         onClose={() => setShowHandoff(false)}
         sessionId={sessionId}
         conversationSummary={conversationSummary}
+      />
+      <ConfirmDialog
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={() => {
+          setShowClearConfirm(false);
+          performClearChat();
+        }}
+        title="Clear conversation?"
+        description="Are you sure you want to clear this Ask Vasco conversation? This will reset the session and cannot be undone."
+        confirmLabel="Clear chat"
+        cancelLabel="Cancel"
+        variant="danger"
       />
     </div>
   );

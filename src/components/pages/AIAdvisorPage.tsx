@@ -43,6 +43,7 @@ import { advisorKeys } from '../../utils/queryKeys';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { ACTIVE_THEME } from '../portal/portal-theme';
 import { toast } from 'sonner@2.0.3';
+import { ConfirmDialog } from '../admin/modules/publications/components/ConfirmDialog';
 
 // Shared Vasco chat components
 import {
@@ -63,10 +64,12 @@ const WELCOME_MESSAGE: ChatMessage = {
   role: 'assistant',
   content: `Hello! I'm **Vasco**, your AI Financial Navigator.
 
-I have access to your portfolio context and can help you understand your finances, explain concepts, and provide personalised guidance.
+I have access to your profile, policy information, portfolio overview, FNA information, communication history, and document history so I can help you understand your finances with richer context.
 
 **I can help with:**
 - Understanding your current policies and cover
+- Explaining what is reflected in your profile and portfolio overview
+- Drawing on available FNA insights and recent document history
 - Retirement planning and savings strategies
 - Tax-efficient investment approaches
 - Estate planning concepts
@@ -250,6 +253,7 @@ export function AIAdvisorPage() {
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Get auth token for streaming
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -388,13 +392,7 @@ export function AIAdvisorPage() {
   });
 
   const handleClearChat = () => {
-    if (
-      window.confirm(
-        'Are you sure you want to clear the chat history? This action cannot be undone.'
-      )
-    ) {
-      clearChatMutation.mutate();
-    }
+    setShowClearConfirm(true);
   };
 
   return (
@@ -425,7 +423,9 @@ export function AIAdvisorPage() {
                 <p className="text-sm text-gray-600 leading-relaxed">
                   Vasco is trained on South African financial regulations and
                   Navigate Wealth's planning philosophy. He has access to your
-                  portfolio context for personalised guidance.
+                  full logged-in client context, including profile details,
+                  policies, portfolio overview, FNA information, communication
+                  history, and document history.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Badge
@@ -560,6 +560,21 @@ export function AIAdvisorPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={() => {
+          setShowClearConfirm(false);
+          clearChatMutation.mutate();
+        }}
+        title="Clear chat history?"
+        description="Are you sure you want to clear your Ask Vasco chat history? This action cannot be undone."
+        confirmLabel="Clear chat"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={clearChatMutation.isPending}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Brain, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { ConfirmDialog } from '../../publications/components/ConfirmDialog';
 
 // Custom Hooks
 import { useAIChat, useClientSearch } from '../hooks';
@@ -30,6 +31,7 @@ import { copyToClipboard } from '../utils';
 export function AskAIInterface() {
   // Local state
   const [input, setInput] = useState('');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // ============================================================================
   // Custom Hooks
@@ -81,12 +83,9 @@ export function AskAIInterface() {
   /**
    * Handle clear chat
    */
-  const handleClearChat = async () => {
-    if (!confirm('Are you sure you want to clear the chat history? This cannot be undone.')) {
-      return;
-    }
-
+  const handleConfirmClearChat = async () => {
     try {
+      setShowClearConfirm(false);
       await clearChat();
       toast.success('Chat history cleared');
     } catch (error) {
@@ -140,7 +139,7 @@ export function AskAIInterface() {
               />
 
               <Button
-                onClick={handleClearChat}
+                onClick={() => setShowClearConfirm(true)}
                 variant="outline"
                 size="sm"
                 className="text-muted-foreground hover:text-red-600 hover:bg-red-50"
@@ -190,6 +189,17 @@ export function AskAIInterface() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={handleConfirmClearChat}
+        title="Clear chat history?"
+        description="Are you sure you want to clear this Ask Vasco conversation? This cannot be undone."
+        confirmLabel="Clear chat"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

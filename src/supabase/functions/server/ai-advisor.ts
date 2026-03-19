@@ -8,6 +8,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 import * as kv from "./kv_store.tsx";
 import { createModuleLogger } from "./stderr-logger.ts";
 import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
+import { getPortfolioSummary } from './client-portal-service.ts';
 
 const app = new Hono();
 const log = createModuleLogger('ai-advisor');
@@ -30,6 +31,165 @@ const getOpenAIKey = () => Deno.env.get('OPENAI_API_KEY');
 import type { Context, Next } from 'npm:hono';
 
 interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string }
+interface KvRow { key: string; value: unknown }
+
+interface AdvisorUserContext {
+  clientName: string;
+  profile: Record<string, unknown>;
+  profileInformation: {
+    clientKeys: unknown;
+    compliance: unknown[];
+    riskProfile: unknown;
+    beneficiaries: unknown[];
+  };
+  policyInformation: unknown[];
+  portfolioOverview: Awaited<ReturnType<typeof getPortfolioSummary>> | null;
+  fnaInformation: Record<string, unknown[]>;
+  communicationHistory: unknown[];
+  documentHistory: unknown[];
+  schemaSources: {
+    profile: string[];
+    policies: string[];
+    portfolioOverview: string[];
+    fnas: string[];
+    communications: string[];
+    documents: string[];
+  };
+}
+
+const POLICY_COLLECTION_KEY = (userId: string) => `policies:client:${userId}`;
+const LEGACY_POLICY_PREFIX = (userId: string) => `client:${userId}:policy:`;
+const PROFILE_KEY = (userId: string) => `user_profile:${userId}:personal_info`;
+const CLIENT_KEYS_KEY = (userId: string) => `user_profile:${userId}:client_keys`;
+const COMPLIANCE_PREFIX = (userId: string) => `client:${userId}:compliance:`;
+const RISK_PROFILE_KEY = (userId: string) => `client:${userId}:risk_profile`;
+const BENEFICIARY_PREFIX = (userId: string) => `client:${userId}:beneficiary:`;
+const COMMUNICATION_PREFIX = (userId: string) => `communication_log:${userId}:`;
+const DOCUMENT_PREFIXES = ['document:', 'doc:', 'tax_doc:', 'estate_doc:'] as const;
+const ESIGN_PREFIX = (userId: string) => `esign:client:${userId}:`;
+const FNA_PREFIXES = {
+  riskPlanning: 'risk-planning-fna:client:',
+  medical: 'medical-fna:client:',
+  retirement: 'retirement-fna:client:',
+  investment: 'investment-ina:client:',
+  taxPlanning: 'tax-planning-fna:client:',
+  estatePlanning: 'estate-planning-fna:client:',
+} as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function toPrettyJson(value: unknown): string {
+  return JSON.stringify(value ?? null, null, 2);
+}
+
+function getClientName(profile: unknown): string {
+  if (!isRecord(profile)) return 'the client';
+
+  const personalInfo = isRecord(profile.personalInformation)
+    ? profile.personalInformation
+    : null;
+
+  const firstName = [
+    profile.firstName,
+    profile.first_name,
+    profile.name,
+    personalInfo?.firstName,
+    personalInfo?.first_name,
+  ].find((value) => typeof value === 'string' && value.trim());
+
+  const lastName = [
+    profile.lastName,
+    profile.last_name,
+    profile.surname,
+    personalInfo?.lastName,
+    personalInfo?.last_name,
+    personalInfo?.surname,
+  ].find((value) => typeof value === 'string' && value.trim());
+
+  const fullName = [firstName, lastName]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join(' ')
+    .trim();
+
+  return fullName || 'the client';
+}
+
+function extractTimestamp(value: unknown): number {
+  if (!isRecord(value)) return 0;
+
+  const candidate = [
+    value.updatedAt,
+    value.updated_at,
+    value.createdAt,
+    value.created_at,
+    value.timestamp,
+    value.uploadDate,
+    value.uploadedAt,
+    value.uploaded_at,
+    value.sentAt,
+    value.sent_at,
+    value.date,
+  ].find((field) => typeof field === 'string' && field.trim());
+
+  if (typeof candidate !== 'string') return 0;
+
+  const parsed = new Date(candidate).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function uniqueItems(items: unknown[]): unknown[] {
+  const seen = new Set<string>();
+
+  return items.filter((item, index) => {
+    let key = `idx:${index}`;
+
+    if (isRecord(item)) {
+      const explicitKey = [
+        item.id,
+        item.messageId,
+        item.documentId,
+        item.policyNumber,
+        item.filePath,
+        item.url,
+      ].find((value) => typeof value === 'string' && value.trim());
+
+      key = typeof explicitKey === 'string' && explicitKey.trim()
+        ? explicitKey
+        : JSON.stringify(item);
+    } else {
+      key = JSON.stringify(item);
+    }
+
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function sortByRecency(items: unknown[]): unknown[] {
+  return [...items].sort((a, b) => extractTimestamp(b) - extractTimestamp(a));
+}
+
+async function safeResolve<T>(label: string, task: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await task();
+  } catch (error) {
+    log.error(`Failed to load ${label} for authenticated Vasco context`, error);
+    return fallback;
+  }
+}
+
+async function fetchRowsByPrefix(prefix: string): Promise<KvRow[]> {
+  const { data, error } = await getSupabase()
+    .from('kv_store_91ed8379')
+    .select('key, value')
+    .like('key', `${prefix}%`);
+
+  if (error) throw error;
+  return data || [];
+}
 
 async function requireAuth(c: Context, next: Next) {
   try {
@@ -57,95 +217,164 @@ async function requireAuth(c: Context, next: Next) {
 /**
  * Fetch client data for AI context
  */
-async function getUserContext(userId: string) {
-  try {
-    // Fetch user profile from KV store
-    const profileKey = `user_profile:${userId}:personal_info`;
-    const profile = await kv.get(profileKey);
+async function getUserContext(userId: string): Promise<AdvisorUserContext | null> {
+  const profile = await safeResolve(
+    'profile',
+    () => kv.get(PROFILE_KEY(userId)),
+    {},
+  );
 
-    // Fetch related data using direct Supabase queries for flexibility and consistency with other modules
-    const [
-      policies,
-      compliance,
+  const profileRecord = isRecord(profile) ? profile : {};
+  const clientName = getClientName(profileRecord);
+
+  const [
+    clientKeys,
+    currentPolicies,
+    legacyPolicyRows,
+    portfolioOverview,
+    complianceRows,
+    riskProfile,
+    beneficiaryRows,
+    communicationHistory,
+    documentBuckets,
+    esignRows,
+    riskPlanning,
+    medical,
+    retirement,
+    investment,
+    taxPlanning,
+    estatePlanning,
+  ] = await Promise.all([
+    safeResolve('client keys', () => kv.get(CLIENT_KEYS_KEY(userId)), null),
+    safeResolve('policy collection', () => kv.get(POLICY_COLLECTION_KEY(userId)), []),
+    safeResolve('legacy policy records', () => fetchRowsByPrefix(LEGACY_POLICY_PREFIX(userId)), [] as KvRow[]),
+    safeResolve('portfolio overview', () => getPortfolioSummary(userId), null),
+    safeResolve('compliance records', () => fetchRowsByPrefix(COMPLIANCE_PREFIX(userId)), [] as KvRow[]),
+    safeResolve('risk profile', () => kv.get(RISK_PROFILE_KEY(userId)), null),
+    safeResolve('beneficiary records', () => fetchRowsByPrefix(BENEFICIARY_PREFIX(userId)), [] as KvRow[]),
+    safeResolve('communication history', () => kv.getByPrefix(COMMUNICATION_PREFIX(userId)), []),
+    Promise.all(
+      DOCUMENT_PREFIXES.map((prefix) =>
+        safeResolve(
+          `${prefix} documents`,
+          () => kv.getByPrefix(`${prefix}${userId}:`),
+          [],
+        )
+      )
+    ),
+    safeResolve('e-sign document history', () => fetchRowsByPrefix(ESIGN_PREFIX(userId)), [] as KvRow[]),
+    safeResolve('risk planning FNAs', () => kv.getByPrefix(`${FNA_PREFIXES.riskPlanning}${userId}:`), []),
+    safeResolve('medical FNAs', () => kv.getByPrefix(`${FNA_PREFIXES.medical}${userId}:`), []),
+    safeResolve('retirement FNAs', () => kv.getByPrefix(`${FNA_PREFIXES.retirement}${userId}:`), []),
+    safeResolve('investment INAs', () => kv.getByPrefix(`${FNA_PREFIXES.investment}${userId}:`), []),
+    safeResolve('tax planning FNAs', () => kv.getByPrefix(`${FNA_PREFIXES.taxPlanning}${userId}:`), []),
+    safeResolve('estate planning FNAs', () => kv.getByPrefix(`${FNA_PREFIXES.estatePlanning}${userId}:`), []),
+  ]);
+
+  const policyInformation = uniqueItems([
+    ...((Array.isArray(currentPolicies) ? currentPolicies : []) as unknown[]),
+    ...legacyPolicyRows.map((row) => ({ key: row.key, value: row.value })),
+  ]);
+
+  const documentHistory = sortByRecency(uniqueItems([
+    ...documentBuckets.flat(),
+    ...esignRows.map((row) => ({ key: row.key, value: row.value })),
+  ]));
+
+  const fnaInformation = {
+    riskPlanning: sortByRecency(riskPlanning),
+    medical: sortByRecency(medical),
+    retirement: sortByRecency(retirement),
+    investment: sortByRecency(investment),
+    taxPlanning: sortByRecency(taxPlanning),
+    estatePlanning: sortByRecency(estatePlanning),
+  };
+
+  return {
+    clientName,
+    profile: profileRecord,
+    profileInformation: {
+      clientKeys,
+      compliance: complianceRows.map((row) => ({ key: row.key, value: row.value })),
       riskProfile,
-      beneficiaries
-    ] = await Promise.all([
-      // Policies
-      getSupabase()
-        .from('kv_store_91ed8379')
-        .select('*')
-        .like('key', `client:${userId}:policy:%`),
-      
-      // Compliance
-      getSupabase()
-        .from('kv_store_91ed8379')
-        .select('*')
-        .like('key', `client:${userId}:compliance:%`),
-      
-      // Risk profile
-      getSupabase()
-        .from('kv_store_91ed8379')
-        .select('*')
-        .eq('key', `client:${userId}:risk_profile`)
-        .single(),
-      
-      // Beneficiaries
-      getSupabase()
-        .from('kv_store_91ed8379')
-        .select('*')
-        .like('key', `client:${userId}:beneficiary:%`)
-    ]);
-
-    return {
-      profile: profile || {},
-      policies: policies.data || [],
-      compliance: compliance.data || [],
-      riskProfile: riskProfile.data?.value || null,
-      beneficiaries: beneficiaries.data || []
-    };
-  } catch (error) {
-    log.error('Error fetching user context:', error);
-    return null;
-  }
+      beneficiaries: beneficiaryRows.map((row) => ({ key: row.key, value: row.value })),
+    },
+    policyInformation,
+    portfolioOverview,
+    fnaInformation,
+    communicationHistory: sortByRecency(uniqueItems(communicationHistory)),
+    documentHistory,
+    schemaSources: {
+      profile: [PROFILE_KEY(userId), CLIENT_KEYS_KEY(userId), RISK_PROFILE_KEY(userId)],
+      policies: [POLICY_COLLECTION_KEY(userId), LEGACY_POLICY_PREFIX(userId)],
+      portfolioOverview: ['client-portal-service:getPortfolioSummary'],
+      fnas: Object.values(FNA_PREFIXES).map((prefix) => `${prefix}${userId}:`),
+      communications: [COMMUNICATION_PREFIX(userId)],
+      documents: [
+        ...DOCUMENT_PREFIXES.map((prefix) => `${prefix}${userId}:`),
+        ESIGN_PREFIX(userId),
+      ],
+    },
+  };
 }
 
 /**
  * Build system prompt
  */
-function buildSystemPrompt(context: Record<string, unknown>) {
-  let clientName = 'the client';
-  if (context?.profile) {
-    const firstName = context.profile.firstName || context.profile.first_name || context.profile.personalInformation?.firstName || '';
-    const lastName = context.profile.surname || context.profile.last_name || context.profile.personalInformation?.lastName || '';
-    if (firstName) clientName = `${firstName} ${lastName}`.trim();
+function buildRuntimeContextPrompt(context: AdvisorUserContext | null) {
+  if (!context) {
+    return `## Runtime Client Context
+No client-specific context could be loaded for this request.
+
+## Context Handling
+- Explain that personalised context is temporarily unavailable.
+- Still answer general financial education questions.
+- Do not invent portfolio, policy, communication, or document details.`;
   }
 
-  return `You are the AI Financial Advisor for Navigate Wealth, assisting ${clientName} directly on their client portal.
+  return `## Runtime Client Context
+This context was fetched live for ${context.clientName} on this request. Treat the structured JSON below as the authoritative client record.
 
-## Your Role
-- Provide helpful, friendly, and professional financial guidance.
-- Explain financial concepts (investments, retirement, tax, estate planning) in simple terms.
-- Answer questions about their specific portfolio using the provided context.
-- Encourage them to book a consultation with their human adviser for complex decisions.
+### What You Can Use
+- Full profile information
+- Policy information
+- Portfolio overview information
+- FNA and INA information
+- Communication history
+- Document history
 
-## Client Context
-${context ? `
-- Name: ${clientName}
-- Policies: ${context.policies.length} active records
-- Risk Profile: ${context.riskProfile ? JSON.stringify(context.riskProfile) : 'Not set'}
-` : 'No specific portfolio data available.'}
+### Profile Information
+${toPrettyJson({
+  profile: context.profile,
+  clientKeys: context.profileInformation.clientKeys,
+  compliance: context.profileInformation.compliance,
+  riskProfile: context.profileInformation.riskProfile,
+  beneficiaries: context.profileInformation.beneficiaries,
+})}
 
-## Guidelines
-1. **Disclaimer**: Always remind the user that you are an AI and this is not official financial advice.
-2. **Safety**: Do not make promises about returns or guarantees.
-3. **Scope**: Stick to financial topics.
-4. **Referral**: If a query is complex or requires specific action (like "Cancel my policy"), advise them to contact their human adviser or use the "Contact" page.
-5. **Tone**: Professional, encouraging, and clear. Avoid jargon where possible.
+### Policy Information
+${toPrettyJson(context.policyInformation)}
 
-## South African Context
-- Apply South African financial context (SARS, RAs, TFSAs, etc.).
-- Currency: ZAR (R).
-`;
+### Portfolio Overview Information
+${toPrettyJson(context.portfolioOverview)}
+
+### FNA Information
+${toPrettyJson(context.fnaInformation)}
+
+### Communication History
+${toPrettyJson(context.communicationHistory)}
+
+### Document History
+${toPrettyJson(context.documentHistory)}
+
+### Schema Awareness
+- The authenticated Vasco context reads live client data each request.
+- The platform currently supports both active and legacy KV key patterns for some client data during migrations.
+- If new fields appear inside these JSON objects, treat them as valid client context.
+- If a required section is empty, say it is not currently available rather than guessing.
+
+### Context Sources
+${toPrettyJson(context.schemaSources)}`;
 }
 
 const ADVISOR_AGENT_ID = 'vasco-authenticated';
@@ -258,7 +487,7 @@ app.post('/chat/stream', requireAuth, async (c) => {
     await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, DEFAULT_PORTAL_PROMPT);
     const activeBase =
       (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? DEFAULT_PORTAL_PROMPT;
-    const systemPrompt = `${activeBase}\n\n## Runtime Client Context\n${buildSystemPrompt(context)}`;
+    const systemPrompt = `${activeBase}\n\n${buildRuntimeContextPrompt(context)}`;
 
     // Build chat messages from history
     const chatMessages: ChatMessage[] = clientMessages
@@ -385,7 +614,7 @@ app.post('/chat', requireAuth, async (c) => {
     await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, DEFAULT_PORTAL_PROMPT);
     const activeBase =
       (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? DEFAULT_PORTAL_PROMPT;
-    const systemPrompt = `${activeBase}\n\n## Runtime Client Context\n${buildSystemPrompt(context)}`;
+    const systemPrompt = `${activeBase}\n\n${buildRuntimeContextPrompt(context)}`;
 
     // Call AI
     const reply = await callOpenAI([{ role: 'user', content: message }], systemPrompt);

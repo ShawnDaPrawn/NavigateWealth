@@ -1344,6 +1344,9 @@ export async function sendContactFormAdminNotification(
     ? data.clientType.charAt(0).toUpperCase() + data.clientType.slice(1)
     : 'Not specified';
 
+  const normalizedPhone = data.phone?.trim();
+  const hasPhone = Boolean(normalizedPhone);
+
   const resolve = (text: string) =>
     text.replace(/\{\{ \.Name \}\}/g, fullName);
 
@@ -1353,7 +1356,11 @@ export async function sendContactFormAdminNotification(
       <h3 style="margin-top: 0; font-size: 18px; color: #111827;">Contact Details</h3>
       <p style="margin: 8px 0;"><strong>Name:</strong> ${fullName}</p>
       <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:${data.email}" style="color: #6d28d9;">${data.email}</a></p>
-      <p style="margin: 8px 0;"><strong>Phone:</strong> <a href="tel:${data.phone}" style="color: #6d28d9;">${data.phone}</a></p>
+      ${
+        hasPhone
+          ? `<p style="margin: 8px 0;"><strong>Phone:</strong> <a href="tel:${normalizedPhone}" style="color: #6d28d9;">${normalizedPhone}</a></p>`
+          : `<p style="margin: 8px 0;"><strong>Phone:</strong> Not provided</p>`
+      }
       <p style="margin: 8px 0;"><strong>Client Type:</strong> ${clientTypeLabel}</p>
       ${data.service ? `<p style="margin: 8px 0;"><strong>Service Interest:</strong> ${data.service}</p>` : ''}
       <p style="margin: 8px 0;"><strong>Submitted:</strong> ${timestamp}</p>
@@ -1385,7 +1392,7 @@ New Contact Form Submission
 
 Name: ${fullName}
 Email: ${data.email}
-Phone: ${data.phone}
+Phone: ${hasPhone ? normalizedPhone : 'Not provided'}
 Client Type: ${clientTypeLabel}
 ${data.service ? `Service Interest: ${data.service}` : ''}
 Submitted: ${timestamp}

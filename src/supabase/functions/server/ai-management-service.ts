@@ -93,7 +93,7 @@ const DEFAULT_AGENTS: AIAgentConfig[] = [
   {
     id: 'vasco-authenticated',
     name: 'Vasco (Portal)',
-    description: 'Authenticated AI advisor in the client portal. Has access to user portfolio context, risk profiles, and personalised financial guidance.',
+    description: 'Authenticated AI advisor in the client portal. Has access to client profile information, policy data, portfolio overview, FNA/INA context, communication history, and document history for personalised guidance.',
     icon: 'Compass',
     status: 'active',
     model: 'gpt-4o',

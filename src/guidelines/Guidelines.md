@@ -454,6 +454,8 @@ Fill in missing details using Design System tokens and components
 Avoid introducing parallel UI abstractions
 Match the visual language of existing admin panel UI
 Document any new patterns that emerge
+When changing client-facing schema, KV key patterns, portfolio summary logic, FNA/INA storage, communication history, or document history, update the authenticated Ask Vasco context (`/ai-advisor`, agent `vasco-authenticated`) in the same logical change
+Prefer reusing shared client-context aggregators and maintain backwards-compatible reads during migrations so authenticated Ask Vasco remains informed while schemas evolve
 Platform-Specific Constraints (Figma Make):
 
 Use react-router — never react-router-dom (not available in this environment)
