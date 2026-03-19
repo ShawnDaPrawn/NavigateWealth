@@ -248,8 +248,57 @@ export function PolicyFormDialog({
     setStep('details');
   };
 
+  const recalcMaturityValues = (data: Record<string, unknown>): Record<string, unknown> => {
+    const updated: Record<string, unknown> = { ...data };
+
+    const recalcForPrefix = (prefix: 'retirement' | 'invest') => {
+      const growthKey = prefix === 'invest' ? 'invest_assumptions_growth' : 'retirement_assumptions_growth';
+      const escalationKey = prefix === 'invest' ? 'invest_assumptions_escalation' : 'retirement_assumptions_escalation';
+      const currentKey = prefix === 'invest' ? 'invest_current_value' : 'retirement_current_value';
+      const maturityKey = prefix === 'invest' ? 'invest_maturity_date' : 'retirement_maturity_date';
+      const contributionKey = prefix === 'invest' ? 'invest_monthly_contribution' : 'retirement_monthly_contribution';
+      const maturityValueKey = prefix === 'invest' ? 'invest_maturity_value' : 'retirement_estimated_maturity_value';
+
+      const growthField = tableStructure.find(f => f.keyId === growthKey);
+      const escalationField = tableStructure.find(f => f.keyId === escalationKey);
+      const currentValueField = tableStructure.find(f => f.keyId === currentKey);
+      const maturityDateField = tableStructure.find(f => f.keyId === maturityKey);
+      const contributionField = tableStructure.find(f => f.keyId === contributionKey);
+      const maturityValueField = tableStructure.find(f => f.keyId === maturityValueKey);
+
+      if (!maturityValueField || !maturityDateField) return;
+
+      const maturityRaw = updated[maturityDateField.id];
+      if (!maturityRaw) return;
+
+      const growth = growthField ? Number(updated[growthField.id] ?? 10) : 10;
+      const escalation = escalationField ? Number(updated[escalationField.id] ?? 5) : 5;
+      const currentVal = currentValueField ? Number(updated[currentValueField.id] ?? 0) : 0;
+      const contrib = contributionField ? Number(updated[contributionField.id] ?? 0) : 0;
+
+      const maturityDate = new Date(maturityRaw as string | number | Date);
+      if (Number.isNaN(maturityDate.getTime())) return;
+
+      const result = calculateRetirementMaturityValue(
+        currentVal,
+        contrib,
+        growth,
+        escalation,
+        new Date(),
+        maturityDate
+      );
+
+      updated[maturityValueField.id] = result;
+    };
+
+    recalcForPrefix('retirement');
+    recalcForPrefix('invest');
+
+    return updated;
+  };
+
   const handleFieldChange = (fieldId: string, value: string | number | boolean) => {
-    setFormData((prev) => ({ ...prev, [fieldId]: value }));
+    setFormData((prev) => recalcMaturityValues({ ...prev, [fieldId]: value }));
     // Clear error for this field
     if (errors[fieldId]) {
       setErrors((prev) => {
@@ -288,13 +337,15 @@ export function PolicyFormDialog({
     const toastId = toast.loading(editingPolicy ? 'Updating policy...' : 'Saving policy...');
 
     try {
+      const finalData = recalcMaturityValues(formData);
+
       const policyData = {
         id: editingPolicy?.id || `policy_${Date.now()}`,
         clientId,
         categoryId: activeCategoryId,
         providerId: selectedProvider.id,
         providerName: selectedProvider.name,
-        data: formData,
+        data: finalData,
         createdAt: editingPolicy?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
