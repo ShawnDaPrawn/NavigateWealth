@@ -2,7 +2,7 @@
  * Publications Feature - Constants & Configuration
  * 
  * Central configuration for the Publications feature including API endpoints,
- * validation rules, default values, and feature flags.
+ * validation rules, and default values.
  * 
  * All constants are type-safe and organized by category.
  */
@@ -248,21 +248,6 @@ export const CATEGORY_SLUG_MAP = {
   'Financial Literacy': 'financial-literacy',
   'Global Markets': 'global-perspectives',
   "Adviser's Corner": 'advisers-corner'
-} as const;
-
-// ==================== Feature Flags ====================
-
-export const FEATURE_FLAGS = {
-  enableDragAndDrop: true,
-  enableEmailNotifications: true,
-  enableScheduledPublishing: true,
-  enableExportImport: true,
-  enableImageUpload: true,
-  enableRichTextEditor: true,
-  enableArticleDuplication: true,
-  enableViewCounter: true,
-  enableSEOFields: true,
-  enableTags: false // Not yet implemented
 } as const;
 
 // ==================== Local Storage Keys ====================
