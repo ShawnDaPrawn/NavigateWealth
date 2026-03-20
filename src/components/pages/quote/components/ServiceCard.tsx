@@ -39,7 +39,7 @@ export function ServiceCard({ service, isSelected, onSelect }: ServiceCardProps)
       type="button"
       onClick={onSelect}
       className={`
-        group relative flex flex-col items-stretch text-left sm:text-center rounded-xl border-2 
+        group relative flex flex-col items-stretch text-left sm:text-center lg:text-left rounded-xl border-2 
         transition-all duration-200 cursor-pointer w-full min-h-[min-content]
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
         ${
@@ -62,10 +62,10 @@ export function ServiceCard({ service, isSelected, onSelect }: ServiceCardProps)
         </div>
       )}
 
-      <div className="flex flex-row sm:flex-col sm:items-center gap-3 p-3 sm:p-4 md:p-5">
+      <div className="flex flex-row sm:flex-col sm:items-center lg:items-start gap-3 p-3 sm:p-4 md:p-5 lg:p-5 lg:gap-3.5">
         <div
           className={`
-            flex-shrink-0 w-11 h-11 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center transition-colors duration-200
+            flex-shrink-0 w-11 h-11 sm:w-14 sm:h-14 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center transition-colors duration-200
             ${isSelected ? 'bg-primary/10' : 'bg-gray-50 group-hover:bg-primary/5'}
           `}
         >
@@ -76,7 +76,7 @@ export function ServiceCard({ service, isSelected, onSelect }: ServiceCardProps)
           />
         </div>
 
-        <div className="flex-1 min-w-0 flex flex-col sm:items-center">
+        <div className="flex-1 min-w-0 flex flex-col sm:items-center lg:items-start lg:text-left">
           <span
             className={`text-sm font-semibold leading-tight transition-colors duration-200 ${
               isSelected ? 'text-primary' : 'text-gray-800'
@@ -84,13 +84,13 @@ export function ServiceCard({ service, isSelected, onSelect }: ServiceCardProps)
           >
             {service.label}
           </span>
-          <span className="text-[11px] text-gray-500 mt-0.5 sm:mt-1 leading-snug line-clamp-2 sm:line-clamp-none">
+          <span className="text-[11px] text-gray-500 mt-0.5 sm:mt-1 leading-snug line-clamp-2 sm:line-clamp-none lg:text-[12px] lg:leading-relaxed">
             {service.description}
           </span>
 
           {chips.length > 0 && (
             <div
-              className="flex flex-wrap gap-1 sm:gap-1.5 mt-2.5 sm:mt-3 sm:justify-center w-full"
+              className="flex flex-wrap gap-1 sm:gap-1.5 mt-2.5 sm:mt-3 sm:justify-center lg:justify-start w-full"
               aria-label={`Includes: ${chips.join(', ')}`}
             >
               {chips.map((chip) => (
@@ -98,7 +98,7 @@ export function ServiceCard({ service, isSelected, onSelect }: ServiceCardProps)
                   key={chip}
                   className={`
                     inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-left
-                    text-[10px] sm:text-[11px] font-medium leading-tight tracking-tight
+                    text-[10px] sm:text-[11px] lg:text-xs font-medium leading-tight tracking-tight
                     ${
                       isSelected
                         ? 'border-primary/25 bg-primary/[0.08] text-primary'
@@ -106,7 +106,9 @@ export function ServiceCard({ service, isSelected, onSelect }: ServiceCardProps)
                     }
                   `}
                 >
-                  <span className="truncate sm:whitespace-normal sm:break-words">{chip}</span>
+                  <span className="truncate sm:whitespace-normal sm:break-words lg:whitespace-normal">
+                    {chip}
+                  </span>
                 </span>
               ))}
             </div>

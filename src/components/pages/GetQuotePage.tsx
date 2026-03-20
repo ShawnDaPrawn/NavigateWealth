@@ -258,8 +258,8 @@ export function GetQuotePage() {
           <strong className="font-semibold text-gray-800">Risk Management</strong>.
         </p>
 
-        {/* Service cards — single column on very narrow screens so chips wrap cleanly */}
-        <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4 mb-8">
+        {/* Service cards: mobile/tablet unchanged; lg+ uses 3–4 cols so cards stay wide (never 7-up) */}
+        <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 mb-8 lg:max-w-6xl xl:max-w-7xl lg:mx-auto">
           {QUOTE_SERVICES.map((service) => (
             <ServiceCard
               key={service.id}
