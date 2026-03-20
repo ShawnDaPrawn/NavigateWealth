@@ -43,6 +43,7 @@ import type {
   SubscriberListResponse,
   SubscriberMutationResponse,
   BulkUploadResponse,
+  ArticleReshareResponse,
 } from './types';
 
 // ============================================================================
@@ -388,6 +389,27 @@ export const ArticlesAPI = {
       headers,
     });
     return handleResponse<Article[]>(response);
+  },
+
+  async reshareArticle(
+    id: string,
+    input: {
+      dryRun?: boolean;
+      targetMode?: 'all' | 'selected';
+      recipientEmails?: string[];
+    },
+  ): Promise<ArticleReshareResponse> {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${BASE_URL}/articles/${id}/reshare`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        dryRun: input.dryRun ?? true,
+        targetMode: input.targetMode ?? 'all',
+        recipientEmails: input.recipientEmails ?? [],
+      }),
+    });
+    return handleResponse<ArticleReshareResponse>(response);
   },
 };
 

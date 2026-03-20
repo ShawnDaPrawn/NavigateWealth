@@ -88,8 +88,18 @@ export function PublicationsModule() {
   const [aiGeneratedResult, setAiGeneratedResult] = useState<(GenerateArticleResult & { categoryId?: string }) | null>(null);
 
   const { isInitialized, isLoading: initLoading, checkInitialization } = usePublicationsInit();
-  const { articles, isLoading: articlesLoading, refetch: refetchArticles } = useArticles();
-  const { categories, isLoading: categoriesLoading } = useCategories({ activeOnly: false });
+  const {
+    articles,
+    isLoading: articlesLoading,
+    isRefreshing: articlesRefreshing,
+    refetch: refetchArticles,
+  } = useArticles();
+  const {
+    categories,
+    isLoading: categoriesLoading,
+    isRefreshing: categoriesRefreshing,
+    refetch: refetchCategories,
+  } = useCategories({ activeOnly: false });
   const { canDo } = useCurrentUserPermissions();
 
   // NOTE: useScheduledPublishProcessor and useAutoContentProcessor have been
@@ -100,6 +110,7 @@ export function PublicationsModule() {
   const canEdit = canDo('publications', 'edit');
   const canDelete = canDo('publications', 'delete');
   const canPublish = canDo('publications', 'publish');
+  const isRefreshing = articlesRefreshing || categoriesRefreshing;
 
   const isLoading = initLoading;
 
@@ -163,6 +174,14 @@ export function PublicationsModule() {
     refetchArticles();
     checkInitialization();
   }, [refetchArticles, checkInitialization]);
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([
+      refetchArticles(),
+      refetchCategories(),
+      checkInitialization(),
+    ]);
+  }, [checkInitialization, refetchArticles, refetchCategories]);
 
   // Kanban status change handler
   const handleStatusChange = useCallback(async (articleId: string, newStatus: ArticleStatus) => {
@@ -250,10 +269,11 @@ export function PublicationsModule() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => refetchArticles()}
+              onClick={handleRefresh}
               className="gap-1.5"
+              disabled={isRefreshing}
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
               <span className="hidden sm:inline">Refresh</span>
             </Button>
             <Button

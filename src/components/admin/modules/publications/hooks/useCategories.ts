@@ -5,8 +5,8 @@
  * Guidelines §11.2 — Deterministic query keys from centralized registry.
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { PublicationsAPI } from '../api';
 import type { Category } from '../types';
 import { publicationKeys } from './queryKeys';
@@ -19,6 +19,7 @@ interface UseCategoriesOptions {
 interface UseCategoriesReturn {
   categories: Category[];
   isLoading: boolean;
+  isRefreshing: boolean;
   error: string | null;
   refetch: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -26,9 +27,8 @@ interface UseCategoriesReturn {
 
 export function useCategories(options?: UseCategoriesOptions): UseCategoriesReturn {
   const { activeOnly = false, autoSort = true } = options || {};
-  const queryClient = useQueryClient();
 
-  const { data: rawCategories = [], isLoading, error } = useQuery({
+  const { data: rawCategories = [], isLoading, isFetching, error, refetch: queryRefetch } = useQuery({
     queryKey: publicationKeys.categories(),
     queryFn: () => PublicationsAPI.Categories.getCategories(),
     staleTime: 5 * 60 * 1000,
@@ -46,13 +46,14 @@ export function useCategories(options?: UseCategoriesOptions): UseCategoriesRetu
     return result;
   }, [rawCategories, activeOnly, autoSort]);
 
-  const refetch = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: publicationKeys.categories() });
-  }, [queryClient]);
+  const refetch = async () => {
+    await queryRefetch();
+  };
 
   return {
     categories,
     isLoading,
+    isRefreshing: isFetching,
     error: error ? (error instanceof Error ? error.message : 'Failed to fetch categories') : null,
     refetch,
     refresh: refetch,

@@ -5,8 +5,7 @@
  * Guidelines §11.2 — Deterministic query keys from centralized registry.
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { PublicationsAPI } from '../api';
 import type { Article, ArticleFilters } from '../types';
 import { publicationKeys } from './queryKeys';
@@ -14,30 +13,27 @@ import { publicationKeys } from './queryKeys';
 interface UseArticlesReturn {
   articles: Article[];
   isLoading: boolean;
+  isRefreshing: boolean;
   error: string | null;
   refetch: () => Promise<void>;
   refresh: () => Promise<void>;
 }
 
 export function useArticles(params?: ArticleFilters): UseArticlesReturn {
-  const queryClient = useQueryClient();
-
-  const { data: articles = [], isLoading, error } = useQuery({
+  const { data: articles = [], isLoading, isFetching, error, refetch: queryRefetch } = useQuery({
     queryKey: publicationKeys.articleList(params),
     queryFn: () => PublicationsAPI.Articles.getArticles(params),
     staleTime: 5 * 60 * 1000,
   });
 
-  const refetch = useCallback(async () => {
-    await queryClient.invalidateQueries({
-      queryKey: publicationKeys.articles(),
-      refetchType: 'all',
-    });
-  }, [queryClient]);
+  const refetch = async () => {
+    await queryRefetch();
+  };
 
   return {
     articles,
     isLoading,
+    isRefreshing: isFetching,
     error: error ? (error instanceof Error ? error.message : 'Failed to fetch articles') : null,
     refetch,
     refresh: refetch,

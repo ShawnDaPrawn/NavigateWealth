@@ -237,20 +237,29 @@ export function GetQuotePage() {
 
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-8 sm:py-12">
         {/* Step indicator */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">1</div>
-            <span className="text-sm font-semibold text-gray-900">Choose your service</span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">1</div>
+            <div className="min-w-0">
+              <span className="text-sm font-semibold text-gray-900 block">Choose your service</span>
+              <span className="text-xs text-gray-500 leading-snug mt-0.5 hidden sm:block">
+                Match what you need (e.g. life cover) to the category below.
+              </span>
+            </div>
           </div>
-          <div className="h-px flex-1 bg-gray-200" />
-          <div className="flex items-center gap-2">
+          <div className="h-px sm:flex-1 bg-gray-200 sm:min-w-[1rem]" />
+          <div className="flex items-center gap-2 shrink-0">
             <div className="w-7 h-7 rounded-full bg-gray-200 text-gray-500 text-xs font-bold flex items-center justify-center">2</div>
             <span className="text-sm font-medium text-gray-400">Product details</span>
           </div>
         </div>
+        <p className="text-xs text-gray-600 leading-relaxed mb-4 sm:hidden -mt-2">
+          Not sure which to pick? Read the labels under each option — for example, life cover and income protection are under{' '}
+          <strong className="font-semibold text-gray-800">Risk Management</strong>.
+        </p>
 
-        {/* Service cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4 mb-8">
+        {/* Service cards — single column on very narrow screens so chips wrap cleanly */}
+        <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4 mb-8">
           {QUOTE_SERVICES.map((service) => (
             <ServiceCard
               key={service.id}

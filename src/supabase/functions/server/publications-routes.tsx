@@ -4,7 +4,7 @@ import * as kv from './kv_store.tsx';
 import { sendEmail } from './email-service.ts';
 import { createArticleNotificationEmail } from './article-notification-template.ts';
 import { createModuleLogger } from './stderr-logger.ts';
-import { sendArticlePublishedNotifications } from './publications-notification-service.ts';
+import { runArticleNotificationDelivery, sendArticlePublishedNotifications } from './publications-notification-service.ts';
 import {
   CreateCategorySchema,
   UpdateCategorySchema,
@@ -12,10 +12,11 @@ import {
   UpdateTypeSchema,
   CreateArticleSchema,
   UpdateArticleSchema,
+  ArticleReshareSchema,
 } from './publications-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { TemplateService, VersionService } from './publications-phase4-service.ts';
-import { requireAuth } from './auth-mw.ts';
+import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 
@@ -815,6 +816,74 @@ publications.post('/articles/:id/publish', async (c) => {
     return c.json({ success: false, error: 'Failed to publish article' }, 500);
   }
 });
+
+publications.post('/articles/:id/reshare', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const id = c.req.param('id');
+  const parsed = ArticleReshareSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+  }
+
+  const article = await kv.get(`article:${id}`) as Article | null;
+  if (!article) {
+    return c.json({ success: false, error: 'Article not found' }, 404);
+  }
+
+  if (article.status !== 'published' || !article.published_at) {
+    return c.json({ success: false, error: 'Only published articles can be reshared' }, 400);
+  }
+
+  const recipientEmails = parsed.data.targetMode === 'selected'
+    ? parsed.data.recipientEmails.map((email) => email.trim().toLowerCase()).filter(Boolean)
+    : undefined;
+
+  if (parsed.data.targetMode === 'selected' && (!recipientEmails || recipientEmails.length === 0)) {
+    return c.json({ success: false, error: 'Select at least one newsletter subscriber' }, 400);
+  }
+
+  const result = await runArticleNotificationDelivery({
+    id: article.id,
+    title: article.title,
+    slug: article.slug,
+    excerpt: article.excerpt,
+  }, {
+    dryRun: parsed.data.dryRun,
+    recipientEmails,
+  });
+
+  const action = parsed.data.dryRun ? 'article_reshare_preview' : 'article_reshared';
+  const adminUserId = c.get('userId') || 'system';
+  AdminAuditService.record({
+    actorId: adminUserId,
+    actorRole: c.get('userRole') || 'admin',
+    category: 'communication',
+    action,
+    summary: `${parsed.data.dryRun ? 'Previewed' : 'Reshared'} article notifications: ${article.title}`,
+    severity: 'info',
+    entityType: 'article',
+    entityId: id,
+    metadata: {
+      targetMode: parsed.data.targetMode,
+      dryRun: parsed.data.dryRun,
+      recipientCount: result.recipientCount,
+      sent: result.sent,
+      failed: result.failed,
+    },
+  }).catch(() => {});
+
+  return c.json({
+    success: true,
+    dryRun: result.dryRun,
+    message: parsed.data.dryRun
+      ? `Preview ready - ${result.recipientCount} recipient(s)`
+      : `Article reshared to ${result.sent} recipient(s)`,
+    recipientCount: result.recipientCount,
+    sent: result.sent,
+    failed: result.failed,
+    recipients: result.recipients,
+    errors: result.errors,
+  });
+}));
 
 publications.post('/articles/:id/archive', async (c) => {
   try {

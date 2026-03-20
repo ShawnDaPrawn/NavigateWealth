@@ -5,8 +5,8 @@
  * Guidelines §11.2 — Deterministic query keys from centralized registry.
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { PublicationsAPI } from '../api';
 import type { ContentType } from '../types';
 import { publicationKeys } from './queryKeys';
@@ -19,6 +19,7 @@ interface UseTypesOptions {
 interface UseTypesReturn {
   types: ContentType[];
   isLoading: boolean;
+  isRefreshing: boolean;
   error: string | null;
   refetch: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -26,9 +27,8 @@ interface UseTypesReturn {
 
 export function useTypes(options?: UseTypesOptions): UseTypesReturn {
   const { activeOnly = false, autoSort = true } = options || {};
-  const queryClient = useQueryClient();
 
-  const { data: rawTypes = [], isLoading, error } = useQuery({
+  const { data: rawTypes = [], isLoading, isFetching, error, refetch: queryRefetch } = useQuery({
     queryKey: publicationKeys.types(),
     queryFn: () => PublicationsAPI.Types.getTypes(),
     staleTime: 5 * 60 * 1000,
@@ -45,13 +45,14 @@ export function useTypes(options?: UseTypesOptions): UseTypesReturn {
     return result;
   }, [rawTypes, activeOnly, autoSort]);
 
-  const refetch = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: publicationKeys.types() });
-  }, [queryClient]);
+  const refetch = async () => {
+    await queryRefetch();
+  };
 
   return {
     types,
     isLoading,
+    isRefreshing: isFetching,
     error: error ? (error instanceof Error ? error.message : 'Failed to fetch types') : null,
     refetch,
     refresh: refetch,

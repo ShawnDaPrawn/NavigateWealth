@@ -1020,3 +1020,20 @@ export interface BulkUploadResponse {
   skipped: number;
   errors: string[];
 }
+
+export interface ArticleReshareRecipient {
+  email: string;
+  firstName: string;
+  name: string;
+}
+
+export interface ArticleReshareResponse {
+  success: boolean;
+  dryRun: boolean;
+  message: string;
+  recipientCount: number;
+  sent: number;
+  failed: number;
+  recipients: ArticleReshareRecipient[];
+  errors?: string[];
+}

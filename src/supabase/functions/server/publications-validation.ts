@@ -55,3 +55,9 @@ export const ArticleNotificationSchema = z.object({
   subject: z.string().min(1).max(500).optional(),
   recipientFilter: z.enum(['all', 'subscribed']).optional().default('subscribed'),
 });
+
+export const ArticleReshareSchema = z.object({
+  dryRun: z.boolean().optional().default(true),
+  targetMode: z.enum(['all', 'selected']).optional().default('all'),
+  recipientEmails: z.array(z.string().email()).max(1000).optional().default([]),
+});

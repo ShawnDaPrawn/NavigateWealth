@@ -45,6 +45,8 @@ export interface QuoteServiceConfig {
   shortLabel: string;
   icon: string; // Lucide icon slug — resolved at render time
   description: string;
+  /** Plain-language product examples shown as chips (helps visitors map needs → category) */
+  topicChips?: string[];
   heroDescription: string;
   providers: QuoteProvider[];
   productFields: QuoteFormField[];
