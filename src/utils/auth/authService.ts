@@ -494,35 +494,6 @@ export async function updatePassword(newPassword: string): Promise<void> {
 }
 
 /**
- * Sign in with Google OAuth
- */
-export async function signInWithGoogle(): Promise<void> {
-  const supabase = getSupabaseClient();
-  
-  try {
-    console.log('🔐 Starting Google OAuth sign in...');
-    
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}${AUTH_ROUTES.DASHBOARD}`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      },
-    });
-
-    if (error) {
-      console.error('❌ Google sign in error:', error);
-      throw parseAuthError(error);
-    }
-  } catch (error) {
-    throw parseAuthError(error);
-  }
-}
-
-/**
  * Listen to auth state changes
  */
 export function onAuthStateChange(callback: AuthCallback) {

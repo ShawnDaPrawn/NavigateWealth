@@ -18,19 +18,14 @@ import {
   Lock,
   HelpCircle,
 } from 'lucide-react';
-import { 
-  signInWithGoogle, 
-  signUp
-} from '../../utils/auth/authService';
 import { validatePassword, getPasswordStrengthColor, getPasswordStrengthLabel } from '../../utils/auth/passwordValidation';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { getErrorMessage, getUserErrorMessage, isError } from '../../utils/errorUtils';
+import { getUserErrorMessage, isError } from '../../utils/errorUtils';
 import { toast } from 'sonner@2.0.3';
 import { useLegalDocumentViewer, LegalDocumentDialog } from '../shared/LegalDocumentViewer';
 import { SIGNUP_FEATURES } from './auth/authConstants';
 import { AuthShowcasePanel } from './auth/AuthShowcasePanel';
 import { AuthTrustBar } from './auth/AuthTrustBar';
-import { GoogleAuthButton } from './auth/GoogleAuthButton';
 import { CountryCodeCombobox } from './auth/CountryCodeCombobox';
 
 export function SignupPage() {
@@ -45,7 +40,6 @@ export function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showLocalhostWarning, setShowLocalhostWarning] = useState(false);
@@ -63,24 +57,6 @@ export function SignupPage() {
 
   const passwordStrength = validatePassword(password);
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
-
-  const handleGoogleSignUp = async () => {
-    setError('');
-    setIsGoogleLoading(true);
-
-    try {
-      await signInWithGoogle();
-      // User will be redirected to Google OAuth page
-    } catch (error: unknown) {
-      setIsGoogleLoading(false);
-      const message = getErrorMessage(error);
-      if (message.includes('not enabled')) {
-        setError('Google sign-up is not yet configured. Please contact support or use email signup.');
-      } else {
-        setError(getUserErrorMessage(error));
-      }
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,14 +237,6 @@ export function SignupPage() {
               </button>
             </Alert>
           )}
-
-          {/* Google Sign-up (feature-flagged) */}
-          <GoogleAuthButton
-            mode="signup"
-            onClick={handleGoogleSignUp}
-            isLoading={isGoogleLoading}
-            disabled={isLoading}
-          />
 
           <form onSubmit={handleSubmit} className="space-y-5" aria-describedby={error ? 'signup-error' : undefined}>
             {/* ── Section: Personal Details ── */}

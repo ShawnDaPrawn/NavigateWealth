@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import { 
   signIn, 
-  signInWithGoogle, 
   resendVerificationEmail 
 } from '../../utils/auth/authService';
 import { signOut } from '../../utils/auth/authService';
@@ -20,7 +19,6 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { LOGIN_FEATURES } from './auth/authConstants';
 import { AuthShowcasePanel } from './auth/AuthShowcasePanel';
 import { AuthTrustBar } from './auth/AuthTrustBar';
-import { GoogleAuthButton } from './auth/GoogleAuthButton';
 import { PageLoader } from '../ui/page-loader';
 
 export function LoginPage() {
@@ -32,7 +30,6 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [verificationEmailSent, setVerificationEmailSent] = useState(false);
   const [show2FAModal, setShow2FAModal] = useState(false);
@@ -84,24 +81,6 @@ export function LoginPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to resend verification email.';
       setError(msg);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setError('');
-    setIsGoogleLoading(true);
-
-    try {
-      await signInWithGoogle();
-      // User will be redirected to Google OAuth page
-    } catch (err: unknown) {
-      setIsGoogleLoading(false);
-      const message = err instanceof Error ? err.message : 'Google sign-in failed.';
-      if (message.includes('not enabled')) {
-        setError('Google sign-in is not yet configured. Please contact support or use email login.');
-      } else {
-        setError(message);
-      }
     }
   };
 
@@ -411,14 +390,6 @@ export function LoginPage() {
               </AlertDescription>
             </Alert>
           )}
-
-          {/* Google Sign-in (feature-flagged) */}
-          <GoogleAuthButton
-            mode="signin"
-            onClick={handleGoogleSignIn}
-            isLoading={isGoogleLoading}
-            disabled={isLoading}
-          />
 
           <form onSubmit={handleSubmit} className="space-y-5" aria-describedby={error ? 'login-error' : undefined}>
             <div>
