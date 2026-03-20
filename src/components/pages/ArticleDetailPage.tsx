@@ -18,7 +18,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useParams, Link, useNavigate } from 'react-router';
+import { useParams, Link } from 'react-router';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import {
@@ -112,6 +112,52 @@ interface ArticleDisplay {
   type_id?: string;
   view_count?: number;
   [key: string]: unknown;
+}
+
+const EMAIL_TRACKING_PARAM = 'nt';
+
+function getEmailTrackingTokenFromUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get(EMAIL_TRACKING_PARAM)?.trim();
+  return token || null;
+}
+
+function stripEmailTrackingTokenFromUrl(): void {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has(EMAIL_TRACKING_PARAM)) return;
+
+  url.searchParams.delete(EMAIL_TRACKING_PARAM);
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState(window.history.state, '', nextUrl);
+}
+
+async function postArticleEmailEngagementEvent(event: 'open' | 'read', token: string): Promise<void> {
+  await fetch(`${API_CONFIG.BASE_URL}/publications/email-engagement/${event}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${publicAnonKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token }),
+  });
+}
+
+function getSessionFlag(key: string): boolean {
+  try {
+    return window.sessionStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function setSessionFlag(key: string): void {
+  try {
+    window.sessionStorage.setItem(key, '1');
+  } catch {
+    // Ignore sessionStorage failures in private browsing / hardened environments.
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -818,7 +864,7 @@ function enhanceArticleHtml(rawHtml: string): string {
 
 export function ArticleDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
+  const [emailTrackingToken, setEmailTrackingToken] = useState<string | null>(null);
 
   // Refs for reading progress and table of contents
   const articleContentRef = useRef<HTMLDivElement>(null);
@@ -833,6 +879,14 @@ export function ArticleDetailPage() {
   // Scroll to top on slug change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [slug]);
+
+  useEffect(() => {
+    const token = getEmailTrackingTokenFromUrl();
+    setEmailTrackingToken(token);
+    if (token) {
+      stripEmailTrackingTokenFromUrl();
+    }
   }, [slug]);
 
   // ── SEO: document title + Open Graph / Twitter Card meta tags ──────────
@@ -910,6 +964,149 @@ export function ArticleDetailPage() {
       jsonLd.remove();
     };
   }, [article]);
+
+  useEffect(() => {
+    if (!article?.id || !emailTrackingToken) return;
+
+    const sessionKey = `nw:article-email-open:${emailTrackingToken}`;
+    if (getSessionFlag(sessionKey)) return;
+
+    let cancelled = false;
+    let hasInteracted = false;
+    let focusedVisibleMs = 0;
+    let lastTick = Date.now();
+    let intervalId: number | null = null;
+
+    const maybeTrackOpen = async () => {
+      if (cancelled || getSessionFlag(sessionKey)) return;
+      if (!hasInteracted && focusedVisibleMs < 4000) return;
+
+      setSessionFlag(sessionKey);
+      try {
+        await postArticleEmailEngagementEvent('open', emailTrackingToken);
+      } catch {
+        // Best effort only. We do not block article reading on analytics delivery.
+      }
+
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const tick = () => {
+      const now = Date.now();
+      const delta = now - lastTick;
+      lastTick = now;
+
+      if (document.visibilityState === 'visible' && document.hasFocus()) {
+        focusedVisibleMs += delta;
+      }
+
+      void maybeTrackOpen();
+    };
+
+    const markInteraction = () => {
+      hasInteracted = true;
+      void maybeTrackOpen();
+    };
+
+    intervalId = window.setInterval(tick, 1000);
+    const events: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach((eventName) => {
+      window.addEventListener(eventName, markInteraction, { passive: true });
+    });
+    document.addEventListener('visibilitychange', tick);
+    window.addEventListener('focus', tick);
+
+    return () => {
+      cancelled = true;
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+      events.forEach((eventName) => {
+        window.removeEventListener(eventName, markInteraction);
+      });
+      document.removeEventListener('visibilitychange', tick);
+      window.removeEventListener('focus', tick);
+    };
+  }, [article?.id, emailTrackingToken]);
+
+  useEffect(() => {
+    if (!article?.id || !emailTrackingToken) return;
+
+    const sessionKey = `nw:article-email-read:${emailTrackingToken}`;
+    if (getSessionFlag(sessionKey)) return;
+
+    let cancelled = false;
+    let focusedVisibleMs = 0;
+    let maxScrollProgress = 0;
+    let lastTick = Date.now();
+    let intervalId: number | null = null;
+
+    const getScrollProgress = () => {
+      const element = articleContentRef.current;
+      if (!element) return 0;
+
+      const rect = element.getBoundingClientRect();
+      const seenHeight = window.innerHeight - rect.top;
+      const totalTrackableHeight = rect.height + window.innerHeight;
+      if (totalTrackableHeight <= 0) return 0;
+
+      return Math.max(0, Math.min(1, seenHeight / totalTrackableHeight));
+    };
+
+    const maybeTrackRead = async () => {
+      if (cancelled || getSessionFlag(sessionKey)) return;
+      if (focusedVisibleMs < 45000 || maxScrollProgress < 0.65) return;
+
+      setSessionFlag(sessionKey);
+      try {
+        await postArticleEmailEngagementEvent('read', emailTrackingToken);
+      } catch {
+        // Best effort only.
+      }
+
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const refreshProgress = () => {
+      maxScrollProgress = Math.max(maxScrollProgress, getScrollProgress());
+      void maybeTrackRead();
+    };
+
+    const tick = () => {
+      const now = Date.now();
+      const delta = now - lastTick;
+      lastTick = now;
+
+      if (document.visibilityState === 'visible' && document.hasFocus()) {
+        focusedVisibleMs += delta;
+      }
+
+      refreshProgress();
+    };
+
+    intervalId = window.setInterval(tick, 1000);
+    window.addEventListener('scroll', refreshProgress, { passive: true });
+    window.addEventListener('resize', refreshProgress);
+    document.addEventListener('visibilitychange', tick);
+    window.addEventListener('focus', tick);
+
+    return () => {
+      cancelled = true;
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+      window.removeEventListener('scroll', refreshProgress);
+      window.removeEventListener('resize', refreshProgress);
+      document.removeEventListener('visibilitychange', tick);
+      window.removeEventListener('focus', tick);
+    };
+  }, [article?.id, emailTrackingToken]);
 
   // Loading
   if (isLoading) return <ArticleLoadingState />;

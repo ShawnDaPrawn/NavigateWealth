@@ -46,6 +46,7 @@ import { InitializePublications } from './InitializePublications';
 
 // New world-class components
 import { ContentAnalytics } from './components/ContentAnalytics';
+import { ArticleEmailEngagementPanel } from './components/ArticleEmailEngagementPanel';
 import { ContentPipeline } from './components/ContentPipeline';
 import { PublicationsSkeleton } from './components/PublicationsSkeleton';
 import { ContentCalendar } from './components/ContentCalendar';
@@ -359,10 +360,13 @@ export function PublicationsModule() {
           {articlesLoading ? (
             <LoadingPlaceholder message="Loading analytics..." />
           ) : (
-            <ContentAnalytics
-              articles={articles}
-              categories={categories}
-            />
+            <div className="space-y-6">
+              <ContentAnalytics
+                articles={articles}
+                categories={categories}
+              />
+              <ArticleEmailEngagementPanel />
+            </div>
           )}
         </TabsContent>
 

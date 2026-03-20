@@ -44,6 +44,8 @@ import type {
   SubscriberMutationResponse,
   BulkUploadResponse,
   ArticleReshareResponse,
+  ArticleEmailEngagementSummary,
+  ArticleEmailEngagementDetail,
 } from './types';
 
 // ============================================================================
@@ -410,6 +412,22 @@ export const ArticlesAPI = {
       }),
     });
     return handleResponse<ArticleReshareResponse>(response);
+  },
+
+  async getEmailEngagementSummary(): Promise<ArticleEmailEngagementSummary[]> {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${BASE_URL}/email-engagement/summary`, {
+      headers: authHeaders,
+    });
+    return handleResponse<ArticleEmailEngagementSummary[]>(response);
+  },
+
+  async getArticleEmailEngagement(id: string): Promise<ArticleEmailEngagementDetail> {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${BASE_URL}/articles/${id}/email-engagement`, {
+      headers: authHeaders,
+    });
+    return handleResponse<ArticleEmailEngagementDetail>(response);
   },
 };
 

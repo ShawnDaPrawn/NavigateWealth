@@ -61,3 +61,7 @@ export const ArticleReshareSchema = z.object({
   targetMode: z.enum(['all', 'selected']).optional().default('all'),
   recipientEmails: z.array(z.string().email()).max(1000).optional().default([]),
 });
+
+export const ArticleEmailEngagementEventSchema = z.object({
+  token: z.string().trim().min(1).max(120),
+});

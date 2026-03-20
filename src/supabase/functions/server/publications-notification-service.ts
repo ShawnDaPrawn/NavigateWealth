@@ -23,6 +23,13 @@ import * as kv from './kv_store.tsx';
 import { sendEmail } from './email-service.ts';
 import { createArticleNotificationEmail } from './article-notification-template.ts';
 import { createModuleLogger } from './stderr-logger.ts';
+import {
+  buildTrackedArticleUrl,
+  createArticleEmailTrackingRecord,
+  markArticleEmailDeliveryFailed,
+  markArticleEmailDeliverySent,
+  type ArticleEmailTrackingSource,
+} from './publications-email-engagement-service.ts';
 
 const log = createModuleLogger('article-notifications');
 
@@ -133,6 +140,7 @@ export async function runArticleNotificationDelivery(
   options?: {
     dryRun?: boolean;
     recipientEmails?: string[];
+    source?: ArticleEmailTrackingSource;
   },
 ): Promise<ArticleNotificationRunResult> {
   const dryRun = options?.dryRun ?? false;
@@ -160,13 +168,21 @@ export async function runArticleNotificationDelivery(
     };
   }
 
-  const articleUrl = `https://navigatewealth.co/resources/article/${article.slug}`;
   const errors: string[] = [];
   let sent = 0;
   let failed = 0;
 
   for (const recipient of recipients) {
+    let trackingToken: string | null = null;
+
     try {
+      const tracking = await createArticleEmailTrackingRecord({
+        article,
+        recipient,
+        source: options?.source ?? 'publish',
+      });
+      trackingToken = tracking.token;
+      const articleUrl = buildTrackedArticleUrl(article.slug, tracking.token);
       const unsubscribeUrl = `https://navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(recipient.email)}`;
       const { html, text } = await createArticleNotificationEmail({
         firstName: recipient.firstName,
@@ -183,11 +199,20 @@ export async function runArticleNotificationDelivery(
         text,
       });
 
+      await markArticleEmailDeliverySent(tracking.token);
       sent++;
     } catch (err) {
       failed++;
       const msg = err instanceof Error ? err.message : 'Unknown error';
       errors.push(`${recipient.email}: ${msg}`);
+
+      if (trackingToken) {
+        try {
+          await markArticleEmailDeliveryFailed(trackingToken, msg);
+        } catch (trackingErr) {
+          log.error(`Failed to mark article notification delivery failure for ${recipient.email}`, trackingErr);
+        }
+      }
       log.error(`Failed to send article notification to ${recipient.email}: ${msg}`);
     }
   }

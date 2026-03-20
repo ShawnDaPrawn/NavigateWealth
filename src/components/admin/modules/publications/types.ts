@@ -1037,3 +1037,48 @@ export interface ArticleReshareResponse {
   recipients: ArticleReshareRecipient[];
   errors?: string[];
 }
+
+export type ArticleEmailDeliveryStatus = 'pending' | 'sent' | 'failed';
+export type ArticleEmailTrackingSource = 'publish' | 'reshare';
+
+export interface ArticleEmailEngagementSummary {
+  articleId: string;
+  articleTitle: string;
+  articleSlug: string;
+  publishedAt: string | null;
+  sent: number;
+  failed: number;
+  opened: number;
+  read: number;
+  openRate: number;
+  readRate: number;
+  latestSentAt: string | null;
+  latestOpenedAt: string | null;
+  latestReadAt: string | null;
+}
+
+export interface ArticleEmailEngagementRecipient {
+  token: string;
+  articleId: string;
+  articleSlug: string;
+  articleTitle: string;
+  recipientEmail: string;
+  recipientName: string;
+  recipientFirstName: string;
+  source: ArticleEmailTrackingSource;
+  createdAt: string;
+  sentAt: string | null;
+  openedAt: string | null;
+  readAt: string | null;
+  lastOpenedAt: string | null;
+  lastReadAt: string | null;
+  openCount: number;
+  readCount: number;
+  deliveryStatus: ArticleEmailDeliveryStatus;
+  deliveryError: string | null;
+}
+
+export interface ArticleEmailEngagementDetail {
+  summary: ArticleEmailEngagementSummary;
+  recipients: ArticleEmailEngagementRecipient[];
+}

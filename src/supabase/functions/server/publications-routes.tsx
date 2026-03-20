@@ -13,12 +13,20 @@ import {
   CreateArticleSchema,
   UpdateArticleSchema,
   ArticleReshareSchema,
+  ArticleEmailEngagementEventSchema,
 } from './publications-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { TemplateService, VersionService } from './publications-phase4-service.ts';
 import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import {
+  listAllArticleEmailTrackingRecords,
+  listArticleEmailTrackingRecords,
+  markArticleEmailOpened,
+  markArticleEmailRead,
+  summarizeArticleEmailEngagement,
+} from './publications-email-engagement-service.ts';
 
 const publications = new Hono();
 const log = createModuleLogger('publications');
@@ -849,6 +857,7 @@ publications.post('/articles/:id/reshare', requireAuth, requireAdmin, asyncHandl
   }, {
     dryRun: parsed.data.dryRun,
     recipientEmails,
+    source: 'reshare',
   });
 
   const action = parsed.data.dryRun ? 'article_reshare_preview' : 'article_reshared';
@@ -882,6 +891,61 @@ publications.post('/articles/:id/reshare', requireAuth, requireAdmin, asyncHandl
     failed: result.failed,
     recipients: result.recipients,
     errors: result.errors,
+  });
+}));
+
+publications.get('/email-engagement/summary', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const records = await listAllArticleEmailTrackingRecords();
+  const articles = await kv.getByPrefix('article:') as Article[];
+  const articleMap = new Map(articles.map((article) => [article.id, article]));
+
+  const grouped = new Map<string, typeof records>();
+  for (const record of records) {
+    const existing = grouped.get(record.articleId) || [];
+    existing.push(record);
+    grouped.set(record.articleId, existing);
+  }
+
+  const summaries = [...grouped.entries()]
+    .map(([articleId, articleRecords]) => {
+      const article = articleMap.get(articleId) || null;
+      return summarizeArticleEmailEngagement(article ? {
+        id: article.id,
+        slug: article.slug,
+        title: article.title,
+        published_at: article.published_at,
+      } : null, articleRecords);
+    })
+    .sort((a, b) => {
+      const aTime = new Date(a.latestSentAt || a.publishedAt || 0).getTime();
+      const bTime = new Date(b.latestSentAt || b.publishedAt || 0).getTime();
+      return bTime - aTime;
+    });
+
+  return c.json({ success: true, data: summaries });
+}));
+
+publications.get('/articles/:id/email-engagement', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const id = c.req.param('id');
+  const article = await kv.get(`article:${id}`) as Article | null;
+  if (!article) {
+    return c.json({ success: false, error: 'Article not found' }, 404);
+  }
+
+  const records = await listArticleEmailTrackingRecords(id);
+  const summary = summarizeArticleEmailEngagement({
+    id: article.id,
+    slug: article.slug,
+    title: article.title,
+    published_at: article.published_at,
+  }, records);
+
+  return c.json({
+    success: true,
+    data: {
+      summary,
+      recipients: records,
+    },
   });
 }));
 
@@ -1138,6 +1202,50 @@ publications.post('/articles/:id/view', async (c) => {
     return c.json({ success: false, error: 'Failed to increment views' }, 500);
   }
 });
+
+publications.post('/email-engagement/open', asyncHandler(async (c) => {
+  const parsed = ArticleEmailEngagementEventSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+  }
+
+  const record = await markArticleEmailOpened(parsed.data.token);
+  if (!record) {
+    return c.json({ success: true, data: { tracked: false } });
+  }
+
+  return c.json({
+    success: true,
+    data: {
+      tracked: true,
+      articleId: record.articleId,
+      openedAt: record.openedAt,
+      openCount: record.openCount,
+    },
+  });
+}));
+
+publications.post('/email-engagement/read', asyncHandler(async (c) => {
+  const parsed = ArticleEmailEngagementEventSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+  }
+
+  const record = await markArticleEmailRead(parsed.data.token);
+  if (!record) {
+    return c.json({ success: true, data: { tracked: false } });
+  }
+
+  return c.json({
+    success: true,
+    data: {
+      tracked: true,
+      articleId: record.articleId,
+      readAt: record.readAt,
+      readCount: record.readCount,
+    },
+  });
+}));
 
 // ============================================================================
 // TAGS ROUTES
