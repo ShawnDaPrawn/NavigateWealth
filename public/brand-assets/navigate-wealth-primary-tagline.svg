@@ -1,36 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 300" role="img" aria-label="Navigate Wealth primary logo without tagline">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 380" role="img" aria-label="Navigate Wealth primary logo with tagline">
   <defs>
-    <linearGradient id="nwShipPrimary" x1="10%" y1="18%" x2="86%" y2="84%">
+    <linearGradient id="nwShipPrimaryTag" x1="10%" y1="18%" x2="86%" y2="84%">
       <stop offset="0%" stop-color="#4338ca"/>
       <stop offset="50%" stop-color="#6d28d9"/>
       <stop offset="100%" stop-color="#8b5cf6"/>
     </linearGradient>
-    <linearGradient id="nwShipSecondary" x1="20%" y1="10%" x2="88%" y2="90%">
+    <linearGradient id="nwShipSecondaryTag" x1="20%" y1="10%" x2="88%" y2="90%">
       <stop offset="0%" stop-color="#a78bfa"/>
       <stop offset="100%" stop-color="#7c3aed"/>
     </linearGradient>
-    <linearGradient id="nwWordmarkAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="nwWordmarkAccentTag" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#5b21b6"/>
       <stop offset="100%" stop-color="#7c3aed"/>
     </linearGradient>
   </defs>
 
-  <g transform="translate(42 34)">
+  <g transform="translate(42 46)">
     <path d="M136 24v162" stroke="#1f2a44" stroke-width="8" stroke-linecap="round"/>
     <path d="M136 30l22 7-22 8z" fill="#f59e0b"/>
-    <path d="M141 48c56 28 93 76 102 140-35-14-67-16-102-11z" fill="url(#nwShipPrimary)"/>
-    <path d="M130 62c-43 24-72 62-80 116 26-11 52-14 80-10z" fill="url(#nwShipSecondary)"/>
+    <path d="M141 48c56 28 93 76 102 140-35-14-67-16-102-11z" fill="url(#nwShipPrimaryTag)"/>
+    <path d="M130 62c-43 24-72 62-80 116 26-11 52-14 80-10z" fill="url(#nwShipSecondaryTag)"/>
     <path d="M31 192c54-11 135-16 223-6 12 1 16 8 12 18-20 45-173 59-232 29-16-8-22-15-21-24 1-7 6-14 18-17z" fill="#1f2a44"/>
     <path d="M74 188c39-12 96-12 145-1" stroke="#f8fafc" stroke-opacity="0.28" stroke-width="5" stroke-linecap="round"/>
     <path d="M18 235c63-11 138-11 248 2-96 22-182 23-248-2z" fill="#c4b5fd" fill-opacity="0.68"/>
   </g>
 
-  <g transform="translate(350 76)">
+  <g transform="translate(350 82)">
     <text x="0" y="98" fill="#162033" font-family="Georgia, 'Times New Roman', serif" font-size="112" letter-spacing="0.8" font-weight="700">
       Navigate
     </text>
-    <text x="468" y="98" fill="url(#nwWordmarkAccent)" font-family="'Segoe UI', Arial, sans-serif" font-size="78" letter-spacing="3.2" font-weight="700">
+    <text x="468" y="98" fill="url(#nwWordmarkAccentTag)" font-family="'Segoe UI', Arial, sans-serif" font-size="78" letter-spacing="3.2" font-weight="700">
       WEALTH
+    </text>
+    <rect x="2" y="126" width="760" height="3" rx="1.5" fill="#c4b5fd" opacity="0.9"/>
+    <text x="2" y="178" fill="#52607a" font-family="'Segoe UI', Arial, sans-serif" font-size="28" letter-spacing="5.1" font-weight="600">
+      INDEPENDENT FINANCIAL ADVISORY SERVICES
     </text>
   </g>
 </svg>

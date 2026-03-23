@@ -1,31 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="Navigate Wealth social logo">
   <defs>
-    <linearGradient id="nwSocialGradient" x1="20%" y1="18%" x2="80%" y2="82%">
-      <stop offset="0%" stop-color="#4c1d95"/>
-      <stop offset="55%" stop-color="#6d28d9"/>
+    <linearGradient id="nwSocialShip" x1="18%" y1="16%" x2="84%" y2="84%">
+      <stop offset="0%" stop-color="#4338ca"/>
+      <stop offset="52%" stop-color="#6d28d9"/>
       <stop offset="100%" stop-color="#8b5cf6"/>
     </linearGradient>
-    <linearGradient id="nwSocialRing" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="nwSocialShip2" x1="10%" y1="10%" x2="90%" y2="90%">
       <stop offset="0%" stop-color="#c4b5fd"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="nwSocialRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ddd6fe"/>
       <stop offset="100%" stop-color="#6d28d9"/>
     </linearGradient>
   </defs>
 
-  <circle cx="540" cy="332" r="164" fill="none" stroke="url(#nwSocialRing)" stroke-width="14" opacity="0.9"/>
+  <circle cx="540" cy="332" r="178" fill="none" stroke="url(#nwSocialRing)" stroke-width="14" opacity="0.92"/>
 
-  <g transform="translate(336 154)">
-    <path d="M122 295c39-90 44-168 0-238 90 56 136 153 141 238-34-23-68-17-141 0Z" fill="url(#nwSocialGradient)"/>
-    <path d="M257 267c5-69-18-131-80-194 58 40 100 101 106 176-6 7-15 13-26 18Z" fill="#7c3aed" opacity="0.92"/>
-    <path d="M51 321c74-35 152-50 283-53-36 37-62 62-90 78 18-29 27-45 27-56 0-10-6-12-17-12-56 0-133 13-203 43Z" fill="#312e81"/>
+  <g transform="translate(316 146)">
+    <path d="M224 48v204" stroke="#1f2a44" stroke-width="10" stroke-linecap="round"/>
+    <path d="M224 56l28 9-28 10z" fill="#f59e0b"/>
+    <path d="M232 82c75 39 126 104 137 182-46-20-90-23-137-17z" fill="url(#nwSocialShip)"/>
+    <path d="M217 99c-57 33-94 82-104 154 36-15 69-18 104-13z" fill="url(#nwSocialShip2)"/>
+    <path d="M78 260c74-16 184-22 305-9 14 2 20 11 15 24-29 60-238 79-319 39-23-11-31-22-29-34 2-9 10-17 28-20z" fill="#1f2a44"/>
+    <path d="M135 255c53-17 132-17 198-2" stroke="#f8fafc" stroke-opacity="0.28" stroke-width="7" stroke-linecap="round"/>
+    <path d="M60 316c86-17 192-17 338 4-132 28-250 29-338-4z" fill="#c4b5fd" fill-opacity="0.68"/>
   </g>
 
-  <text x="540" y="700" text-anchor="middle" fill="#172033" font-family="Georgia, 'Times New Roman', serif" font-size="112" letter-spacing="2" font-weight="700">
+  <text x="540" y="734" text-anchor="middle" fill="#172033" font-family="Georgia, 'Times New Roman', serif" font-size="112" letter-spacing="1" font-weight="700">
     Navigate
   </text>
-  <text x="540" y="795" text-anchor="middle" fill="#6d28d9" font-family="'Segoe UI', Arial, sans-serif" font-size="78" letter-spacing="8" font-weight="700">
+  <text x="540" y="820" text-anchor="middle" fill="#6d28d9" font-family="'Segoe UI', Arial, sans-serif" font-size="72" letter-spacing="4.2" font-weight="700">
     WEALTH
-  </text>
-  <text x="540" y="860" text-anchor="middle" fill="#64748b" font-family="'Segoe UI', Arial, sans-serif" font-size="27" letter-spacing="7" font-weight="600">
-    INDEPENDENT FINANCIAL ADVISORY SERVICES
   </text>
 </svg>

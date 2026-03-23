@@ -1,14 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Navigate Wealth sail icon">
-  <path
-    d="M17 49c7-16 8-30 0-42 16 10 24 27 25 42-6-4-12-3-25 0Z"
-    fill="#6d28d9"
-  />
-  <path
-    d="M41 44c1-12-3-23-14-34 10 7 18 18 19 31-1 1-3 2-5 3Z"
-    fill="#6d28d9"
-  />
-  <path
-    d="M7 54c13-6 27-9 50-9-6 6-11 11-16 14 3-5 5-8 5-10 0-2-1-2-3-2-10 0-24 2-36 7Z"
-    fill="#6d28d9"
-  />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Navigate Wealth ship icon">
+  <defs>
+    <linearGradient id="nwMiniShip" x1="18%" y1="16%" x2="84%" y2="84%">
+      <stop offset="0%" stop-color="#4338ca"/>
+      <stop offset="52%" stop-color="#6d28d9"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="nwMiniShip2" x1="10%" y1="10%" x2="90%" y2="90%">
+      <stop offset="0%" stop-color="#c4b5fd"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M31 6v23" stroke="#1f2a44" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M31 7l4 1.5-4 1.6z" fill="#f59e0b"/>
+  <path d="M32 10c8.5 4.5 14 11.6 15.2 20-5.2-2-9.9-2.4-15.2-1.6z" fill="url(#nwMiniShip)"/>
+  <path d="M30 13c-6.4 3.6-10.4 9.2-11.5 17 4.2-1.6 7.8-2 11.5-1.4z" fill="url(#nwMiniShip2)"/>
+  <path d="M14 33.8c8-1.6 19.8-2.2 32.8-.9 1.5.2 2.2 1.1 1.6 2.5-3 6.4-25.7 8.5-34.3 4.2-2.4-1.2-3.3-2.4-3.1-3.8.1-.8.9-1.6 3-2z" fill="#1f2a44"/>
+  <path d="M20 33.1c5.7-1.9 14.2-1.9 21.3-.3" stroke="#f8fafc" stroke-opacity="0.35" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M12 41c8.9-1.7 19.8-1.7 35.6.6-13.9 3-26.3 3.1-35.6-.6z" fill="#c4b5fd" fill-opacity="0.7"/>
 </svg>

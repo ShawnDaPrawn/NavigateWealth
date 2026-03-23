@@ -4,7 +4,7 @@
  * and Provider Configuration for provider selection
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -78,6 +78,15 @@ interface PolicyFormDialogProps {
   onSave: () => void;
 }
 
+/** First matching field by keyId — schemas may use legacy aliases (e.g. fund value vs current value). */
+function findFieldByKeyIds(structure: ProductField[], keyIds: string[]): ProductField | undefined {
+  for (const keyId of keyIds) {
+    const found = structure.find((f) => f.keyId === keyId);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 export function PolicyFormDialog({
   isOpen,
   onClose,
@@ -95,6 +104,8 @@ export function PolicyFormDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  /** True after any field edit while editing — drives "Recalculate & update" footer label when maturity projection applies. */
+  const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
 
   // Resolve initial category ID from the subtab
   const initialCategoryId = SUBTAB_TO_CATEGORY[categorySubtabId];
@@ -114,6 +125,7 @@ export function PolicyFormDialog({
           categoryIds: [],
         });
         setFormData(editingPolicy.data || {});
+        setHasUnsavedEdits(false);
       } else {
         // If adding new, check if we need subcategory selection
         if (initialCategoryId === 'retirement_planning') {
@@ -132,6 +144,7 @@ export function PolicyFormDialog({
         }
         setSelectedProvider(null);
         setFormData({});
+        setHasUnsavedEdits(false);
       }
     }
   }, [isOpen, initialCategoryId, editingPolicy]);
@@ -254,14 +267,17 @@ export function PolicyFormDialog({
     const recalcForPrefix = (prefix: 'retirement' | 'invest') => {
       const growthKey = prefix === 'invest' ? 'invest_assumptions_growth' : 'retirement_assumptions_growth';
       const escalationKey = prefix === 'invest' ? 'invest_assumptions_escalation' : 'retirement_assumptions_escalation';
-      const currentKey = prefix === 'invest' ? 'invest_current_value' : 'retirement_current_value';
       const maturityKey = prefix === 'invest' ? 'invest_maturity_date' : 'retirement_maturity_date';
       const contributionKey = prefix === 'invest' ? 'invest_monthly_contribution' : 'retirement_monthly_contribution';
       const maturityValueKey = prefix === 'invest' ? 'invest_maturity_value' : 'retirement_estimated_maturity_value';
 
       const growthField = tableStructure.find(f => f.keyId === growthKey);
       const escalationField = tableStructure.find(f => f.keyId === escalationKey);
-      const currentValueField = tableStructure.find(f => f.keyId === currentKey);
+      // Pre-retirement schemas often use retirement_fund_value; key manager also lists retirement_current_value.
+      const currentValueField =
+        prefix === 'invest'
+          ? findFieldByKeyIds(tableStructure, ['invest_current_value'])
+          : findFieldByKeyIds(tableStructure, ['retirement_current_value', 'retirement_fund_value']);
       const maturityDateField = tableStructure.find(f => f.keyId === maturityKey);
       const contributionField = tableStructure.find(f => f.keyId === contributionKey);
       const maturityValueField = tableStructure.find(f => f.keyId === maturityValueKey);
@@ -272,20 +288,35 @@ export function PolicyFormDialog({
       if (!maturityRaw) return;
 
       const growth = growthField ? Number(updated[growthField.id] ?? 10) : 10;
-      const escalation = escalationField ? Number(updated[escalationField.id] ?? 5) : 5;
+      const growthNum = Number.isFinite(growth) ? growth : 10;
+      const escalationRaw = escalationField ? Number(updated[escalationField.id] ?? 0) : 0;
+      const escalationNum = Number.isFinite(escalationRaw) ? escalationRaw : 0;
       const currentVal = currentValueField ? Number(updated[currentValueField.id] ?? 0) : 0;
       const contrib = contributionField ? Number(updated[contributionField.id] ?? 0) : 0;
 
       const maturityDate = new Date(maturityRaw as string | number | Date);
       if (Number.isNaN(maturityDate.getTime())) return;
 
+      const inceptionKey =
+        prefix === 'invest' ? 'invest_date_of_inception' : 'retirement_date_of_inception';
+      const inceptionField = tableStructure.find((f) => f.keyId === inceptionKey);
+      const inceptionRaw = inceptionField ? updated[inceptionField.id] : null;
+      let calcOptions: { premiumAnniversaryReference: Date } | undefined;
+      if (inceptionRaw != null && inceptionRaw !== '') {
+        const inc = new Date(inceptionRaw as string | number | Date);
+        if (!Number.isNaN(inc.getTime())) {
+          calcOptions = { premiumAnniversaryReference: inc };
+        }
+      }
+
       const result = calculateRetirementMaturityValue(
         currentVal,
         contrib,
-        growth,
-        escalation,
+        growthNum,
+        escalationNum,
         new Date(),
-        maturityDate
+        maturityDate,
+        calcOptions
       );
 
       updated[maturityValueField.id] = result;
@@ -297,7 +328,17 @@ export function PolicyFormDialog({
     return updated;
   };
 
+  const supportsMaturityProjection = useMemo(
+    () =>
+      tableStructure.some(
+        (f) =>
+          f.keyId === 'retirement_estimated_maturity_value' || f.keyId === 'invest_maturity_value'
+      ),
+    [tableStructure]
+  );
+
   const handleFieldChange = (fieldId: string, value: string | number | boolean) => {
+    setHasUnsavedEdits(true);
     setFormData((prev) => recalcMaturityValues({ ...prev, [fieldId]: value }));
     // Clear error for this field
     if (errors[fieldId]) {
@@ -371,6 +412,7 @@ export function PolicyFormDialog({
       toast.success(editingPolicy ? 'Policy updated successfully' : 'Policy added successfully', {
         id: toastId,
       });
+      setHasUnsavedEdits(false);
       onSave();
       handleClose();
     } catch (err: unknown) {
@@ -401,34 +443,40 @@ export function PolicyFormDialog({
     const growthKey = isInvestment ? 'invest_assumptions_growth' : 'retirement_assumptions_growth';
     const escalationKey = isInvestment ? 'invest_assumptions_escalation' : 'retirement_assumptions_escalation';
     // Note: For voluntary investments, keys are mapped to invest_voluntary category but IDs remain invest_...
-    const currentKey = isInvestment ? 'invest_current_value' : 'retirement_current_value';
     const maturityKey = isInvestment ? 'invest_maturity_date' : 'retirement_maturity_date';
     const contributionKey = isInvestment ? 'invest_monthly_contribution' : 'retirement_monthly_contribution';
     
     // Find related fields by keyId
     const growthField = tableStructure.find(f => f.keyId === growthKey);
     const escalationField = tableStructure.find(f => f.keyId === escalationKey);
-    const currentValueField = tableStructure.find(f => f.keyId === currentKey);
+    const currentValueField = isInvestment
+      ? findFieldByKeyIds(tableStructure, ['invest_current_value'])
+      : findFieldByKeyIds(tableStructure, ['retirement_current_value', 'retirement_fund_value']);
     const maturityDateField = tableStructure.find(f => f.keyId === maturityKey);
     const contributionField = tableStructure.find(f => f.keyId === contributionKey);
+    const inceptionKey = isInvestment ? 'invest_date_of_inception' : 'retirement_date_of_inception';
+    const inceptionField = tableStructure.find((f) => f.keyId === inceptionKey);
 
-    // Get current values
-    const growth = growthField ? (formData[growthField.id] || 10) : 10;
-    const escalation = escalationField ? (formData[escalationField.id] || 5) : 5;
+    // Get current values (0% escalation = no annual premium increase; growth defaults to 10%)
+    const growth = growthField ? Number(formData[growthField.id] ?? 10) : 10;
+    const growthNum = Number.isFinite(growth) ? growth : 10;
+    const escalation = escalationField ? Number(formData[escalationField.id] ?? 0) : 0;
+    const escalationNum = Number.isFinite(escalation) ? escalation : 0;
     const currentValue = currentValueField ? (Number(formData[currentValueField.id]) || 0) : 0;
     const contribution = contributionField ? (Number(formData[contributionField.id]) || 0) : 0;
     const maturityDate = maturityDateField ? formData[maturityDateField.id] : null;
+    const inceptionRaw = inceptionField ? formData[inceptionField.id] : null;
 
     // Temporary state for the modal
-    const [tempGrowth, setTempGrowth] = useState(growth);
-    const [tempEscalation, setTempEscalation] = useState(escalation);
+    const [tempGrowth, setTempGrowth] = useState(growthNum);
+    const [tempEscalation, setTempEscalation] = useState(escalationNum);
 
     useEffect(() => {
       if (open) {
-        setTempGrowth(growth);
-        setTempEscalation(escalation);
+        setTempGrowth(growthNum);
+        setTempEscalation(escalationNum);
       }
-    }, [open, growth, escalation]);
+    }, [open, growthNum, escalationNum]);
 
     const handleCalculate = () => {
       if (!maturityDate) {
@@ -437,26 +485,32 @@ export function PolicyFormDialog({
       }
 
       // Update assumption fields (if they exist in the schema)
-      if (growthField) handleFieldChange(growthField.id, tempTempGrowth);
-      if (escalationField) handleFieldChange(escalationField.id, tempEscalation);
+      if (growthField) handleFieldChange(growthField.id, Number(tempGrowth));
+      if (escalationField) handleFieldChange(escalationField.id, Number(tempEscalation));
 
       // Calculate result
+      let maturityCalcOptions: { premiumAnniversaryReference: Date } | undefined;
+      if (inceptionRaw != null && inceptionRaw !== '') {
+        const inc = new Date(inceptionRaw as string | number | Date);
+        if (!Number.isNaN(inc.getTime())) {
+          maturityCalcOptions = { premiumAnniversaryReference: inc };
+        }
+      }
+
       const result = calculateRetirementMaturityValue(
         currentValue,
         contribution,
         Number(tempGrowth),
         Number(tempEscalation),
         new Date(),
-        new Date(maturityDate)
+        new Date(maturityDate),
+        maturityCalcOptions
       );
 
       // Update estimated value
       handleFieldChange(field.id, result);
       setOpen(false);
     };
-
-    // Fix for tempGrowth in handleCalculate
-    const tempTempGrowth = tempGrowth; 
 
     return (
       <Dialog open={open} onOpenChange={setOpen}>
@@ -474,7 +528,8 @@ export function PolicyFormDialog({
           <DialogHeader>
             <DialogTitle>{isInvestment ? 'Investment' : 'Retirement'} Assumptions</DialogTitle>
             <DialogDescription>
-              Adjust growth and escalation rates to project the maturity value.
+              Growth and premium escalation (0% = none). With a date of inception captured, escalation
+              applies on each policy anniversary; otherwise it applies every 12 months from today.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -490,6 +545,12 @@ export function PolicyFormDialog({
                <div className="flex justify-between">
                 <span className="text-gray-500">Maturity Date:</span>
                 <span className="font-medium">{maturityDate ? new Date(maturityDate).toLocaleDateString() : '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Inception (anniversary):</span>
+                <span className="font-medium">
+                  {inceptionRaw ? new Date(inceptionRaw as string | number | Date).toLocaleDateString() : '—'}
+                </span>
               </div>
             </div>
 
@@ -508,7 +569,10 @@ export function PolicyFormDialog({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="escalation" className="text-xs">Annual Premium Escalation (%)</Label>
+                <Label htmlFor="escalation" className="text-xs">
+                  Annual Premium Escalation (%)
+                  <span className="block font-normal text-muted-foreground mt-0.5">Use 0 if the premium does not escalate</span>
+                </Label>
                 <div className="relative">
                   <Input 
                     id="escalation" 
@@ -533,12 +597,6 @@ export function PolicyFormDialog({
   };
 
   const renderFieldInput = (field: ProductField) => {
-    // Hide assumption fields from main list
-    if (field.keyId === 'retirement_assumptions_growth' || field.keyId === 'retirement_assumptions_escalation' ||
-        field.keyId === 'invest_assumptions_growth' || field.keyId === 'invest_assumptions_escalation') {
-      return null;
-    }
-
     const value = formData[field.id] || '';
     const hasError = !!errors[field.id];
 
@@ -586,15 +644,26 @@ export function PolicyFormDialog({
       case 'currency':
         return (
           <div key={field.id} className="space-y-2">
-            <div className="flex justify-between items-end min-h-5">
+            <div className="flex justify-between items-end min-h-5 gap-2">
               <Label htmlFor={field.id}>
                 {field.name}
                 {field.required && <span className="text-red-500 ml-1">*</span>}
               </Label>
               
-              {/* Inject Assumptions Tool for Estimated Maturity Value */}
+              {/* Assumptions + explicit recalculate (drivers may use legacy keyIds, e.g. retirement_fund_value) */}
               {(field.keyId === 'retirement_estimated_maturity_value' || field.keyId === 'invest_maturity_value') && (
-                <AssumptionsTool field={field} />
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <AssumptionsTool field={field} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-xs px-2 border-dashed border-slate-300 text-slate-700 hover:bg-slate-50"
+                    onClick={() => setFormData((prev) => recalcMaturityValues({ ...prev }))}
+                  >
+                    Recalculate
+                  </Button>
+                </div>
               )}
             </div>
             
@@ -989,8 +1058,10 @@ export function PolicyFormDialog({
                         }
                         onDocumentChange={onSave}
                         onApplyExtractedData={(fieldsToApply) => {
-                          // Update the local form data with extracted values
-                          setFormData((prev) => ({ ...prev, ...fieldsToApply }));
+                          setHasUnsavedEdits(true);
+                          setFormData((prev) =>
+                            recalcMaturityValues({ ...prev, ...fieldsToApply })
+                          );
                         }}
                       />
                     )}
@@ -1013,7 +1084,13 @@ export function PolicyFormDialog({
                   Saving...
                 </div>
               ) : (
-                <span>{editingPolicy ? 'Update Policy' : 'Save Policy'}</span>
+                <span>
+                  {editingPolicy && hasUnsavedEdits && supportsMaturityProjection
+                    ? 'Recalculate & Update Policy'
+                    : editingPolicy
+                      ? 'Update Policy'
+                      : 'Save Policy'}
+                </span>
               )}
             </Button>
           )}

@@ -49,6 +49,7 @@ export const DEFAULT_SCHEMAS: Record<string, { fields: DefaultSchemaField[] }> =
   'retirement_pre': {
     fields: [
       { id: 'ret_pre_1', name: 'Policy Number', type: 'text', required: true },
+      { id: 'ret_pre_inception', name: 'Date of Inception', type: 'date', required: false, keyId: 'retirement_date_of_inception' },
       { id: 'ret_pre_2', name: 'Product Type', type: 'dropdown', required: true, options: ['Retirement Annuity', 'Pension Fund', 'Provident Fund', 'Preservation Fund', 'Living Annuity'], keyId: 'retirement_fund_type' },
       { id: 'ret_pre_3', name: 'Current Value', type: 'currency', required: true, keyId: 'retirement_fund_value' },
       { id: 'ret_pre_4', name: 'Estimated Maturity Value', type: 'currency', required: false, keyId: 'retirement_estimated_maturity_value' },
@@ -56,8 +57,8 @@ export const DEFAULT_SCHEMAS: Record<string, { fields: DefaultSchemaField[] }> =
       { id: 'ret_pre_8', name: 'Maturity Date', type: 'date', required: false, keyId: 'retirement_maturity_date' },
       { id: 'ret_pre_6', name: 'Premium', type: 'currency', required: true, keyId: 'retirement_monthly_contribution' },
       { id: 'ret_pre_7', name: 'Notes', type: 'long_text', required: false },
-      { id: 'ret_pre_9', name: 'Growth Rate', type: 'percentage', required: false, keyId: 'retirement_assumptions_growth' },
-      { id: 'ret_pre_10', name: 'Escalation Rate', type: 'percentage', required: false, keyId: 'retirement_assumptions_escalation' },
+      { id: 'ret_pre_9', name: 'Assumed growth (%)', type: 'percentage', required: false, keyId: 'retirement_assumptions_growth' },
+      { id: 'ret_pre_10', name: 'Premium escalation (%) — anniversary', type: 'percentage', required: false, keyId: 'retirement_assumptions_escalation' },
     ]
   },
   'retirement_post': {
@@ -87,14 +88,15 @@ export const DEFAULT_SCHEMAS: Record<string, { fields: DefaultSchemaField[] }> =
   'investments_voluntary': {
     fields: [
       { id: 'inv_vol_1', name: 'Policy Number', type: 'text', required: true },
+      { id: 'inv_vol_inception', name: 'Date of Inception', type: 'date', required: false, keyId: 'invest_date_of_inception' },
       { id: 'inv_vol_2', name: 'Product Type', type: 'dropdown', required: true, options: ['Unit Trust', 'Tax Free Savings', 'Offshore Investment', 'Shares'], keyId: 'invest_product_type' },
       { id: 'inv_vol_3', name: 'Current Value', type: 'currency', required: true, keyId: 'invest_current_value' },
       { id: 'inv_vol_4', name: 'Estimated Maturity Value', type: 'currency', required: false, keyId: 'invest_maturity_value' },
       { id: 'inv_vol_5', name: 'Maturity Date', type: 'date', required: false, keyId: 'invest_maturity_date' },
       { id: 'inv_vol_6', name: 'Premium', type: 'currency', required: false, keyId: 'invest_monthly_contribution' },
       { id: 'inv_vol_7', name: 'Notes', type: 'long_text', required: false },
-      { id: 'inv_vol_8', name: 'Growth Rate', type: 'percentage', required: false, keyId: 'invest_assumptions_growth' },
-      { id: 'inv_vol_9', name: 'Escalation Rate', type: 'percentage', required: false, keyId: 'invest_assumptions_escalation' },
+      { id: 'inv_vol_8', name: 'Assumed growth (%)', type: 'percentage', required: false, keyId: 'invest_assumptions_growth' },
+      { id: 'inv_vol_9', name: 'Contribution escalation (%) — anniversary', type: 'percentage', required: false, keyId: 'invest_assumptions_escalation' },
     ]
   },
   'investments_guaranteed': {

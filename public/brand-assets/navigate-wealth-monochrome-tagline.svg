@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 300" role="img" aria-label="Navigate Wealth monochrome logo without tagline">
-  <g transform="translate(42 34)">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 380" role="img" aria-label="Navigate Wealth monochrome logo with tagline">
+  <g transform="translate(42 46)">
     <path d="M136 24v162" stroke="#1e293b" stroke-width="8" stroke-linecap="round"/>
     <path d="M136 30l22 7-22 8z" fill="#1e293b"/>
     <path d="M141 48c56 28 93 76 102 140-35-14-67-16-102-11z" fill="#1e293b"/>
@@ -9,12 +9,16 @@
     <path d="M18 235c63-11 138-11 248 2-96 22-182 23-248-2z" fill="#1e293b" opacity="0.18"/>
   </g>
 
-  <g transform="translate(350 76)">
+  <g transform="translate(350 82)">
     <text x="0" y="98" fill="#1e293b" font-family="Georgia, 'Times New Roman', serif" font-size="112" letter-spacing="0.8" font-weight="700">
       Navigate
     </text>
     <text x="468" y="98" fill="#1e293b" font-family="'Segoe UI', Arial, sans-serif" font-size="78" letter-spacing="3.2" font-weight="700">
       WEALTH
+    </text>
+    <rect x="2" y="126" width="760" height="3" rx="1.5" fill="#1e293b" opacity="0.28"/>
+    <text x="2" y="178" fill="#1e293b" font-family="'Segoe UI', Arial, sans-serif" font-size="28" letter-spacing="5.1" font-weight="600">
+      INDEPENDENT FINANCIAL ADVISORY SERVICES
     </text>
   </g>
 </svg>

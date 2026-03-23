@@ -368,7 +368,8 @@ export const RETIREMENT_PRE_KEYS: ProductKey[] = [
     id: 'retirement_assumptions_escalation',
     category: 'retirement_pre',
     name: 'Premium Escalation (%)',
-    description: 'Annual premium increase percentage',
+    description:
+      'Annual increase to the monthly premium on each policy anniversary (e.g. 5 or 6). Use 0 if the premium does not escalate. Maturity projections use this together with date of inception when present.',
     dataType: 'percentage',
     isCalculated: false,
   },
@@ -376,7 +377,8 @@ export const RETIREMENT_PRE_KEYS: ProductKey[] = [
     id: 'retirement_date_of_inception',
     category: 'retirement_pre',
     name: 'Date of Inception',
-    description: 'Start date of the retirement policy',
+    description:
+      'Policy start / commencement date. Used to time annual premium escalation on anniversary for maturity projections.',
     dataType: 'date',
     isCalculated: false,
   },
@@ -536,7 +538,8 @@ export const INVEST_VOLUNTARY_KEYS: ProductKey[] = [
     id: 'invest_date_of_inception',
     category: 'invest_voluntary',
     name: 'Date of Inception',
-    description: 'Start date of the investment',
+    description:
+      'Policy or investment start date. Used to time annual contribution escalation on anniversary for maturity projections.',
     dataType: 'date',
     isCalculated: false,
   },
@@ -561,7 +564,8 @@ export const INVEST_VOLUNTARY_KEYS: ProductKey[] = [
     id: 'invest_assumptions_escalation',
     category: 'invest_voluntary',
     name: 'Premium Escalation (%)',
-    description: 'Annual premium increase percentage',
+    description:
+      'Annual increase to the monthly contribution on each policy anniversary. Use 0 if the contribution does not escalate. Maturity projections use this with date of inception when present.',
     dataType: 'percentage',
     isCalculated: false,
   },
