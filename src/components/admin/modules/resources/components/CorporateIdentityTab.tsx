@@ -295,7 +295,7 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
           <h3 className="text-base font-semibold">Logo Library</h3>
           <p className="text-sm text-muted-foreground">Upload and manage all brand logo variants.</p>
         </div>
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
           {/* Preview background toggle */}
           <div className="flex items-center border rounded-lg overflow-hidden">
             {(['light', 'dark', 'brand'] as const).map((bg) => (
@@ -349,19 +349,21 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
                           <TooltipContent>Download</TooltipContent>
                         </Tooltip>
                       )}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50"
-                            onClick={() => handleDelete(variant.value)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Delete</TooltipContent>
-                      </Tooltip>
+                      {logo.source !== 'builtin' && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => handleDelete(variant.value)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   )}
                 </div>
@@ -392,11 +394,16 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
                 {logo && (
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{logo.fileName}</span>
-                    <span>{(logo.fileSize / 1024).toFixed(0)} KB</span>
+                    <span>{logo.source === 'builtin' ? 'Built-in pack' : `${(logo.fileSize / 1024).toFixed(0)} KB`}</span>
                   </div>
                 )}
                 {logo?.usageNotes && (
                   <p className="text-xs text-muted-foreground bg-gray-50 rounded px-2 py-1.5">{logo.usageNotes}</p>
+                )}
+                {logo?.source === 'builtin' && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    Included by default
+                  </Badge>
                 )}
                 {logo?.previousVersions && logo.previousVersions.length > 0 && (
                   <Badge variant="outline" className="text-[10px]">
@@ -415,7 +422,7 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
           <DialogHeader>
             <DialogTitle>Upload Logo</DialogTitle>
             <DialogDescription>
-              Upload a logo variant. If a logo already exists for this variant, the previous version will be archived.
+              Upload a logo variant. If a built-in or uploaded logo already exists for this variant, your upload will replace the visible version and archive the previous uploaded version.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">

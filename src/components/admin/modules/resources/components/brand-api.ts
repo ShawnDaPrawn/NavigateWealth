@@ -28,6 +28,7 @@ export interface LogoEntry {
   uploadedAt: string;
   uploadedBy: string;
   signedUrl?: string | null;
+  source?: 'uploaded' | 'builtin';
   previousVersions?: { storagePath: string; uploadedAt: string; uploadedBy: string }[];
 }
 
@@ -135,6 +136,77 @@ export const LOGO_VARIANTS = [
   { value: 'monochrome', label: 'Monochrome', description: 'Single-colour version for print' },
 ] as const;
 
+const BUILTIN_LOGO_PACK = [
+  {
+    variant: 'primary',
+    label: 'Primary (Full Colour)',
+    fileName: 'navigate-wealth-primary.svg',
+    signedUrl: '/brand-assets/navigate-wealth-primary.svg',
+    usageNotes: 'Built-in Navigate Wealth primary logo for light backgrounds.',
+  },
+  {
+    variant: 'reversed',
+    label: 'Reversed (White/Light)',
+    fileName: 'navigate-wealth-reversed.svg',
+    signedUrl: '/brand-assets/navigate-wealth-reversed.svg',
+    usageNotes: 'Built-in reversed logo for dark backgrounds.',
+  },
+  {
+    variant: 'icon',
+    label: 'Icon Only',
+    fileName: 'navigate-wealth-icon.svg',
+    signedUrl: '/brand-assets/navigate-wealth-icon.svg',
+    usageNotes: 'Built-in favicon and compact icon mark.',
+  },
+  {
+    variant: 'social',
+    label: 'Social Media',
+    fileName: 'navigate-wealth-social.svg',
+    signedUrl: '/brand-assets/navigate-wealth-social.svg',
+    usageNotes: 'Built-in square social avatar treatment.',
+  },
+  {
+    variant: 'monochrome',
+    label: 'Monochrome',
+    fileName: 'navigate-wealth-monochrome.svg',
+    signedUrl: '/brand-assets/navigate-wealth-monochrome.svg',
+    usageNotes: 'Built-in single-colour version for print and embossing.',
+  },
+] as const satisfies Array<{
+  variant: LogoEntry['variant'];
+  label: string;
+  fileName: string;
+  signedUrl: string;
+  usageNotes: string;
+}>;
+
+function getBuiltInLogoEntries(): LogoEntry[] {
+  return BUILTIN_LOGO_PACK.map((asset) => ({
+    id: `builtin-${asset.variant}`,
+    variant: asset.variant,
+    label: asset.label,
+    fileName: asset.fileName,
+    storagePath: asset.signedUrl,
+    mimeType: asset.fileName.endsWith('.svg') ? 'image/svg+xml' : 'image/png',
+    fileSize: 0,
+    usageNotes: asset.usageNotes,
+    uploadedAt: '',
+    uploadedBy: 'Navigate Wealth',
+    signedUrl: asset.signedUrl,
+    source: 'builtin',
+  }));
+}
+
+function mergeBuiltInLogos(logos: LogoEntry[]): LogoEntry[] {
+  const uploaded = logos.map((logo) => ({
+    ...logo,
+    source: logo.source ?? 'uploaded',
+  }));
+  const uploadedVariants = new Set(uploaded.map((logo) => logo.variant));
+  const fallbacks = getBuiltInLogoEntries().filter((logo) => !uploadedVariants.has(logo.variant));
+  return [...uploaded, ...fallbacks];
+}
+
 // ============================================================================
 // API METHODS
 // ============================================================================
@@ -143,13 +215,16 @@ export const brandApi = {
   // Summary
   async getSummary(): Promise<BrandSummary> {
     const res = await api.get<BrandSummary & { success: boolean }>('/brand/summary');
-    return res;
+    return {
+      ...res,
+      logoCount: Math.max(res.logoCount || 0, BUILTIN_LOGO_PACK.length),
+    };
   },
 
   // Logos
   async getLogos(): Promise<LogoEntry[]> {
     const res = await api.get<{ success: boolean; logos: LogoEntry[] }>('/brand/logos');
-    return res.logos || [];
+    return mergeBuiltInLogos(res.logos || []);
   },
 
   async uploadLogo(file: File, variant: string, label: string, usageNotes: string): Promise<LogoEntry[]> {
@@ -160,12 +235,12 @@ export const brandApi = {
     formData.append('usageNotes', usageNotes);
     formData.append('uploadedBy', 'admin');
     const res = await api.post<{ success: boolean; logos: LogoEntry[] }>('/brand/logos/upload', formData);
-    return res.logos || [];
+    return mergeBuiltInLogos(res.logos || []);
   },
 
   async deleteLogo(variant: string): Promise<LogoEntry[]> {
     const res = await api.delete<{ success: boolean; logos: LogoEntry[] }>(`/brand/logos/${variant}`);
-    return res.logos || [];
+    return mergeBuiltInLogos(res.logos || []);
   },
 
   // Colours
