@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 360" role="img" aria-label="Navigate Wealth reversed logo">
+  <defs>
+    <linearGradient id="nwSailReversed" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#ede9fe"/>
+      <stop offset="100%" stop-color="#ddd6fe"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(36 30)">
+    <path d="M97 218c31-71 35-133 0-188 71 44 107 121 111 188-27-18-53-13-111 0Z" fill="url(#nwSailReversed)"/>
+    <path d="M203 196c4-55-15-103-63-153 46 32 79 79 84 138-5 6-12 10-21 15Z" fill="#f5f3ff" opacity="0.92"/>
+    <path d="M41 239c58-27 120-40 223-42-29 29-49 49-71 61 14-23 21-36 21-45 0-8-5-10-13-10-44 0-105 10-160 36Z" fill="#ffffff"/>
+  </g>
+
+  <g transform="translate(332 88)">
+    <text x="0" y="82" fill="#ffffff" font-family="Georgia, 'Times New Roman', serif" font-size="102" letter-spacing="1.2" font-weight="700">
+      Navigate
+    </text>
+    <text x="612" y="82" fill="#ede9fe" font-family="'Segoe UI', Arial, sans-serif" font-size="82" letter-spacing="5" font-weight="700">
+      WEALTH
+    </text>
+    <rect x="2" y="112" width="878" height="3.5" rx="1.75" fill="#c4b5fd" opacity="0.8"/>
+    <text x="2" y="162" fill="#e2e8f0" font-family="'Segoe UI', Arial, sans-serif" font-size="28" letter-spacing="6" font-weight="600">
+      INDEPENDENT FINANCIAL ADVISORY SERVICES
+    </text>
+  </g>
+</svg>

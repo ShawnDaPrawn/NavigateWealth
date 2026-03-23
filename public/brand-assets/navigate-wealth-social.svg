@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="Navigate Wealth social logo">
+  <defs>
+    <linearGradient id="nwSocialGradient" x1="20%" y1="18%" x2="80%" y2="82%">
+      <stop offset="0%" stop-color="#4c1d95"/>
+      <stop offset="55%" stop-color="#6d28d9"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="nwSocialRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c4b5fd"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="540" cy="332" r="164" fill="none" stroke="url(#nwSocialRing)" stroke-width="14" opacity="0.9"/>
+
+  <g transform="translate(336 154)">
+    <path d="M122 295c39-90 44-168 0-238 90 56 136 153 141 238-34-23-68-17-141 0Z" fill="url(#nwSocialGradient)"/>
+    <path d="M257 267c5-69-18-131-80-194 58 40 100 101 106 176-6 7-15 13-26 18Z" fill="#7c3aed" opacity="0.92"/>
+    <path d="M51 321c74-35 152-50 283-53-36 37-62 62-90 78 18-29 27-45 27-56 0-10-6-12-17-12-56 0-133 13-203 43Z" fill="#312e81"/>
+  </g>
+
+  <text x="540" y="700" text-anchor="middle" fill="#172033" font-family="Georgia, 'Times New Roman', serif" font-size="112" letter-spacing="2" font-weight="700">
+    Navigate
+  </text>
+  <text x="540" y="795" text-anchor="middle" fill="#6d28d9" font-family="'Segoe UI', Arial, sans-serif" font-size="78" letter-spacing="8" font-weight="700">
+    WEALTH
+  </text>
+  <text x="540" y="860" text-anchor="middle" fill="#64748b" font-family="'Segoe UI', Arial, sans-serif" font-size="27" letter-spacing="7" font-weight="600">
+    INDEPENDENT FINANCIAL ADVISORY SERVICES
+  </text>
+</svg>
