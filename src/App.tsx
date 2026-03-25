@@ -5,9 +5,12 @@ import { AppProviders } from "./components/providers/AppProviders";
 import { AppRoutes } from "./AppRoutes";
 import { SkipToContent } from "./components/shared/AccessibilityHelpers";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary";
-import appIcon from "figma:asset/659a0de62953bd7f998e24115e7eb3980457ec76.png";
 
 export default function App() {
+  const appIconVersion = "20260325b";
+  const appIcon192 = `/favicon-192x192.png?v=${appIconVersion}`;
+  const appIcon512 = `/favicon-512x512.png?v=${appIconVersion}`;
+
   // Validate environment variables on first render
   // v5.1: Submissions UI aligned to TaskManagementModule pattern
   useEffect(() => {
@@ -114,13 +117,13 @@ export default function App() {
         categories: ["finance", "productivity", "business"],
         icons: [
           {
-            src: appIcon,
+            src: appIcon192,
             sizes: "192x192",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: appIcon,
+            src: appIcon512,
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",

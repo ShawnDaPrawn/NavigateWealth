@@ -1,8 +1,9 @@
+@import "tailwindcss";
 @custom-variant dark (&:is(.dark *));
 
 :root {
   --font-size: 14px;
-  --background: #ffffff;
+  --background: #f8f9fa;
   --foreground: #000000;
   --card: #ffffff;
   --card-foreground: #000000;
@@ -31,13 +32,13 @@
   --chart-4: #f59e0b;
   --chart-5: #ef4444;
   --radius: 0.625rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #000000;
+  --sidebar: #111827;
+  --sidebar-foreground: #f9fafb;
   --sidebar-primary: #6d28d9;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f8f9fa;
-  --sidebar-accent-foreground: #000000;
-  --sidebar-border: rgba(0, 0, 0, 0.1);
+  --sidebar-accent: #1f2937;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1f2937;
   --sidebar-ring: #6d28d9;
   
   /* Theme-specific section backgrounds */
@@ -270,6 +271,25 @@
     display: none;  /* Safari and Chrome */
   }
   
+  /* Custom scrollbar for dark sidebar */
+  .sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.25);
+    border-radius: 20px;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+
   /* Smooth scrolling for tab containers */
   .scroll-smooth {
     scroll-behavior: smooth;

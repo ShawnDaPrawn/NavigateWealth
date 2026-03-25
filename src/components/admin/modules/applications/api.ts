@@ -5,6 +5,24 @@ import { ENDPOINTS, STATUS_MAP } from './constants';
 
 export const applicationsApi = {
   getApplications: async (activeTab: TabStatus): Promise<Application[]> => {
+    if (activeTab === 'incomplete') {
+      try {
+        const [draftData, inProgressData] = await Promise.all([
+          api.get<ApplicationsResponse>(`/${ENDPOINTS.APPLICATIONS}?status=draft&sortBy=created_at&sortOrder=desc`),
+          api.get<ApplicationsResponse>(`/${ENDPOINTS.APPLICATIONS}?status=in_progress&sortBy=created_at&sortOrder=desc`),
+        ]);
+        const combined = [
+          ...(draftData.applications || []),
+          ...(inProgressData.applications || []),
+        ];
+        combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return combined;
+      } catch (error) {
+        logger.error('Failed to fetch incomplete applications', error);
+        throw error;
+      }
+    }
+
     const backendStatus = STATUS_MAP[activeTab as keyof typeof STATUS_MAP];
     if (!backendStatus) return [];
 

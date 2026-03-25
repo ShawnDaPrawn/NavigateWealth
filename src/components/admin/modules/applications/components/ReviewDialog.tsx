@@ -406,6 +406,8 @@ export function ReviewDialog({
   if (!selectedApplication || !data) return null;
 
   const isPending = selectedApplication.status === 'submitted' || selectedApplication.status === 'invited';
+  const isIncomplete = selectedApplication.status === 'draft' || selectedApplication.status === 'in_progress';
+  const isActionable = isPending || isIncomplete;
   const urgencyInfo = data?.urgency ? URGENCY_MAP[data.urgency] : null;
 
   const fullName = [data?.title, data?.firstName, data?.middleName, data?.lastName].filter(Boolean).join(' ');
@@ -496,7 +498,7 @@ export function ReviewDialog({
             </div>
 
             {/* Edit mode controls */}
-            {isPending && (
+            {isActionable && (
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
                 {!isEditing ? (
                   <Button
@@ -565,7 +567,7 @@ export function ReviewDialog({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { label: 'Application ID', value: selectedApplication.application_number || selectedApplication.id.substring(0, 12), mono: true },
-              { label: 'Submitted', value: formatDate(selectedApplication.submitted_at || selectedApplication.created_at) },
+              { label: isIncomplete ? 'Signed Up' : 'Submitted', value: formatDate(isIncomplete ? selectedApplication.created_at : (selectedApplication.submitted_at || selectedApplication.created_at)) },
               { label: 'Last Updated', value: formatDate(selectedApplication.updated_at) },
               { label: 'Services Requested', value: `${services.length} service${services.length !== 1 ? 's' : ''}`, bold: true },
             ].map((item) => (
@@ -577,6 +579,51 @@ export function ReviewDialog({
               </div>
             ))}
           </div>
+
+          {/* Account Type — visible for incomplete applications, editable in edit mode */}
+          {(() => {
+            const ACCOUNT_TYPES = [
+              { value: 'Personal Client', label: 'Personal Client', description: 'Individual seeking financial advisory' },
+              { value: 'Business Client', label: 'Business Client', description: 'Corporate financial services (coming soon)', comingSoon: true },
+              { value: 'Partner Financial Adviser', label: 'Partner Financial Adviser', description: 'Independent adviser joining the platform (coming soon)', comingSoon: true },
+            ];
+            const currentAccountType = isEditing
+              ? (editData.accountType as string || 'Personal Client')
+              : (data?.accountType as string || 'Personal Client');
+
+            return (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white border border-gray-200">
+                <Building2 className="h-4 w-4 text-gray-400 shrink-0" />
+                <span className="text-xs text-gray-500 font-medium shrink-0">Account Type:</span>
+                {isEditing ? (
+                  <Select value={currentAccountType} onValueChange={(v) => updateField('accountType', v)}>
+                    <SelectTrigger className="h-7 text-xs w-auto min-w-[180px] bg-gray-50/60 border-gray-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACCOUNT_TYPES.map((t) => (
+                        <SelectItem key={t.value} value={t.value} disabled={t.comingSoon}>
+                          <span className="flex items-center gap-2">
+                            {t.label}
+                            {t.comingSoon && (
+                              <span className="text-[9px] text-gray-400 bg-gray-100 px-1 py-px rounded">Soon</span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge variant="outline" className="text-[11px] font-medium bg-purple-50 text-purple-700 border-purple-200">
+                    {currentAccountType}
+                  </Badge>
+                )}
+                {isIncomplete && !isEditing && (
+                  <span className="text-[10px] text-gray-400 ml-auto">Click "Amend Application" to change</span>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Urgency badge (if present) */}
           {urgencyInfo && (
@@ -1167,7 +1214,7 @@ export function ReviewDialog({
             >
               Close
             </Button>
-            {isPending && (
+            {isActionable && (
               <div className="flex items-center gap-2.5">
                 <Button
                   variant="outline"

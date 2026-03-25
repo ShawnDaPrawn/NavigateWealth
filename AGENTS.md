@@ -19,6 +19,7 @@ All standard commands are in `package.json`:
 
 ### Notes
 
+- After changing Edge Function behaviour (for example `GET /admin/stats` fields such as `incomplete` or `draft`), deploy the Supabase Edge Function so production returns the updated JSON; the SPA always calls the deployed function URL above.
 - No ESLint config exists in the repo; there is no lint command.
 - The test suite has a pre-existing issue: `resolveNestedKey.test.tsx` uses custom assertion logging instead of vitest `test()`/`it()` functions, so vitest reports it as "failed suite" despite all 17 internal assertions passing. 64 tests across 3 other suites pass cleanly.
 - The Vite dev server opens a browser by default (`server.open: true` in `vite.config.ts`).

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="Navigate Wealth social logo">
+  <defs>
+    <linearGradient id="nwSocialMain" x1="16%" y1="8%" x2="72%" y2="88%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#5b21b6"/>
+    </linearGradient>
+    <linearGradient id="nwSocialRear" x1="12%" y1="10%" x2="82%" y2="90%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+    <linearGradient id="nwSocialHull" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(166 112) scale(0.82)">
+    <path d="M52 26C120 74 177 151 192 247C205 332 187 414 148 491C124 539 95 582 66 619C132 580 197 548 262 533C309 522 353 525 391 544C372 456 338 367 290 286C233 191 153 99 52 26Z" fill="url(#nwSocialMain)"/>
+    <path d="M206 92C277 152 337 227 381 313C413 377 431 444 428 507C394 444 356 385 314 329C276 277 239 198 206 92Z" fill="url(#nwSocialRear)"/>
+    <path d="M8 576C126 534 263 511 442 500C592 491 721 497 835 516C796 559 759 602 721 648C697 678 661 699 627 700C652 669 675 638 689 603C700 575 692 566 660 565C503 564 281 572 8 576Z" fill="url(#nwSocialHull)"/>
+  </g>
+
+  <text x="524" y="832" text-anchor="end" fill="#142033" font-family="'Times New Roman', Georgia, serif" font-size="84" font-weight="700" letter-spacing="0.2">
+    Navigate
+  </text>
+  <text x="528" y="832" text-anchor="start" fill="#6d28d9" font-family="'Times New Roman', Georgia, serif" font-size="84" font-weight="700" letter-spacing="0.2">
+    Wealth
+  </text>
+</svg>

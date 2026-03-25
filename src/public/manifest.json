@@ -12,21 +12,21 @@
   "categories": ["finance", "productivity", "business"],
   "icons": [
     {
-      "src": "/logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/favicon-32x32.png?v=20260325b",
+      "sizes": "32x32",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo.svg",
+      "src": "/favicon-192x192.png?v=20260325b",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/logo.svg",
+      "src": "/favicon-512x512.png?v=20260325b",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ]

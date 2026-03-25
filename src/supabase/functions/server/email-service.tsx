@@ -866,7 +866,7 @@ Admin Panel: https://navigatewealth.co/admin
   `.trim();
 
   return await sendEmail({
-    to: 'admin@navigatewealth.co',
+    to: 'info@navigatewealth.co',
     subject: `New Application: ${applicationNumber}`,
     html,
     text,
@@ -1061,7 +1061,7 @@ View Admin Panel: https://navigatewealth.co/admin
   `.trim();
 
   return await sendEmail({
-    to: 'admin@navigatewealth.co',
+    to: 'info@navigatewealth.co',
     subject: `Application Approved: ${applicationNumber}`,
     html,
     text,
@@ -1117,7 +1117,7 @@ Admin Panel: https://navigatewealth.co/admin
   `.trim();
 
   return await sendEmail({
-    to: 'admin@navigatewealth.co',
+    to: 'info@navigatewealth.co',
     subject: 'New User Signup',
     html,
     text,

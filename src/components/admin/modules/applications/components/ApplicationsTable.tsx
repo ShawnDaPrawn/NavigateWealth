@@ -78,6 +78,11 @@ interface ApplicationsTableProps {
 
 /** Tab-specific empty state configuration */
 const EMPTY_STATE_CONFIG: Record<TabStatus, { icon: React.ElementType; title: string; description: string }> = {
+  incomplete: {
+    icon: Inbox,
+    title: 'No incomplete applications',
+    description: 'Clients who sign up but don\u2019t finish their application will appear here.',
+  },
   pending: {
     icon: Inbox,
     title: 'No pending applications',
@@ -101,6 +106,7 @@ const EMPTY_STATE_CONFIG: Record<TabStatus, { icon: React.ElementType; title: st
 };
 
 const TAB_LABELS: Record<TabStatus, string> = {
+  incomplete: 'Incomplete',
   pending: 'Pending Review',
   invited: 'Invited',
   approved: 'Approved',
@@ -124,6 +130,7 @@ export function ApplicationsTable({
 }: ApplicationsTableProps) {
   // Filter applications by tab status
   const statusMap: Record<TabStatus, string[]> = {
+    incomplete: ['draft', 'in_progress'],
     pending: ['submitted'],
     approved: ['approved'],
     rejected: ['declined'],
@@ -180,7 +187,7 @@ export function ApplicationsTable({
     return (app.application_data.existingProducts || []).filter(p => p !== 'None of the above').length;
   };
 
-  const isPendingLike = activeTab === 'pending' || activeTab === 'invited';
+  const isPendingLike = activeTab === 'pending' || activeTab === 'invited' || activeTab === 'incomplete';
 
   if (loading) {
     return (
@@ -283,7 +290,7 @@ export function ApplicationsTable({
                 Status
               </TableHead>
               <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
-                {activeTab === 'invited' ? 'Invited' : 'Submitted'}
+                {activeTab === 'invited' ? 'Invited' : activeTab === 'incomplete' ? 'Signed Up' : 'Submitted'}
               </TableHead>
               <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
                 Origin
@@ -492,7 +499,7 @@ export function ApplicationsTable({
                             </div>
                           )}
 
-                          {activeTab === 'pending' && onCompleteOnBehalf && (
+                          {(activeTab === 'pending' || activeTab === 'incomplete') && onCompleteOnBehalf && (
                             <div className="contents">
                               <DropdownMenuSeparator />
                               <DropdownMenuItem

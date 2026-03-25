@@ -1,4 +1,4 @@
-export type TabStatus = 'pending' | 'approved' | 'rejected' | 'invited';
+export type TabStatus = 'pending' | 'approved' | 'rejected' | 'invited' | 'incomplete';
 
 export type ApplicationStatus = 'draft' | 'submitted' | 'approved' | 'declined' | 'in_progress' | 'invited';
 
@@ -104,6 +104,9 @@ export interface ApplicationStats {
   declined: number;
   application_in_progress: number;
   invited?: number;
+  /** Draft-only signups (subset of incomplete when not in progress) */
+  draft?: number;
+  incomplete?: number;
 }
 
 export interface ApplicationsResponse {

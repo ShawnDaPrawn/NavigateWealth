@@ -1,8 +1,12 @@
-const CACHE_NAME = 'nw-admin-v2';
+const CACHE_NAME = 'nw-admin-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/favicon.svg',
+  '/favicon-32x32.png',
+  '/favicon-192x192.png',
+  '/favicon-512x512.png',
+  '/apple-touch-icon.png',
   '/robots.txt'
 ];
 

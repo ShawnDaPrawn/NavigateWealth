@@ -27,6 +27,7 @@ export const STATUS_MAP = {
   approved: 'approved',
   rejected: 'declined',
   invited: 'invited',
+  incomplete: 'incomplete',
 } as const;
 
 // ---------------------------------------------------------------------------

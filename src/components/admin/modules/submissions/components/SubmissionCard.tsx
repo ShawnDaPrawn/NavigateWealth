@@ -187,7 +187,6 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
   const wasDragged = React.useRef(false);
 
   return (
-    <div className="contents">
       <Draggable draggableId={submission.id} index={index}>
         {(provided, snapshot) => {
           // Mark as dragged whenever the snapshot shows dragging
@@ -201,7 +200,7 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
             {...provided.draggableProps}
             {...provided.dragHandleProps}
             className={cn(
-              'group bg-white rounded-lg border border-gray-200 p-4 relative',
+              'group bg-white rounded-lg border border-gray-200 p-4 relative mb-3',
               'hover:border-purple-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing',
               snapshot.isDragging && 'shadow-xl ring-2 ring-purple-500 rotate-2 z-50',
             )}
@@ -341,6 +340,5 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
           );
         }}
       </Draggable>
-    </div>
   );
 }

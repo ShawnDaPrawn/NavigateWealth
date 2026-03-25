@@ -63,6 +63,7 @@ import {
 import { toast } from 'sonner@2.0.3';
 import {
   brandApi,
+  LOGO_THEME_GROUPS,
   LOGO_VARIANTS,
   COLLATERAL_CATEGORIES,
 } from './brand-api';
@@ -86,7 +87,7 @@ const EmailSignatureGenerator = React.lazy(() =>
 // ============================================================================
 
 const STAT_CONFIG = {
-  logoCount: { label: 'Logo Variants', icon: Image, iconColor: 'text-blue-600', bgColor: 'bg-blue-50' },
+  logoCount: { label: 'Logo Assets', icon: Image, iconColor: 'text-blue-600', bgColor: 'bg-blue-50' },
   colourCount: { label: 'Brand Colours', icon: Palette, iconColor: 'text-purple-600', bgColor: 'bg-purple-50' },
   collateralCount: { label: 'Collateral', icon: FolderOpen, iconColor: 'text-green-600', bgColor: 'bg-green-50' },
   lastUpdated: { label: 'Last Updated', icon: Clock, iconColor: 'text-amber-600', bgColor: 'bg-amber-50' },
@@ -228,11 +229,14 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
   const [logos, setLogos] = useState<LogoEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [selectedVariant, setSelectedVariant] = useState<string>('primary');
+  const [selectedVariant, setSelectedVariant] = useState<string>(LOGO_VARIANTS[0].value);
   const [usageNotes, setUsageNotes] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [previewBg, setPreviewBg] = useState<'light' | 'dark' | 'brand'>('light');
+  const [previewTarget, setPreviewTarget] = useState<{
+    logo: LogoEntry;
+    variant: (typeof LOGO_VARIANTS)[number];
+  } | null>(null);
 
   const loadLogos = useCallback(async () => {
     try {
@@ -247,6 +251,24 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
   }, []);
 
   useEffect(() => { loadLogos(); }, [loadLogos]);
+
+  const logosByVariant = useMemo(
+    () => new Map(logos.map((logo) => [logo.variant, logo])),
+    [logos],
+  );
+
+  const selectedVariantConfig = useMemo(
+    () => LOGO_VARIANTS.find((variant) => variant.value === selectedVariant) ?? LOGO_VARIANTS[0],
+    [selectedVariant],
+  );
+
+  const openUploadDialog = useCallback((variant: string) => {
+    const existingLogo = logosByVariant.get(variant as LogoEntry['variant']);
+    setSelectedVariant(variant);
+    setUploadFile(null);
+    setUsageNotes(existingLogo?.usageNotes ?? '');
+    setUploadOpen(true);
+  }, [logosByVariant]);
 
   const handleUpload = async () => {
     if (!uploadFile) return;
@@ -280,136 +302,150 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
     }
   };
 
-  const bgClasses: Record<string, string> = {
-    light: 'bg-white border',
-    dark: 'bg-gray-900 border border-gray-800',
-    brand: 'bg-purple-700 border border-purple-600',
-  };
-
-  if (loading) return <SectionSkeleton rows={3} />;
+  if (loading) return <SectionSkeleton rows={4} />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base font-semibold">Logo Library</h3>
-          <p className="text-sm text-muted-foreground">Upload and manage all brand logo variants.</p>
+          <p className="text-sm text-muted-foreground">Manage each logo slot by theme, including quick preview, detailed preview, download, and replacement uploads.</p>
         </div>
-          <div className="flex items-center gap-2">
-          {/* Preview background toggle */}
-          <div className="flex items-center border rounded-lg overflow-hidden">
-            {(['light', 'dark', 'brand'] as const).map((bg) => (
-              <button
-                key={bg}
-                onClick={() => setPreviewBg(bg)}
-                className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                  previewBg === bg
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-gray-50'
-                }`}
-              >
-                {bg}
-              </button>
-            ))}
-          </div>
-          <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => setUploadOpen(true)}>
+        <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => openUploadDialog(LOGO_VARIANTS[0].value)}>
             <Upload className="h-4 w-4 mr-1.5" />
-            Upload Logo
-          </Button>
-        </div>
+            Upload Asset
+        </Button>
       </div>
 
-      {/* Logo Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {LOGO_VARIANTS.map((variant) => {
-          const logo = logos.find(l => l.variant === variant.value);
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {LOGO_THEME_GROUPS.map((themeGroup) => {
+          const themeVariants = LOGO_VARIANTS.filter((variant) => variant.theme === themeGroup.value);
           return (
-            <Card key={variant.value} className={!logo ? 'border-dashed' : ''}>
-              <CardContent className="pt-4 pb-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{variant.label}</p>
-                    <p className="text-xs text-muted-foreground">{variant.description}</p>
-                  </div>
-                  {logo && (
-                    <div className="flex items-center gap-0.5">
-                      {logo.signedUrl && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <a href={logo.signedUrl} download={logo.fileName} target="_blank" rel="noopener noreferrer">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-7 w-7 text-purple-500 hover:text-purple-600 hover:bg-purple-50"
-                              >
-                                <Download className="h-3.5 w-3.5" />
-                              </Button>
-                            </a>
-                          </TooltipTrigger>
-                          <TooltipContent>Download</TooltipContent>
-                        </Tooltip>
-                      )}
-                      {logo.source !== 'builtin' && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50"
-                              onClick={() => handleDelete(variant.value)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Delete</TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
-                  )}
-                </div>
+            <Card key={themeGroup.value}>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base">{themeGroup.label}</CardTitle>
+                <CardDescription>{themeGroup.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {themeVariants.map((variant) => {
+                    const logo = logosByVariant.get(variant.value);
+                    const previewUrl = logo?.signedUrl ?? null;
+                    return (
+                      <Card key={variant.value} className={!logo ? 'border-dashed' : ''}>
+                        <CardContent className="pt-4 pb-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium">{variant.label}</p>
+                              <p className="text-xs text-muted-foreground">{variant.description}</p>
+                            </div>
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                              {logo && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                                      onClick={() => setPreviewTarget({ logo, variant })}
+                                    >
+                                      <Search className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Preview</TooltipContent>
+                                </Tooltip>
+                              )}
+                              {logo?.signedUrl && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <a href={logo.signedUrl} download={logo.fileName} target="_blank" rel="noopener noreferrer">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-7 w-7 text-purple-500 hover:text-purple-600 hover:bg-purple-50"
+                                      >
+                                        <Download className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </a>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Download</TooltipContent>
+                                </Tooltip>
+                              )}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                    onClick={() => openUploadDialog(variant.value)}
+                                  >
+                                    <Upload className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{logo ? 'Replace' : 'Upload'}</TooltipContent>
+                              </Tooltip>
+                              {logo && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                      onClick={() => handleDelete(variant.value)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Delete</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          </div>
 
-                {/* Preview */}
-                <div className={`rounded-lg flex items-center justify-center h-24 ${bgClasses[previewBg]}`}>
-                  {logo?.signedUrl ? (
-                    <img
-                      src={logo.signedUrl}
-                      alt={logo.label}
-                      className="max-h-16 max-w-full object-contain"
-                    />
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setSelectedVariant(variant.value);
-                        setUploadOpen(true);
-                      }}
-                      className="flex flex-col items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    >
-                      <Upload className="h-5 w-5" />
-                      <span className="text-xs">Upload</span>
-                    </button>
-                  )}
-                </div>
+                          <button
+                            type="button"
+                            onClick={() => logo ? setPreviewTarget({ logo, variant }) : openUploadDialog(variant.value)}
+                            className={`w-full rounded-lg flex items-center justify-center h-28 transition-colors ${themeGroup.previewClass}`}
+                          >
+                            {previewUrl ? (
+                              <img
+                                src={previewUrl}
+                                alt={logo?.label ?? variant.label}
+                                className="max-h-20 max-w-full object-contain"
+                              />
+                            ) : (
+                              <div className="flex flex-col items-center gap-1.5 text-muted-foreground">
+                                <Upload className="h-5 w-5" />
+                                <span className="text-xs">Upload {variant.label}</span>
+                              </div>
+                            )}
+                          </button>
 
-                {/* Metadata */}
-                {logo && (
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{logo.fileName}</span>
-                    <span>{logo.source === 'builtin' ? 'Built-in pack' : `${(logo.fileSize / 1024).toFixed(0)} KB`}</span>
-                  </div>
-                )}
-                {logo?.usageNotes && (
-                  <p className="text-xs text-muted-foreground bg-gray-50 rounded px-2 py-1.5">{logo.usageNotes}</p>
-                )}
-                {logo?.source === 'builtin' && (
-                  <Badge variant="secondary" className="text-[10px]">
-                    Included by default
-                  </Badge>
-                )}
-                {logo?.previousVersions && logo.previousVersions.length > 0 && (
-                  <Badge variant="outline" className="text-[10px]">
-                    {logo.previousVersions.length} previous version{logo.previousVersions.length > 1 ? 's' : ''}
-                  </Badge>
-                )}
+                          {logo ? (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-xs text-muted-foreground gap-3">
+                                <span className="truncate">{logo.fileName}</span>
+                                <span className="flex-shrink-0">{`${(logo.fileSize / 1024).toFixed(0)} KB`}</span>
+                              </div>
+                              {logo.usageNotes && (
+                                <p className="text-xs text-muted-foreground bg-gray-50 rounded px-2 py-1.5">{logo.usageNotes}</p>
+                              )}
+                              {logo.previousVersions && logo.previousVersions.length > 0 && (
+                                <Badge variant="outline" className="text-[10px]">
+                                  {logo.previousVersions.length} previous version{logo.previousVersions.length > 1 ? 's' : ''}
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              No file uploaded yet. Use the upload action to add this theme asset.
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
           );
@@ -420,19 +456,21 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Upload Logo</DialogTitle>
+            <DialogTitle>Upload Logo Asset</DialogTitle>
             <DialogDescription>
-              Upload a logo variant. If a built-in or uploaded logo already exists for this variant, your upload will replace the visible version and archive the previous uploaded version.
+              Upload a file for {selectedVariantConfig.label}. If a file already exists in this slot, the new upload will replace it and archive the previous version.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Variant</Label>
+              <Label>Upload Slot</Label>
               <Select value={selectedVariant} onValueChange={setSelectedVariant}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {LOGO_VARIANTS.map(v => (
-                    <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                    <SelectItem key={v.value} value={v.value}>
+                      {`${v.theme === 'light' ? 'Light' : 'Dark'} - ${v.label}`}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -467,6 +505,72 @@ function LogosSection({ onUpdate }: { onUpdate: () => void }) {
               Upload
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detailed Preview Dialog */}
+      <Dialog
+        open={!!previewTarget}
+        onOpenChange={(open) => {
+          if (!open) setPreviewTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-3xl">
+          {previewTarget && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{`${previewTarget.variant.theme === 'light' ? 'Light Theme' : 'Dark Theme'} - ${previewTarget.variant.label}`}</DialogTitle>
+                <DialogDescription>{previewTarget.variant.description}</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className={`rounded-xl flex items-center justify-center min-h-[360px] p-8 ${LOGO_THEME_GROUPS.find((group) => group.value === previewTarget.variant.theme)?.previewClass ?? 'bg-white border'}`}>
+                  {previewTarget.logo.signedUrl ? (
+                    <img
+                      src={previewTarget.logo.signedUrl}
+                      alt={previewTarget.logo.label}
+                      className="max-h-[320px] max-w-full object-contain"
+                    />
+                  ) : null}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">File</p>
+                    <p className="font-medium break-all">{previewTarget.logo.fileName}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Size</p>
+                    <p className="font-medium">{`${(previewTarget.logo.fileSize / 1024).toFixed(0)} KB`}</p>
+                  </div>
+                </div>
+                {previewTarget.logo.usageNotes && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Usage Notes</p>
+                    <p className="text-sm text-muted-foreground">{previewTarget.logo.usageNotes}</p>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                {previewTarget.logo.signedUrl && (
+                  <a href={previewTarget.logo.signedUrl} download={previewTarget.logo.fileName} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline">
+                      <Download className="h-4 w-4 mr-1.5" />
+                      Download
+                    </Button>
+                  </a>
+                )}
+                <Button
+                  className="bg-purple-600 hover:bg-purple-700"
+                  onClick={() => {
+                    openUploadDialog(previewTarget.variant.value);
+                    setPreviewTarget(null);
+                  }}
+                >
+                  <Upload className="h-4 w-4 mr-1.5" />
+                  Replace
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

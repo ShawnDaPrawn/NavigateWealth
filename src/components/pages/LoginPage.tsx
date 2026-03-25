@@ -63,7 +63,9 @@ export function LoginPage() {
       // If a returnUrl was provided (e.g. from session-expiry redirect), use it.
       // Otherwise, use the RouteGuards helper to determine the correct redirect path.
       const redirectPath = returnUrl || getAuthenticatedRedirectPath(user);
-      navigate(redirectPath);
+      
+      // Perform a hard refresh to ensure the dashboard has the latest UI and data
+      window.location.href = redirectPath;
     }
   }, [isAuthenticated, user, navigate, isLoading, show2FAModal, returnUrl]);
 

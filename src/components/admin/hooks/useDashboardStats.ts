@@ -28,6 +28,8 @@ export function useDashboardStats() {
             approved: 0,
             declined: 0,
             application_in_progress: 0,
+            draft: 0,
+            incomplete: 0,
             no_application: 0,
             new_applications_7d: 0,
             new_this_month: 0,
@@ -38,6 +40,7 @@ export function useDashboardStats() {
             total_requests: 0,
             pending_esignatures: 0,
             active_users: 0,
+            total_clients: 0,
           } as ApplicationStats;
         }
         // Network errors and other transient failures — return empty stats
@@ -48,6 +51,8 @@ export function useDashboardStats() {
           approved: 0,
           declined: 0,
           application_in_progress: 0,
+          draft: 0,
+          incomplete: 0,
           no_application: 0,
           new_applications_7d: 0,
           new_this_month: 0,
@@ -58,6 +63,7 @@ export function useDashboardStats() {
           total_requests: 0,
           pending_esignatures: 0,
           active_users: 0,
+          total_clients: 0,
         } as ApplicationStats;
       }
     },

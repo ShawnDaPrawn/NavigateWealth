@@ -283,6 +283,10 @@ export interface ApplicationStats {
   declined: number;
   application_in_progress: number;
   invited?: number;
+  /** Signups that have not submitted — `draft` count only */
+  draft: number;
+  /** `draft` + `in_progress` (incomplete onboarding) */
+  incomplete: number;
   no_application: number;
   new_applications_7d: number;
   new_this_month: number;

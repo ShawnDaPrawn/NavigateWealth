@@ -63,7 +63,16 @@ app.post('/logos/upload', requireAuth, requireAdmin, asyncHandler(async (c) => {
     return c.json({ error: 'File and variant are required' }, 400);
   }
 
-  const allowedVariants = ['primary', 'reversed', 'icon', 'social', 'monochrome'];
+  const allowedVariants = [
+    'light_combined_1',
+    'light_combined_2',
+    'light_icon_only',
+    'light_logo_only',
+    'dark_combined_1',
+    'dark_combined_2',
+    'dark_icon_only',
+    'dark_logo_only',
+  ];
   if (!allowedVariants.includes(variant)) {
     return c.json({ error: `Invalid variant. Must be one of: ${allowedVariants.join(', ')}` }, 400);
   }

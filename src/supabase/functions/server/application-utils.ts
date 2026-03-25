@@ -123,14 +123,14 @@ export async function enrichApplicationWithDetails(
  * Check if application can be approved (must be in submitted, pending, or invited status)
  */
 export function canApproveApplication(status: BackendApplicationStatus): boolean {
-  return status === 'submitted' || status === 'pending' || status === 'invited';
+  return status === 'submitted' || status === 'pending' || status === 'invited' || status === 'draft' || status === 'in_progress';
 }
 
 /**
  * Check if application can be declined (must be in submitted, pending, or invited status)
  */
 export function canDeclineApplication(status: BackendApplicationStatus): boolean {
-  return status === 'submitted' || status === 'pending' || status === 'invited';
+  return status === 'submitted' || status === 'pending' || status === 'invited' || status === 'draft' || status === 'in_progress';
 }
 
 /**
@@ -142,11 +142,12 @@ export function validateStatusTransition(
 ): { valid: boolean; error?: string } {
   // Define valid transitions
   const validTransitions: Record<BackendApplicationStatus, BackendApplicationStatus[]> = {
-    'in_progress': ['submitted'],
-    'pending': ['approved', 'declined'], // Pending can be approved or declined
+    'draft': ['in_progress', 'submitted', 'approved', 'declined'],
+    'in_progress': ['submitted', 'approved', 'declined'],
+    'pending': ['approved', 'declined'],
     'submitted': ['approved', 'declined'],
-    'approved': [], // Cannot transition from approved
-    'declined': [], // Cannot transition from declined
+    'approved': [],
+    'declined': [],
   };
 
   const allowedTransitions = validTransitions[currentStatus] || [];
@@ -455,7 +456,7 @@ export function parseStatusFilter(status?: string): BackendApplicationStatus[] |
   }
   
   // Validate status is a valid backend status
-  const validStatuses: BackendApplicationStatus[] = ['in_progress', 'pending', 'submitted', 'approved', 'declined'];
+  const validStatuses: BackendApplicationStatus[] = ['draft', 'in_progress', 'pending', 'submitted', 'approved', 'declined'];
   
   if (validStatuses.includes(status as BackendApplicationStatus)) {
     return [status as BackendApplicationStatus];

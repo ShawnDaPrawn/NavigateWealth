@@ -82,7 +82,7 @@ export function Sidebar({
          )}
          aria-label="Admin navigation"
        >
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-sidebar border-r border-sidebar-border">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto sidebar-scrollbar bg-sidebar border-r border-sidebar-border">
           <SidebarContent 
             activeModule={activeModule}
             onModuleChange={onModuleChange}
@@ -183,11 +183,11 @@ function SidebarContent({
       )}>
         {collapsed && !isMobile ? (
           <button 
-            className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center cursor-pointer"
+            className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center cursor-pointer hover:bg-sidebar-primary/90 transition-colors"
             onClick={() => setCollapsed(false)}
             aria-label="Expand sidebar"
           >
-            <span className="text-white font-bold text-sm">N</span>
+            <span className="text-sidebar-primary-foreground font-bold text-sm">N</span>
           </button>
         ) : (
           <div className="flex items-center justify-between w-full">
@@ -198,7 +198,7 @@ function SidebarContent({
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-6 w-6 ml-auto hidden lg:flex" 
+                className="h-6 w-6 ml-auto hidden lg:flex text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" 
                 onClick={() => setCollapsed(!collapsed)}
                 aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
@@ -206,7 +206,7 @@ function SidebarContent({
               </Button>
             )}
             {isMobile && (
-               <Button variant="ghost" size="sm" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu">
+               <Button variant="ghost" size="sm" className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu">
                  <X className="h-4 w-4" />
                </Button>
             )}
@@ -215,7 +215,7 @@ function SidebarContent({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4" aria-label="Admin modules">
+      <nav className="flex-1 overflow-y-auto sidebar-scrollbar py-4" aria-label="Admin modules">
         {moduleGroups.map((section, sectionIdx) => {
           // Filter modules by permission — only show modules the user can access
           const visibleModules = section.modules.filter(m => can(m));
@@ -226,7 +226,7 @@ function SidebarContent({
               {/* Section title - only show when not collapsed */}
               {(!collapsed || isMobile) && (
                 <div className="px-4 mb-2">
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider">
                     {section.label}
                   </h3>
                 </div>
@@ -256,7 +256,7 @@ function SidebarContent({
                         'transition-all duration-200',
                         collapsed && !isMobile ? 'w-10 h-10 p-0 justify-center' : 'w-full justify-start gap-3',
                         isActive 
-                          ? 'bg-purple-600 text-white hover:bg-purple-700 hover:text-white' 
+                          ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground' 
                           : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                       )}
                     >
@@ -265,13 +265,13 @@ function SidebarContent({
                       {showBadge && (!collapsed || isMobile) && (
                         <Badge 
                           variant="secondary"
-                          className="ml-auto text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center bg-gray-100 text-gray-700 border-gray-200"
+                          className="ml-auto text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center bg-sidebar-primary text-sidebar-primary-foreground border-transparent"
                         >
                           {pendingData.count}
                         </Badge>
                       )}
                       {showBadge && collapsed && !isMobile && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-gray-500 text-white rounded-full flex items-center justify-center text-xs font-medium">
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-sidebar-primary text-sidebar-primary-foreground rounded-full flex items-center justify-center text-xs font-medium border-2 border-sidebar">
                           {pendingData.count > 99 ? '99+' : pendingData.count}
                         </div>
                       )}
@@ -316,18 +316,18 @@ function SidebarContent({
             <Button 
               variant="ghost" 
               className={cn(
-                "transition-all duration-200",
+                "transition-all duration-200 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 collapsed && !isMobile ? "w-10 h-10 px-0 justify-center" : "w-full justify-start gap-3 h-12"
               )}
             >
-              <Avatar className="h-8 w-8 shrink-0">
+              <Avatar className="h-8 w-8 shrink-0 border border-sidebar-border">
                 <AvatarImage src="/api/placeholder/32/32" alt="" />
-                <AvatarFallback>{user?.name?.[0] || 'A'}</AvatarFallback>
+                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">{user?.name?.[0] || 'A'}</AvatarFallback>
               </Avatar>
               {(!collapsed || isMobile) && (
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium">{user?.name || 'Admin User'}</p>
-                  <p className="text-xs text-muted-foreground">{user?.role || 'Administrator'}</p>
+                  <p className="text-xs text-sidebar-foreground/70">{user?.role || 'Administrator'}</p>
                 </div>
               )}
             </Button>

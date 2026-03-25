@@ -55,6 +55,72 @@ import type {
 
 const log = createModuleLogger('admin-applications-service');
 
+/**
+ * Root application documents live at `application:{uuid}`.
+ * Per-step entries use `application:{uuid}:step_N` and lack top-level `application_data`.
+ */
+function isRootApplicationRecord(a: unknown): a is KvApplication {
+  if (!a || typeof a !== 'object' || Array.isArray(a)) return false;
+  const o = a as Record<string, unknown>;
+  const id = o.id;
+  const uid = o.user_id ?? o.userId;
+  const appData = o.application_data;
+  if (typeof id !== 'string' || !id) return false;
+  if (typeof uid !== 'string' || !uid) return false;
+  if (appData === undefined || appData === null) return false;
+  if (typeof appData !== 'object' || Array.isArray(appData)) return false;
+  return true;
+}
+
+/**
+ * Exclude applications for deleted clients (security:* KV). Matches getApplications
+ * filtering so /admin/stats counts align with the Incomplete tab.
+ * @param cascadeDeprecate When true, mark stale application KV rows deprecated (listing path).
+ */
+async function excludeApplicationsForDeletedClients(
+  applications: KvApplication[],
+  cascadeDeprecate: boolean,
+): Promise<KvApplication[]> {
+  const uniqueUserIds = [...new Set(
+    applications
+      .map((app: KvApplication) => app.user_id)
+      .filter((uid: string | undefined): uid is string => !!uid && isValidUUID(uid))
+  )];
+  if (uniqueUserIds.length === 0) return applications;
+
+  const securityKeys = uniqueUserIds.map(uid => `security:${uid}`);
+  const securityEntries = await kv.mget(securityKeys);
+  const deletedUserIds = new Set<string>();
+  uniqueUserIds.forEach((uid, idx) => {
+    const sec = securityEntries[idx];
+    if (sec?.deleted === true) {
+      deletedUserIds.add(uid);
+    }
+  });
+  if (deletedUserIds.size === 0) return applications;
+
+  if (cascadeDeprecate) {
+    log.info(`Excluding ${deletedUserIds.size} application(s) for deleted clients from listing`);
+    const staleApps = applications.filter(
+      (app: KvApplication) => app.user_id && deletedUserIds.has(app.user_id)
+    );
+    for (const app of staleApps) {
+      kv.set(`application:${app.id}`, {
+        ...app,
+        deprecated: true,
+        deprecated_at: new Date().toISOString(),
+        deprecated_reason: 'Client account deleted — cascade cleanup',
+      }).catch(err => log.error('Failed to cascade-deprecate stale application', { appId: app.id, err }));
+    }
+  } else {
+    log.info(`getStats: Excluding ${deletedUserIds.size} application(s) for deleted clients from counts`);
+  }
+
+  return applications.filter(
+    (app: KvApplication) => !app.user_id || !deletedUserIds.has(app.user_id)
+  );
+}
+
 // Helper to create Supabase client with service role
 function createServiceClient(): SupabaseAdminClient {
   return createClient(
@@ -140,49 +206,12 @@ export class AdminApplicationsService {
       return { applications: [], total: 0 };
     }
 
-    // Filter deprecated
-    let applications = allApplications.filter((app: KvApplication) => app.deprecated !== true);
+    // Filter deprecated, root documents only (same as getStats — excludes step KV rows)
+    let applications = allApplications
+      .filter((app: KvApplication) => app.deprecated !== true)
+      .filter(isRootApplicationRecord);
 
-    // ── Downstream guard: exclude applications for deleted clients ────────
-    // Per Guidelines §12.3 — any code path that enumerates clients must
-    // cross-reference security entries. This belt-and-suspenders check
-    // handles legacy applications that were not cascade-deprecated when
-    // their client was deleted (e.g. before the cascade was introduced).
-    const uniqueUserIds = [...new Set(
-      applications
-        .map((app: KvApplication) => app.user_id)
-        .filter((uid: string | undefined): uid is string => !!uid && isValidUUID(uid))
-    )];
-    if (uniqueUserIds.length > 0) {
-      const securityKeys = uniqueUserIds.map(uid => `security:${uid}`);
-      const securityEntries = await kv.mget(securityKeys);
-      const deletedUserIds = new Set<string>();
-      uniqueUserIds.forEach((uid, idx) => {
-        const sec = securityEntries[idx];
-        if (sec?.deleted === true) {
-          deletedUserIds.add(uid);
-        }
-      });
-      if (deletedUserIds.size > 0) {
-        log.info(`Excluding ${deletedUserIds.size} application(s) for deleted clients from listing`);
-        // Cascade-deprecate stale applications so they don't require
-        // this check on subsequent fetches (fire-and-forget)
-        const staleApps = applications.filter(
-          (app: KvApplication) => app.user_id && deletedUserIds.has(app.user_id)
-        );
-        for (const app of staleApps) {
-          kv.set(`application:${app.id}`, {
-            ...app,
-            deprecated: true,
-            deprecated_at: new Date().toISOString(),
-            deprecated_reason: 'Client account deleted — cascade cleanup',
-          }).catch(err => log.error('Failed to cascade-deprecate stale application', { appId: app.id, err }));
-        }
-        applications = applications.filter(
-          (app: KvApplication) => !app.user_id || !deletedUserIds.has(app.user_id)
-        );
-      }
-    }
+    applications = await excludeApplicationsForDeletedClients(applications, true);
 
     // Filter by status
     if (status) {
@@ -827,12 +856,20 @@ export class AdminApplicationsService {
     let applications: KvApplication[] = [];
     try {
       const raw = ((await kv.getByPrefix('application:')) || []) as KvApplication[];
-      // Exclude deprecated applications from all stat counts
-      applications = raw.filter((a: KvApplication) => a.deprecated !== true);
+      // Exclude deprecated applications and per-step KV rows (not root application documents)
+      applications = raw
+        .filter((a: KvApplication) => a.deprecated !== true)
+        .filter(isRootApplicationRecord);
+      applications = await excludeApplicationsForDeletedClients(applications, false);
     } catch (kvError) {
       log.error('getStats: Failed to fetch applications from KV', kvError as Error);
       // Return safe defaults so the endpoint still responds
     }
+
+    const draftCount = applications.filter((a) => a.status === 'draft').length;
+    const inProgressCount = applications.filter((a) => a.status === 'in_progress').length;
+    // incomplete = draft + in_progress (same as filtering for either status)
+    const incompleteCount = draftCount + inProgressCount;
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -844,13 +881,11 @@ export class AdminApplicationsService {
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
     const newThisMonth = applications.filter((a: KvApplication) => {
-        if (a.deprecated) return false;
         const d = new Date(a.created_at);
         return d >= startOfMonth;
     }).length;
 
     const newLastMonth = applications.filter((a: KvApplication) => {
-        if (a.deprecated) return false;
         const d = new Date(a.created_at);
         return d >= startOfLastMonth && d <= endOfLastMonth;
     }).length;
@@ -942,8 +977,10 @@ export class AdminApplicationsService {
       submitted_for_review: applications.filter((a) => a.status === 'submitted' || a.status === 'pending' as string).length,
       approved: applications.filter((a) => a.status === 'approved').length,
       declined: applications.filter((a) => a.status === 'declined').length,
-      application_in_progress: applications.filter((a) => a.status === 'in_progress').length,
+      application_in_progress: inProgressCount,
       invited: applications.filter((a) => a.status === 'invited').length,
+      draft: draftCount,
+      incomplete: incompleteCount,
       no_application: 0,
       new_applications_7d: applications.filter((a) => a.status === 'submitted' && a.created_at && new Date(a.created_at) >= sevenDaysAgo).length,
       new_this_month: newThisMonth,

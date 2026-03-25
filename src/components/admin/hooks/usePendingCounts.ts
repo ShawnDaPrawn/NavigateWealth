@@ -3,6 +3,7 @@ import { projectId } from '../../../utils/supabase/info';
 import { getSession } from '../../../utils/auth';
 import type { AdminModule } from '../layout/types';
 import { pendingCountsKeys } from '../../../utils/queryKeys';
+import { getIncompleteCount } from '../modules/applications/utils';
 
 // All admin modules — stable list used for initialisation
 const ALL_MODULES: AdminModule[] = [
@@ -50,8 +51,9 @@ async function fetchPendingCounts(): Promise<Record<AdminModule, { count: number
 
     if (statsResponse.ok) {
       const data = await statsResponse.json();
-      // Count only "submitted_for_review" applications (pending admin action)
-      applicationsPending = data.stats?.submitted_for_review || 0;
+      // Count "submitted_for_review" + incomplete (draft + in-progress signups)
+      applicationsPending =
+        (data.stats?.submitted_for_review || 0) + getIncompleteCount(data.stats);
       // Get pending requests count
       requestsPending = data.stats?.pending_requests || 0;
     }

@@ -38,10 +38,10 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-8 p-8 max-w-[1600px] mx-auto">
       {/* Show error banner if dashboard data failed, but don't block the rest */}
       {error && !loading && (
-        <div className="bg-destructive/10 border border-destructive rounded-lg p-4 text-center">
+        <div className="bg-destructive/10 border border-destructive rounded-xl p-4 text-center">
           <p className="text-destructive font-medium text-sm">Some dashboard data failed to load</p>
           <p className="text-xs text-muted-foreground mt-1">{error}</p>
         </div>

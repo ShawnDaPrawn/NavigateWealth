@@ -67,7 +67,7 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
         </Button>
 
         {/* Global Search — uses AdminNavigationContext, no props needed */}
-        <div className="hidden lg:flex items-center justify-between px-6 py-3 border-b bg-white sticky top-0 z-30">
+        <div className="hidden lg:flex items-center justify-between px-6 py-3 border-b border-border bg-white/80 backdrop-blur-md sticky top-0 z-30 shadow-sm">
            <div className="flex-1 max-w-xl">
              <GlobalSearch />
            </div>

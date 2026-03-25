@@ -51,7 +51,15 @@ const KEYS = {
 
 export interface LogoEntry {
   id: string;
-  variant: 'primary' | 'reversed' | 'icon' | 'social' | 'monochrome';
+  variant:
+    | 'light_combined_1'
+    | 'light_combined_2'
+    | 'light_icon_only'
+    | 'light_logo_only'
+    | 'dark_combined_1'
+    | 'dark_combined_2'
+    | 'dark_icon_only'
+    | 'dark_logo_only';
   label: string;
   fileName: string;
   storagePath: string;

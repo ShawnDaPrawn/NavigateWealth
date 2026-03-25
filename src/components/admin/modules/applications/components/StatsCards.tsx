@@ -7,8 +7,9 @@
  */
 
 import React from 'react';
-import { Clock, CheckCircle2, XCircle, FileText, Send } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, FileText, Send, AlertTriangle } from 'lucide-react';
 import { ApplicationStats, TabStatus } from '../types';
+import { getIncompleteCount } from '../utils';
 
 interface StatsCardsProps {
   stats: ApplicationStats | null;
@@ -25,6 +26,15 @@ const TAB_CARDS: {
   activeIconBg: string;
   activeIconColor: string;
 }[] = [
+  {
+    label: 'Incomplete',
+    tab: 'incomplete',
+    icon: AlertTriangle,
+    subtitle: 'Signup without application',
+    statKey: 'incomplete',
+    activeIconBg: 'bg-orange-100',
+    activeIconColor: 'text-orange-600',
+  },
   {
     label: 'Pending Review',
     tab: 'pending',
@@ -67,10 +77,13 @@ export function StatsCards({ stats, activeTab, setActiveTab }: StatsCardsProps) 
   const total = stats?.total || 0;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
       {TAB_CARDS.map((card) => {
         const isActive = activeTab === card.tab;
-        const count = (stats?.[card.statKey] as number) || 0;
+        const count =
+          card.tab === 'incomplete'
+            ? getIncompleteCount(stats)
+            : ((stats?.[card.statKey] as number) || 0);
         const Icon = card.icon;
 
         return (

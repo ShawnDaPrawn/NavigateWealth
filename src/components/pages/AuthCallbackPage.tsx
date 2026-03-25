@@ -86,7 +86,7 @@ export default function AuthCallbackPage() {
               setMessage('Email verified successfully! Redirecting to application...');
               setTimeout(() => {
                 console.log('➡️ AUTH CALLBACK - Redirecting to', redirectPath);
-                navigate(redirectPath, { replace: true });
+                window.location.href = redirectPath;
               }, 1500);
             }
           }
@@ -124,7 +124,7 @@ export default function AuthCallbackPage() {
                 setMessage('Email verified successfully! Redirecting to application...');
                 setTimeout(() => {
                   console.log('➡️ AUTH CALLBACK - Redirecting to', redirectPath);
-                  navigate(redirectPath, { replace: true });
+                  window.location.href = redirectPath;
                 }, 1500);
               }
             }
@@ -164,7 +164,7 @@ export default function AuthCallbackPage() {
               
               setTimeout(() => {
                 console.log('➡️ AUTH CALLBACK - Redirecting to /verification-success');
-                navigate('/verification-success', { replace: true });
+                window.location.href = '/verification-success';
               }, 1500);
             } else {
               // Email verified but no session - user needs to login
@@ -202,7 +202,7 @@ export default function AuthCallbackPage() {
           if (session) {
             console.log('✅ AUTH CALLBACK - Active session found!');
             console.log('➡️ AUTH CALLBACK - Redirecting to /verification-success');
-            navigate('/verification-success', { replace: true });
+            window.location.href = '/verification-success';
           } else {
             // Email was verified but no session was created
             // This is normal for Supabase email verification flow

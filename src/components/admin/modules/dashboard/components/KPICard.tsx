@@ -21,16 +21,16 @@ export function KPICard({
 
   if (loading) {
     return (
-      <Card className="shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-9 w-9 rounded-full" />
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-7 w-20 mb-2" />
+          <Skeleton className="h-9 w-24 mb-3" />
           <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-5 w-14" />
+            <Skeleton className="h-5 w-32" />
           </div>
         </CardContent>
       </Card>
@@ -39,22 +39,22 @@ export function KPICard({
 
   return (
     <Card 
-      className={`shadow-sm transition-all hover:shadow-md ${onClick ? 'cursor-pointer' : ''}`}
+      className={`transition-all ${onClick ? 'cursor-pointer hover:-translate-y-1 hover:shadow-lg' : ''}`}
       onClick={onClick}
     >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           {title}
         </CardTitle>
-        <div className="p-2 bg-primary/10 rounded-full">
+        <div className="p-2.5 bg-primary/10 rounded-full">
           <Icon className="h-4 w-4 text-primary" />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-gray-900">
+        <div className="text-3xl font-bold text-gray-900 tracking-tight">
           {formatKPIValue(value, format)}
         </div>
-        <div className="flex items-center text-xs mt-1">
+        <div className="flex items-center text-sm mt-2">
           {isPositive && (
             <span className="text-green-600 flex items-center font-medium">
               <ArrowUp className="h-3 w-3 mr-1" />
