@@ -97,7 +97,7 @@ export function PdfDecryptTool() {
         setIsOpen(open);
         if (!open) handleReset();
       }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md w-[95vw] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Unlock className="h-5 w-5 text-red-600" />
@@ -149,20 +149,20 @@ export function PdfDecryptTool() {
                       <p className="text-xs text-muted-foreground mt-1">Max file size: 50MB</p>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="h-8 w-8 bg-red-100 rounded flex items-center justify-center flex-shrink-0">
-                          <FileText className="h-4 w-4 text-red-600" />
+                      <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30 overflow-hidden">
+                        <div className="flex items-center gap-3 overflow-hidden min-w-0">
+                          <div className="h-8 w-8 bg-red-100 rounded flex items-center justify-center flex-shrink-0">
+                            <FileText className="h-4 w-4 text-red-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
+                            <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{file.name}</p>
-                          <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                        </div>
+                        <Button variant="ghost" size="icon" onClick={handleRemoveFile} className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0 ml-2">
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={handleRemoveFile} className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
                   )}
                   <input 
                     type="file" 
