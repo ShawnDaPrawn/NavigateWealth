@@ -3,14 +3,25 @@ import navigateWealthLogo from 'figma:asset/def9c4d4fdd055d486a64e8df869988fd6a2
 import wealthFooterLogo from 'figma:asset/8dc2892f50ecc4c5f692fd5ad52639699e2e4656.png';
 
 interface LogoProps {
-  variant?: 'default' | 'light';
+  variant?: 'default' | 'light' | 'admin-white';
   className?: string;
 }
 
 export function Logo({ variant = 'default', className = '' }: LogoProps) {
-  const logoSrc = variant === 'light' ? wealthFooterLogo : navigateWealthLogo;
-  const altText = variant === 'light' ? 'Wealth' : 'Navigate Wealth';
-  
+  let logoSrc = navigateWealthLogo;
+  let altText = 'Navigate Wealth';
+  let height = '25.5px';
+
+  if (variant === 'light') {
+    logoSrc = wealthFooterLogo;
+    altText = 'Wealth';
+    height = '29.75px';
+  } else if (variant === 'admin-white') {
+    logoSrc = '/brand-assets/navigate-wealth-lockup-horizontal-white.png';
+    altText = 'Navigate Wealth';
+    height = '25.5px';
+  }
+
   return (
     <div className={`${className} flex items-center`}>
       <img
@@ -20,7 +31,7 @@ export function Logo({ variant = 'default', className = '' }: LogoProps) {
         loading="eager"
         decoding="sync"
         style={{ 
-          height: variant === 'light' ? '29.75px' : '25.5px',
+          height,
           width: 'auto',
           maxWidth: 'none',
           imageRendering: 'auto',

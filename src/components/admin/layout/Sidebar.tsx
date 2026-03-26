@@ -192,7 +192,7 @@ function SidebarContent({
         ) : (
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
-              <Logo />
+              <Logo variant="admin-white" />
             </div>
             {!isMobile && (
               <Button 
