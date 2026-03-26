@@ -36,4 +36,5 @@ jobs:
             echo "::error::SUPABASE_ACCESS_TOKEN is not set. Add it under Repository secrets."
             exit 1
           fi
-          supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz
+          supabase --version
+          supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir .
