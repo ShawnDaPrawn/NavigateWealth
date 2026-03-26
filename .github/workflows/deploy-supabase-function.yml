@@ -6,6 +6,7 @@
 # Project ref is fixed in supabase/config.toml (vpjmdsltwrnpefzcgdmz).
 
 # Trigger note: this workflow can be rerun via workflow_dispatch.
+# CI trigger marker: token-variable verification.
 name: Deploy Supabase Edge Function
 
 on:
