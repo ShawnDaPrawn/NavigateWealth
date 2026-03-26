@@ -23,6 +23,19 @@ export type LogoVariant =
   | 'dark_icon_only'
   | 'dark_logo_only';
 
+export type LogoAssetFormat = 'png' | 'jpeg' | 'svg' | 'pdf';
+
+export interface LogoAssetFile {
+  format: LogoAssetFormat;
+  fileName: string;
+  storagePath: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string;
+  uploadedBy: string;
+  signedUrl?: string | null;
+}
+
 export interface LogoEntry {
   id: string;
   variant: LogoVariant;
@@ -38,6 +51,7 @@ export interface LogoEntry {
   uploadedAt: string;
   uploadedBy: string;
   signedUrl?: string | null;
+  assets: LogoAssetFile[];
   previousVersions?: { storagePath: string; uploadedAt: string; uploadedBy: string }[];
 }
 
@@ -220,13 +234,22 @@ export const brandApi = {
     return res.logos || [];
   },
 
-  async uploadLogo(file: File, variant: string, label: string, usageNotes: string): Promise<LogoEntry[]> {
+  async uploadLogo(
+    files: Partial<Record<LogoAssetFormat, File | null>>,
+    variant: string,
+    label: string,
+    usageNotes: string,
+  ): Promise<LogoEntry[]> {
     const formData = new FormData();
-    formData.append('file', file);
     formData.append('variant', variant);
     formData.append('label', label);
     formData.append('usageNotes', usageNotes);
     formData.append('uploadedBy', 'admin');
+    (Object.entries(files) as Array<[LogoAssetFormat, File | null | undefined]>).forEach(([format, file]) => {
+      if (file) {
+        formData.append(`${format}File`, file);
+      }
+    });
     const res = await api.post<{ success: boolean; logos: LogoEntry[] }>('/brand/logos/upload', formData);
     return res.logos || [];
   },

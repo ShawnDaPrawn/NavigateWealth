@@ -61,6 +61,15 @@ export interface LogoEntry {
     | 'dark_icon_only'
     | 'dark_logo_only';
   label: string;
+  assets: {
+    format: 'png' | 'jpeg' | 'svg' | 'pdf';
+    fileName: string;
+    storagePath: string;
+    mimeType: string;
+    fileSize: number;
+    uploadedAt: string;
+    uploadedBy: string;
+  }[];
   fileName: string;
   storagePath: string;
   mimeType: string;
@@ -160,6 +169,68 @@ export interface BrandSummary {
 // ============================================================================
 
 export class BrandService {
+  private getDisplayAsset(entry: Pick<LogoEntry, 'assets' | 'storagePath' | 'fileName' | 'mimeType' | 'fileSize' | 'uploadedAt' | 'uploadedBy'>) {
+    if (entry.assets.length > 0) {
+      return (
+        entry.assets.find((asset) => asset.format === 'png')
+        || entry.assets.find((asset) => asset.format === 'svg')
+        || entry.assets.find((asset) => asset.format === 'jpeg')
+        || entry.assets.find((asset) => asset.format === 'pdf')
+        || entry.assets[0]
+      );
+    }
+
+    return {
+      format: 'png' as const,
+      fileName: entry.fileName,
+      storagePath: entry.storagePath,
+      mimeType: entry.mimeType,
+      fileSize: entry.fileSize,
+      uploadedAt: entry.uploadedAt,
+      uploadedBy: entry.uploadedBy,
+    };
+  }
+
+  private normalizeLogoEntry(entry: LogoEntry): LogoEntry {
+    const assets = entry.assets && entry.assets.length > 0
+      ? entry.assets
+      : [{
+        format: entry.mimeType === 'application/pdf'
+          ? 'pdf'
+          : entry.mimeType === 'image/svg+xml'
+            ? 'svg'
+            : entry.mimeType === 'image/jpeg'
+              ? 'jpeg'
+              : 'png',
+        fileName: entry.fileName,
+        storagePath: entry.storagePath,
+        mimeType: entry.mimeType,
+        fileSize: entry.fileSize,
+        uploadedAt: entry.uploadedAt,
+        uploadedBy: entry.uploadedBy,
+      }];
+
+    const displayAsset = this.getDisplayAsset({
+      assets,
+      storagePath: entry.storagePath,
+      fileName: entry.fileName,
+      mimeType: entry.mimeType,
+      fileSize: entry.fileSize,
+      uploadedAt: entry.uploadedAt,
+      uploadedBy: entry.uploadedBy,
+    });
+
+    return {
+      ...entry,
+      assets,
+      fileName: displayAsset.fileName,
+      storagePath: displayAsset.storagePath,
+      mimeType: displayAsset.mimeType,
+      fileSize: displayAsset.fileSize,
+      uploadedAt: displayAsset.uploadedAt,
+      uploadedBy: displayAsset.uploadedBy,
+    };
+  }
   // ------------------------------------------------------------------
   // Bucket — idempotent creation
   // ------------------------------------------------------------------
@@ -207,25 +278,30 @@ export class BrandService {
 
   async getLogos(): Promise<LogoEntry[]> {
     const data = await kv.get(KEYS.logosMetadata);
-    return (data as LogoEntry[] | null) || [];
+    return ((data as LogoEntry[] | null) || []).map((entry) => this.normalizeLogoEntry(entry));
   }
 
   async upsertLogo(entry: LogoEntry): Promise<LogoEntry[]> {
     const logos = await this.getLogos();
     const idx = logos.findIndex(l => l.variant === entry.variant);
+    const normalizedEntry = this.normalizeLogoEntry(entry);
     if (idx >= 0) {
-      // Keep max 3 previous versions
       const prev = logos[idx];
-      const history = (prev.previousVersions || []).slice(0, 2);
-      history.unshift({
-        storagePath: prev.storagePath,
-        uploadedAt: prev.uploadedAt,
-        uploadedBy: prev.uploadedBy,
+      const existingAssets = prev.assets || [];
+      const incomingFormats = new Set(normalizedEntry.assets.map((asset) => asset.format));
+      const mergedAssets = [
+        ...existingAssets.filter((asset) => !incomingFormats.has(asset.format)),
+        ...normalizedEntry.assets,
+      ];
+      logos[idx] = this.normalizeLogoEntry({
+        ...prev,
+        ...normalizedEntry,
+        assets: mergedAssets,
+        usageNotes: normalizedEntry.usageNotes,
+        label: normalizedEntry.label,
       });
-      entry.previousVersions = history;
-      logos[idx] = entry;
     } else {
-      logos.push(entry);
+      logos.push(normalizedEntry);
     }
     await Promise.all([
       kv.set(KEYS.logosMetadata, logos),
@@ -240,7 +316,9 @@ export class BrandService {
     if (target) {
       // Delete from storage
       const supabase = getSupabase();
-      const pathsToDelete = [target.storagePath];
+      const pathsToDelete = target.assets?.length
+        ? target.assets.map((asset) => asset.storagePath)
+        : [target.storagePath];
       if (target.previousVersions) {
         pathsToDelete.push(...target.previousVersions.map(v => v.storagePath));
       }
