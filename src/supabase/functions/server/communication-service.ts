@@ -34,6 +34,19 @@ function generateId(): string {
   return crypto.randomUUID();
 }
 
+function splitFullName(fullName?: string): { firstName: string; surname: string } {
+  const value = (fullName || '').trim();
+  if (!value) {
+    return { firstName: '', surname: '' };
+  }
+
+  const [firstName, ...rest] = value.split(/\s+/);
+  return {
+    firstName: firstName || '',
+    surname: rest.join(' ').trim(),
+  };
+}
+
 export class CommunicationService {
   
   /**
@@ -500,8 +513,20 @@ export class CommunicationService {
         clientIds: updates.clientIds
       }
     });
-    
+
+    const previousGroup =
+      groupId === 'sys_newsletter_contacts' && updates.externalContacts !== undefined
+        ? await repo.getGroupById(groupId)
+        : null;
+
     const group = await repo.updateGroup(groupId, updates);
+
+    if (groupId === 'sys_newsletter_contacts' && updates.externalContacts !== undefined) {
+      await this.syncNewsletterSubscribersFromGroupUpdate(
+        previousGroup?.externalContacts || [],
+        group.externalContacts || [],
+      );
+    }
     
     log.success('Group updated', { 
       groupId,
@@ -523,6 +548,76 @@ export class CommunicationService {
     await repo.deleteGroup(groupId);
     
     log.warn('Group deleted', { groupId });
+  }
+
+  private async syncNewsletterSubscribersFromGroupUpdate(
+    previousContacts: Array<{ email: string; name?: string; subscribedAt?: string }>,
+    nextContacts: Array<{ email: string; name?: string; subscribedAt?: string }>,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+
+    const previousMap = new Map<string, { email: string; name?: string; subscribedAt?: string }>();
+    const nextMap = new Map<string, { email: string; name?: string; subscribedAt?: string }>();
+
+    for (const contact of previousContacts) {
+      const email = (contact.email || '').trim().toLowerCase();
+      if (!email || !email.includes('@')) continue;
+      previousMap.set(email, { ...contact, email });
+    }
+
+    for (const contact of nextContacts) {
+      const email = (contact.email || '').trim().toLowerCase();
+      if (!email || !email.includes('@')) continue;
+      nextMap.set(email, { ...contact, email });
+    }
+
+    for (const [email] of previousMap) {
+      if (nextMap.has(email)) continue;
+      const key = `newsletter:${email}`;
+      const existing = (await kv.get(key)) as Record<string, unknown> | null;
+      if (!existing) continue;
+
+      await kv.set(key, {
+        ...existing,
+        email,
+        active: false,
+        unsubscribedAt: now,
+        removedBy: 'admin',
+      });
+    }
+
+    for (const [email, contact] of nextMap) {
+      const key = `newsletter:${email}`;
+      const existing = (await kv.get(key)) as Record<string, unknown> | null;
+      const split = splitFullName(contact.name);
+      const existingFirstName = typeof existing?.firstName === 'string' ? existing.firstName : '';
+      const existingSurname = typeof existing?.surname === 'string' ? existing.surname : '';
+      const resolvedFirstName = split.firstName || existingFirstName;
+      const resolvedSurname = split.surname || existingSurname;
+      const resolvedName =
+        contact.name?.trim() ||
+        `${resolvedFirstName} ${resolvedSurname}`.trim() ||
+        (typeof existing?.name === 'string' ? existing.name : '');
+
+      await kv.set(key, {
+        ...(existing || {}),
+        email,
+        firstName: resolvedFirstName,
+        surname: resolvedSurname,
+        name: resolvedName,
+        source: typeof existing?.source === 'string' ? existing.source : 'Admin Manual Upload',
+        subscribedAt:
+          (typeof existing?.subscribedAt === 'string' ? existing.subscribedAt : undefined) ||
+          contact.subscribedAt ||
+          now,
+        confirmedAt:
+          (typeof existing?.confirmedAt === 'string' ? existing.confirmedAt : undefined) || now,
+        confirmed: true,
+        active: true,
+        unsubscribedAt: null,
+        removedBy: null,
+      });
+    }
   }
   
   /**

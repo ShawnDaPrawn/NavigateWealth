@@ -22,6 +22,7 @@ import {
   AdminAddSubscriberSchema,
   AdminBulkSubscriberSchema,
   AdminEmailSchema,
+  AdminUpdateSubscriberSchema,
 } from './newsletter-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { requireAuth } from './auth-mw.ts';
@@ -35,6 +36,7 @@ import {
   bulkAddSubscribers,
   removeSubscriberByEmail,
   resubscribeByEmail,
+  updateSubscriberDetails,
   getStats,
 } from './newsletter-service.ts';
 
@@ -554,6 +556,32 @@ app.post('/admin/resubscribe', requireAuth, asyncHandler(async (c) => {
     category: 'communication',
     action: 'newsletter_subscriber_resubscribed',
     summary: 'Newsletter subscriber re-activated by admin',
+    severity: 'info',
+    entityType: 'newsletter',
+  }).catch(() => {});
+
+  return c.json({ success: true, ...result });
+}));
+
+/**
+ * POST /admin/update — Update subscriber details
+ */
+app.post('/admin/update', requireAuth, asyncHandler(async (c) => {
+  const body = await c.req.json();
+  const parsed = AdminUpdateSubscriberSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+  }
+
+  const result = await updateSubscriberDetails(parsed.data);
+
+  const adminUserId = c.get('userId') || 'unknown';
+  AdminAuditService.record({
+    actorId: adminUserId,
+    actorRole: 'admin',
+    category: 'communication',
+    action: 'newsletter_subscriber_updated',
+    summary: 'Newsletter subscriber details updated',
     severity: 'info',
     entityType: 'newsletter',
   }).catch(() => {});

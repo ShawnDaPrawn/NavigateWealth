@@ -261,7 +261,7 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
                 <div className="flex justify-between items-center">
                   <h3 className="text-sm font-medium text-muted-foreground">Available Groups</h3>
                   <Button variant="outline" size="sm" onClick={() => setShowGroupManager(true)}>
-                    Manage Custom Groups
+                    Manage Groups
                   </Button>
                 </div>
 

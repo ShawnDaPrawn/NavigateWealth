@@ -284,3 +284,64 @@ export async function removeNewsletterSubscriber(email: string): Promise<void> {
     log.error('Failed to remove subscriber from Newsletter Contacts group', error);
   }
 }
+
+/**
+ * Update a newsletter subscriber contact inside the Newsletter Contacts group.
+ *
+ * - If the email changed, removes the previous email and adds the new one.
+ * - If only the name changed and the subscriber is an external contact,
+ *   updates it in-place.
+ * - If no matching external contact exists, falls back to add flow.
+ */
+export async function updateNewsletterSubscriberContact(
+  previousEmail: string,
+  nextEmail: string,
+  name?: string,
+): Promise<void> {
+  const normPrevious = previousEmail.trim().toLowerCase();
+  const normNext = nextEmail.trim().toLowerCase();
+  const nextName = name?.trim() || undefined;
+
+  if (!normPrevious || !normNext) return;
+
+  if (normPrevious !== normNext) {
+    await removeNewsletterSubscriber(normPrevious);
+    await addNewsletterSubscriber(normNext, nextName);
+    return;
+  }
+
+  try {
+    const group = await repo.getGroupById(NEWSLETTER_GROUP_ID);
+    if (!group) {
+      await addNewsletterSubscriber(normNext, nextName);
+      return;
+    }
+
+    const externalContacts: ExternalContact[] = [...(group.externalContacts || [])];
+    const existingIndex = externalContacts.findIndex(
+      (c: ExternalContact) => c.email.toLowerCase() === normNext,
+    );
+
+    if (existingIndex === -1) {
+      await addNewsletterSubscriber(normNext, nextName);
+      return;
+    }
+
+    externalContacts[existingIndex] = {
+      ...externalContacts[existingIndex],
+      name: nextName,
+    };
+
+    const updatedGroup = {
+      ...group,
+      externalContacts,
+      clientCount: (group.clientIds || []).length + externalContacts.length,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await kv.set(`communication:groups:${NEWSLETTER_GROUP_ID}`, updatedGroup);
+    log.info('Updated Newsletter Contacts external subscriber details', { email: normNext });
+  } catch (error) {
+    log.error('Failed to update subscriber in Newsletter Contacts group', error);
+  }
+}

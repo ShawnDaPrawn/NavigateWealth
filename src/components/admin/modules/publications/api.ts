@@ -42,6 +42,7 @@ import type { PipelineId, PipelineConfig, PipelineRunLog, PipelineTriggerResult,
 import type {
   SubscriberListResponse,
   SubscriberMutationResponse,
+  UpdateSubscriberInput,
   BulkUploadResponse,
   ArticleReshareResponse,
   ArticleEmailEngagementSummary,
@@ -1232,6 +1233,17 @@ export const NewsletterAPI = {
       method: 'POST',
       headers: authHeaders,
       body: JSON.stringify({ email }),
+    });
+    return handleResponse<SubscriberMutationResponse>(response);
+  },
+
+  /** POST /newsletter/admin/update */
+  async updateSubscriber(input: UpdateSubscriberInput): Promise<SubscriberMutationResponse> {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${NEWSLETTER_URL}/admin/update`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify(input),
     });
     return handleResponse<SubscriberMutationResponse>(response);
   },

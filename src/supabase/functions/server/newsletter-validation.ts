@@ -39,3 +39,11 @@ export const AdminBulkSubscriberSchema = z.object({
 export const AdminEmailSchema = z.object({
   email: z.string().min(1, 'Email is required'),
 });
+
+export const AdminUpdateSubscriberSchema = z.object({
+  currentEmail: z.string().email('A valid current email address is required'),
+  email: z.string().email('A valid email address is required'),
+  firstName: z.string().optional().default(''),
+  surname: z.string().optional().default(''),
+  name: z.string().optional(),
+});

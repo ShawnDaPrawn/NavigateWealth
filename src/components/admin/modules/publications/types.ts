@@ -1013,6 +1013,13 @@ export interface SubscriberMutationResponse {
   alreadyActive?: boolean;
 }
 
+export interface UpdateSubscriberInput {
+  currentEmail: string;
+  email: string;
+  firstName: string;
+  surname: string;
+}
+
 export interface BulkUploadResponse {
   success: boolean;
   message: string;

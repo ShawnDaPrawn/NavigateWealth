@@ -9,6 +9,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner@2.0.3';
 import { NewsletterAPI } from '../api';
 import { newsletterKeys } from './queryKeys';
+import type { UpdateSubscriberInput } from '../types';
 
 // ── Add single subscriber ──────────────────────────────────────────────
 
@@ -84,6 +85,24 @@ export function useResubscribe() {
     onError: (error: Error) => {
       console.error('Failed to re-subscribe:', error);
       toast.error(error.message || 'Failed to re-subscribe');
+    },
+  });
+}
+
+// —— Update subscriber details —————————————————————————————————————————————————————————————
+
+export function useUpdateSubscriber() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdateSubscriberInput) => NewsletterAPI.updateSubscriber(input),
+    onSuccess: (data) => {
+      toast.success(data.message || 'Subscriber updated');
+      queryClient.invalidateQueries({ queryKey: newsletterKeys.subscribers() });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to update subscriber:', error);
+      toast.error(error.message || 'Failed to update subscriber');
     },
   });
 }

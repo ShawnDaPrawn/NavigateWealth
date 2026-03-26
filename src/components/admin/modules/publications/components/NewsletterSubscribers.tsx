@@ -52,6 +52,7 @@ import {
   RotateCcw,
   Calendar,
   FileDown,
+  Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 
@@ -78,6 +79,7 @@ import {
   useBulkUpload,
   useRemoveSubscriber,
   useResubscribe,
+  useUpdateSubscriber,
 } from '../hooks/useNewsletterMutations';
 
 // ============================================================================
@@ -97,6 +99,7 @@ export function NewsletterSubscribers() {
   const bulkMutation = useBulkUpload();
   const removeMutation = useRemoveSubscriber();
   const resubscribeMutation = useResubscribe();
+  const updateMutation = useUpdateSubscriber();
 
   // ── Local UI state ───────────────────────────────────────────────────
   const [addOpen, setAddOpen] = useState(false);
@@ -112,6 +115,10 @@ export function NewsletterSubscribers() {
 
   const [removeTarget, setRemoveTarget] = useState<string | null>(null);
   const [resubscribeTarget, setResubscribeTarget] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<Subscriber | null>(null);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editSurname, setEditSurname] = useState('');
+  const [editEmail, setEditEmail] = useState('');
 
   // ── Handlers ─────────────────────────────────────────────────────────
 
@@ -164,6 +171,24 @@ export function NewsletterSubscribers() {
     if (!resubscribeTarget) return;
     await resubscribeMutation.mutateAsync(resubscribeTarget);
     setResubscribeTarget(null);
+  };
+
+  const openEditDialog = (subscriber: Subscriber) => {
+    setEditTarget(subscriber);
+    setEditFirstName(subscriber.firstName || '');
+    setEditSurname(subscriber.surname || '');
+    setEditEmail(subscriber.email || '');
+  };
+
+  const handleUpdateSubscriber = async () => {
+    if (!editTarget) return;
+    await updateMutation.mutateAsync({
+      currentEmail: editTarget.email,
+      email: editEmail.trim(),
+      firstName: editFirstName.trim(),
+      surname: editSurname.trim(),
+    });
+    setEditTarget(null);
   };
 
   const handleExportUnsubscribed = () => {
@@ -406,6 +431,7 @@ export function NewsletterSubscribers() {
                     key={sub.email}
                     sub={sub}
                     statusFilter={statusFilter}
+                    onEdit={openEditDialog}
                     onRemove={setRemoveTarget}
                     onResubscribe={setResubscribeTarget}
                   />
@@ -470,6 +496,59 @@ export function NewsletterSubscribers() {
             >
               {addMutation.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <UserPlus className="h-4 w-4 mr-1.5" />}
               Add Subscriber
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════ Edit Subscriber Dialog ═══════ */}
+      <Dialog open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-4 w-4 text-purple-500" />
+              Edit Subscriber Details
+            </DialogTitle>
+            <DialogDescription>
+              Update the subscriber name and email address. The newsletter audience will use the new details immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-2">
+              <Label>Email Address <span className="text-red-500">*</span></Label>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="subscriber@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>First Name</Label>
+              <Input
+                value={editFirstName}
+                onChange={(e) => setEditFirstName(e.target.value)}
+                placeholder="John"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Surname</Label>
+              <Input
+                value={editSurname}
+                onChange={(e) => setEditSurname(e.target.value)}
+                placeholder="Smith"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={handleUpdateSubscriber}
+              disabled={!editEmail.trim().includes('@') || updateMutation.isPending}
+            >
+              {updateMutation.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Pencil className="h-4 w-4 mr-1.5" />}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -704,11 +783,12 @@ export function NewsletterSubscribers() {
 interface SubscriberRowProps {
   sub: Subscriber;
   statusFilter: SubscriberStatusFilter;
+  onEdit: (subscriber: Subscriber) => void;
   onRemove: (email: string) => void;
   onResubscribe: (email: string) => void;
 }
 
-function SubscriberRow({ sub, statusFilter, onRemove, onResubscribe }: SubscriberRowProps) {
+function SubscriberRow({ sub, statusFilter, onEdit, onRemove, onResubscribe }: SubscriberRowProps) {
   const status = deriveSubscriberStatus(sub);
   const cfg = SUBSCRIBER_STATUS_CONFIG[status];
   const isUnsub = status === 'unsubscribed';
@@ -767,36 +847,51 @@ function SubscriberRow({ sub, statusFilter, onRemove, onResubscribe }: Subscribe
         )}
       </td>
       <td className="py-2.5 px-4 text-right">
-        {status === 'active' && (
+        <div className="flex items-center justify-end gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
-                onClick={() => onRemove(sub.email)}
+                className="h-7 w-7 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                onClick={() => onEdit(sub)}
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Pencil className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Remove subscriber</TooltipContent>
+            <TooltipContent>Edit subscriber</TooltipContent>
           </Tooltip>
-        )}
-        {isUnsub && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 text-green-500 hover:text-green-700 hover:bg-green-50"
-                onClick={() => onResubscribe(sub.email)}
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Re-subscribe</TooltipContent>
-          </Tooltip>
-        )}
+          {status === 'active' && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => onRemove(sub.email)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Remove subscriber</TooltipContent>
+            </Tooltip>
+          )}
+          {isUnsub && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-green-500 hover:text-green-700 hover:bg-green-50"
+                  onClick={() => onResubscribe(sub.email)}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Re-subscribe</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
       </td>
     </tr>
   );

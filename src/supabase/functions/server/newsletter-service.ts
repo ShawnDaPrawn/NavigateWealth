@@ -16,6 +16,7 @@ import {
   addNewsletterSubscriber,
   addNewsletterSubscribersBulk,
   removeNewsletterSubscriber,
+  updateNewsletterSubscriberContact,
 } from './newsletter-group-service.ts';
 
 const log = createModuleLogger('newsletter-service');
@@ -59,6 +60,14 @@ export interface BulkAddResult {
   added: number;
   skipped: number;
   errors: string[];
+}
+
+export interface UpdateSubscriberInput {
+  currentEmail: string;
+  email: string;
+  firstName?: string;
+  surname?: string;
+  name?: string;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────
@@ -293,6 +302,63 @@ export async function resubscribeByEmail(
   return {
     alreadyActive: false,
     message: `${normEmail} re-subscribed to newsletter`,
+  };
+}
+
+/**
+ * Update subscriber details (email and/or name fields).
+ */
+export async function updateSubscriberDetails(
+  input: UpdateSubscriberInput,
+): Promise<{ message: string; subscriber: SubscriberView }> {
+  const normCurrentEmail = input.currentEmail.trim().toLowerCase();
+  const normEmail = input.email.trim().toLowerCase();
+  const normFirstName = input.firstName?.trim() || '';
+  const normSurname = input.surname?.trim() || '';
+  const composedName = composeName(normFirstName, normSurname, input.name);
+
+  const currentKey = `newsletter:${normCurrentEmail}`;
+  const existing: SubscriberEntry | null = await kv.get(currentKey);
+
+  if (!existing) {
+    throw new Error('Subscriber not found');
+  }
+
+  if (normCurrentEmail !== normEmail) {
+    const targetExisting: SubscriberEntry | null = await kv.get(`newsletter:${normEmail}`);
+    if (targetExisting && targetExisting.email && targetExisting.email !== normCurrentEmail) {
+      throw new Error('A subscriber with this email already exists');
+    }
+  }
+
+  const updated: SubscriberEntry = {
+    ...existing,
+    email: normEmail,
+    firstName: normFirstName,
+    surname: normSurname,
+    name: composedName,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const targetKey = `newsletter:${normEmail}`;
+  await kv.set(targetKey, updated);
+
+  if (normCurrentEmail !== normEmail) {
+    await kv.del(currentKey);
+  }
+
+  if (existing.active && existing.confirmed) {
+    await updateNewsletterSubscriberContact(normCurrentEmail, normEmail, composedName);
+  }
+
+  log.info('Admin updated newsletter subscriber details', {
+    previousEmail: normCurrentEmail,
+    nextEmail: normEmail,
+  });
+
+  return {
+    message: `${normCurrentEmail} updated`,
+    subscriber: toSubscriberView(updated),
   };
 }
 

@@ -112,8 +112,12 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
         communicationApi.getClients(),
         communicationApi.getProviders()
       ]);
-      // Filter to show custom groups - include groups without a type field (legacy) or explicitly custom
-      setGroups(fetchedGroups.filter(g => !g.type || g.type === 'custom'));
+      // Include custom groups + newsletter system group (editable external contacts)
+      setGroups(
+        fetchedGroups.filter(
+          (g) => !g.type || g.type === 'custom' || g.id === 'sys_newsletter_contacts',
+        ),
+      );
       setClients(fetchedClients);
       setProviders(fetchedProviders);
     } catch (error) {
@@ -135,7 +139,8 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
   };
 
   const handleSave = async (groupData: Partial<ClientGroup>) => {
-    if (!groupData.name?.trim()) {
+    const isEditingNewsletterGroup = editingGroup?.id === 'sys_newsletter_contacts';
+    if (!isEditingNewsletterGroup && !groupData.name?.trim()) {
       toast.error('Group name is required');
       return;
     }
@@ -161,6 +166,12 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
   };
 
   const handleDelete = async (id: string) => {
+    const group = groups.find((g) => g.id === id);
+    if (group?.type === 'system') {
+      toast.error('System groups cannot be deleted');
+      return;
+    }
+
     try {
       setIsDeleting(true);
       await communicationApi.deleteGroup(id);
@@ -251,9 +262,9 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
 
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Custom Groups</h2>
+          <h2 className="text-2xl font-bold">Groups</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage and organize your client groups
+            Manage custom groups and newsletter external contacts
           </p>
         </div>
         <div className="flex gap-2">
@@ -314,7 +325,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
       ) : groups.length === 0 ? (
         <div className="col-span-full text-center py-12 border-2 border-dashed rounded-lg bg-muted/20">
           <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold">No Custom Groups</h3>
+          <h3 className="text-lg font-semibold">No Groups</h3>
           <p className="text-muted-foreground mb-6">Create your first custom group to start organizing clients.</p>
           <Button onClick={handleCreateNew}>Create Group</Button>
         </div>
@@ -340,10 +351,18 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
             <TableBody>
               {filteredGroups.map((group) => {
                 const activeFilters = getActiveFilters(group);
+                const isSystemGroup = group.type === 'system';
                 
                 return (
                   <TableRow key={group.id} className="cursor-pointer hover:bg-muted/50">
-                    <TableCell className="font-medium">{group.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{group.name}</span>
+                        <Badge variant={isSystemGroup ? 'secondary' : 'outline'} className="text-[10px] capitalize">
+                          {isSystemGroup ? 'system' : 'custom'}
+                        </Badge>
+                      </div>
+                    </TableCell>
                     <TableCell className="max-w-xs truncate text-muted-foreground">
                       {group.description || '—'}
                     </TableCell>
@@ -374,6 +393,8 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
                             </Badge>
                           )}
                         </div>
+                      ) : group.id === 'sys_newsletter_contacts' ? (
+                        <span className="text-muted-foreground text-sm">Newsletter audience group</span>
                       ) : (
                         <span className="text-muted-foreground text-sm">Manual selection</span>
                       )}
@@ -407,18 +428,20 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
                         >
                           <Edit2 className="h-4 w-4 text-muted-foreground hover:text-primary" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setGroupToDelete(group);
-                            setDeleteDialogOpen(true);
-                          }}
-                          aria-label="Delete group"
-                        >
-                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                        </Button>
+                        {!isSystemGroup && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setGroupToDelete(group);
+                              setDeleteDialogOpen(true);
+                            }}
+                            aria-label="Delete group"
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
