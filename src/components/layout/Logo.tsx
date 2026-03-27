@@ -8,9 +8,13 @@ interface LogoProps {
 }
 
 export function Logo({ variant = 'default', className = '' }: LogoProps) {
-  let logoSrc = navigateWealthLogo;
+  // Original logo for easy rollback:
+  // let logoSrc = navigateWealthLogo;
+  // let height = '25.5px';
+  
+  let logoSrc = '/brand-assets/navigate-wealth-logo-main.png';
   let altText = 'Navigate Wealth';
-  let height = '25.5px';
+  let height = '29.5px'; // Increased by ~15% to make it slightly larger/wider as requested
 
   if (variant === 'light') {
     logoSrc = wealthFooterLogo;
