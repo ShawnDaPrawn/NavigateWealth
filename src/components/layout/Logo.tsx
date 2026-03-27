@@ -8,29 +8,18 @@ interface LogoProps {
 }
 
 export function Logo({ variant = 'default', className = '' }: LogoProps) {
-  // --- ROLLBACK CODE (Uncomment to restore original logo) ---
-  // let logoSrc = navigateWealthLogo;
-  // let height = '25.5px';
-  // let filterStyle = 'none';
-  // ----------------------------------------------------------
-
-  // --- NEW LOGO CODE ---
   let logoSrc = '/brand-assets/navigate-wealth-logo-main-v2.png';
   let altText = 'Navigate Wealth';
   let height = '29.5px'; // ~15% larger
-  let filterStyle = 'contrast(1.05) drop-shadow(0px 1px 2px rgba(0,0,0,0.08))'; // Slight enhancement
-  // ---------------------
 
   if (variant === 'light') {
     logoSrc = wealthFooterLogo;
     altText = 'Wealth';
     height = '29.75px';
-    filterStyle = 'none';
   } else if (variant === 'admin-white') {
     logoSrc = '/brand-assets/navigate-wealth-admin-logo-transparent.png';
     altText = 'Navigate Wealth';
     height = '36px';
-    filterStyle = 'none';
   }
 
   return (
@@ -46,8 +35,7 @@ export function Logo({ variant = 'default', className = '' }: LogoProps) {
           width: 'auto',
           maxWidth: 'none',
           imageRendering: 'auto',
-          WebkitImageRendering: '-webkit-optimize-contrast',
-          filter: filterStyle
+          WebkitImageRendering: '-webkit-optimize-contrast'
         }}
       />
     </div>
