@@ -17,7 +17,7 @@ export function Logo({ variant = 'default', className = '' }: LogoProps) {
     altText = 'Wealth';
     height = '29.75px';
   } else if (variant === 'admin-white') {
-    logoSrc = '/brand-assets/navigate-wealth-reversed.svg';
+    logoSrc = '/brand-assets/navigate-wealth-admin-logo-transparent.png';
     altText = 'Navigate Wealth';
     height = '36px';
   }
