@@ -27,7 +27,7 @@ export function Logo({ variant = 'default', className = '' }: LogoProps) {
       <img
         src={logoSrc}
         alt={altText}
-        className="w-auto high-quality-image"
+        className={`w-auto high-quality-image ${variant === 'admin-white' ? 'mix-blend-screen' : ''}`}
         loading="eager"
         decoding="sync"
         style={{ 
