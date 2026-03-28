@@ -2,11 +2,6 @@
 // Moved to constants.ts — re-exported for backward compatibility
 export { WIZARD_STEPS, TAX_YEAR_2026_2027 } from './constants';
 
-/**
- * @deprecated Use TAX_YEAR_2026_2027 instead.
- */
-export { TAX_YEAR_2024_2025 } from './constants';
-
 // ==================== WIZARD STEP TYPE ====================
 
 /**
