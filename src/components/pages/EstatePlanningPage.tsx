@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
-import { getSEOData } from '../seo/seo-config';
+import { getSEOData, estatePlanningFAQs } from '../seo/seo-config';
 import { ServicePageTemplate, type CoverContent } from '../templates/ServicePageTemplate';
 import { Shield, FileText, Users, Building, Heart, Scale, Crown, Briefcase, Search, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { capitalLegacyLogo, ewSerfonteinLogo } from '../shared/assets/provider-logos';
@@ -144,7 +144,7 @@ export function EstatePlanningPage() {
           heroImageAlt: 'Estate planning consultation representing wealth transfer and legacy protection',
           statusLabel: 'Estate Planning',
           statusValue: 'Individuals & Businesses',
-          quoteLink: '/get-quote/estate-planning',
+          quoteLink: '/get-quote/estate-planning/contact',
           heroStyle: 'unified',
           stats: [
             { value: '2+', label: 'Trusted Partners' },
@@ -166,7 +166,7 @@ export function EstatePlanningPage() {
           },
           cardIcon: Heart,
           cardLabel: 'Personal Estate',
-          quoteLink: '/get-quote/estate-planning',
+          quoteLink: '/get-quote/estate-planning/contact',
         },
         business: {
           badgeText: 'For Businesses',
@@ -181,7 +181,7 @@ export function EstatePlanningPage() {
           },
           cardIcon: Briefcase,
           cardLabel: 'Business Estate',
-          quoteLink: '/get-quote/estate-planning',
+          quoteLink: '/get-quote/estate-planning/contact',
         },
         partners: {
           logos: partnerLogos,
@@ -219,6 +219,7 @@ export function EstatePlanningPage() {
           { name: 'Estate Planning' },
         ],
         preloadImages: [],
+        faqs: estatePlanningFAQs,
         approach: {
           serviceName: 'How We Protect Your Legacy',
           headerDescription: 'At Navigate Wealth, we follow a proven methodology to ensure your estate plan comprehensively protects your family and preserves your legacy.',

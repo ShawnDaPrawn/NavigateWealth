@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { SEO } from '../seo/SEO';
 
 export function NewsletterUnsubscribePage() {
   const [searchParams] = useSearchParams();
@@ -11,6 +12,12 @@ export function NewsletterUnsubscribePage() {
   const [message, setMessage] = useState('');
   
   const email = searchParams.get('email');
+  const seoProps = {
+    title: 'Newsletter Unsubscribe | Navigate Wealth',
+    description: 'Newsletter unsubscribe page for Navigate Wealth.',
+    canonicalUrl: 'https://navigatewealth.co/newsletter/unsubscribe',
+    robotsContent: 'noindex, nofollow',
+  };
 
   const handleUnsubscribe = async () => {
     if (!email) {
@@ -55,8 +62,10 @@ export function NewsletterUnsubscribePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center px-4 py-12">
-      <Card className="max-w-md w-full">
+    <>
+      <SEO {...seoProps} />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center px-4 py-12">
+        <Card className="max-w-md w-full">
         {status === 'initial' && (
           <div className="contents">
             <CardHeader className="text-center">
@@ -133,7 +142,8 @@ export function NewsletterUnsubscribePage() {
             </p>
           </CardContent>
         )}
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </>
   );
 }

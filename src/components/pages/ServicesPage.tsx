@@ -441,7 +441,7 @@ export function ServicesPage() {
                           className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 text-xs px-4"
                           asChild
                         >
-                          <Link to={`/get-quote/${service.quoteSlug}`}>
+                          <Link to={`/get-quote/${service.quoteSlug}/contact`}>
                             Get Quote
                           </Link>
                         </Button>

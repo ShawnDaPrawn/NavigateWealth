@@ -53,6 +53,9 @@ const ResetPasswordPage = React.lazy(() => import('./components/pages/ResetPassw
 const VerifyEmailPage = React.lazy(() => import('./components/pages/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })));
 const GetStartedPage = React.lazy(() => import('./components/pages/GetStartedPage').then(m => ({ default: m.GetStartedPage })));
 const GetQuotePage = React.lazy(() => import('./components/pages/GetQuotePage').then(m => ({ default: m.GetQuotePage })));
+const QuoteServiceContactPage = React.lazy(() =>
+  import('./components/pages/QuoteServiceContactPage').then(m => ({ default: m.QuoteServiceContactPage })),
+);
 const ProductQuotePage = React.lazy(() => import('./components/pages/ProductQuotePage').then(m => ({ default: m.ProductQuotePage })));
 const AccountTypeSelectionPage = React.lazy(() => import('./components/pages/AccountTypeSelectionPage').then(m => ({ default: m.AccountTypeSelectionPage })));
 const ApplicationPage = React.lazy(() => import('./components/pages/ApplicationPage').then(m => ({ default: m.ApplicationPage })));
@@ -135,8 +138,9 @@ export function AppRoutes() {
         <Route path="/robots.txt" element={<RobotsTxtPage />} />
         <Route path="/sitemap/xml" element={<SitemapXmlPage />} />
         
-        {/* Get Quote — always public layout */}
+        {/* Get Quote — always public layout (contact route must be registered before :service) */}
         <Route path="/get-quote" element={<FlexibleRoute><AppLayout forcePublicLayout><GetQuotePage /></AppLayout></FlexibleRoute>} />
+        <Route path="/get-quote/:service/contact" element={<FlexibleRoute><AppLayout forcePublicLayout><QuoteServiceContactPage /></AppLayout></FlexibleRoute>} />
         <Route path="/get-quote/:service" element={<FlexibleRoute><AppLayout forcePublicLayout><ProductQuotePage /></AppLayout></FlexibleRoute>} />
         
         {/* Auth routes */}
@@ -202,8 +206,6 @@ export function AppRoutes() {
         {/* Admin */}
         <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
         
-        {/* Migration Helper */}
-        <Route path="/migration-helper" element={<FlexibleRoute>{null}</FlexibleRoute>} />
         
         {/* Public functional routes (standalone — no MainLayout, need explicit error boundaries) */}
         <Route path="/requests/:id" element={<FlexibleRoute><ErrorBoundary fallbackTitle="Request Error" fallbackMessage="Unable to load this request. The link may be invalid or expired."><RequestCompletionPage /></ErrorBoundary></FlexibleRoute>} />

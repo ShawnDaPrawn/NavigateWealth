@@ -15,10 +15,11 @@ import { useEffect } from 'react';
 interface SEOProps {
   title: string;
   description: string;
-  keywords?: string;
+  keywords?: string | string[];
   canonicalUrl?: string;
   ogType?: string;
   ogImage?: string;
+  robotsContent?: string;
   structuredData?: Record<string, unknown>;
 }
 
@@ -61,6 +62,7 @@ export function SEO({
   canonicalUrl,
   ogType = 'website',
   ogImage,
+  robotsContent = 'index, follow',
   structuredData,
 }: SEOProps) {
   useEffect(() => {
@@ -78,9 +80,11 @@ export function SEO({
       el.setAttribute('content', content);
     };
 
+    const normalizedKeywords = Array.isArray(keywords) ? keywords.join(', ') : keywords;
+
     setMeta('name', 'description', description);
-    setMeta('name', 'robots', 'index, follow');
-    if (keywords) setMeta('name', 'keywords', keywords);
+    setMeta('name', 'robots', robotsContent);
+    if (normalizedKeywords) setMeta('name', 'keywords', normalizedKeywords);
 
     // Open Graph
     const resolvedImage = ogImage || DEFAULT_OG_IMAGE;
@@ -92,6 +96,7 @@ export function SEO({
     setMeta('property', 'og:image', resolvedImage);
     setMeta('property', 'og:image:width', '1200');
     setMeta('property', 'og:image:height', '630');
+    setMeta('property', 'og:image:alt', title);
     if (canonicalUrl) setMeta('property', 'og:url', canonicalUrl);
 
     // Twitter Card
@@ -99,6 +104,7 @@ export function SEO({
     setMeta('name', 'twitter:title', title);
     setMeta('name', 'twitter:description', description);
     setMeta('name', 'twitter:image', resolvedImage);
+    setMeta('name', 'twitter:site', '@NavigateWealthSA');
 
     // Canonical link
     if (canonicalUrl) {
@@ -131,7 +137,7 @@ export function SEO({
       const existing = document.getElementById(SCRIPT_ID);
       if (existing) existing.remove();
     };
-  }, [title, description, keywords, canonicalUrl, ogType, ogImage, structuredData]);
+  }, [title, description, keywords, canonicalUrl, ogType, ogImage, robotsContent, structuredData]);
 
   return null;
 }
@@ -145,18 +151,50 @@ export function createOrganizationSchema(): Record<string, unknown> {
     '@type': 'Organization',
     name: SITE_NAME,
     url: BASE_URL,
-    logo: `${BASE_URL}/logo.png`,
+    logo: {
+      '@type': 'ImageObject',
+      url: `${BASE_URL}/logo.png`,
+      width: 600,
+      height: 60,
+    },
     description:
       'Independent financial advisory firm providing comprehensive wealth management services across South Africa.',
     address: {
       '@type': 'PostalAddress',
+      addressLocality: 'Johannesburg',
+      addressRegion: 'Gauteng',
       addressCountry: 'ZA',
     },
-    sameAs: [],
+    sameAs: [
+      'https://www.linkedin.com/company/navigatewealth/',
+      'https://www.instagram.com/navigate_wealth?igsh=MTh6bTc2emszbXU0MA==',
+      'https://www.youtube.com/@navigatewealth',
+    ],
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
+      telephone: '+27126672505',
       availableLanguage: ['English', 'Afrikaans'],
+    },
+  };
+}
+
+/**
+ * WebSite schema with SearchAction — strongly helps Google generate sitelinks
+ * and the branded search box.
+ */
+export function createWebSiteSchema(): Record<string, unknown> {
+  return {
+    '@type': 'WebSite',
+    name: SITE_NAME,
+    url: BASE_URL,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${BASE_URL}/resources?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
     },
   };
 }

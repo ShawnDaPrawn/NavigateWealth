@@ -19,6 +19,7 @@ import {
 } from '../../../../ui/table';
 import {
   Activity,
+  AlertCircle,
   BookOpenCheck,
   Loader2,
   Mail,
@@ -26,6 +27,7 @@ import {
   RefreshCw,
   Users,
 } from 'lucide-react';
+import { toast } from 'sonner@2.0.3';
 
 import { PublicationsAPI } from '../api';
 import type {
@@ -34,6 +36,37 @@ import type {
   ArticleEmailEngagementRecipient,
   ArticleEmailEngagementSummary,
 } from '../types';
+
+function asCount(value: number | null | undefined): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function normalizeSummary(summary: ArticleEmailEngagementSummary): ArticleEmailEngagementSummary {
+  return {
+    ...summary,
+    pending: asCount(summary.pending),
+    sent: asCount(summary.sent),
+    failed: asCount(summary.failed),
+    undelivered: asCount(summary.undelivered),
+    publishPending: asCount(summary.publishPending),
+    publishFailed: asCount(summary.publishFailed),
+    publishUndelivered: asCount(summary.publishUndelivered),
+    resharePending: asCount(summary.resharePending),
+    reshareFailed: asCount(summary.reshareFailed),
+    reshareUndelivered: asCount(summary.reshareUndelivered),
+    opened: asCount(summary.opened),
+    read: asCount(summary.read),
+    openRate: typeof summary.openRate === 'number' && Number.isFinite(summary.openRate) ? summary.openRate : 0,
+    readRate: typeof summary.readRate === 'number' && Number.isFinite(summary.readRate) ? summary.readRate : 0,
+  };
+}
+
+function normalizeDetail(detail: ArticleEmailEngagementDetail): ArticleEmailEngagementDetail {
+  return {
+    ...detail,
+    summary: normalizeSummary(detail.summary),
+  };
+}
 
 function formatDateTime(value: string | null): string {
   if (!value) return '-';
@@ -79,6 +112,7 @@ export function ArticleEmailEngagementPanel() {
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ArticleEmailEngagementDetail | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [retryingArticleId, setRetryingArticleId] = useState<string | null>(null);
 
   const loadSummary = async () => {
     setIsLoading(true);
@@ -86,7 +120,7 @@ export function ArticleEmailEngagementPanel() {
 
     try {
       const result = await PublicationsAPI.Articles.getEmailEngagementSummary();
-      setSummaries(result);
+      setSummaries(result.map(normalizeSummary));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load article email engagement');
     } finally {
@@ -105,7 +139,7 @@ export function ArticleEmailEngagementPanel() {
 
     try {
       const result = await PublicationsAPI.Articles.getArticleEmailEngagement(articleId);
-      setDetail(result);
+      setDetail(normalizeDetail(result));
     } catch {
       setDetail(null);
     } finally {
@@ -113,13 +147,40 @@ export function ArticleEmailEngagementPanel() {
     }
   };
 
+  const retryUndelivered = async (articleId: string) => {
+    setRetryingArticleId(articleId);
+
+    try {
+      const result = await PublicationsAPI.Articles.retryUndeliveredArticleNotifications(articleId, {
+        source: 'publish',
+      });
+
+      if (result.recipientCount === 0) {
+        toast.info('No undelivered publish recipients remain for this article');
+      } else {
+        toast.success(`Queued retry for ${result.recipientCount} undelivered publish recipient(s)`);
+      }
+
+      await loadSummary();
+      if (selectedArticleId === articleId) {
+        await openDetail(articleId);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to retry undelivered recipients');
+    } finally {
+      setRetryingArticleId(null);
+    }
+  };
+
   const totals = useMemo(() => {
+    const pending = summaries.reduce((sum, item) => sum + item.pending, 0);
     const sent = summaries.reduce((sum, item) => sum + item.sent, 0);
     const opened = summaries.reduce((sum, item) => sum + item.opened, 0);
     const read = summaries.reduce((sum, item) => sum + item.read, 0);
     const failed = summaries.reduce((sum, item) => sum + item.failed, 0);
 
     return {
+      pending,
       sent,
       opened,
       read,
@@ -155,11 +216,18 @@ export function ArticleEmailEngagementPanel() {
             sub={formatRate(totals.readRate)}
           />
           <MetricCard
+            label="Pending Delivery"
+            value={totals.pending.toLocaleString()}
+            icon={AlertCircle}
+            accent="amber"
+            sub="Recipients not yet confirmed as sent"
+          />
+          <MetricCard
             label="Delivery Failures"
             value={totals.failed.toLocaleString()}
             icon={Activity}
             accent="amber"
-            sub="Best-effort tracking only"
+            sub="Recipients that still need recovery"
           />
         </div>
 
@@ -202,6 +270,8 @@ export function ArticleEmailEngagementPanel() {
                   <TableRow>
                     <TableHead>Article</TableHead>
                     <TableHead>Sent</TableHead>
+                    <TableHead>Pending</TableHead>
+                    <TableHead>Failed</TableHead>
                     <TableHead>Opened</TableHead>
                     <TableHead>Read</TableHead>
                     <TableHead>Open Rate</TableHead>
@@ -222,15 +292,34 @@ export function ArticleEmailEngagementPanel() {
                         </div>
                       </TableCell>
                       <TableCell>{summary.sent.toLocaleString()}</TableCell>
+                      <TableCell>{summary.pending.toLocaleString()}</TableCell>
+                      <TableCell>{summary.failed.toLocaleString()}</TableCell>
                       <TableCell>{summary.opened.toLocaleString()}</TableCell>
                       <TableCell>{summary.read.toLocaleString()}</TableCell>
                       <TableCell>{formatRate(summary.openRate)}</TableCell>
                       <TableCell>{formatRate(summary.readRate)}</TableCell>
                       <TableCell>{formatDateTime(summary.latestReadAt || summary.latestOpenedAt || summary.latestSentAt)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => void openDetail(summary.articleId)}>
-                          View Recipients
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          {summary.publishUndelivered > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void retryUndelivered(summary.articleId)}
+                              disabled={retryingArticleId === summary.articleId}
+                            >
+                              {retryingArticleId === summary.articleId ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+                              <span className="ml-1.5">Retry {summary.publishUndelivered}</span>
+                            </Button>
+                          )}
+                          <Button variant="outline" size="sm" onClick={() => void openDetail(summary.articleId)}>
+                            View Recipients
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -267,12 +356,39 @@ export function ArticleEmailEngagementPanel() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <DetailStat label="Sent" value={detail.summary.sent} />
+                  <DetailStat label="Pending" value={detail.summary.pending} />
+                  <DetailStat label="Failed" value={detail.summary.failed} />
                   <DetailStat label="Opened" value={detail.summary.opened} />
                   <DetailStat label="Read" value={detail.summary.read} />
                   <DetailStat label="Read Rate" value={formatRate(detail.summary.readRate)} />
                 </div>
+
+                {detail.summary.publishUndelivered > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-amber-900">
+                        {detail.summary.publishUndelivered} publish recipient(s) still need delivery attention
+                      </p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        Retry the pending and failed publish recipients for this article.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => void retryUndelivered(detail.summary.articleId)}
+                      disabled={retryingArticleId === detail.summary.articleId}
+                    >
+                      {retryingArticleId === detail.summary.articleId ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      <span className="ml-1.5">Retry Undelivered</span>
+                    </Button>
+                  </div>
+                )}
 
                 <Table>
                   <TableHeader>

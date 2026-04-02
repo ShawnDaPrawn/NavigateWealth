@@ -10,6 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
+import { Progress } from '../../../ui/progress';
 import { 
   ArrowLeft, 
   Save, 
@@ -30,7 +31,7 @@ import { VersionHistory } from './components/VersionHistory';
 
 // Import from refactored modules
 import { PublicationsAPI } from './api';
-import type { CreateArticleInput, UpdateArticleInput } from './types';
+import type { ArticleNotificationJob, CreateArticleInput, UpdateArticleInput } from './types';
 import type { ContentTemplate, GenerateArticleResult } from './types';
 import {
   useArticleForm,
@@ -125,7 +126,6 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   const {
     handleCreate,
     handleUpdate,
-    handlePublish,
     handleSchedule,
     isProcessing
   } = useArticleActions({
@@ -144,6 +144,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [publishJob, setPublishJob] = useState<ArticleNotificationJob | null>(null);
   const [autoSlug, setAutoSlug] = useState(!isEditMode);
   const [scheduledDate, setScheduledDate] = useState('');
 
@@ -281,12 +282,17 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       setError('Please fix validation errors before publishing');
       return;
     }
+    setPublishJob(null);
     setShowPublishDialog(true);
   };
 
+  const publishJobInFlight = Boolean(
+    publishJob && (publishJob.status === 'queued' || publishJob.status === 'processing')
+  );
+
   // Escape key handler for the custom publish dialog
   useEffect(() => {
-    if (!showPublishDialog || isProcessing) return;
+    if (!showPublishDialog || isProcessing || publishJobInFlight) return;
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setShowPublishDialog(false);
     };
@@ -296,7 +302,56 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
     };
-  }, [showPublishDialog, isProcessing]);
+  }, [showPublishDialog, isProcessing, publishJobInFlight]);
+
+  useEffect(() => {
+    if (!publishJob?.id || !showPublishDialog) return;
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const pollJob = async () => {
+      try {
+        if (publishJob.status === 'queued' || publishJob.status === 'processing') {
+          await PublicationsAPI.Articles.processNotificationJobs({
+            jobId: publishJob.id,
+            maxJobs: 1,
+          });
+        }
+
+        const latestJob = await PublicationsAPI.Articles.getNotificationJob(publishJob.id);
+        if (cancelled) return;
+
+        setPublishJob(latestJob);
+
+        if (latestJob.status === 'queued' || latestJob.status === 'processing') {
+          timeoutId = setTimeout(pollJob, 2000);
+        }
+      } catch (err) {
+        if (cancelled) return;
+
+        const message = err instanceof Error ? err.message : 'Failed to refresh publish notification progress';
+        setError(message);
+        timeoutId = setTimeout(pollJob, 4000);
+      }
+    };
+
+    void pollJob();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [publishJob?.id, publishJob?.status, showPublishDialog]);
+
+  const closePublishDialog = useCallback((navigateBack: boolean) => {
+    setShowPublishDialog(false);
+    setPublishJob(null);
+
+    if (navigateBack) {
+      onSaved();
+    }
+  }, [onSaved]);
 
   const handlePublishConfirm = async () => {
     setError(null);
@@ -328,23 +383,40 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
         // calls onSaved() which navigates away before handlePublish can run.
         const newArticle = await PublicationsAPI.Articles.createArticle(serverPayload);
         if (newArticle?.id) {
-          await PublicationsAPI.Articles.publishArticle(newArticle.id, { notify_subscribers: notifySubscribers });
-          setSuccessMessage('Article created and published successfully');
-          onSaved();
+          const publishResult = await PublicationsAPI.Articles.publishArticle(newArticle.id, {
+            notify_subscribers: notifySubscribers,
+          });
+
+          if (publishResult.notificationJob) {
+            setSuccessMessage('Article published. Newsletter delivery has been queued.');
+            setPublishJob(publishResult.notificationJob);
+          } else {
+            setSuccessMessage('Article created and published successfully');
+            closePublishDialog(true);
+          }
         }
       } else if (article?.id) {
         // For existing articles: save any pending changes first, then publish.
         if (isDirty) {
           await PublicationsAPI.Articles.updateArticle({ id: article.id, ...serverPayload });
         }
-        await handlePublish(article.id, notifySubscribers);
+        const publishResult = await PublicationsAPI.Articles.publishArticle(article.id, {
+          notify_subscribers: notifySubscribers,
+        });
+
+        if (publishResult.notificationJob) {
+          setSuccessMessage('Article published. Newsletter delivery has been queued.');
+          setPublishJob(publishResult.notificationJob);
+        } else {
+          setSuccessMessage('Article published successfully');
+          closePublishDialog(true);
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to publish article';
       setError(msg);
       console.error('Publish error:', err);
     }
-    setShowPublishDialog(false);
   };
 
   const handleScheduleClick = () => {
@@ -852,7 +924,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
-            onClick={!isProcessing ? () => setShowPublishDialog(false) : undefined}
+            onClick={!isProcessing && !publishJob ? () => closePublishDialog(false) : undefined}
             aria-hidden="true"
           />
           {/* Dialog */}
@@ -864,60 +936,137 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
             aria-describedby="publish-dialog-description"
           >
             <div
-              className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+              className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Icon */}
-              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-4">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-
-              {/* Content */}
-              <h3 id="publish-dialog-title" className="text-xl mb-2 text-gray-900">
-                Publish Article
-              </h3>
-              <p id="publish-dialog-description" className="text-gray-600 mb-4">
-                Are you sure you want to publish this article? It will be immediately visible to all users.
-              </p>
-
-              {/* Notification Toggle */}
-              <div className="bg-gray-50 rounded-lg p-3 mb-6">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notifySubscribers}
-                    onChange={(e) => setNotifySubscribers(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5 text-purple-600" />
-                      Notify newsletter subscribers
-                    </span>
-                    <span className="text-xs text-gray-500 block mt-0.5">
-                      Send an email notification to all confirmed subscribers with a link to this article
-                    </span>
+              {!publishJob ? (
+                <>
+                  <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-4">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
                   </div>
-                </label>
-              </div>
 
-              {/* Actions */}
-              <div className="flex gap-3 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPublishDialog(false)}
-                  disabled={isProcessing}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                  onClick={handlePublishConfirm}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? 'Publishing...' : 'Publish Now'}
-                </Button>
-              </div>
+                  <h3 id="publish-dialog-title" className="text-xl mb-2 text-gray-900">
+                    Publish Article
+                  </h3>
+                  <p id="publish-dialog-description" className="text-gray-600 mb-4">
+                    Are you sure you want to publish this article? It will be immediately visible to all users.
+                  </p>
+
+                  <div className="bg-gray-50 rounded-lg p-3 mb-6">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notifySubscribers}
+                        onChange={(e) => setNotifySubscribers(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5 text-purple-600" />
+                          Notify newsletter subscribers
+                        </span>
+                        <span className="text-xs text-gray-500 block mt-0.5">
+                          Send an email notification to all confirmed subscribers with a link to this article
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="flex gap-3 justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => closePublishDialog(false)}
+                      disabled={isProcessing}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={handlePublishConfirm}
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? 'Publishing...' : 'Publish Now'}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                      <h3 id="publish-dialog-title" className="text-xl text-gray-900">
+                        {publishJobInFlight ? 'Publishing And Sending' : 'Publish Delivery Summary'}
+                      </h3>
+                      <p id="publish-dialog-description" className="text-sm text-gray-600 mt-1">
+                        {publishJobInFlight
+                          ? 'The article is live and newsletter delivery is progressing in the queued sender.'
+                          : 'The article is live and the queued newsletter delivery has finished its current run.'}
+                      </p>
+                    </div>
+                    <Badge className={cn(
+                      publishJob.status === 'completed'
+                        ? 'bg-green-100 text-green-700'
+                        : publishJob.status === 'completed_with_failures'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-blue-100 text-blue-700'
+                    )}>
+                      {publishJob.status.replace(/_/g, ' ')}
+                    </Badge>
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between text-sm mb-2">
+                        <span className="text-gray-600">Newsletter progress</span>
+                        <span className="font-medium text-gray-900">
+                          {publishJob.processedCount} / {publishJob.recipientCount}
+                        </span>
+                      </div>
+                      <Progress value={publishJob.progressPercent} className="h-2.5" indicatorClassName="bg-green-600" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
+                        <p className="text-gray-500">Recipients</p>
+                        <p className="text-lg font-semibold text-gray-900">{publishJob.recipientCount}</p>
+                      </div>
+                      <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
+                        <p className="text-gray-500">Pending</p>
+                        <p className="text-lg font-semibold text-amber-700">{publishJob.pendingCount}</p>
+                      </div>
+                      <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
+                        <p className="text-gray-500">Sent</p>
+                        <p className="text-lg font-semibold text-green-700">{publishJob.sentCount}</p>
+                      </div>
+                      <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
+                        <p className="text-gray-500">Failed</p>
+                        <p className="text-lg font-semibold text-red-700">{publishJob.failedCount}</p>
+                      </div>
+                    </div>
+
+                    {publishJob.lastError && publishJob.failedCount > 0 && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                        <p className="text-xs font-medium text-amber-900">Latest delivery issue</p>
+                        <p className="text-xs text-amber-800 mt-1">{publishJob.lastError}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 justify-end mt-6">
+                    {publishJobInFlight ? (
+                      <Button variant="outline" onClick={() => closePublishDialog(true)}>
+                        Continue in Background
+                      </Button>
+                    ) : (
+                      <Button
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => closePublishDialog(true)}
+                      >
+                        Done
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

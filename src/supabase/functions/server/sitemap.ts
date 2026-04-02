@@ -32,9 +32,14 @@ import { asyncHandler } from './error.middleware.ts';
 const app = new Hono();
 const log = createModuleLogger('sitemap');
 
-const BASE_URL = 'https://www.navigatewealth.co';
+const BASE_URL = 'https://navigatewealth.co';
 const BUCKET_NAME = 'make-91ed8379-sitemap';
 const SITEMAP_FILE = 'sitemap.xml';
+
+interface SitemapEntry {
+  loc: string;
+  lastmod: string;
+}
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () => createClient(
@@ -47,40 +52,42 @@ const getSupabase = () => createClient(
  * 1. This SITEMAP_URLS array (the backend single source of truth)
  * 2. The FALLBACK_URLS in /components/pages/SitemapXmlPage.tsx (client-side fallback)
  * 3. Then call POST /sitemap/publish to update the public storage file
+ *
+ * Google ignores <priority> and <changefreq> — only <loc> and <lastmod> matter.
+ * Only canonical, indexable public pages belong here.
+ * Individual articles are excluded — the /resources hub page is what we want ranked.
  */
-const SITEMAP_URLS = [
-  { loc: '/', priority: '1.0', changefreq: 'weekly' },
-  { loc: '/about', priority: '0.8', changefreq: 'monthly' },
-  { loc: '/services', priority: '0.9', changefreq: 'monthly' },
-  { loc: '/team', priority: '0.7', changefreq: 'monthly' },
-  { loc: '/contact', priority: '0.8', changefreq: 'monthly' },
-  { loc: '/resources', priority: '0.8', changefreq: 'weekly' },
-  { loc: '/get-quote', priority: '0.8', changefreq: 'monthly' },
-  { loc: '/risk-management', priority: '0.8', changefreq: 'monthly' },
-  { loc: '/retirement-planning', priority: '0.8', changefreq: 'monthly' },
-  { loc: '/investment-management', priority: '0.8', changefreq: 'monthly' },
-  { loc: '/tax-planning', priority: '0.8', changefreq: 'monthly' },
-  { loc: '/estate-planning', priority: '0.8', changefreq: 'monthly' },
-  { loc: '/employee-benefits', priority: '0.7', changefreq: 'monthly' },
-  { loc: '/medical-aid', priority: '0.7', changefreq: 'monthly' },
-  { loc: '/financial-planning', priority: '0.7', changefreq: 'monthly' },
-  { loc: '/solutions/individuals', priority: '0.8', changefreq: 'monthly' },
-  { loc: '/solutions/businesses', priority: '0.8', changefreq: 'monthly' },
-  { loc: '/solutions/advisers', priority: '0.7', changefreq: 'monthly' },
-  { loc: '/why-us', priority: '0.7', changefreq: 'monthly' },
-  { loc: '/careers', priority: '0.5', changefreq: 'monthly' },
-  { loc: '/press', priority: '0.5', changefreq: 'monthly' },
-  { loc: '/legal', priority: '0.4', changefreq: 'yearly' },
-  { loc: '/sitemap', priority: '0.3', changefreq: 'monthly' },
+const SITEMAP_URLS: SitemapEntry[] = [
+  { loc: '/', lastmod: '2026-04-02' },
+  { loc: '/services', lastmod: '2026-04-02' },
+  { loc: '/resources', lastmod: '2026-04-02' },
+  { loc: '/about', lastmod: '2026-03-01' },
+  { loc: '/team', lastmod: '2026-03-01' },
+  { loc: '/contact', lastmod: '2026-03-01' },
+  { loc: '/why-us', lastmod: '2026-03-01' },
+  { loc: '/risk-management', lastmod: '2026-03-01' },
+  { loc: '/retirement-planning', lastmod: '2026-03-01' },
+  { loc: '/investment-management', lastmod: '2026-03-01' },
+  { loc: '/tax-planning', lastmod: '2026-03-01' },
+  { loc: '/estate-planning', lastmod: '2026-03-01' },
+  { loc: '/financial-planning', lastmod: '2026-03-01' },
+  { loc: '/medical-aid', lastmod: '2026-03-01' },
+  { loc: '/employee-benefits', lastmod: '2026-03-01' },
+  { loc: '/get-quote', lastmod: '2026-03-01' },
+  { loc: '/solutions/individuals', lastmod: '2026-03-01' },
+  { loc: '/solutions/businesses', lastmod: '2026-03-01' },
+  { loc: '/solutions/advisers', lastmod: '2026-03-01' },
+  { loc: '/ask-vasco', lastmod: '2026-03-01' },
+  { loc: '/careers', lastmod: '2026-03-01' },
+  { loc: '/press', lastmod: '2026-03-01' },
+  { loc: '/legal', lastmod: '2026-01-01' },
 ];
 
-/** Generate the full XML sitemap string */
+/** Generate the full XML sitemap string — only <loc> and <lastmod>, no priority/changefreq */
 function generateSitemapXml(): string {
-  const today = new Date().toISOString().split('T')[0];
-
   const entries = SITEMAP_URLS.map(
     (u) =>
-      `  <url>\n    <loc>${BASE_URL}${u.loc}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${u.changefreq}</changefreq>\n    <priority>${u.priority}</priority>\n  </url>`
+      `  <url>\n    <loc>${BASE_URL}${u.loc}</loc>\n    <lastmod>${u.lastmod}</lastmod>\n  </url>`
   ).join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`;

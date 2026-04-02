@@ -257,6 +257,7 @@ export default defineConfig({
       host: '0.0.0.0',
       port: 3000,
       strictPort: true,
-      open: true,
+      // Explicit URL helps the default browser open reliably on Windows; app is NOT on :300
+      open: 'http://localhost:3000/',
     },
   });

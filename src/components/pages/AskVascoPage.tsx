@@ -23,6 +23,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../ui/button';
+import { SEO, createWebPageSchema } from '../seo/SEO';
+import { getSEOData } from '../seo/seo-config';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -427,6 +429,7 @@ function HandoffModal({
 // ============================================================================
 
 export function AskVascoPage() {
+  const seoData = getSEOData('ask-vasco');
   const [messages, setMessages] = useState<Message[]>([VASCO_WELCOME]);
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -649,6 +652,10 @@ export function AskVascoPage() {
   if (isDisabled) {
     return (
       <div className="contents">
+        <SEO
+          {...seoData}
+          structuredData={createWebPageSchema(seoData.title, seoData.description, seoData.canonicalUrl)}
+        />
         <div className="min-h-screen bg-[#111827] flex items-center justify-center px-4 relative overflow-hidden">
           {/* Nautical background */}
           <CompassRoseSvg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] text-white pointer-events-none" />
@@ -687,6 +694,10 @@ export function AskVascoPage() {
   // ── Main render ────────────────────────────────────────────────
   return (
     <div className="contents">
+      <SEO
+        {...seoData}
+        structuredData={createWebPageSchema(seoData.title, seoData.description, seoData.canonicalUrl)}
+      />
       <div className="min-h-screen">
         {/* ════════════════════════════════════════════════════════════
             HERO SECTION — Nautical-themed, NW design standard

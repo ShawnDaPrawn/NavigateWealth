@@ -6,6 +6,9 @@
  * and Open Graph type used by the SEO component.
  */
 
+import { getServiceConfig } from '../pages/quote/constants';
+import type { QuoteServiceId } from '../pages/quote/types';
+
 const BASE_URL = 'https://navigatewealth.co';
 
 export interface SEOPageData {
@@ -45,12 +48,12 @@ const seoPages: Record<string, SEOPageData> = {
     ogType: 'website',
   },
   'risk-management': {
-    title: 'Risk Management Insurance | Life, Disability & Income Protection | Navigate Wealth',
+    title: 'Risk Management | Life & Disability Cover | Navigate Wealth',
     description:
-      'Independent risk management advice for individuals and businesses in South Africa. Life cover, disability cover, severe illness, income protection and business insurance solutions from leading insurers.',
+      'Independent risk management advice in South Africa. Life cover, disability, severe illness & income protection from leading insurers.',
     keywords:
       'risk management South Africa, life cover, disability insurance, income protection, severe illness cover, business insurance, buy and sell agreement, key person insurance, life insurance South Africa, independent insurance advisor, Navigate Wealth',
-    canonicalUrl: `${BASE_URL}/services/risk-management`,
+    canonicalUrl: `${BASE_URL}/risk-management`,
     ogType: 'website',
   },
   'medical-aid': {
@@ -59,25 +62,25 @@ const seoPages: Record<string, SEOPageData> = {
       'Independent medical aid advice for individuals and businesses in South Africa. Comprehensive plans, hospital plans, savings plans, group schemes, and corporate wellness from leading medical schemes.',
     keywords:
       'medical aid South Africa, health insurance, hospital plan, medical savings, gap cover, group medical scheme, corporate wellness, Discovery Health, Momentum Health, Navigate Wealth',
-    canonicalUrl: `${BASE_URL}/services/medical-aid`,
+    canonicalUrl: `${BASE_URL}/medical-aid`,
     ogType: 'website',
   },
   'investment-management': {
-    title: 'Investment Management | Unit Trusts, Offshore & Tax-Free Savings | Navigate Wealth',
+    title: 'Investment Management | Navigate Wealth',
     description:
-      'Professional investment management for individuals and businesses in South Africa. Unit trusts, tax-free savings, offshore investments, endowments, corporate funds, and cash management solutions.',
+      'Professional investment management in South Africa. Unit trusts, tax-free savings, offshore investments & corporate fund solutions.',
     keywords:
       'investment management South Africa, unit trusts, tax free savings account, offshore investments, endowments, corporate investments, wealth management, Allan Gray, Sygnia, Navigate Wealth',
-    canonicalUrl: `${BASE_URL}/services/investment-management`,
+    canonicalUrl: `${BASE_URL}/investment-management`,
     ogType: 'website',
   },
   'retirement-planning': {
-    title: 'Retirement Planning | Annuities, Pension & Provident Funds | Navigate Wealth',
+    title: 'Retirement Planning | Annuities & Pension Funds | Navigate Wealth',
     description:
-      'Comprehensive retirement planning for individuals and businesses in South Africa. Retirement annuities, preservation funds, living annuities, pension funds, and provident funds from leading providers.',
+      'Comprehensive retirement planning in South Africa. Retirement annuities, preservation funds, living annuities & pension funds from leading providers.',
     keywords:
       'retirement planning South Africa, retirement annuity, living annuity, pension fund, provident fund, preservation fund, retirement savings, Navigate Wealth',
-    canonicalUrl: `${BASE_URL}/services/retirement-planning`,
+    canonicalUrl: `${BASE_URL}/retirement-planning`,
     ogType: 'website',
   },
   'tax-planning': {
@@ -86,7 +89,7 @@ const seoPages: Record<string, SEOPageData> = {
       'Expert tax planning and optimisation for individuals and businesses in South Africa. Tax-efficient structures, estate duty planning, capital gains management, and corporate tax strategies.',
     keywords:
       'tax planning South Africa, tax optimisation, estate duty, capital gains tax, corporate tax, tax-free savings, tax deductions, Navigate Wealth',
-    canonicalUrl: `${BASE_URL}/services/tax-planning`,
+    canonicalUrl: `${BASE_URL}/tax-planning`,
     ogType: 'website',
   },
   'estate-planning': {
@@ -95,22 +98,22 @@ const seoPages: Record<string, SEOPageData> = {
       'Comprehensive estate planning for individuals and businesses in South Africa. Wills, trusts, succession planning, estate duty optimisation, and business continuity from accredited specialists.',
     keywords:
       'estate planning South Africa, wills, trusts, succession planning, estate duty, inheritance, business succession, Navigate Wealth',
-    canonicalUrl: `${BASE_URL}/services/estate-planning`,
+    canonicalUrl: `${BASE_URL}/estate-planning`,
     ogType: 'website',
   },
   'employee-benefits': {
-    title: 'Employee Benefits | Group Risk, Retirement & Health | Navigate Wealth',
+    title: 'Employee Benefits | Group Risk & Health | Navigate Wealth',
     description:
-      'Tailored employee benefits solutions for businesses in South Africa. Group risk cover, retirement funds, medical aid schemes, and wellness programmes from leading providers.',
+      'Tailored employee benefits for businesses in South Africa. Group risk cover, retirement funds, medical aid & wellness programmes.',
     keywords:
       'employee benefits South Africa, group risk cover, group retirement fund, group medical aid, corporate wellness, employee wellness, Navigate Wealth',
-    canonicalUrl: `${BASE_URL}/services/employee-benefits`,
+    canonicalUrl: `${BASE_URL}/employee-benefits`,
     ogType: 'website',
   },
   'financial-planning': {
-    title: 'Financial Planning | Comprehensive Wealth Strategy | Navigate Wealth',
+    title: 'Financial Planning | Wealth Strategy | Navigate Wealth',
     description:
-      'Independent financial planning for individuals and businesses in South Africa. Comprehensive strategies covering investments, retirement, tax optimisation, estate planning, and debt management.',
+      'Independent financial planning in South Africa. Strategies covering investments, retirement, tax, estate planning & debt management.',
     keywords:
       'financial planning South Africa, comprehensive financial plan, wealth strategy, retirement planning, investment strategy, tax planning, estate planning, debt management, certified financial planner, Navigate Wealth',
     canonicalUrl: `${BASE_URL}/financial-planning`,
@@ -176,7 +179,7 @@ const seoPages: Record<string, SEOPageData> = {
       'Personal financial planning services for individuals in South Africa. Risk management, investments, retirement planning, tax optimisation, estate planning, and medical aid from independent advisors.',
     keywords:
       'personal financial planning, individual wealth management, personal insurance, investment advice, retirement planning individual, South Africa, Navigate Wealth',
-    canonicalUrl: `${BASE_URL}/for-individuals`,
+    canonicalUrl: `${BASE_URL}/solutions/individuals`,
     ogType: 'website',
   },
   'for-businesses': {
@@ -185,7 +188,7 @@ const seoPages: Record<string, SEOPageData> = {
       'Corporate financial services for businesses in South Africa. Employee benefits, group risk cover, business insurance, corporate investments, and tax planning from independent advisors.',
     keywords:
       'business financial planning, corporate wealth management, employee benefits, group risk cover, business insurance, corporate investments, South Africa, Navigate Wealth',
-    canonicalUrl: `${BASE_URL}/for-businesses`,
+    canonicalUrl: `${BASE_URL}/solutions/businesses`,
     ogType: 'website',
   },
   'for-advisers': {
@@ -194,16 +197,7 @@ const seoPages: Record<string, SEOPageData> = {
       'Join Navigate Wealth as an independent financial adviser. Access our technology platform, compliance support, product range, and collaborative network across South Africa.',
     keywords:
       'financial adviser partnership, independent adviser network, financial services franchise, adviser support platform, Navigate Wealth partnership, South Africa',
-    canonicalUrl: `${BASE_URL}/for-advisers`,
-    ogType: 'website',
-  },
-  'products-services': {
-    title: 'Products & Services | Navigate Wealth',
-    description:
-      'Explore the full range of financial products and services offered by Navigate Wealth. From risk management and investments to retirement planning and employee benefits across South Africa.',
-    keywords:
-      'financial products South Africa, financial services, insurance products, investment products, retirement products, Navigate Wealth',
-    canonicalUrl: `${BASE_URL}/products-services`,
+    canonicalUrl: `${BASE_URL}/solutions/advisers`,
     ogType: 'website',
   },
   'get-started': {
@@ -224,7 +218,32 @@ const seoPages: Record<string, SEOPageData> = {
     canonicalUrl: `${BASE_URL}/resources`,
     ogType: 'website',
   },
+  'ask-vasco': {
+    title: 'Ask Vasco | AI Financial Navigator | Navigate Wealth',
+    description:
+      'Ask Vasco, Navigate Wealth’s public AI financial navigator, for general South African financial guidance on retirement, tax, risk cover, investing, and estate planning.',
+    keywords:
+      'AI financial navigator South Africa, financial planning chatbot, retirement questions, tax planning guidance, Navigate Wealth Vasco',
+    canonicalUrl: `${BASE_URL}/ask-vasco`,
+    ogType: 'website',
+  },
 };
+
+/**
+ * SEO for shareable quote contact landing pages: /get-quote/:service/contact
+ */
+export function getQuoteServiceContactSEO(serviceId: QuoteServiceId): SEOPageData {
+  const cfg = getServiceConfig(serviceId);
+  const description =
+    cfg.heroDescription.length > 155 ? `${cfg.heroDescription.slice(0, 152)}…` : cfg.heroDescription;
+  return {
+    title: `Request a ${cfg.label} Quote | Navigate Wealth`,
+    description,
+    keywords: `${cfg.label}, free quote, independent advisor, Navigate Wealth, South Africa`,
+    canonicalUrl: `${BASE_URL}/get-quote/${serviceId}/contact`,
+    ogType: 'website',
+  };
+}
 
 /**
  * Retrieve SEO metadata for a given page identifier.

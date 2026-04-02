@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
-import { getSEOData } from '../seo/seo-config';
+import { getSEOData, riskManagementFAQs } from '../seo/seo-config';
 import { ServicePageTemplate, type CoverContent } from '../templates/ServicePageTemplate';
 import {
   Shield,
@@ -255,7 +255,7 @@ export function RiskManagementPage() {
             { value: '5',  label: 'Cover Types' },
             { value: '3',  label: 'Business Solutions' },
           ],
-          quoteLink: '/get-quote/risk-management',
+          quoteLink: '/get-quote/risk-management/contact',
           heroStyle: 'unified',
         },
 
@@ -269,7 +269,7 @@ export function RiskManagementPage() {
           imageAltMap: individualImageAltMap,
           cardIcon: Shield,
           cardLabel: 'Personal Cover',
-          quoteLink: '/get-quote/risk-management',
+          quoteLink: '/get-quote/risk-management/contact',
           ariaLabel: 'Risk cover for individuals',
         },
 
@@ -283,7 +283,7 @@ export function RiskManagementPage() {
           imageAltMap: businessImageAltMap,
           cardIcon: Briefcase,
           cardLabel: 'Business Cover',
-          quoteLink: '/get-quote/risk-management',
+          quoteLink: '/get-quote/risk-management/contact',
           ariaLabel: 'Risk cover for businesses',
         },
 
@@ -324,6 +324,7 @@ export function RiskManagementPage() {
           { name: 'Risk Management' },
         ],
         preloadImages: [],
+        faqs: riskManagementFAQs,
 
         approach: {
           serviceName: 'How We Protect You',

@@ -5,6 +5,7 @@ const log = createModuleLogger('publications-email-engagement');
 
 const ARTICLE_EMAIL_TRACKING_PREFIX = 'article_email_tracking:';
 const ARTICLE_EMAIL_TOKEN_PREFIX = 'article_email_token:';
+const ARTICLE_EMAIL_PUBLISH_RECIPIENT_PREFIX = 'article_email_publish_recipient:';
 const WEBSITE_BASE_URL = 'https://navigatewealth.co';
 
 export type ArticleEmailTrackingSource = 'publish' | 'reshare';
@@ -29,6 +30,7 @@ export interface ArticleEmailTrackingRecord {
   readCount: number;
   deliveryStatus: ArticleEmailDeliveryStatus;
   deliveryError: string | null;
+  jobId?: string | null;
 }
 
 export interface ArticleEmailEngagementSummary {
@@ -36,8 +38,16 @@ export interface ArticleEmailEngagementSummary {
   articleTitle: string;
   articleSlug: string;
   publishedAt: string | null;
+  pending: number;
   sent: number;
   failed: number;
+  undelivered: number;
+  publishPending: number;
+  publishFailed: number;
+  publishUndelivered: number;
+  resharePending: number;
+  reshareFailed: number;
+  reshareUndelivered: number;
   opened: number;
   read: number;
   openRate: number;
@@ -62,6 +72,7 @@ interface CreateTrackingRecordInput {
     name: string;
   };
   source?: ArticleEmailTrackingSource;
+  jobId?: string | null;
 }
 
 function articleTrackingKey(articleId: string, token: string): string {
@@ -72,11 +83,44 @@ function tokenTrackingKey(token: string): string {
   return `${ARTICLE_EMAIL_TOKEN_PREFIX}${token}`;
 }
 
+function publishRecipientTrackingKey(articleId: string, recipientEmail: string): string {
+  return `${ARTICLE_EMAIL_PUBLISH_RECIPIENT_PREFIX}${articleId}:${recipientEmail.trim().toLowerCase()}`;
+}
+
 async function persistTrackingRecord(record: ArticleEmailTrackingRecord): Promise<void> {
-  await kv.mset(
-    [articleTrackingKey(record.articleId, record.token), tokenTrackingKey(record.token)],
-    [record, record],
-  );
+  const keys = [
+    articleTrackingKey(record.articleId, record.token),
+    tokenTrackingKey(record.token),
+  ];
+  const values = [record, record];
+
+  if (record.source === 'publish') {
+    keys.push(publishRecipientTrackingKey(record.articleId, record.recipientEmail));
+    values.push(record);
+  }
+
+  await kv.mset(keys, values);
+}
+
+async function persistTrackingRecords(records: ArticleEmailTrackingRecord[]): Promise<void> {
+  if (records.length === 0) return;
+
+  const keys: string[] = [];
+  const values: ArticleEmailTrackingRecord[] = [];
+
+  for (const record of records) {
+    keys.push(articleTrackingKey(record.articleId, record.token));
+    values.push(record);
+    keys.push(tokenTrackingKey(record.token));
+    values.push(record);
+
+    if (record.source === 'publish') {
+      keys.push(publishRecipientTrackingKey(record.articleId, record.recipientEmail));
+      values.push(record);
+    }
+  }
+
+  await kv.mset(keys, values);
 }
 
 function toIsoNow(): string {
@@ -102,15 +146,39 @@ export function buildTrackedArticleUrl(articleSlug: string, token: string): stri
 export async function createArticleEmailTrackingRecord(
   input: CreateTrackingRecordInput,
 ): Promise<ArticleEmailTrackingRecord> {
+  const source = input.source ?? 'publish';
+  const recipientEmail = input.recipient.email.trim().toLowerCase();
+
+  if (source === 'publish') {
+    const existing = await kv.get(
+      publishRecipientTrackingKey(input.article.id, recipientEmail),
+    ) as ArticleEmailTrackingRecord | null;
+
+    if (existing) {
+      const updatedExisting: ArticleEmailTrackingRecord = {
+        ...existing,
+        articleSlug: input.article.slug,
+        articleTitle: input.article.title,
+        recipientEmail,
+        recipientName: input.recipient.name || input.recipient.firstName || input.recipient.email,
+        recipientFirstName: input.recipient.firstName || 'Subscriber',
+        jobId: input.jobId ?? existing.jobId ?? null,
+      };
+
+      await persistTrackingRecord(updatedExisting);
+      return updatedExisting;
+    }
+  }
+
   const record: ArticleEmailTrackingRecord = {
     token: crypto.randomUUID(),
     articleId: input.article.id,
     articleSlug: input.article.slug,
     articleTitle: input.article.title,
-    recipientEmail: input.recipient.email.trim().toLowerCase(),
+    recipientEmail,
     recipientName: input.recipient.name || input.recipient.firstName || input.recipient.email,
     recipientFirstName: input.recipient.firstName || 'Subscriber',
-    source: input.source ?? 'publish',
+    source,
     createdAt: toIsoNow(),
     sentAt: null,
     openedAt: null,
@@ -121,10 +189,71 @@ export async function createArticleEmailTrackingRecord(
     readCount: 0,
     deliveryStatus: 'pending',
     deliveryError: null,
+    jobId: input.jobId ?? null,
   };
 
   await persistTrackingRecord(record);
   return record;
+}
+
+export async function createArticleEmailTrackingRecords(
+  inputs: CreateTrackingRecordInput[],
+): Promise<ArticleEmailTrackingRecord[]> {
+  if (inputs.length === 0) return [];
+
+  const existingPublishRecords = await Promise.all(
+    inputs.map((input) => {
+      const source = input.source ?? 'publish';
+      if (source !== 'publish') return Promise.resolve(null);
+
+      return kv.get(
+        publishRecipientTrackingKey(input.article.id, input.recipient.email.trim().toLowerCase()),
+      ) as Promise<ArticleEmailTrackingRecord | null>;
+    }),
+  );
+
+  const records = inputs.map((input, index) => {
+    const source = input.source ?? 'publish';
+    const recipientEmail = input.recipient.email.trim().toLowerCase();
+    const existing = source === 'publish' ? existingPublishRecords[index] : null;
+
+    if (existing) {
+      return {
+        ...existing,
+        articleSlug: input.article.slug,
+        articleTitle: input.article.title,
+        recipientEmail,
+        recipientName: input.recipient.name || input.recipient.firstName || input.recipient.email,
+        recipientFirstName: input.recipient.firstName || 'Subscriber',
+        jobId: input.jobId ?? existing.jobId ?? null,
+      } satisfies ArticleEmailTrackingRecord;
+    }
+
+    return {
+      token: crypto.randomUUID(),
+      articleId: input.article.id,
+      articleSlug: input.article.slug,
+      articleTitle: input.article.title,
+      recipientEmail,
+      recipientName: input.recipient.name || input.recipient.firstName || input.recipient.email,
+      recipientFirstName: input.recipient.firstName || 'Subscriber',
+      source,
+      createdAt: toIsoNow(),
+      sentAt: null,
+      openedAt: null,
+      readAt: null,
+      lastOpenedAt: null,
+      lastReadAt: null,
+      openCount: 0,
+      readCount: 0,
+      deliveryStatus: 'pending',
+      deliveryError: null,
+      jobId: input.jobId ?? null,
+    } satisfies ArticleEmailTrackingRecord;
+  });
+
+  await persistTrackingRecords(records);
+  return records;
 }
 
 export async function getArticleEmailTrackingRecordByToken(
@@ -210,12 +339,41 @@ export async function listAllArticleEmailTrackingRecords(): Promise<ArticleEmail
   });
 }
 
+export async function listUndeliveredArticleEmailTrackingRecords(
+  articleId: string,
+  source?: ArticleEmailTrackingSource,
+): Promise<ArticleEmailTrackingRecord[]> {
+  const records = await listArticleEmailTrackingRecords(articleId);
+  return records.filter((record) => {
+    if (source && record.source !== source) return false;
+    return record.deliveryStatus !== 'sent';
+  });
+}
+
+export function summarizeTrackedRecipientDeliveries(
+  records: ArticleEmailTrackingRecord[],
+  source?: ArticleEmailTrackingSource,
+) {
+  const filtered = source ? records.filter((record) => record.source === source) : records;
+  const pending = filtered.filter((record) => record.deliveryStatus === 'pending').length;
+  const sent = filtered.filter((record) => record.deliveryStatus === 'sent').length;
+  const failed = filtered.filter((record) => record.deliveryStatus === 'failed').length;
+
+  return {
+    pending,
+    sent,
+    failed,
+    undelivered: pending + failed,
+  };
+}
+
 export function summarizeArticleEmailEngagement(
   article: TrackingArticleDetails | null,
   records: ArticleEmailTrackingRecord[],
 ): ArticleEmailEngagementSummary {
-  const sent = records.filter((record) => record.deliveryStatus === 'sent').length;
-  const failed = records.filter((record) => record.deliveryStatus === 'failed').length;
+  const totals = summarizeTrackedRecipientDeliveries(records);
+  const publishTotals = summarizeTrackedRecipientDeliveries(records, 'publish');
+  const reshareTotals = summarizeTrackedRecipientDeliveries(records, 'reshare');
   const opened = records.filter((record) => Boolean(record.openedAt)).length;
   const read = records.filter((record) => Boolean(record.readAt)).length;
 
@@ -224,12 +382,20 @@ export function summarizeArticleEmailEngagement(
     articleTitle: article?.title || records[0]?.articleTitle || 'Untitled article',
     articleSlug: article?.slug || records[0]?.articleSlug || '',
     publishedAt: article?.published_at || null,
-    sent,
-    failed,
+    pending: totals.pending,
+    sent: totals.sent,
+    failed: totals.failed,
+    undelivered: totals.undelivered,
+    publishPending: publishTotals.pending,
+    publishFailed: publishTotals.failed,
+    publishUndelivered: publishTotals.undelivered,
+    resharePending: reshareTotals.pending,
+    reshareFailed: reshareTotals.failed,
+    reshareUndelivered: reshareTotals.undelivered,
     opened,
     read,
-    openRate: roundRate(opened, sent),
-    readRate: roundRate(read, sent),
+    openRate: roundRate(opened, totals.sent),
+    readRate: roundRate(read, totals.sent),
     latestSentAt: latestDate(records.map((record) => record.sentAt)),
     latestOpenedAt: latestDate(records.map((record) => record.lastOpenedAt || record.openedAt)),
     latestReadAt: latestDate(records.map((record) => record.lastReadAt || record.readAt)),

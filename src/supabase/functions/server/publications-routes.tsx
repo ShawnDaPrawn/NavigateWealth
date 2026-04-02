@@ -4,7 +4,13 @@ import * as kv from './kv_store.tsx';
 import { sendEmail } from './email-service.ts';
 import { createArticleNotificationEmail } from './article-notification-template.ts';
 import { createModuleLogger } from './stderr-logger.ts';
-import { runArticleNotificationDelivery, sendArticlePublishedNotifications } from './publications-notification-service.ts';
+import {
+  getArticleNotificationJob,
+  processArticleNotificationJobs,
+  runArticleNotificationDelivery,
+  retryUndeliveredArticleNotifications,
+  sendArticlePublishedNotifications,
+} from './publications-notification-service.ts';
 import {
   CreateCategorySchema,
   UpdateCategorySchema,
@@ -12,6 +18,7 @@ import {
   UpdateTypeSchema,
   CreateArticleSchema,
   UpdateArticleSchema,
+  ArticleDeliveryRetrySchema,
   ArticleReshareSchema,
   ArticleEmailEngagementEventSchema,
 } from './publications-validation.ts';
@@ -733,16 +740,22 @@ publications.put('/articles/:id', async (c) => {
       log.error('Failed to create version snapshot on article update', vErr);
     }
     
+    let publishNotificationJob: Awaited<ReturnType<typeof sendArticlePublishedNotifications>> | null = null;
+    let publishNotificationError: string | null = null;
+
     // If status just changed to published, notify newsletter subscribers
     if (body.status === 'published' && existing.status !== 'published') {
-      sendArticlePublishedNotifications({
-        id: updated.id,
-        title: updated.title,
-        slug: updated.slug,
-        excerpt: updated.excerpt,
-      }).catch((nErr) => {
-        log.error('Failed to send article published notifications via update', nErr);
-      });
+      try {
+        publishNotificationJob = await sendArticlePublishedNotifications({
+          id: updated.id,
+          title: updated.title,
+          slug: updated.slug,
+          excerpt: updated.excerpt,
+        });
+      } catch (notificationError) {
+        publishNotificationError = notificationError instanceof Error ? notificationError.message : 'Notification delivery failed';
+        log.error('Article publish notifications via update failed', notificationError);
+      }
     }
 
     // Audit trail (non-blocking — §12.2)
@@ -759,10 +772,23 @@ publications.put('/articles/:id', async (c) => {
         previousStatus: existing.status,
         newStatus: updated.status,
         titleChanged: body.title !== undefined && body.title !== existing.title,
+        notificationRecipientCount: publishNotificationJob?.recipientCount ?? 0,
+        notificationJobId: publishNotificationJob?.id ?? null,
+        notificationStatus: publishNotificationJob?.status ?? null,
+        notificationError: publishNotificationError,
       },
     }).catch(() => {});
     
-    return c.json({ success: true, data: updated });
+    return c.json({
+      success: true,
+      data: updated,
+      notificationJob: publishNotificationJob,
+      notification: publishNotificationJob ? {
+        jobId: publishNotificationJob.id,
+        recipientCount: publishNotificationJob.recipientCount,
+        status: publishNotificationJob.status,
+      } : publishNotificationError ? { error: publishNotificationError } : null,
+    });
   } catch (error) {
     log.error('Error updating article', error);
     return c.json({ success: false, error: 'Failed to update article' }, 500);
@@ -793,16 +819,23 @@ publications.post('/articles/:id/publish', async (c) => {
     
     await kv.set(`article:${id}`, updated);
     
-    // Fire-and-forget: notify newsletter subscribers about the new article
+    let notificationJob: Awaited<ReturnType<typeof sendArticlePublishedNotifications>> | null = null;
+    let notificationError: string | null = null;
+
+    // Queue delivery separately so publish completes quickly and the send can
+    // resume across multiple short processor requests.
     if (notifySubscribers) {
-      sendArticlePublishedNotifications({
-        id: updated.id,
-        title: updated.title,
-        slug: updated.slug,
-        excerpt: updated.excerpt,
-      }).catch((nErr) => {
-        log.error('Failed to send article published notifications', nErr);
-      });
+      try {
+        notificationJob = await sendArticlePublishedNotifications({
+          id: updated.id,
+          title: updated.title,
+          slug: updated.slug,
+          excerpt: updated.excerpt,
+        });
+      } catch (deliveryError) {
+        notificationError = deliveryError instanceof Error ? deliveryError.message : 'Notification delivery failed';
+        log.error('Failed to deliver article published notifications', deliveryError);
+      }
     }
 
     // Audit trail (non-blocking — §12.2)
@@ -815,10 +848,27 @@ publications.post('/articles/:id/publish', async (c) => {
       severity: 'info',
       entityType: 'article',
       entityId: id,
-      metadata: { notifySubscribers },
+      metadata: {
+        notifySubscribers,
+        notificationRecipientCount: notificationJob?.recipientCount ?? 0,
+        notificationJobId: notificationJob?.id ?? null,
+        notificationStatus: notificationJob?.status ?? null,
+        notificationError,
+      },
     }).catch(() => {});
     
-    return c.json({ success: true, data: updated });
+    return c.json({
+      success: true,
+      data: {
+        article: updated,
+        notificationJob,
+      },
+      notification: notificationJob ? {
+        jobId: notificationJob.id,
+        recipientCount: notificationJob.recipientCount,
+        status: notificationJob.status,
+      } : notificationError ? { error: notificationError } : null,
+    });
   } catch (error) {
     log.error('Error publishing article', error);
     return c.json({ success: false, error: 'Failed to publish article' }, 500);
@@ -947,6 +997,78 @@ publications.get('/articles/:id/email-engagement', requireAuth, requireAdmin, as
       recipients: records,
     },
   });
+}));
+
+publications.post('/articles/:id/retry-undelivered', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const id = c.req.param('id');
+  const parsed = ArticleDeliveryRetrySchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+  }
+
+  const article = await kv.get(`article:${id}`) as Article | null;
+  if (!article) {
+    return c.json({ success: false, error: 'Article not found' }, 404);
+  }
+
+  if (article.status !== 'published' || !article.published_at) {
+    return c.json({ success: false, error: 'Only published articles can retry delivery' }, 400);
+  }
+
+  const notificationJob = await retryUndeliveredArticleNotifications({
+    id: article.id,
+    title: article.title,
+    slug: article.slug,
+    excerpt: article.excerpt,
+  }, {
+    source: parsed.data.source,
+  });
+
+  const adminUserId = c.get('userId') || 'system';
+  AdminAuditService.record({
+    actorId: adminUserId,
+    actorRole: c.get('userRole') || 'admin',
+    category: 'communication',
+    action: 'article_delivery_retried',
+    summary: `Queued undelivered article notification retry: ${article.title}`,
+    severity: 'info',
+    entityType: 'article',
+    entityId: id,
+    metadata: {
+      source: parsed.data.source,
+      recipientCount: notificationJob.recipientCount,
+      notificationJobId: notificationJob.id,
+      notificationStatus: notificationJob.status,
+    },
+  }).catch(() => {});
+
+  return c.json({
+    success: true,
+    data: notificationJob,
+    message: notificationJob.recipientCount > 0
+      ? `Queued retry for ${notificationJob.recipientCount} undelivered recipient(s)`
+      : 'No undelivered recipients remain for this source',
+  });
+}));
+
+publications.get('/notification-jobs/:jobId', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const jobId = c.req.param('jobId');
+  const job = await getArticleNotificationJob(jobId);
+
+  if (!job) {
+    return c.json({ success: false, error: 'Notification job not found' }, 404);
+  }
+
+  return c.json({ success: true, data: job });
+}));
+
+publications.post('/notification-jobs/process', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const jobId = typeof body.jobId === 'string' && body.jobId.trim() ? body.jobId.trim() : undefined;
+  const maxJobs = typeof body.maxJobs === 'number' ? body.maxJobs : undefined;
+
+  const result = await processArticleNotificationJobs({ jobId, maxJobs });
+  return c.json({ success: true, data: result });
 }));
 
 publications.post('/articles/:id/archive', async (c) => {
@@ -1392,14 +1514,21 @@ publications.post('/cron/process-scheduled', async (c) => {
           published.push(article.title);
 
           if (shouldNotify) {
-            sendArticlePublishedNotifications({
-              id: article.id,
-              title: article.title,
-              slug: article.slug,
-              excerpt: article.excerpt,
-            }).catch((nErr) => {
-              log.error(`Failed to send notifications for scheduled article ${article.id}`, nErr);
-            });
+            try {
+              const notificationJob = await sendArticlePublishedNotifications({
+                id: article.id,
+                title: article.title,
+                slug: article.slug,
+                excerpt: article.excerpt,
+              });
+              log.info(`Scheduled article notifications complete for ${article.id}`, {
+                recipientCount: notificationJob.recipientCount,
+                notificationJobId: notificationJob.id,
+                status: notificationJob.status,
+              });
+            } catch (notificationError) {
+              log.error(`Failed to send notifications for scheduled article ${article.id}`, notificationError);
+            }
           }
         }
       }
@@ -1442,14 +1571,21 @@ publications.post('/process-scheduled', async (c) => {
 
           // Notify newsletter subscribers only if opted-in at scheduling time
           if (shouldNotify) {
-            sendArticlePublishedNotifications({
-              id: article.id,
-              title: article.title,
-              slug: article.slug,
-              excerpt: article.excerpt,
-            }).catch((nErr) => {
-              log.error(`Failed to send notifications for scheduled article ${article.id}`, nErr);
-            });
+            try {
+              const notificationJob = await sendArticlePublishedNotifications({
+                id: article.id,
+                title: article.title,
+                slug: article.slug,
+                excerpt: article.excerpt,
+              });
+              log.info(`Scheduled article notifications complete for ${article.id}`, {
+                recipientCount: notificationJob.recipientCount,
+                notificationJobId: notificationJob.id,
+                status: notificationJob.status,
+              });
+            } catch (notificationError) {
+              log.error(`Failed to send notifications for scheduled article ${article.id}`, notificationError);
+            }
           } else {
             log.info(`Skipping email notifications for scheduled article ${article.id} — notify_on_publish was disabled`);
           }

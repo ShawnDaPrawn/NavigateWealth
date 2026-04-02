@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
-import { getSEOData } from '../seo/seo-config';
+import { getSEOData, investmentManagementFAQs } from '../seo/seo-config';
 import { ServicePageTemplate, type CoverContent } from '../templates/ServicePageTemplate';
 import {
   TrendingUp,
@@ -235,7 +235,7 @@ export function InvestmentManagementPage() {
           heroImageAlt: 'Investment growth concept showing stacked coins with growing plant representing wealth growth and investment protection',
           statusLabel: 'Investment Status',
           statusValue: 'Individuals & Businesses',
-          quoteLink: '/get-quote/investment-management',
+          quoteLink: '/get-quote/investment-management/contact',
           heroStyle: 'unified',
           stats: [
             { value: '10+', label: 'Fund Managers' },
@@ -259,7 +259,7 @@ export function InvestmentManagementPage() {
           },
           cardIcon: TrendingUp,
           cardLabel: 'Personal Investments',
-          quoteLink: '/get-quote/investment-management',
+          quoteLink: '/get-quote/investment-management/contact',
         },
         business: {
           badgeText: 'For Businesses',
@@ -275,7 +275,7 @@ export function InvestmentManagementPage() {
           },
           cardIcon: Briefcase,
           cardLabel: 'Business Investments',
-          quoteLink: '/get-quote/investment-management',
+          quoteLink: '/get-quote/investment-management/contact',
         },
         partners: {
           logos: partnerLogos,
@@ -316,6 +316,7 @@ export function InvestmentManagementPage() {
           { name: 'Investment Management' },
         ],
         preloadImages: [investmentGrowthImage, unitTrustImage, taxFreeSavingsImage, offshoreUnitTrustsImage, endowmentsImage, offshoreEndowmentsImage, corporateImage, cashManagementImage, treasuryImage],
+        faqs: investmentManagementFAQs,
         approach: {
           serviceName: 'How We Manage Your Investments',
           headerDescription: 'At Navigate Wealth, we follow a proven methodology to ensure your investment strategy aligns with your financial goals, risk appetite, and time horizon.',

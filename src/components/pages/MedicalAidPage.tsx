@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
-import { getSEOData } from '../seo/seo-config';
+import { getSEOData, medicalAidFAQs } from '../seo/seo-config';
 import { ServicePageTemplate, type CoverContent } from '../templates/ServicePageTemplate';
 import {
   Heart,
@@ -248,7 +248,7 @@ export function MedicalAidPage() {
             { value: '3', label: 'Individual Plans' },
             { value: '3', label: 'Business Solutions' },
           ],
-          quoteLink: '/get-quote/medical-aid',
+          quoteLink: '/get-quote/medical-aid/contact',
           heroStyle: 'unified',
         },
 
@@ -262,7 +262,7 @@ export function MedicalAidPage() {
           imageAltMap: individualImageAltMap,
           cardIcon: Heart,
           cardLabel: 'Personal Health',
-          quoteLink: '/get-quote/medical-aid',
+          quoteLink: '/get-quote/medical-aid/contact',
           ariaLabel: 'Medical aid for individuals',
         },
 
@@ -276,7 +276,7 @@ export function MedicalAidPage() {
           imageAltMap: businessImageAltMap,
           cardIcon: Briefcase,
           cardLabel: 'Business Health',
-          quoteLink: '/get-quote/medical-aid',
+          quoteLink: '/get-quote/medical-aid/contact',
           ariaLabel: 'Medical aid for businesses',
         },
 
@@ -319,6 +319,7 @@ export function MedicalAidPage() {
           { name: 'Medical Aid' },
         ],
         preloadImages: [],
+        faqs: medicalAidFAQs,
 
         approach: {
           serviceName: 'How We Find Your Ideal Plan',

@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { getSEOData } from '../seo/seo-config';
+import { getSEOData, financialPlanningFAQs } from '../seo/seo-config';
 import { ServicePageTemplate, type CoverContent } from '../templates/ServicePageTemplate';
 import {
   ClipboardList,
@@ -314,7 +314,7 @@ export function FinancialPlanningPage() {
             { value: '7+', label: 'Partner Providers' },
             { value: '3', label: 'Business Solutions' },
           ],
-          quoteLink: '/get-quote/financial-planning',
+          quoteLink: '/get-quote',
           heroStyle: 'unified',
         },
 
@@ -328,7 +328,7 @@ export function FinancialPlanningPage() {
           imageAltMap: individualImageAltMap,
           cardIcon: ClipboardList,
           cardLabel: 'Personal Planning',
-          quoteLink: '/get-quote/risk-management',
+          quoteLink: '/get-quote/risk-management/contact',
           ariaLabel: 'Financial planning for individuals',
         },
 
@@ -342,7 +342,7 @@ export function FinancialPlanningPage() {
           imageAltMap: businessImageAltMap,
           cardIcon: Briefcase,
           cardLabel: 'Business Planning',
-          quoteLink: '/get-quote/employee-benefits',
+          quoteLink: '/get-quote/employee-benefits/contact',
           ariaLabel: 'Financial planning for businesses',
         },
 
@@ -387,6 +387,7 @@ export function FinancialPlanningPage() {
           { name: 'Financial Planning' },
         ],
         preloadImages: [],
+        faqs: financialPlanningFAQs,
 
         approach: {
           serviceName: 'How We Build Your Financial Plan',

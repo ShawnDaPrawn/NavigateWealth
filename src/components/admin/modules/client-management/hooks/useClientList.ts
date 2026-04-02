@@ -10,6 +10,7 @@ import { useCallback } from 'react';
 import { Client, ApiUser, ClientProfile, ProfileData } from '../types';
 import { clientApi } from '../api';
 import { clientKeys } from './queryKeys';
+import { resolvePersonName } from '../../../../../utils/personName';
 
 /**
  * Normalize profile data from the server response.
@@ -38,24 +39,30 @@ function normalizeProfile(raw: unknown): ClientProfile | undefined {
 function transformApiUser(user: ApiUser): Client {
   const normalizedProfile = normalizeProfile(user.profile);
   const pi = normalizedProfile?.personalInformation;
+  const rawProfile = (user.profile ?? undefined) as Record<string, unknown> | undefined;
+
+  const { firstName, lastName } = resolvePersonName({
+    profileFirstName:
+      pi?.firstName ||
+      (rawProfile?.firstName as string | undefined) ||
+      (rawProfile?.first_name as string | undefined),
+    profileLastName:
+      pi?.lastName ||
+      (rawProfile?.lastName as string | undefined) ||
+      (rawProfile?.surname as string | undefined) ||
+      (rawProfile?.last_name as string | undefined),
+    metadataFirstName: user.user_metadata?.firstName,
+    metadataLastName: user.user_metadata?.surname,
+    fullName: user.name,
+    fallbackFirstName: 'Unknown',
+    fallbackLastName: 'User',
+  });
 
   return {
     id: user.id,
-    firstName:
-      user.user_metadata?.firstName ||
-      pi?.firstName ||
-      user.name?.split(' ')[0] ||
-      'Unknown',
-    lastName:
-      user.user_metadata?.surname ||
-      pi?.lastName ||
-      user.name?.split(' ').slice(1).join(' ') ||
-      'User',
-    preferredName:
-      user.user_metadata?.firstName ||
-      pi?.firstName ||
-      user.name?.split(' ')[0] ||
-      'Unknown',
+    firstName,
+    lastName,
+    preferredName: firstName,
     email: user.email,
     idNumber:
       pi?.idNumber ||

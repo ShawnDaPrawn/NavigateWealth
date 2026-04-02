@@ -7,7 +7,7 @@
 import { useState, useCallback } from 'react';
 import { PublicationsAPI } from '../api';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../constants';
-import type { Article, CreateArticleInput, UpdateArticleInput } from '../types';
+import type { Article, ArticlePublishResponse, CreateArticleInput, UpdateArticleInput } from '../types';
 
 interface UseArticleActionsOptions {
   onSuccess?: (message: string, article?: Article) => void;
@@ -21,7 +21,7 @@ interface UseArticleActionsReturn {
   // Actions
   handleCreate: (data: CreateArticleInput) => Promise<Article | null>;
   handleUpdate: (id: string, data: UpdateArticleInput) => Promise<Article | null>;
-  handlePublish: (id: string, notifySubscribers?: boolean) => Promise<Article | null>;
+  handlePublish: (id: string, notifySubscribers?: boolean) => Promise<ArticlePublishResponse | null>;
   handleUnpublish: (id: string) => Promise<Article | null>;
   handleSchedule: (id: string, publishAt: string, notifyOnPublish?: boolean) => Promise<Article | null>;
   handleDelete: (id: string) => Promise<boolean>;
@@ -85,19 +85,19 @@ export function useArticleActions(options?: UseArticleActionsOptions): UseArticl
   }, [onSuccess, onError]);
 
   // Publish article
-  const handlePublish = useCallback(async (id: string, notifySubscribers?: boolean): Promise<Article | null> => {
+  const handlePublish = useCallback(async (id: string, notifySubscribers?: boolean): Promise<ArticlePublishResponse | null> => {
     setIsProcessing(true);
     
     try {
-      const article = await PublicationsAPI.Articles.publishArticle(id, {
+      const result = await PublicationsAPI.Articles.publishArticle(id, {
         notify_subscribers: notifySubscribers ?? true,
       });
       
       if (onSuccess) {
-        onSuccess(SUCCESS_MESSAGES.articlePublished, article);
+        onSuccess(SUCCESS_MESSAGES.articlePublished, result.article);
       }
       
-      return article;
+      return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : ERROR_MESSAGES.articlePublishFailed;
       

@@ -1047,14 +1047,69 @@ export interface ArticleReshareResponse {
 
 export type ArticleEmailDeliveryStatus = 'pending' | 'sent' | 'failed';
 export type ArticleEmailTrackingSource = 'publish' | 'reshare';
+export type ArticleNotificationJobStatus = 'queued' | 'processing' | 'completed' | 'completed_with_failures';
+export type ArticleNotificationJobKind = 'publish' | 'retry_undelivered';
+
+export interface ArticleNotificationJobItem {
+  email: string;
+  firstName: string;
+  name: string;
+  trackingToken: string;
+}
+
+export interface ArticleNotificationJob {
+  id: string;
+  articleId: string;
+  articleTitle: string;
+  articleSlug: string;
+  articleExcerpt: string;
+  source: ArticleEmailTrackingSource;
+  kind: ArticleNotificationJobKind;
+  status: ArticleNotificationJobStatus;
+  recipientCount: number;
+  currentIndex: number;
+  items: ArticleNotificationJobItem[];
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  lastError: string | null;
+  lockId: string | null;
+  lockExpiresAt: string | null;
+  sentCount: number;
+  failedCount: number;
+  pendingCount: number;
+  processedCount: number;
+  progressPercent: number;
+}
+
+export interface ArticleNotificationProcessorResult {
+  processedJobs: number;
+  advancedJobs: number;
+  completedJobs: number;
+  jobs: ArticleNotificationJob[];
+}
+
+export interface ArticlePublishResponse {
+  article: Article;
+  notificationJob: ArticleNotificationJob | null;
+}
 
 export interface ArticleEmailEngagementSummary {
   articleId: string;
   articleTitle: string;
   articleSlug: string;
   publishedAt: string | null;
+  pending: number;
   sent: number;
   failed: number;
+  undelivered: number;
+  publishPending: number;
+  publishFailed: number;
+  publishUndelivered: number;
+  resharePending: number;
+  reshareFailed: number;
+  reshareUndelivered: number;
   opened: number;
   read: number;
   openRate: number;

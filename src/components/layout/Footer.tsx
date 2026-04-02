@@ -103,7 +103,8 @@ export function Footer() {
     servicesColumn2: [
       { label: 'Employee Benefits', path: '/employee-benefits' },
       { label: 'Tax Planning', path: '/tax-planning' },
-      { label: 'Estate Planning', path: '/estate-planning' }
+      { label: 'Estate Planning', path: '/estate-planning' },
+      { label: 'Financial Planning', path: '/financial-planning' }
     ],
     resources: [
       { label: 'Insights', path: '/resources' },

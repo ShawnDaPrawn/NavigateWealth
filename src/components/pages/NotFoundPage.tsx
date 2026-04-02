@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
@@ -14,6 +14,17 @@ import {
 
 export function NotFoundPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = 'Page Not Found | Navigate Wealth';
+    let el = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute('name', 'robots');
+      document.head.appendChild(el);
+    }
+    el.setAttribute('content', 'noindex, nofollow');
+  }, []);
 
   const handleGoBack = () => {
     if (window.history.length > 1) {

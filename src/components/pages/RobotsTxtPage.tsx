@@ -6,35 +6,43 @@ export function RobotsTxtPage() {
     document.documentElement.style.cssText = '';
     document.body.style.cssText = '';
     
-    const robotsContent = `# Navigate Wealth - robots.txt
-# This file tells search engines which pages to crawl
-
-User-agent: *
+    const robotsContent = `User-agent: *
 Allow: /
-
-# Disallow admin and user-specific areas
 Disallow: /admin
 Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /products-services-dashboard
 Disallow: /login
 Disallow: /signup
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /auth/
 Disallow: /account-type
+Disallow: /get-started
 Disallow: /application
-Disallow: /password-reset
+Disallow: /application/
+Disallow: /onboarding/
 Disallow: /profile
 Disallow: /security
+Disallow: /history
+Disallow: /communication
+Disallow: /transactions-documents
+Disallow: /my-adviser
+Disallow: /ai-advisor
+Disallow: /requests/
+Disallow: /newsletter/
+Disallow: /sign
+Disallow: /verify
+Disallow: /verify-document
+Disallow: /og-preview
+Disallow: /links
+Disallow: /migration-helper
+Disallow: /design-system
+Disallow: /sitemap/xml
+Disallow: /preview_page.html
 
-# Allow important pages
-Allow: /
-Allow: /services
-Allow: /about
-Allow: /team
-Allow: /contact
-Allow: /resources
-Allow: /legal
-Allow: /sitemap
-
-# Sitemap
-Sitemap: https://navigatewealth.co.za/sitemap/xml
+Sitemap: https://navigatewealth.co/sitemap.xml
 `;
 
     // Clear all existing content and styles

@@ -44,9 +44,12 @@ import type {
   SubscriberMutationResponse,
   UpdateSubscriberInput,
   BulkUploadResponse,
+  ArticlePublishResponse,
   ArticleReshareResponse,
   ArticleEmailEngagementSummary,
   ArticleEmailEngagementDetail,
+  ArticleNotificationJob,
+  ArticleNotificationProcessorResult,
 } from './types';
 
 // ============================================================================
@@ -265,13 +268,13 @@ export const ArticlesAPI = {
    * const articleWithNotification = await ArticlesAPI.publishArticle('abc-123', { notify_subscribers: true });
    * ```
    */
-  async publishArticle(id: string, options?: { notify_subscribers?: boolean }): Promise<Article> {
+  async publishArticle(id: string, options?: { notify_subscribers?: boolean }): Promise<ArticlePublishResponse> {
     const response = await fetch(`${BASE_URL}/articles/${id}/publish`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ notify_subscribers: options?.notify_subscribers ?? true }),
     });
-    return handleResponse<Article>(response);
+    return handleResponse<ArticlePublishResponse>(response);
   },
 
   /**
@@ -429,6 +432,47 @@ export const ArticlesAPI = {
       headers: authHeaders,
     });
     return handleResponse<ArticleEmailEngagementDetail>(response);
+  },
+
+  async retryUndeliveredArticleNotifications(
+    id: string,
+    input?: {
+      source?: 'publish' | 'reshare';
+    },
+  ): Promise<ArticleNotificationJob> {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${BASE_URL}/articles/${id}/retry-undelivered`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        source: input?.source ?? 'publish',
+      }),
+    });
+    return handleResponse<ArticleNotificationJob>(response);
+  },
+
+  async getNotificationJob(jobId: string): Promise<ArticleNotificationJob> {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${BASE_URL}/notification-jobs/${jobId}`, {
+      headers: authHeaders,
+    });
+    return handleResponse<ArticleNotificationJob>(response);
+  },
+
+  async processNotificationJobs(input?: {
+    jobId?: string;
+    maxJobs?: number;
+  }): Promise<ArticleNotificationProcessorResult> {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${BASE_URL}/notification-jobs/process`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        jobId: input?.jobId,
+        maxJobs: input?.maxJobs,
+      }),
+    });
+    return handleResponse<ArticleNotificationProcessorResult>(response);
   },
 };
 

@@ -14,7 +14,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Link } from 'react-router';
-import { SEO, createServiceSchema, createBreadcrumbSchema, createOrganizationSchema } from '../seo/SEO';
+import { SEO, createServiceSchema, createBreadcrumbSchema, createOrganizationSchema, createFAQSchema } from '../seo/SEO';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
@@ -221,21 +221,22 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
     setFormData({ name: '', email: '', contactNumber: '', [config.form.selectFieldName]: '', message: '' });
   };
 
-  // SEO structured data
-  const structuredData = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      createOrganizationSchema(),
-      createServiceSchema({
-        name: config.structuredDataServiceName,
-        description: seoData.description,
-        url: seoData.canonicalUrl,
-        serviceType: config.structuredDataServiceType,
-        offers: config.structuredDataOffers,
-      }),
-      createBreadcrumbSchema(config.breadcrumbs),
-    ],
-  };
+  // SEO structured data — includes FAQPage when FAQ content is provided
+  const graphNodes: Record<string, unknown>[] = [
+    createOrganizationSchema(),
+    createServiceSchema({
+      name: config.structuredDataServiceName,
+      description: seoData.description,
+      url: seoData.canonicalUrl,
+      serviceType: config.structuredDataServiceType,
+      offers: config.structuredDataOffers,
+    }),
+    createBreadcrumbSchema(config.breadcrumbs),
+  ];
+  if (config.faqs && config.faqs.length > 0) {
+    graphNodes.push(createFAQSchema(config.faqs));
+  }
+  const structuredData = { '@context': 'https://schema.org', '@graph': graphNodes };
 
   const IndivCardIcon = config.individuals.cardIcon;
   const BizCardIcon = config.business.cardIcon;

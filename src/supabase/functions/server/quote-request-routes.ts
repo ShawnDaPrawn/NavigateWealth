@@ -1027,7 +1027,7 @@ app.post('/submit', asyncHandler(async (c) => {
         : 'One of our advisers will be in touch',
       buttonUrl: isFullStage
         ? 'https://navigatewealth.co/services'
-        : `https://navigatewealth.co/get-quote/${service || ''}`,
+        : `https://navigatewealth.co/get-quote/${service || ''}/contact`,
       buttonLabel: isFullStage ? 'Explore Our Services' : 'Complete Your Quote',
       footerSettings,
     });

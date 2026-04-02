@@ -93,6 +93,11 @@ export function Navigation({ forcePublic = false }: NavigationProps) {
       path: '/estate-planning', 
       label: 'Estate Planning',
       icon: Users
+    },
+    { 
+      path: '/financial-planning', 
+      label: 'Financial Planning',
+      icon: Compass
     }
   ];
 

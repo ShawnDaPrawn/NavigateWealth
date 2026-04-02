@@ -14,7 +14,7 @@ import image_c6ebf07ce2d2b7d5973be0c78b41cc2d3efbcf39 from 'figma:asset/c6ebf07c
 import image_d84d9d4e620a44dabbbe1f028d18b3312e2327c0 from 'figma:asset/d84d9d4e620a44dabbbe1f028d18b3312e2327c0.png';
 import React from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
-import { getSEOData } from '../seo/seo-config';
+import { getSEOData, retirementPlanningFAQs } from '../seo/seo-config';
 import { ServicePageTemplate, type CoverContent } from '../templates/ServicePageTemplate';
 import { PiggyBank, Target, TrendingUp, Calendar, DollarSign, Building, Shield, Briefcase, Users, Search, MessageSquare, CheckCircle2 } from 'lucide-react';
 import retirementHeroImage from 'figma:asset/b6c49e3128a8d7c0869121962a0c8a9836a4fef6.png';
@@ -228,7 +228,7 @@ export function RetirementPlanningPage() {
           heroImageAlt: 'Happy retired couple enjoying financial freedom representing retirement planning success',
           statusLabel: 'Retirement Status',
           statusValue: 'Individuals & Businesses',
-          quoteLink: '/get-quote/retirement-planning',
+          quoteLink: '/get-quote/retirement-planning/contact',
           heroStyle: 'unified',
           stats: [
             { value: '13+', label: 'Trusted Providers' },
@@ -252,7 +252,7 @@ export function RetirementPlanningPage() {
           },
           cardIcon: PiggyBank,
           cardLabel: 'Personal Retirement',
-          quoteLink: '/get-quote/retirement-planning',
+          quoteLink: '/get-quote/retirement-planning/contact',
         },
         business: {
           badgeText: 'For Businesses',
@@ -269,7 +269,7 @@ export function RetirementPlanningPage() {
           },
           cardIcon: Briefcase,
           cardLabel: 'Business Retirement',
-          quoteLink: '/get-quote/retirement-planning',
+          quoteLink: '/get-quote/retirement-planning/contact',
         },
         partners: {
           logos: partnerLogos,
@@ -309,6 +309,7 @@ export function RetirementPlanningPage() {
           { name: 'Retirement Planning' },
         ],
         preloadImages: [],
+        faqs: retirementPlanningFAQs,
         approach: {
           serviceName: 'How We Plan Your Retirement',
           headerDescription: 'At Navigate Wealth, we follow a proven methodology to ensure your retirement strategy provides the income and security you need for a comfortable retirement.',

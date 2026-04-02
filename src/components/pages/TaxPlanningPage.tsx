@@ -6,7 +6,7 @@
 import { profinLogo } from '../shared/assets/provider-logos';
 import React from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
-import { getSEOData } from '../seo/seo-config';
+import { getSEOData, taxPlanningFAQs } from '../seo/seo-config';
 import { ServicePageTemplate, type CoverContent } from '../templates/ServicePageTemplate';
 import { Calculator, Shield, FileText, Building, PiggyBank, DollarSign, Briefcase, Target, Search, MessageSquare, CheckCircle2 } from 'lucide-react';
 
@@ -193,7 +193,7 @@ export function TaxPlanningPage() {
           heroImageAlt: 'Professional tax planning consultation representing strategic tax optimisation',
           statusLabel: 'Tax Planning',
           statusValue: 'Individuals & Businesses',
-          quoteLink: '/get-quote/tax-planning',
+          quoteLink: '/get-quote/tax-planning/contact',
           heroStyle: 'unified',
           stats: [
             { value: '1+', label: 'Trusted Partner' },
@@ -217,7 +217,7 @@ export function TaxPlanningPage() {
           },
           cardIcon: Calculator,
           cardLabel: 'Personal Tax',
-          quoteLink: '/get-quote/tax-planning',
+          quoteLink: '/get-quote/tax-planning/contact',
         },
         business: {
           badgeText: 'For Businesses',
@@ -233,7 +233,7 @@ export function TaxPlanningPage() {
           },
           cardIcon: Briefcase,
           cardLabel: 'Business Tax',
-          quoteLink: '/get-quote/tax-planning',
+          quoteLink: '/get-quote/tax-planning/contact',
         },
         partners: {
           logos: partnerLogos,
@@ -274,6 +274,7 @@ export function TaxPlanningPage() {
           { name: 'Tax Planning' },
         ],
         preloadImages: [],
+        faqs: taxPlanningFAQs,
         approach: {
           serviceName: 'How We Optimise Your Tax',
           headerDescription: 'At Navigate Wealth, we follow a structured approach to ensure your tax strategy is comprehensive, compliant, and optimised for your financial situation.',

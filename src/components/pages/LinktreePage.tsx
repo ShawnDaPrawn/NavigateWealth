@@ -32,6 +32,7 @@ import {
   Twitter,
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { SEO } from '../seo/SEO';
 import navigateWealthLogo from 'figma:asset/8dc2892f50ecc4c5f692fd5ad52639699e2e4656.png';
 
 // ============================================================================
@@ -113,6 +114,12 @@ export function LinktreePage() {
   const [clickedId, setClickedId] = useState<string | null>(null);
 
   const BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/linktree`;
+  const seoProps = {
+    title: 'Navigate Wealth Links',
+    description: 'Navigate Wealth social and profile links.',
+    canonicalUrl: 'https://navigatewealth.co/links',
+    robotsContent: 'noindex, nofollow',
+  };
 
   useEffect(() => {
     (async () => {
@@ -166,15 +173,18 @@ export function LinktreePage() {
 
   if (loading) {
     return (
-      <div
-        className="min-h-screen flex flex-col items-center justify-center"
-        style={{ background: `linear-gradient(135deg, ${BRAND.heroBg}, ${BRAND.heroMid}, ${BRAND.heroBg})` }}
-      >
-        <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-400/20 flex items-center justify-center mb-4">
-          <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
+      <>
+        <SEO {...seoProps} />
+        <div
+          className="min-h-screen flex flex-col items-center justify-center"
+          style={{ background: `linear-gradient(135deg, ${BRAND.heroBg}, ${BRAND.heroMid}, ${BRAND.heroBg})` }}
+        >
+          <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-400/20 flex items-center justify-center mb-4">
+            <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
+          </div>
+          <p className="text-gray-500 text-sm">Loading...</p>
         </div>
-        <p className="text-gray-500 text-sm">Loading...</p>
-      </div>
+      </>
     );
   }
 
@@ -184,7 +194,9 @@ export function LinktreePage() {
 
   if (error || !settings) {
     return (
-      <div
+      <>
+        <SEO {...seoProps} />
+        <div
         className="min-h-screen flex flex-col items-center justify-center px-6"
         style={{ background: `linear-gradient(135deg, ${BRAND.heroBg}, ${BRAND.heroMid}, ${BRAND.heroBg})` }}
       >
@@ -205,7 +217,8 @@ export function LinktreePage() {
           <span>·</span>
           <span>FSP 54606</span>
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 
@@ -214,7 +227,9 @@ export function LinktreePage() {
   // --------------------------------------------------------------------------
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex flex-col">
+    <>
+      <SEO {...seoProps} />
+      <div className="min-h-screen relative overflow-hidden flex flex-col">
       {/* ── Layered Background (matches homepage hero) ───────────────────── */}
       <div
         className="absolute inset-0"
@@ -374,6 +389,7 @@ export function LinktreePage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

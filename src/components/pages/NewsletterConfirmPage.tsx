@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { SEO } from '../seo/SEO';
 
 export function NewsletterConfirmPage() {
   const [searchParams] = useSearchParams();
@@ -12,6 +13,12 @@ export function NewsletterConfirmPage() {
   
   const token = searchParams.get('token');
   const email = searchParams.get('email');
+  const seoProps = {
+    title: 'Newsletter Confirmation | Navigate Wealth',
+    description: 'Newsletter subscription confirmation status for Navigate Wealth.',
+    canonicalUrl: 'https://navigatewealth.co/newsletter/confirm',
+    robotsContent: 'noindex, nofollow',
+  };
 
   useEffect(() => {
     const confirmSubscription = async () => {
@@ -63,9 +70,11 @@ export function NewsletterConfirmPage() {
   }, [token, email]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center px-4 py-12">
-      <Card className="max-w-md w-full">
-        <CardContent className="pt-8 pb-8 text-center">
+    <>
+      <SEO {...seoProps} />
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center px-4 py-12">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-8 pb-8 text-center">
           {status === 'loading' && (
             <div className="contents">
               <Loader2 className="h-16 w-16 text-primary mx-auto mb-4 animate-spin" />
@@ -124,8 +133,9 @@ export function NewsletterConfirmPage() {
               </p>
             </div>
           )}
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }

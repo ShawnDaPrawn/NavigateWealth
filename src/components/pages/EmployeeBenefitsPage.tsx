@@ -6,7 +6,7 @@
 import image_e687c01861aee919fa24cf06bfbd5e069af5249c from 'figma:asset/e687c01861aee919fa24cf06bfbd5e069af5249c.png';
 import React from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
-import { getSEOData } from '../seo/seo-config';
+import { getSEOData, employeeBenefitsFAQs } from '../seo/seo-config';
 import { ServicePageTemplate, type CoverContent } from '../templates/ServicePageTemplate';
 import { Users, Heart, Shield, DollarSign, TrendingUp, Building, Award, Briefcase, FileText, Search, MessageSquare, CheckCircle2 } from 'lucide-react';
 import employeeBenefitsBusinessImage from 'figma:asset/f7f8a616cb10a78c61dfc9f8e66eeefbfeac413c.png';
@@ -210,7 +210,7 @@ export function EmployeeBenefitsPage() {
           heroImageAlt: 'Happy employees representing comprehensive employee benefits and workplace wellbeing',
           statusLabel: 'Benefits Status',
           statusValue: 'Employees & Businesses',
-          quoteLink: '/get-quote/employee-benefits',
+          quoteLink: '/get-quote/employee-benefits/contact',
           heroStyle: 'unified',
           stats: [
             { value: '13+', label: 'Trusted Providers' },
@@ -234,7 +234,7 @@ export function EmployeeBenefitsPage() {
           },
           cardIcon: Heart,
           cardLabel: 'Employee Benefits',
-          quoteLink: '/get-quote/employee-benefits',
+          quoteLink: '/get-quote/employee-benefits/contact',
         },
         business: {
           badgeText: 'For Businesses',
@@ -250,7 +250,7 @@ export function EmployeeBenefitsPage() {
           },
           cardIcon: Briefcase,
           cardLabel: 'Business Benefits',
-          quoteLink: '/get-quote/employee-benefits',
+          quoteLink: '/get-quote/employee-benefits/contact',
         },
         partners: {
           logos: partnerLogos,
@@ -291,6 +291,7 @@ export function EmployeeBenefitsPage() {
           { name: 'Employee Benefits' },
         ],
         preloadImages: [],
+        faqs: employeeBenefitsFAQs,
         approach: {
           serviceName: 'How We Design Your Benefits',
           headerDescription: 'At Navigate Wealth, we follow a proven methodology to design, implement, and manage employee benefit solutions that attract and retain talent.',

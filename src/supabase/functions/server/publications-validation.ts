@@ -62,6 +62,11 @@ export const ArticleReshareSchema = z.object({
   recipientEmails: z.array(z.string().email()).max(1000).optional().default([]),
 });
 
+export const ArticleDeliveryRetrySchema = z.object({
+  dryRun: z.boolean().optional().default(false),
+  source: z.enum(['publish', 'reshare']).optional().default('publish'),
+});
+
 export const ArticleEmailEngagementEventSchema = z.object({
   token: z.string().trim().min(1).max(120),
 });

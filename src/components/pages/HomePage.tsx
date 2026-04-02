@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react
 import { Link } from 'react-router';
 import { SEO, createOrganizationSchema, createWebPageSchema, createFAQSchema } from '../seo/SEO';
 import { getSEOData, commonFAQs } from '../seo/seo-config';
+import { createWebSiteSchema } from '../seo/SEO';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
@@ -136,6 +137,7 @@ export function HomePage() {
     "@context": "https://schema.org",
     "@graph": [
       createOrganizationSchema(),
+      createWebSiteSchema(),
       createWebPageSchema(seoData.title, seoData.description, seoData.canonicalUrl!),
       createFAQSchema(commonFAQs)
     ]

@@ -8,30 +8,34 @@ const buildDate = new Intl.DateTimeFormat('en-CA', {
   timeZone: process.env.SITEMAP_TIMEZONE || DEFAULT_TIMEZONE,
 }).format(new Date());
 
+// Google ignores <priority> and <changefreq> — only <loc> and <lastmod> matter.
+// lastmod should reflect genuinely meaningful content changes.
+// Only canonical, indexable public pages belong here. No auth, dashboard, or admin routes.
+// Individual articles are excluded — the /resources hub page is what we want ranked.
 const sitemapEntries = [
-  { path: '/', changefreq: 'weekly', priority: '1.0' },
-  { path: '/about', changefreq: 'monthly', priority: '0.8' },
-  { path: '/services', changefreq: 'monthly', priority: '0.9' },
-  { path: '/team', changefreq: 'monthly', priority: '0.7' },
-  { path: '/contact', changefreq: 'monthly', priority: '0.8' },
-  { path: '/resources', changefreq: 'weekly', priority: '0.8' },
-  { path: '/get-quote', changefreq: 'monthly', priority: '0.8' },
-  { path: '/risk-management', changefreq: 'monthly', priority: '0.8' },
-  { path: '/retirement-planning', changefreq: 'monthly', priority: '0.8' },
-  { path: '/investment-management', changefreq: 'monthly', priority: '0.8' },
-  { path: '/employee-benefits', changefreq: 'monthly', priority: '0.7' },
-  { path: '/tax-planning', changefreq: 'monthly', priority: '0.8' },
-  { path: '/financial-planning', changefreq: 'monthly', priority: '0.7' },
-  { path: '/estate-planning', changefreq: 'monthly', priority: '0.8' },
-  { path: '/medical-aid', changefreq: 'monthly', priority: '0.7' },
-  { path: '/solutions/individuals', changefreq: 'monthly', priority: '0.8' },
-  { path: '/solutions/businesses', changefreq: 'monthly', priority: '0.8' },
-  { path: '/solutions/advisers', changefreq: 'monthly', priority: '0.7' },
-  { path: '/why-us', changefreq: 'monthly', priority: '0.7' },
-  { path: '/careers', changefreq: 'monthly', priority: '0.5' },
-  { path: '/press', changefreq: 'monthly', priority: '0.5' },
-  { path: '/legal', changefreq: 'yearly', priority: '0.4' },
-  { path: '/ask-vasco', changefreq: 'weekly', priority: '0.6' },
+  { path: '/', lastmod: buildDate },
+  { path: '/services', lastmod: buildDate },
+  { path: '/resources', lastmod: buildDate },
+  { path: '/about', lastmod: '2026-03-01' },
+  { path: '/team', lastmod: '2026-03-01' },
+  { path: '/contact', lastmod: '2026-03-01' },
+  { path: '/why-us', lastmod: '2026-03-01' },
+  { path: '/risk-management', lastmod: '2026-03-01' },
+  { path: '/retirement-planning', lastmod: '2026-03-01' },
+  { path: '/investment-management', lastmod: '2026-03-01' },
+  { path: '/tax-planning', lastmod: '2026-03-01' },
+  { path: '/estate-planning', lastmod: '2026-03-01' },
+  { path: '/financial-planning', lastmod: '2026-03-01' },
+  { path: '/medical-aid', lastmod: '2026-03-01' },
+  { path: '/employee-benefits', lastmod: '2026-03-01' },
+  { path: '/get-quote', lastmod: '2026-03-01' },
+  { path: '/solutions/individuals', lastmod: '2026-03-01' },
+  { path: '/solutions/businesses', lastmod: '2026-03-01' },
+  { path: '/solutions/advisers', lastmod: '2026-03-01' },
+  { path: '/ask-vasco', lastmod: '2026-03-01' },
+  { path: '/careers', lastmod: '2026-03-01' },
+  { path: '/press', lastmod: '2026-03-01' },
+  { path: '/legal', lastmod: '2026-01-01' },
 ];
 
 const disallowPaths = [
@@ -65,16 +69,15 @@ const disallowPaths = [
   '/og-preview',
   '/links',
   '/migration-helper',
+  '/design-system',
   '/sitemap/xml',
+  '/preview_page.html',
 ];
 
 const publicDir = path.resolve('public');
 fs.mkdirSync(publicDir, { recursive: true });
 
-fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), generateSitemapXml(), 'utf8');
-fs.writeFileSync(path.join(publicDir, 'robots.txt'), generateRobotsTxt(), 'utf8');
-
-console.log(`Generated sitemap and robots for ${siteUrl}`);
+main();
 
 function normalizeSiteUrl(value) {
   const trimmed = value.trim();
@@ -98,11 +101,9 @@ function absoluteUrl(routePath) {
 function generateSitemapXml() {
   const urls = sitemapEntries
     .map(
-      ({ path: routePath, changefreq, priority }) => `  <url>
+      ({ path: routePath, lastmod }) => `  <url>
     <loc>${escapeXml(absoluteUrl(routePath))}</loc>
-    <lastmod>${buildDate}</lastmod>
-    <changefreq>${changefreq}</changefreq>
-    <priority>${priority}</priority>
+    <lastmod>${lastmod || buildDate}</lastmod>
   </url>`
     )
     .join('\n');
@@ -123,4 +124,11 @@ ${rules}
 
 Sitemap: ${siteUrl}/sitemap.xml
 `;
+}
+
+function main() {
+  fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), generateSitemapXml(), 'utf8');
+  fs.writeFileSync(path.join(publicDir, 'robots.txt'), generateRobotsTxt(), 'utf8');
+
+  console.log(`Generated sitemap and robots for ${siteUrl} (${sitemapEntries.length} URLs)`);
 }

@@ -1,17 +1,5 @@
 /**
- * GlobalSearch — Account Search Command Palette
- *
- * Quick-access search for client and personnel accounts.
- * Opens via Cmd+K or clicking the search bar in the admin header.
- *
- * Currently searches:
- *   - Individual client accounts (name, email)
- *   - Personnel / staff accounts (name, email, role)
- *
- * Future: will extend to other account types (corporate, adviser, etc.)
- *
- * Guidelines §8.3 — Cmd+K is the standard for quick navigation.
- * Guidelines §7   — No business logic in UI; search filtering is pure.
+ * GlobalSearch - Account Search Command Palette
  */
 
 import * as React from 'react';
@@ -36,10 +24,6 @@ import { useGlobalSearchData } from './useGlobalSearchData';
 import { useAdminNavigation } from './AdminNavigationContext';
 import type { SearchableAccount } from './useGlobalSearchData';
 
-// ============================================================================
-// STATUS BADGE CONFIG (§5.3 — config-driven)
-// ============================================================================
-
 const STATUS_BADGE_CONFIG: Record<string, { label: string; className: string }> = {
   active: { label: 'Active', className: 'bg-green-100 text-green-700 border-green-200' },
   approved: { label: 'Active', className: 'bg-green-100 text-green-700 border-green-200' },
@@ -49,23 +33,30 @@ const STATUS_BADGE_CONFIG: Record<string, { label: string; className: string }> 
 };
 
 function getStatusBadge(status: string) {
-  const cfg = STATUS_BADGE_CONFIG[status] ?? {
+  return STATUS_BADGE_CONFIG[status] ?? {
     label: status.charAt(0).toUpperCase() + status.slice(1),
     className: 'bg-gray-100 text-gray-700 border-gray-200',
   };
-  return cfg;
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = React.useState(value);
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [value, delayMs]);
+
+  return debounced;
+}
 
 export function GlobalSearch() {
   const [open, setOpen] = React.useState(false);
+  const [searchValue, setSearchValue] = React.useState('');
+  const debouncedSearch = useDebouncedValue(searchValue, 250);
   const { navigateToAccount } = useAdminNavigation();
-  const { clients, personnel, isLoading } = useGlobalSearchData(open);
+  const { clients, personnel, isLoading, hasSearchQuery } = useGlobalSearchData(open, debouncedSearch);
 
-  // Cmd+K keyboard shortcut
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
@@ -77,6 +68,12 @@ export function GlobalSearch() {
     return () => document.removeEventListener('keydown', down);
   }, []);
 
+  React.useEffect(() => {
+    if (!open) {
+      setSearchValue('');
+    }
+  }, [open]);
+
   const handleSelect = React.useCallback(
     (account: SearchableAccount) => {
       setOpen(false);
@@ -87,7 +84,6 @@ export function GlobalSearch() {
 
   return (
     <div className="contents">
-      {/* Trigger button */}
       <button
         onClick={() => setOpen(true)}
         className="hidden lg:flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground bg-muted/50 hover:bg-muted/80 rounded-md border border-transparent hover:border-border transition-colors w-full max-w-sm"
@@ -100,19 +96,28 @@ export function GlobalSearch() {
         </kbd>
       </button>
 
-      {/* Command palette dialog */}
       <CommandDialog
         open={open}
         onOpenChange={setOpen}
         title="Account Search"
         description="Search for client and personnel accounts by name or email."
       >
-        <CommandInput placeholder="Search by name or email..." />
+        <CommandInput
+          placeholder="Search by name or email..."
+          value={searchValue}
+          onValueChange={setSearchValue}
+        />
         <CommandList className="max-h-[400px]">
-          {isLoading ? (
+          {!hasSearchQuery ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-1 text-center">
+              <Search className="h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm font-medium text-muted-foreground">Search clients and personnel</p>
+              <p className="text-xs text-muted-foreground/70">Type at least 2 characters to start</p>
+            </div>
+          ) : isLoading ? (
             <div className="flex items-center justify-center py-8 gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading accounts...</span>
+              <span>Searching accounts...</span>
             </div>
           ) : (
             <div className="contents">
@@ -126,7 +131,6 @@ export function GlobalSearch() {
                 </div>
               </CommandEmpty>
 
-              {/* Clients */}
               {clients.length > 0 && (
                 <CommandGroup heading="Clients">
                   {clients.map((account) => (
@@ -141,7 +145,6 @@ export function GlobalSearch() {
 
               {clients.length > 0 && personnel.length > 0 && <CommandSeparator />}
 
-              {/* Personnel */}
               {personnel.length > 0 && (
                 <CommandGroup heading="Personnel">
                   {personnel.map((account) => (
@@ -157,15 +160,20 @@ export function GlobalSearch() {
           )}
         </CommandList>
 
-        {/* Footer hint */}
         <div className="flex items-center justify-between border-t px-3 py-2 text-[11px] text-muted-foreground">
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
-              <Users className="h-3 w-3" /> {clients.length} clients
-            </span>
-            <span className="flex items-center gap-1">
-              <UserCog className="h-3 w-3" /> {personnel.length} personnel
-            </span>
+            {hasSearchQuery ? (
+              <div className="contents">
+                <span className="flex items-center gap-1">
+                  <Users className="h-3 w-3" /> {clients.length} clients
+                </span>
+                <span className="flex items-center gap-1">
+                  <UserCog className="h-3 w-3" /> {personnel.length} personnel
+                </span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground/80">Start typing to search</span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <kbd className="inline-flex h-4 items-center rounded border bg-muted px-1 font-mono text-[10px]">{'\u2191\u2193'}</kbd>
@@ -180,10 +188,6 @@ export function GlobalSearch() {
     </div>
   );
 }
-
-// ============================================================================
-// ACCOUNT ITEM (sub-component)
-// ============================================================================
 
 interface AccountItemProps {
   account: SearchableAccount;
@@ -201,18 +205,15 @@ function AccountItem({ account, onSelect }: AccountItemProps) {
       onSelect={() => onSelect(account)}
       className="flex items-center gap-3 py-2.5 px-2 cursor-pointer"
     >
-      {/* Avatar placeholder */}
       <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-100 shrink-0">
         <Icon className="h-4 w-4 text-gray-500" />
       </div>
 
-      {/* Name + email */}
       <div className="flex flex-col min-w-0 flex-1">
         <span className="text-sm font-medium text-gray-900 truncate">{displayName}</span>
         <span className="text-xs text-muted-foreground truncate">{account.email}</span>
       </div>
 
-      {/* Status / role badge */}
       <div className="flex items-center gap-2 shrink-0">
         {account.type === 'personnel' && (
           <span className="text-xs text-muted-foreground">{account.meta}</span>
@@ -227,3 +228,4 @@ function AccountItem({ account, onSelect }: AccountItemProps) {
     </CommandItem>
   );
 }
+

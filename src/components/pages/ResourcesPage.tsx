@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router';
+import { SEO, createWebPageSchema } from '../seo/SEO';
+import { getSEOData } from '../seo/seo-config';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Badge } from '../ui/badge';
 import { 
@@ -75,6 +77,7 @@ interface SearchResult {
 export function ResourcesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const seoData = getSEOData('resources');
   
   // Tab States
   const [activeTab, setActiveTab] = useState(() => {
@@ -284,6 +287,10 @@ export function ResourcesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 font-sans">
+      <SEO
+        {...seoData}
+        structuredData={createWebPageSchema(seoData.title, seoData.description, seoData.canonicalUrl)}
+      />
       {/* Hero Section */}
       <section className="relative z-20 bg-[#111827]" aria-label="Hero">
         {/* Background — single subtle gradient (overflow-hidden scoped to decorations only) */}

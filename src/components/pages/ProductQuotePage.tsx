@@ -5,14 +5,16 @@
  *   1. Continuation from the Quote Gateway (contact details pre-filled)
  *   2. Standalone entry (blank fields — acts as a lead capture landing page)
  *
- * Deep-linked from service pages via /get-quote/:service
+ * Step 3 of the quote funnel. Requires contact from step 2 (/get-quote/:service/contact);
+ * bare /get-quote/:service redirects there. Deep-linked from service pages via
+ * /get-quote/:service/contact → submit → this page with router state.
  *
  * §7 — Presentation layer
  * §3.1 — Dependency direction: UI → hooks → API
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useLocation, useNavigate, Link } from 'react-router';
+import { useParams, useLocation, useNavigate, Link, Navigate } from 'react-router';
 import { toast } from 'sonner@2.0.3';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -199,6 +201,18 @@ export function ProductQuotePage() {
   }, [firstName, lastName, email, phone, service, serviceConfig, productFields, routerState, isFormValid]);
 
   // ── Invalid service ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!serviceConfig) {
+      let el = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute('name', 'robots');
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', 'noindex, nofollow');
+    }
+  }, [serviceConfig]);
+
   if (!serviceConfig) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -211,6 +225,11 @@ export function ProductQuotePage() {
         </div>
       </div>
     );
+  }
+
+  // Deep links to /get-quote/:service must complete step 2 (contact) first
+  if (!routerState?.contact) {
+    return <Navigate to={`/get-quote/${service}/contact`} replace />;
   }
 
   // ── Success state ───────────────────────────────────────────────────────────
@@ -268,23 +287,32 @@ export function ProductQuotePage() {
         </div>
       </div>
 
-      {/* Step indicator */}
+      {/* Step indicator — steps 1–3 of public quote funnel */}
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 pt-8 pb-2">
-        {!hasPhase2Wizard && (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center">
-                <CheckCircle className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-medium text-green-700">Service selected</span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
+              <CheckCircle className="h-4 w-4" />
             </div>
-            <div className="h-px flex-1 bg-primary/30" />
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">2</div>
-              <span className="text-sm font-semibold text-gray-900">Your quote details</span>
-            </div>
+            <span className="text-sm font-medium text-green-700">Service</span>
           </div>
-        )}
+          <div className="h-px sm:flex-1 bg-primary/30 sm:min-w-[1rem]" />
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
+              <CheckCircle className="h-4 w-4" />
+            </div>
+            <span className="text-sm font-medium text-green-700">Your details</span>
+          </div>
+          <div className="h-px sm:flex-1 bg-primary/30 sm:min-w-[1rem]" />
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
+              3
+            </div>
+            <span className="text-sm font-semibold text-gray-900">
+              {hasPhase2Wizard ? 'Quote wizard' : 'Your quote details'}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Main content */}
@@ -531,7 +559,7 @@ export function ProductQuotePage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => navigate('/get-quote')}
+                    onClick={() => navigate(`/get-quote/${service}/contact`)}
                     className="w-full sm:w-auto h-11 px-5 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium"
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />

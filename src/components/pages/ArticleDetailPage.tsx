@@ -91,6 +91,7 @@ interface ArticleDisplay {
   excerpt?: string;
   body?: string;
   content?: string | null;
+  seo_canonical_url?: string | null;
   author_name?: string;
   category_name?: string;
   category?: { name?: string } | null;
@@ -363,6 +364,16 @@ function ArticleErrorState({
   message: string;
   onRetry?: () => void;
 }) {
+  useEffect(() => {
+    let el = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute('name', 'robots');
+      document.head.appendChild(el);
+    }
+    el.setAttribute('content', 'noindex, nofollow');
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
       <div className="text-center max-w-md px-6">
@@ -904,7 +915,9 @@ export function ArticleDetailPage() {
       article.thumbnail_image_url ||
       '';
     const description = article.excerpt || article.subtitle || '';
-    const url = window.location.href;
+    const url =
+      article.seo_canonical_url ||
+      `${window.location.origin}/resources/article/${article.slug}`;
 
     const metaTags: Record<string, string> = {
       'og:title': article.title,
@@ -941,6 +954,16 @@ export function ArticleDetailPage() {
       el.setAttribute('content', value);
     }
 
+    const prevCanonicalHref =
+      document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href || null;
+    let canonicalEl = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonicalEl) {
+      canonicalEl = document.createElement('link');
+      canonicalEl.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalEl);
+    }
+    canonicalEl.setAttribute('href', url);
+
     // JSON-LD structured data
     const jsonLd = document.createElement('script');
     jsonLd.type = 'application/ld+json';
@@ -961,6 +984,13 @@ export function ArticleDetailPage() {
     return () => {
       document.title = prevTitle;
       createdEls.forEach(el => el.remove());
+      if (canonicalEl) {
+        if (prevCanonicalHref) {
+          canonicalEl.setAttribute('href', prevCanonicalHref);
+        } else {
+          canonicalEl.remove();
+        }
+      }
       jsonLd.remove();
     };
   }, [article]);
