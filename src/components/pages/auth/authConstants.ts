@@ -1,11 +1,7 @@
 /**
  * Shared constants for Login and Signup pages.
- * Single source of truth for stats, feature showcases, and feature flags.
+ * Single source of truth for stats, feature showcases, and shared form data.
  */
-
-// ─── Feature Flags ─────────────────────────────────────────────────────────────
-/** Set to true to re-enable Google OAuth on login and signup pages. */
-export const ENABLE_GOOGLE_AUTH = false;
 
 // ─── Stat Cards (Right Column) ─────────────────────────────────────────────────
 export const AUTH_STATS = [
