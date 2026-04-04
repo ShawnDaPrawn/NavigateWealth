@@ -10,7 +10,13 @@ const WEBSITE_BASE_URL = 'https://navigatewealth.co';
 const TRACKING_RECORD_PERSIST_BATCH_SIZE = 25;
 
 export type ArticleEmailTrackingSource = 'publish' | 'reshare';
-export type ArticleEmailDeliveryStatus = 'pending' | 'sent' | 'failed';
+export type ArticleEmailDeliveryStatus =
+  | 'pending'
+  | 'sending'
+  | 'sent'
+  | 'failed'
+  | 'failed_retryable'
+  | 'failed_terminal';
 
 export interface ArticleEmailTrackingRecord {
   token: string;
@@ -31,6 +37,9 @@ export interface ArticleEmailTrackingRecord {
   readCount: number;
   deliveryStatus: ArticleEmailDeliveryStatus;
   deliveryError: string | null;
+  attemptCount?: number;
+  lastAttemptedAt?: string | null;
+  providerMessageId?: string | null;
   jobId?: string | null;
 }
 
@@ -89,15 +98,16 @@ function publishRecipientTrackingKey(articleId: string, recipientEmail: string):
 }
 
 async function persistTrackingRecord(record: ArticleEmailTrackingRecord): Promise<void> {
+  const normalizedRecord = withTrackingDefaults(record);
   const keys = [
-    articleTrackingKey(record.articleId, record.token),
-    tokenTrackingKey(record.token),
+    articleTrackingKey(normalizedRecord.articleId, normalizedRecord.token),
+    tokenTrackingKey(normalizedRecord.token),
   ];
-  const values = [record, record];
+  const values = [normalizedRecord, normalizedRecord];
 
-  if (record.source === 'publish') {
-    keys.push(publishRecipientTrackingKey(record.articleId, record.recipientEmail));
-    values.push(record);
+  if (normalizedRecord.source === 'publish') {
+    keys.push(publishRecipientTrackingKey(normalizedRecord.articleId, normalizedRecord.recipientEmail));
+    values.push(normalizedRecord);
   }
 
   await kv.mset(keys, values);
@@ -112,14 +122,15 @@ async function persistTrackingRecords(records: ArticleEmailTrackingRecord[]): Pr
     const values: ArticleEmailTrackingRecord[] = [];
 
     for (const record of batch) {
-      keys.push(articleTrackingKey(record.articleId, record.token));
-      values.push(record);
-      keys.push(tokenTrackingKey(record.token));
-      values.push(record);
+      const normalizedRecord = withTrackingDefaults(record);
+      keys.push(articleTrackingKey(normalizedRecord.articleId, normalizedRecord.token));
+      values.push(normalizedRecord);
+      keys.push(tokenTrackingKey(normalizedRecord.token));
+      values.push(normalizedRecord);
 
-      if (record.source === 'publish') {
-        keys.push(publishRecipientTrackingKey(record.articleId, record.recipientEmail));
-        values.push(record);
+      if (normalizedRecord.source === 'publish') {
+        keys.push(publishRecipientTrackingKey(normalizedRecord.articleId, normalizedRecord.recipientEmail));
+        values.push(normalizedRecord);
       }
     }
 
@@ -141,6 +152,46 @@ function latestDate(values: Array<string | null | undefined>): string | null {
   if (filtered.length === 0) return null;
 
   return filtered.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+}
+
+function normalizeDeliveryStatus(status: ArticleEmailDeliveryStatus | null | undefined): ArticleEmailDeliveryStatus {
+  switch (status) {
+    case 'pending':
+    case 'sending':
+    case 'sent':
+    case 'failed_retryable':
+    case 'failed_terminal':
+      return status;
+    case 'failed':
+    default:
+      return 'failed_retryable';
+  }
+}
+
+function withTrackingDefaults(record: ArticleEmailTrackingRecord): ArticleEmailTrackingRecord {
+  return {
+    ...record,
+    deliveryStatus: normalizeDeliveryStatus(record.deliveryStatus),
+    attemptCount: typeof record.attemptCount === 'number' && Number.isFinite(record.attemptCount)
+      ? record.attemptCount
+      : 0,
+    lastAttemptedAt: record.lastAttemptedAt ?? null,
+    providerMessageId: record.providerMessageId ?? null,
+  };
+}
+
+export function isArticleEmailDeliveryTerminalStatus(
+  status: ArticleEmailDeliveryStatus | null | undefined,
+): boolean {
+  const normalized = normalizeDeliveryStatus(status);
+  return normalized === 'sent' || normalized === 'failed_terminal';
+}
+
+export function isArticleEmailDeliveryRetryableStatus(
+  status: ArticleEmailDeliveryStatus | null | undefined,
+): boolean {
+  const normalized = normalizeDeliveryStatus(status);
+  return normalized === 'pending' || normalized === 'sending' || normalized === 'failed_retryable';
 }
 
 export function buildTrackedArticleUrl(articleSlug: string, token: string): string {
@@ -169,8 +220,9 @@ export async function createArticleEmailTrackingRecord(
         jobId: input.jobId ?? existing.jobId ?? null,
       };
 
-      await persistTrackingRecord(updatedExisting);
-      return updatedExisting;
+      const normalizedExisting = withTrackingDefaults(updatedExisting);
+      await persistTrackingRecord(normalizedExisting);
+      return normalizedExisting;
     }
   }
 
@@ -193,6 +245,9 @@ export async function createArticleEmailTrackingRecord(
     readCount: 0,
     deliveryStatus: 'pending',
     deliveryError: null,
+    attemptCount: 0,
+    lastAttemptedAt: null,
+    providerMessageId: null,
     jobId: input.jobId ?? null,
   };
 
@@ -222,7 +277,7 @@ export async function createArticleEmailTrackingRecords(
     const existing = source === 'publish' ? existingPublishRecords[index] : null;
 
     if (existing) {
-      return {
+      return withTrackingDefaults({
         ...existing,
         articleSlug: input.article.slug,
         articleTitle: input.article.title,
@@ -230,10 +285,10 @@ export async function createArticleEmailTrackingRecords(
         recipientName: input.recipient.name || input.recipient.firstName || input.recipient.email,
         recipientFirstName: input.recipient.firstName || 'Subscriber',
         jobId: input.jobId ?? existing.jobId ?? null,
-      } satisfies ArticleEmailTrackingRecord;
+      } satisfies ArticleEmailTrackingRecord);
     }
 
-    return {
+    return withTrackingDefaults({
       token: crypto.randomUUID(),
       articleId: input.article.id,
       articleSlug: input.article.slug,
@@ -252,8 +307,11 @@ export async function createArticleEmailTrackingRecords(
       readCount: 0,
       deliveryStatus: 'pending',
       deliveryError: null,
+      attemptCount: 0,
+      lastAttemptedAt: null,
+      providerMessageId: null,
       jobId: input.jobId ?? null,
-    } satisfies ArticleEmailTrackingRecord;
+    } satisfies ArticleEmailTrackingRecord);
   });
 
   await persistTrackingRecords(records);
@@ -264,10 +322,39 @@ export async function getArticleEmailTrackingRecordByToken(
   token: string,
 ): Promise<ArticleEmailTrackingRecord | null> {
   if (!token) return null;
-  return (await kv.get(tokenTrackingKey(token))) as ArticleEmailTrackingRecord | null;
+  const record = (await kv.get(tokenTrackingKey(token))) as ArticleEmailTrackingRecord | null;
+  return record ? withTrackingDefaults(record) : null;
 }
 
-export async function markArticleEmailDeliverySent(token: string): Promise<void> {
+export async function markArticleEmailDeliveryAttemptStarted(
+  token: string,
+): Promise<ArticleEmailTrackingRecord | null> {
+  const existing = await getArticleEmailTrackingRecordByToken(token);
+  if (!existing) return null;
+
+  const normalizedStatus = normalizeDeliveryStatus(existing.deliveryStatus);
+  if (normalizedStatus === 'sent' || normalizedStatus === 'failed_terminal') {
+    return existing;
+  }
+
+  const updated = withTrackingDefaults({
+    ...existing,
+    deliveryStatus: 'sending',
+    deliveryError: null,
+    attemptCount: (existing.attemptCount || 0) + 1,
+    lastAttemptedAt: toIsoNow(),
+  });
+
+  await persistTrackingRecord(updated);
+  return updated;
+}
+
+export async function markArticleEmailDeliverySent(
+  token: string,
+  options?: {
+    providerMessageId?: string | null;
+  },
+): Promise<void> {
   const existing = await getArticleEmailTrackingRecordByToken(token);
   if (!existing) return;
 
@@ -276,16 +363,21 @@ export async function markArticleEmailDeliverySent(token: string): Promise<void>
     sentAt: existing.sentAt || toIsoNow(),
     deliveryStatus: 'sent',
     deliveryError: null,
+    providerMessageId: options?.providerMessageId ?? existing.providerMessageId ?? null,
   });
 }
 
-export async function markArticleEmailDeliveryFailed(token: string, errorMessage: string): Promise<void> {
+export async function markArticleEmailDeliveryFailed(
+  token: string,
+  errorMessage: string,
+  status: 'failed_retryable' | 'failed_terminal' = 'failed_retryable',
+): Promise<void> {
   const existing = await getArticleEmailTrackingRecordByToken(token);
   if (!existing) return;
 
   await persistTrackingRecord({
     ...existing,
-    deliveryStatus: 'failed',
+    deliveryStatus: status,
     deliveryError: errorMessage || 'Delivery failed',
   });
 }
@@ -327,7 +419,7 @@ export async function markArticleEmailRead(token: string): Promise<ArticleEmailT
 
 export async function listArticleEmailTrackingRecords(articleId: string): Promise<ArticleEmailTrackingRecord[]> {
   const records = await kv.getByPrefix(`${ARTICLE_EMAIL_TRACKING_PREFIX}${articleId}:`) as ArticleEmailTrackingRecord[];
-  return records.sort((a, b) => {
+  return records.map((record) => withTrackingDefaults(record)).sort((a, b) => {
     const aTime = new Date(a.lastReadAt || a.lastOpenedAt || a.sentAt || a.createdAt).getTime();
     const bTime = new Date(b.lastReadAt || b.lastOpenedAt || b.sentAt || b.createdAt).getTime();
     return bTime - aTime;
@@ -336,7 +428,7 @@ export async function listArticleEmailTrackingRecords(articleId: string): Promis
 
 export async function listAllArticleEmailTrackingRecords(): Promise<ArticleEmailTrackingRecord[]> {
   const records = await kv.getByPrefix(ARTICLE_EMAIL_TRACKING_PREFIX) as ArticleEmailTrackingRecord[];
-  return records.sort((a, b) => {
+  return records.map((record) => withTrackingDefaults(record)).sort((a, b) => {
     const aTime = new Date(a.sentAt || a.createdAt).getTime();
     const bTime = new Date(b.sentAt || b.createdAt).getTime();
     return bTime - aTime;
@@ -350,7 +442,7 @@ export async function listUndeliveredArticleEmailTrackingRecords(
   const records = await listArticleEmailTrackingRecords(articleId);
   return records.filter((record) => {
     if (source && record.source !== source) return false;
-    return record.deliveryStatus !== 'sent';
+    return !isArticleEmailDeliveryTerminalStatus(record.deliveryStatus);
   });
 }
 
@@ -359,15 +451,21 @@ export function summarizeTrackedRecipientDeliveries(
   source?: ArticleEmailTrackingSource,
 ) {
   const filtered = source ? records.filter((record) => record.source === source) : records;
-  const pending = filtered.filter((record) => record.deliveryStatus === 'pending').length;
-  const sent = filtered.filter((record) => record.deliveryStatus === 'sent').length;
-  const failed = filtered.filter((record) => record.deliveryStatus === 'failed').length;
+  const pendingOnly = filtered.filter((record) => normalizeDeliveryStatus(record.deliveryStatus) === 'pending').length;
+  const sending = filtered.filter((record) => normalizeDeliveryStatus(record.deliveryStatus) === 'sending').length;
+  const sent = filtered.filter((record) => normalizeDeliveryStatus(record.deliveryStatus) === 'sent').length;
+  const failedRetryable = filtered.filter((record) => normalizeDeliveryStatus(record.deliveryStatus) === 'failed_retryable').length;
+  const failedTerminal = filtered.filter((record) => normalizeDeliveryStatus(record.deliveryStatus) === 'failed_terminal').length;
+  const pending = pendingOnly + sending + failedRetryable;
 
   return {
     pending,
+    sending,
     sent,
-    failed,
-    undelivered: pending + failed,
+    failed: failedTerminal,
+    failedRetryable,
+    failedTerminal,
+    undelivered: pending,
   };
 }
 

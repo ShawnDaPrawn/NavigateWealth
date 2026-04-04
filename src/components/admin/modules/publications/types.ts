@@ -1045,9 +1045,19 @@ export interface ArticleReshareResponse {
   errors?: string[];
 }
 
-export type ArticleEmailDeliveryStatus = 'pending' | 'sent' | 'failed';
+export type ArticleEmailDeliveryStatus =
+  | 'pending'
+  | 'sending'
+  | 'sent'
+  | 'failed'
+  | 'failed_retryable'
+  | 'failed_terminal';
 export type ArticleEmailTrackingSource = 'publish' | 'reshare';
 export type ArticleNotificationJobStatus = 'queued' | 'processing' | 'completed' | 'completed_with_failures';
+export type ArticleNotificationCampaignStatus =
+  | ArticleNotificationJobStatus
+  | 'no_recipients'
+  | 'queue_failed';
 export type ArticleNotificationJobKind = 'publish' | 'retry_undelivered';
 
 export interface ArticleNotificationJobItem {
@@ -1090,9 +1100,35 @@ export interface ArticleNotificationProcessorResult {
   jobs: ArticleNotificationJob[];
 }
 
+export interface ArticleNotificationCampaign {
+  id: string;
+  articleId: string;
+  articleTitle: string;
+  articleSlug: string;
+  articleExcerpt: string;
+  source: ArticleEmailTrackingSource;
+  status: ArticleNotificationCampaignStatus;
+  intendedRecipientCount: number;
+  pendingCount: number;
+  sendingCount: number;
+  sentCount: number;
+  failedRetryableCount: number;
+  failedTerminalCount: number;
+  processedCount: number;
+  progressPercent: number;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  lastActivityAt: string | null;
+  lastError: string | null;
+  jobId: string | null;
+}
+
 export interface ArticlePublishResponse {
   article: Article;
   notificationJob: ArticleNotificationJob | null;
+  notificationCampaign?: ArticleNotificationCampaign | null;
   notificationError?: string | null;
 }
 
@@ -1101,6 +1137,14 @@ export interface ArticleEmailEngagementSummary {
   articleTitle: string;
   articleSlug: string;
   publishedAt: string | null;
+  campaignId?: string | null;
+  campaignStatus?: ArticleNotificationCampaignStatus | null;
+  intendedRecipientCount?: number;
+  sendingCount?: number;
+  failedRetryableCount?: number;
+  failedTerminalCount?: number;
+  lastActivityAt?: string | null;
+  lastError?: string | null;
   pending: number;
   sent: number;
   failed: number;
@@ -1139,9 +1183,13 @@ export interface ArticleEmailEngagementRecipient {
   readCount: number;
   deliveryStatus: ArticleEmailDeliveryStatus;
   deliveryError: string | null;
+  attemptCount?: number;
+  lastAttemptedAt?: string | null;
+  providerMessageId?: string | null;
 }
 
 export interface ArticleEmailEngagementDetail {
   summary: ArticleEmailEngagementSummary;
+  campaign?: ArticleNotificationCampaign | null;
   recipients: ArticleEmailEngagementRecipient[];
 }

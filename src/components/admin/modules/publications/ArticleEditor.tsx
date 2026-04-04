@@ -31,7 +31,12 @@ import { VersionHistory } from './components/VersionHistory';
 
 // Import from refactored modules
 import { PublicationsAPI } from './api';
-import type { ArticleNotificationJob, CreateArticleInput, UpdateArticleInput } from './types';
+import type {
+  ArticleNotificationCampaign,
+  ArticleNotificationJob,
+  CreateArticleInput,
+  UpdateArticleInput,
+} from './types';
 import type { ContentTemplate, GenerateArticleResult } from './types';
 import {
   useArticleForm,
@@ -145,6 +150,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [publishJob, setPublishJob] = useState<ArticleNotificationJob | null>(null);
+  const [publishCampaign, setPublishCampaign] = useState<ArticleNotificationCampaign | null>(null);
   const [autoSlug, setAutoSlug] = useState(!isEditMode);
   const [scheduledDate, setScheduledDate] = useState('');
 
@@ -283,16 +289,21 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       return;
     }
     setPublishJob(null);
+    setPublishCampaign(null);
     setShowPublishDialog(true);
   };
 
-  const publishJobInFlight = Boolean(
-    publishJob && (publishJob.status === 'queued' || publishJob.status === 'processing')
+  const publishCampaignInFlight = Boolean(
+    publishCampaign && (publishCampaign.status === 'queued' || publishCampaign.status === 'processing')
   );
+  const publishJobInFlight = Boolean(
+    !publishCampaign && publishJob && (publishJob.status === 'queued' || publishJob.status === 'processing')
+  );
+  const publishInFlight = publishCampaignInFlight || publishJobInFlight;
 
   // Escape key handler for the custom publish dialog
   useEffect(() => {
-    if (!showPublishDialog || isProcessing || publishJobInFlight) return;
+    if (!showPublishDialog || isProcessing || publishInFlight) return;
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setShowPublishDialog(false);
     };
@@ -302,10 +313,43 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
     };
-  }, [showPublishDialog, isProcessing, publishJobInFlight]);
+  }, [showPublishDialog, isProcessing, publishInFlight]);
 
   useEffect(() => {
-    if (!publishJob?.id || !showPublishDialog) return;
+    if (!publishCampaign?.id || !showPublishDialog) return;
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const pollCampaign = async () => {
+      try {
+        const latestCampaign = await PublicationsAPI.Articles.getNotificationCampaign(publishCampaign.id);
+        if (cancelled) return;
+
+        setPublishCampaign(latestCampaign);
+
+        if (latestCampaign.status === 'queued' || latestCampaign.status === 'processing') {
+          timeoutId = setTimeout(pollCampaign, 2000);
+        }
+      } catch (err) {
+        if (cancelled) return;
+
+        const message = err instanceof Error ? err.message : 'Failed to refresh publish notification progress';
+        setError(message);
+        timeoutId = setTimeout(pollCampaign, 4000);
+      }
+    };
+
+    void pollCampaign();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [publishCampaign?.id, publishCampaign?.status, showPublishDialog]);
+
+  useEffect(() => {
+    if (publishCampaign?.id || !publishJob?.id || !showPublishDialog) return;
 
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -335,11 +379,12 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [publishJob?.id, publishJob?.status, showPublishDialog]);
+  }, [publishCampaign?.id, publishJob?.id, publishJob?.status, showPublishDialog]);
 
   const closePublishDialog = useCallback((navigateBack: boolean) => {
     setShowPublishDialog(false);
     setPublishJob(null);
+    setPublishCampaign(null);
 
     if (navigateBack) {
       onSaved();
@@ -380,7 +425,19 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
             notify_subscribers: notifySubscribers,
           });
 
-          if (publishResult.notificationJob) {
+          if (publishResult.notificationCampaign) {
+            setPublishCampaign(publishResult.notificationCampaign);
+            setPublishJob(publishResult.notificationJob);
+
+            if (publishResult.notificationCampaign.status === 'queue_failed') {
+              setSuccessMessage('Article published, but newsletter delivery could not be queued.');
+              setError(publishResult.notificationError || publishResult.notificationCampaign.lastError || 'Newsletter delivery could not be queued.');
+            } else if (publishResult.notificationCampaign.status === 'no_recipients') {
+              setSuccessMessage('Article published. No newsletter recipients were eligible for this send.');
+            } else {
+              setSuccessMessage('Article published. Newsletter delivery has been queued.');
+            }
+          } else if (publishResult.notificationJob) {
             setSuccessMessage('Article published. Newsletter delivery has been queued.');
             setPublishJob(publishResult.notificationJob);
           } else if (publishResult.notificationError) {
@@ -400,7 +457,19 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
           notify_subscribers: notifySubscribers,
         });
 
-        if (publishResult.notificationJob) {
+        if (publishResult.notificationCampaign) {
+          setPublishCampaign(publishResult.notificationCampaign);
+          setPublishJob(publishResult.notificationJob);
+
+          if (publishResult.notificationCampaign.status === 'queue_failed') {
+            setSuccessMessage('Article published, but newsletter delivery could not be queued.');
+            setError(publishResult.notificationError || publishResult.notificationCampaign.lastError || 'Newsletter delivery could not be queued.');
+          } else if (publishResult.notificationCampaign.status === 'no_recipients') {
+            setSuccessMessage('Article published. No newsletter recipients were eligible for this send.');
+          } else {
+            setSuccessMessage('Article published. Newsletter delivery has been queued.');
+          }
+        } else if (publishResult.notificationJob) {
           setSuccessMessage('Article published. Newsletter delivery has been queued.');
           setPublishJob(publishResult.notificationJob);
         } else if (publishResult.notificationError) {
@@ -482,6 +551,19 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       onBack();
     }
   };
+
+  const activePublishStatus = publishCampaign?.status ?? publishJob?.status ?? null;
+  const activePublishRecipientCount = publishCampaign?.intendedRecipientCount ?? publishJob?.recipientCount ?? 0;
+  const activePublishPendingCount = publishCampaign
+    ? publishCampaign.pendingCount + publishCampaign.sendingCount + publishCampaign.failedRetryableCount
+    : publishJob?.pendingCount ?? 0;
+  const activePublishSentCount = publishCampaign?.sentCount ?? publishJob?.sentCount ?? 0;
+  const activePublishFailedCount = publishCampaign
+    ? publishCampaign.failedTerminalCount
+    : publishJob?.failedCount ?? 0;
+  const activePublishProcessedCount = publishCampaign?.processedCount ?? publishJob?.processedCount ?? 0;
+  const activePublishProgressPercent = publishCampaign?.progressPercent ?? publishJob?.progressPercent ?? 0;
+  const activePublishLastError = publishCampaign?.lastError ?? publishJob?.lastError ?? null;
 
   if (categoriesLoading) {
     return <LoadingState message="Loading editor..." />;
@@ -923,7 +1005,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
-            onClick={!isProcessing && !publishJob ? () => closePublishDialog(false) : undefined}
+            onClick={!isProcessing && !publishCampaign && !publishJob ? () => closePublishDialog(false) : undefined}
             aria-hidden="true"
           />
           {/* Dialog */}
@@ -938,7 +1020,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
               className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              {!publishJob ? (
+              {!publishCampaign && !publishJob ? (
                 <>
                   <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-4">
                     <CheckCircle className="w-6 h-6 text-green-600" />
@@ -993,22 +1075,28 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                   <div className="flex items-center justify-between gap-3 mb-4">
                     <div>
                       <h3 id="publish-dialog-title" className="text-xl text-gray-900">
-                        {publishJobInFlight ? 'Publishing And Sending' : 'Publish Delivery Summary'}
+                        {publishInFlight ? 'Publishing And Sending' : 'Publish Delivery Summary'}
                       </h3>
                       <p id="publish-dialog-description" className="text-sm text-gray-600 mt-1">
-                        {publishJobInFlight
+                        {publishInFlight
                           ? 'The article is live and newsletter delivery is progressing in the queued sender.'
-                          : 'The article is live and the queued newsletter delivery has finished its current run.'}
+                          : activePublishStatus === 'queue_failed'
+                            ? 'The article is live, but the newsletter campaign could not be queued.'
+                            : activePublishStatus === 'no_recipients'
+                              ? 'The article is live, and no eligible newsletter recipients were found for this send.'
+                              : 'The article is live and the queued newsletter delivery has finished its current run.'}
                       </p>
                     </div>
                     <Badge className={cn(
-                      publishJob.status === 'completed'
+                      activePublishStatus === 'completed'
                         ? 'bg-green-100 text-green-700'
-                        : publishJob.status === 'completed_with_failures'
+                        : activePublishStatus === 'completed_with_failures'
                           ? 'bg-amber-100 text-amber-800'
+                          : activePublishStatus === 'queue_failed'
+                            ? 'bg-red-100 text-red-700'
                           : 'bg-blue-100 text-blue-700'
                     )}>
-                      {publishJob.status.replace(/_/g, ' ')}
+                      {(activePublishStatus || 'queued').replace(/_/g, ' ')}
                     </Badge>
                   </div>
 
@@ -1017,41 +1105,41 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                       <div className="flex items-center justify-between text-sm mb-2">
                         <span className="text-gray-600">Newsletter progress</span>
                         <span className="font-medium text-gray-900">
-                          {publishJob.processedCount} / {publishJob.recipientCount}
+                          {activePublishProcessedCount} / {activePublishRecipientCount}
                         </span>
                       </div>
-                      <Progress value={publishJob.progressPercent} className="h-2.5" indicatorClassName="bg-green-600" />
+                      <Progress value={activePublishProgressPercent} className="h-2.5" indicatorClassName="bg-green-600" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
                         <p className="text-gray-500">Recipients</p>
-                        <p className="text-lg font-semibold text-gray-900">{publishJob.recipientCount}</p>
+                        <p className="text-lg font-semibold text-gray-900">{activePublishRecipientCount}</p>
                       </div>
                       <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
-                        <p className="text-gray-500">Pending</p>
-                        <p className="text-lg font-semibold text-amber-700">{publishJob.pendingCount}</p>
+                        <p className="text-gray-500">Remaining</p>
+                        <p className="text-lg font-semibold text-amber-700">{activePublishPendingCount}</p>
                       </div>
                       <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
                         <p className="text-gray-500">Sent</p>
-                        <p className="text-lg font-semibold text-green-700">{publishJob.sentCount}</p>
+                        <p className="text-lg font-semibold text-green-700">{activePublishSentCount}</p>
                       </div>
                       <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
                         <p className="text-gray-500">Failed</p>
-                        <p className="text-lg font-semibold text-red-700">{publishJob.failedCount}</p>
+                        <p className="text-lg font-semibold text-red-700">{activePublishFailedCount}</p>
                       </div>
                     </div>
 
-                    {publishJob.lastError && publishJob.failedCount > 0 && (
+                    {activePublishLastError && (activePublishFailedCount > 0 || activePublishStatus === 'queue_failed') && (
                       <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
                         <p className="text-xs font-medium text-amber-900">Latest delivery issue</p>
-                        <p className="text-xs text-amber-800 mt-1">{publishJob.lastError}</p>
+                        <p className="text-xs text-amber-800 mt-1">{activePublishLastError}</p>
                       </div>
                     )}
                   </div>
 
                   <div className="flex gap-3 justify-end mt-6">
-                    {publishJobInFlight ? (
+                    {publishInFlight ? (
                       <Button variant="outline" onClick={() => closePublishDialog(true)}>
                         Continue in Background
                       </Button>

@@ -19,9 +19,11 @@ import {
   buildTrackedArticleUrl,
   createArticleEmailTrackingRecord,
   createArticleEmailTrackingRecords,
-  getArticleEmailTrackingRecordByToken,
+  isArticleEmailDeliveryRetryableStatus,
+  isArticleEmailDeliveryTerminalStatus,
   listArticleEmailTrackingRecords,
   listUndeliveredArticleEmailTrackingRecords,
+  markArticleEmailDeliveryAttemptStarted,
   markArticleEmailDeliveryFailed,
   markArticleEmailDeliverySent,
   summarizeTrackedRecipientDeliveries,
@@ -35,9 +37,11 @@ const NEWSLETTER_PREFIX = 'newsletter:';
 const NEWSLETTER_GROUP_KEY = 'communication:groups:sys_newsletter_contacts';
 const ARTICLE_NOTIFICATION_JOB_PREFIX = 'article_notification_job:';
 const ARTICLE_NOTIFICATION_ACTIVE_PREFIX = 'article_notification_job_active:';
+const ARTICLE_NOTIFICATION_CAMPAIGN_PREFIX = 'article_notification_campaign:';
 const DELIVERY_BATCH_SIZE = 10;
 const MAX_SEND_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [750, 1500];
+const RETRYABLE_REQUEUE_DELAY_MS = 30_000;
 const JOB_LOCK_TTL_MS = 120_000;
 const JOB_LOCK_SETTLE_MS = 80;
 
@@ -68,6 +72,11 @@ export type ArticleNotificationJobStatus =
   | 'processing'
   | 'completed'
   | 'completed_with_failures';
+
+export type ArticleNotificationCampaignStatus =
+  | ArticleNotificationJobStatus
+  | 'no_recipients'
+  | 'queue_failed';
 
 export type ArticleNotificationJobKind = 'publish' | 'retry_undelivered';
 
@@ -102,9 +111,37 @@ export interface ArticleNotificationJob {
 export interface ArticleNotificationJobSnapshot extends ArticleNotificationJob {
   sentCount: number;
   failedCount: number;
+  failedRetryableCount: number;
+  failedTerminalCount: number;
   pendingCount: number;
+  sendingCount: number;
   processedCount: number;
   progressPercent: number;
+}
+
+export interface ArticleNotificationCampaign {
+  id: string;
+  articleId: string;
+  articleTitle: string;
+  articleSlug: string;
+  articleExcerpt: string;
+  source: ArticleEmailTrackingSource;
+  status: ArticleNotificationCampaignStatus;
+  intendedRecipientCount: number;
+  pendingCount: number;
+  sendingCount: number;
+  sentCount: number;
+  failedRetryableCount: number;
+  failedTerminalCount: number;
+  processedCount: number;
+  progressPercent: number;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  lastActivityAt: string | null;
+  lastError: string | null;
+  jobId: string | null;
 }
 
 export interface ArticleNotificationProcessorResult {
@@ -151,8 +188,68 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+type DeliveryFailureDisposition = 'retryable' | 'terminal';
+
+interface DeliveryFailureClassification {
+  message: string;
+  disposition: DeliveryFailureDisposition;
+}
+
+function classifyDeliveryFailure(error: unknown): DeliveryFailureClassification {
+  const message = normalizeSendError(error);
+  const lowerMessage = message.toLowerCase();
+
+  const terminalPatterns = [
+    'invalid email',
+    'invalid address',
+    'does not contain a valid address',
+    'address is invalid',
+    'bounce',
+    'suppression',
+    'unsubscribe',
+    'spam report',
+    'recipient is on the suppression list',
+    'permission',
+    'forbidden',
+    'unauthorized',
+    'not verified',
+    'from address does not match',
+    'malformed',
+    'bad request',
+  ];
+
+  if (terminalPatterns.some((pattern) => lowerMessage.includes(pattern))) {
+    return { message, disposition: 'terminal' };
+  }
+
+  return { message, disposition: 'retryable' };
+}
+
+function isReadyToAttemptTrackingRecord(record: ArticleEmailTrackingRecord): boolean {
+  if (isArticleEmailDeliveryTerminalStatus(record.deliveryStatus)) {
+    return false;
+  }
+
+  const lastAttemptedAt = record.lastAttemptedAt ? new Date(record.lastAttemptedAt).getTime() : 0;
+  const elapsedMs = lastAttemptedAt > 0 ? Date.now() - lastAttemptedAt : Number.POSITIVE_INFINITY;
+
+  if (record.deliveryStatus === 'sending') {
+    return elapsedMs >= JOB_LOCK_TTL_MS;
+  }
+
+  if (record.deliveryStatus === 'failed_retryable' || record.deliveryStatus === 'failed') {
+    return elapsedMs >= RETRYABLE_REQUEUE_DELAY_MS;
+  }
+
+  return isArticleEmailDeliveryRetryableStatus(record.deliveryStatus);
+}
+
 function notificationJobKey(jobId: string): string {
   return `${ARTICLE_NOTIFICATION_JOB_PREFIX}${jobId}`;
+}
+
+function notificationCampaignKey(campaignId: string): string {
+  return `${ARTICLE_NOTIFICATION_CAMPAIGN_PREFIX}${campaignId}`;
 }
 
 function activeNotificationJobKey(
@@ -181,6 +278,65 @@ async function persistArticleNotificationJob(job: ArticleNotificationJob): Promi
   await kv.set(notificationJobKey(job.id), job);
 }
 
+async function getArticleNotificationCampaignRecord(
+  campaignId: string,
+): Promise<ArticleNotificationCampaign | null> {
+  if (!campaignId) return null;
+  return (await kv.get(notificationCampaignKey(campaignId))) as ArticleNotificationCampaign | null;
+}
+
+async function persistArticleNotificationCampaign(
+  campaign: ArticleNotificationCampaign,
+): Promise<void> {
+  await kv.set(notificationCampaignKey(campaign.id), campaign);
+}
+
+function campaignStatusFromJob(
+  snapshot: ArticleNotificationJobSnapshot,
+): ArticleNotificationCampaignStatus {
+  if (snapshot.recipientCount === 0) return 'no_recipients';
+  return snapshot.status;
+}
+
+function campaignFromJobSnapshot(
+  snapshot: ArticleNotificationJobSnapshot,
+): ArticleNotificationCampaign {
+  return {
+    id: snapshot.id,
+    articleId: snapshot.articleId,
+    articleTitle: snapshot.articleTitle,
+    articleSlug: snapshot.articleSlug,
+    articleExcerpt: snapshot.articleExcerpt,
+    source: snapshot.source,
+    status: campaignStatusFromJob(snapshot),
+    intendedRecipientCount: snapshot.recipientCount,
+    pendingCount: snapshot.pendingCount,
+    sendingCount: snapshot.sendingCount,
+    sentCount: snapshot.sentCount,
+    failedRetryableCount: snapshot.failedRetryableCount,
+    failedTerminalCount: snapshot.failedTerminalCount,
+    processedCount: snapshot.processedCount,
+    progressPercent: snapshot.progressPercent,
+    createdAt: snapshot.createdAt,
+    updatedAt: snapshot.updatedAt,
+    startedAt: snapshot.startedAt,
+    completedAt: snapshot.completedAt,
+    lastActivityAt: snapshot.updatedAt,
+    lastError: snapshot.lastError,
+    jobId: snapshot.id,
+  };
+}
+
+async function syncArticleNotificationCampaignFromJob(
+  snapshot: ArticleNotificationJobSnapshot,
+): Promise<ArticleNotificationCampaign | null> {
+  if (snapshot.kind !== 'publish') return null;
+
+  const campaign = campaignFromJobSnapshot(snapshot);
+  await persistArticleNotificationCampaign(campaign);
+  return campaign;
+}
+
 async function removeActiveJobPointer(job: ArticleNotificationJob): Promise<void> {
   try {
     await kv.del(activeNotificationJobKey(job.articleId, job.source, job.kind));
@@ -192,25 +348,38 @@ async function removeActiveJobPointer(job: ArticleNotificationJob): Promise<void
   }
 }
 
+function mapJobTrackingRecords(
+  job: ArticleNotificationJob,
+  records: ArticleEmailTrackingRecord[],
+): ArticleEmailTrackingRecord[] {
+  const recordByToken = new Map(records.map((record) => [record.token, record]));
+  return job.items
+    .map((item) => recordByToken.get(item.trackingToken) ?? null)
+    .filter((record): record is ArticleEmailTrackingRecord => Boolean(record));
+}
+
 async function hydrateArticleNotificationJob(job: ArticleNotificationJob): Promise<ArticleNotificationJobSnapshot> {
-  const trackingRecords = (await listArticleEmailTrackingRecords(job.articleId)).filter((record) =>
-    job.items.some((item) => item.trackingToken === record.token),
-  );
+  const articleRecords = await listArticleEmailTrackingRecords(job.articleId);
+  const trackingRecords = mapJobTrackingRecords(job, articleRecords);
+  const missingRecordCount = Math.max(job.recipientCount - trackingRecords.length, 0);
 
   const totals = summarizeTrackedRecipientDeliveries(trackingRecords);
-  const startedCount = Math.min(job.currentIndex, job.recipientCount);
-  const notStartedCount = Math.max(job.recipientCount - startedCount, 0);
-  const processedCount = totals.sent + totals.failed;
-  const pendingCount = totals.pending + notStartedCount;
+  const failedTerminalCount = totals.failedTerminal + missingRecordCount;
+  const processedCount = totals.sent + failedTerminalCount;
+  const pendingCount = totals.pending;
   const progressPercent = job.recipientCount > 0
     ? Math.round((processedCount / job.recipientCount) * 1000) / 10
     : 100;
 
   return {
     ...job,
+    currentIndex: Math.min(processedCount, job.recipientCount),
     sentCount: totals.sent,
-    failedCount: totals.failed,
+    failedCount: totals.failedRetryable + failedTerminalCount,
+    failedRetryableCount: totals.failedRetryable,
+    failedTerminalCount,
     pendingCount,
+    sendingCount: totals.sending,
     processedCount,
     progressPercent,
   };
@@ -268,25 +437,12 @@ async function syncRetryJobRecipients(
   records: ArticleEmailTrackingRecord[],
 ): Promise<ArticleNotificationJobSnapshot> {
   const desiredItems = records.map(jobItemFromTrackingRecord);
-  const desiredByToken = new Map(desiredItems.map((item) => [item.trackingToken, item]));
-
-  const processedItems = job.items.slice(0, Math.min(job.currentIndex, job.items.length));
-  const remainingItems = job.items
-    .slice(Math.min(job.currentIndex, job.items.length))
-    .filter((item) => desiredByToken.has(item.trackingToken));
-
-  const knownTokens = new Set([
-    ...processedItems.map((item) => item.trackingToken),
-    ...remainingItems.map((item) => item.trackingToken),
-  ]);
-
-  const missingItems = desiredItems.filter((item) => !knownTokens.has(item.trackingToken));
-  const nextItems = [...processedItems, ...remainingItems, ...missingItems];
+  const nextItems = desiredItems;
+  const resolvedCount = records.filter((record) => isArticleEmailDeliveryTerminalStatus(record.deliveryStatus)).length;
 
   if (
     nextItems.length === job.items.length &&
-    missingItems.length === 0 &&
-    remainingItems.length === job.items.slice(job.currentIndex).length
+    nextItems.every((item, index) => item.trackingToken === job.items[index]?.trackingToken)
   ) {
     return hydrateArticleNotificationJob(job);
   }
@@ -295,23 +451,33 @@ async function syncRetryJobRecipients(
     ...job,
     items: nextItems,
     recipientCount: nextItems.length,
-    currentIndex: Math.min(processedItems.length, nextItems.length),
+    currentIndex: Math.min(resolvedCount, nextItems.length),
     updatedAt: nowIso(),
     completedAt: null,
   };
 
   await persistArticleNotificationJob(syncedJob);
-  return hydrateArticleNotificationJob(syncedJob);
+  const snapshot = await hydrateArticleNotificationJob(syncedJob);
+  await syncArticleNotificationCampaignFromJob(snapshot);
+  return snapshot;
 }
 
 async function deliverTrackedNotificationRecord(
   article: PublishedArticle,
   record: ArticleEmailTrackingRecord,
 ): Promise<void> {
-  let lastError = 'Delivery failed';
+  if (isArticleEmailDeliveryTerminalStatus(record.deliveryStatus)) {
+    return;
+  }
+
+  let lastFailure: DeliveryFailureClassification = {
+    message: 'Delivery failed',
+    disposition: 'retryable',
+  };
 
   for (let attempt = 1; attempt <= MAX_SEND_ATTEMPTS; attempt++) {
     try {
+      await markArticleEmailDeliveryAttemptStarted(record.token);
       const articleUrl = buildTrackedArticleUrl(article.slug, record.token);
       const unsubscribeUrl = `https://navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(record.recipientEmail)}`;
       const { html, text } = await createArticleNotificationEmail({
@@ -332,25 +498,28 @@ async function deliverTrackedNotificationRecord(
       await markArticleEmailDeliverySent(record.token);
       return;
     } catch (error) {
-      lastError = normalizeSendError(error);
+      lastFailure = classifyDeliveryFailure(error);
       const hasRetryRemaining = attempt < MAX_SEND_ATTEMPTS;
 
-      if (hasRetryRemaining) {
+      if (hasRetryRemaining && lastFailure.disposition === 'retryable') {
         const delayMs = RETRY_DELAYS_MS[Math.min(attempt - 1, RETRY_DELAYS_MS.length - 1)] ?? 1000;
         log.warn(`Retrying article notification delivery for ${record.recipientEmail}`, {
           articleId: article.id,
           attempt,
           nextDelayMs: delayMs,
-          error: lastError,
+          error: lastFailure.message,
         });
         await sleep(delayMs);
         continue;
       }
+
+      break;
     }
   }
 
-  await markArticleEmailDeliveryFailed(record.token, lastError);
-  throw new Error(lastError);
+  const failureStatus = lastFailure.disposition === 'terminal' ? 'failed_terminal' : 'failed_retryable';
+  await markArticleEmailDeliveryFailed(record.token, lastFailure.message, failureStatus);
+  throw new Error(lastFailure.message);
 }
 
 async function createAndDeliverTrackingRecord(
@@ -421,6 +590,16 @@ async function collectArticleNotificationRecipients(
   return [...recipientMap.values()].sort((a, b) => a.email.localeCompare(b.email));
 }
 
+async function listJobTrackingRecords(job: ArticleNotificationJob): Promise<ArticleEmailTrackingRecord[]> {
+  const articleRecords = await listArticleEmailTrackingRecords(job.articleId);
+  return mapJobTrackingRecords(job, articleRecords);
+}
+
+async function listReadyJobTrackingRecords(job: ArticleNotificationJob): Promise<ArticleEmailTrackingRecord[]> {
+  const records = await listJobTrackingRecords(job);
+  return records.filter((record) => isReadyToAttemptTrackingRecord(record));
+}
+
 async function queueArticleNotificationJob(
   article: PublishedArticle,
   items: ArticleNotificationRecipient[] | ArticleEmailTrackingRecord[],
@@ -432,7 +611,9 @@ async function queueArticleNotificationJob(
     if (options.kind === 'retry_undelivered') {
       return syncRetryJobRecipients(existingActiveJob, items as ArticleEmailTrackingRecord[]);
     }
-    return hydrateArticleNotificationJob(existingActiveJob);
+    const snapshot = await hydrateArticleNotificationJob(existingActiveJob);
+    await syncArticleNotificationCampaignFromJob(snapshot);
+    return snapshot;
   }
 
   const jobId = crypto.randomUUID();
@@ -494,7 +675,9 @@ async function queueArticleNotificationJob(
     await kv.set(activeNotificationJobKey(job.articleId, job.source, job.kind), job.id);
   }
 
-  return hydrateArticleNotificationJob(job);
+  const snapshot = await hydrateArticleNotificationJob(job);
+  await syncArticleNotificationCampaignFromJob(snapshot);
+  return snapshot;
 }
 
 async function finalizeArticleNotificationJob(
@@ -503,7 +686,7 @@ async function finalizeArticleNotificationJob(
   const snapshot = await hydrateArticleNotificationJob(job);
   const completedJob: ArticleNotificationJob = {
     ...job,
-    status: snapshot.failedCount > 0 ? 'completed_with_failures' : 'completed',
+    status: snapshot.failedTerminalCount > 0 ? 'completed_with_failures' : 'completed',
     completedAt: nowIso(),
     updatedAt: nowIso(),
     lockId: null,
@@ -512,8 +695,9 @@ async function finalizeArticleNotificationJob(
 
   await persistArticleNotificationJob(completedJob);
   await removeActiveJobPointer(completedJob);
-
-  return hydrateArticleNotificationJob(completedJob);
+  const snapshot = await hydrateArticleNotificationJob(completedJob);
+  await syncArticleNotificationCampaignFromJob(snapshot);
+  return snapshot;
 }
 
 export async function runArticleNotificationDelivery(
@@ -627,12 +811,82 @@ export async function retryUndeliveredArticleNotifications(
   });
 }
 
+export async function getArticleNotificationCampaign(
+  campaignId: string,
+): Promise<ArticleNotificationCampaign | null> {
+  return getArticleNotificationCampaignRecord(campaignId);
+}
+
+export async function listArticleNotificationCampaigns(
+  options?: {
+    articleId?: string;
+    source?: ArticleEmailTrackingSource;
+  },
+): Promise<ArticleNotificationCampaign[]> {
+  const campaigns = await kv.getByPrefix(ARTICLE_NOTIFICATION_CAMPAIGN_PREFIX) as ArticleNotificationCampaign[];
+
+  return campaigns
+    .filter((campaign) => {
+      if (options?.articleId && campaign.articleId !== options.articleId) return false;
+      if (options?.source && campaign.source !== options.source) return false;
+      return true;
+    })
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+}
+
+export async function getLatestArticleNotificationCampaign(
+  articleId: string,
+  source: ArticleEmailTrackingSource = 'publish',
+): Promise<ArticleNotificationCampaign | null> {
+  const campaigns = await listArticleNotificationCampaigns({ articleId, source });
+  return campaigns[0] ?? null;
+}
+
+export async function createArticleNotificationQueueFailedCampaign(
+  article: PublishedArticle,
+  options?: {
+    source?: ArticleEmailTrackingSource;
+    lastError?: string | null;
+  },
+): Promise<ArticleNotificationCampaign> {
+  const createdAt = nowIso();
+  const campaign: ArticleNotificationCampaign = {
+    id: crypto.randomUUID(),
+    articleId: article.id,
+    articleTitle: article.title,
+    articleSlug: article.slug,
+    articleExcerpt: article.excerpt,
+    source: options?.source ?? 'publish',
+    status: 'queue_failed',
+    intendedRecipientCount: 0,
+    pendingCount: 0,
+    sendingCount: 0,
+    sentCount: 0,
+    failedRetryableCount: 0,
+    failedTerminalCount: 0,
+    processedCount: 0,
+    progressPercent: 0,
+    createdAt,
+    updatedAt: createdAt,
+    startedAt: null,
+    completedAt: createdAt,
+    lastActivityAt: createdAt,
+    lastError: options?.lastError ?? 'Notification campaign could not be queued',
+    jobId: null,
+  };
+
+  await persistArticleNotificationCampaign(campaign);
+  return campaign;
+}
+
 export async function getArticleNotificationJob(
   jobId: string,
 ): Promise<ArticleNotificationJobSnapshot | null> {
   const job = await getArticleNotificationJobRecord(jobId);
   if (!job) return null;
-  return hydrateArticleNotificationJob(job);
+  const snapshot = await hydrateArticleNotificationJob(job);
+  await syncArticleNotificationCampaignFromJob(snapshot);
+  return snapshot;
 }
 
 export async function processArticleNotificationJobs(options?: {
@@ -670,7 +924,8 @@ export async function processArticleNotificationJobs(options?: {
     const leasedJob = await acquireArticleNotificationJobLease(job);
     if (!leasedJob) continue;
 
-    if (leasedJob.currentIndex >= leasedJob.items.length) {
+    const leasedSnapshot = await hydrateArticleNotificationJob(leasedJob);
+    if (leasedSnapshot.pendingCount === 0 && leasedSnapshot.sendingCount === 0) {
       const completed = await finalizeArticleNotificationJob(leasedJob);
       snapshots.push(completed);
       completedJobs++;
@@ -687,52 +942,57 @@ export async function processArticleNotificationJobs(options?: {
 
     let workingJob = leasedJob;
     let batchSteps = 0;
+    let didAdvanceJob = false;
 
-    while (batchSteps < maxBatchesPerJob && workingJob.currentIndex < workingJob.items.length) {
-      const batch = workingJob.items.slice(
-        workingJob.currentIndex,
-        workingJob.currentIndex + DELIVERY_BATCH_SIZE,
-      );
+    while (batchSteps < maxBatchesPerJob) {
+      const readyRecords = await listReadyJobTrackingRecords(workingJob);
+      const batch = readyRecords.slice(0, DELIVERY_BATCH_SIZE);
+      if (batch.length === 0) break;
 
       const batchResults = await Promise.allSettled(
-        batch.map(async (item) => {
-          const tracking = await getArticleEmailTrackingRecordByToken(item.trackingToken);
-          if (!tracking) {
-            throw new Error(`Tracking record missing for ${item.email}`);
-          }
-
-          if (tracking.deliveryStatus === 'sent') {
-            return { email: item.email, skipped: true };
+        batch.map(async (tracking) => {
+          if (isArticleEmailDeliveryTerminalStatus(tracking.deliveryStatus)) {
+            return { email: tracking.recipientEmail, skipped: true };
           }
 
           await deliverTrackedNotificationRecord(article, tracking);
-          return { email: item.email, skipped: false };
+          return { email: tracking.recipientEmail, skipped: false };
         }),
       );
 
       const errors = batchResults
         .map((result, index) => {
           if (result.status === 'fulfilled') return null;
-          return `${batch[index]?.email || 'unknown'}: ${normalizeSendError(result.reason)}`;
+          return `${batch[index]?.recipientEmail || 'unknown'}: ${normalizeSendError(result.reason)}`;
         })
         .filter((value): value is string => Boolean(value));
 
+      const refreshedSnapshot = await hydrateArticleNotificationJob(workingJob);
+
       workingJob = {
         ...workingJob,
-        currentIndex: workingJob.currentIndex + batch.length,
+        currentIndex: refreshedSnapshot.currentIndex,
         updatedAt: nowIso(),
         lastError: errors[0] ?? workingJob.lastError,
+        status: 'processing',
       };
 
       await persistArticleNotificationJob(workingJob);
       batchSteps++;
+      didAdvanceJob = true;
+
+      if (refreshedSnapshot.pendingCount === 0 && refreshedSnapshot.sendingCount === 0) {
+        break;
+      }
     }
 
-    const snapshot = workingJob.currentIndex >= workingJob.items.length
+    const refreshedSnapshot = await hydrateArticleNotificationJob(workingJob);
+    const snapshot = refreshedSnapshot.pendingCount === 0 && refreshedSnapshot.sendingCount === 0
       ? await finalizeArticleNotificationJob(workingJob)
       : await (async () => {
         const releasableJob: ArticleNotificationJob = {
           ...workingJob,
+          currentIndex: refreshedSnapshot.currentIndex,
           lockId: null,
           lockExpiresAt: null,
           updatedAt: nowIso(),
@@ -743,7 +1003,11 @@ export async function processArticleNotificationJobs(options?: {
       })();
 
     snapshots.push(snapshot);
-    advancedJobs++;
+    if (didAdvanceJob || snapshot.status === 'completed' || snapshot.status === 'completed_with_failures') {
+      advancedJobs++;
+    }
+
+    await syncArticleNotificationCampaignFromJob(snapshot);
 
     if (snapshot.status === 'completed' || snapshot.status === 'completed_with_failures') {
       completedJobs++;

@@ -49,6 +49,7 @@ import type {
   ArticleEmailEngagementSummary,
   ArticleEmailEngagementDetail,
   ArticleNotificationJob,
+  ArticleNotificationCampaign,
   ArticleNotificationProcessorResult,
 } from './types';
 
@@ -69,7 +70,7 @@ const EMAIL_ENGAGEMENT_CHANGED_EVENT = 'publications:email-engagement-changed';
 
 function notifyEmailEngagementChanged(
   articleId: string,
-  reason: 'published' | 'retry_queued' | 'notification_job_updated',
+  reason: 'published' | 'retry_queued' | 'notification_job_updated' | 'notification_campaign_updated',
 ): void {
   if (typeof window === 'undefined') return;
 
@@ -478,6 +479,16 @@ export const ArticlesAPI = {
     });
     const result = await handleResponse<ArticleNotificationJob>(response);
     notifyEmailEngagementChanged(result.articleId, 'notification_job_updated');
+    return result;
+  },
+
+  async getNotificationCampaign(campaignId: string): Promise<ArticleNotificationCampaign> {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${BASE_URL}/notification-campaigns/${campaignId}`, {
+      headers: authHeaders,
+    });
+    const result = await handleResponse<ArticleNotificationCampaign>(response);
+    notifyEmailEngagementChanged(result.articleId, 'notification_campaign_updated');
     return result;
   },
 

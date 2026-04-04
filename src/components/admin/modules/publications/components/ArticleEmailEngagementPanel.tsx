@@ -46,6 +46,14 @@ function asCount(value: number | null | undefined): number {
 function normalizeSummary(summary: ArticleEmailEngagementSummary): ArticleEmailEngagementSummary {
   return {
     ...summary,
+    campaignId: summary.campaignId ?? null,
+    campaignStatus: summary.campaignStatus ?? null,
+    intendedRecipientCount: asCount(summary.intendedRecipientCount),
+    sendingCount: asCount(summary.sendingCount),
+    failedRetryableCount: asCount(summary.failedRetryableCount),
+    failedTerminalCount: asCount(summary.failedTerminalCount),
+    lastActivityAt: summary.lastActivityAt ?? null,
+    lastError: summary.lastError ?? null,
     pending: asCount(summary.pending),
     sent: asCount(summary.sent),
     failed: asCount(summary.failed),
@@ -94,10 +102,33 @@ function statusBadgeVariant(status: ArticleEmailDeliveryStatus): string {
   switch (status) {
     case 'sent':
       return 'bg-green-50 text-green-700 border-green-200';
+    case 'failed_terminal':
     case 'failed':
       return 'bg-red-50 text-red-700 border-red-200';
+    case 'failed_retryable':
+      return 'bg-orange-50 text-orange-700 border-orange-200';
+    case 'sending':
+      return 'bg-blue-50 text-blue-700 border-blue-200';
     default:
       return 'bg-amber-50 text-amber-700 border-amber-200';
+  }
+}
+
+function campaignStatusBadgeClass(status: ArticleEmailEngagementSummary['campaignStatus']): string {
+  switch (status) {
+    case 'completed':
+      return 'bg-green-50 text-green-700 border-green-200';
+    case 'completed_with_failures':
+      return 'bg-amber-50 text-amber-800 border-amber-200';
+    case 'queue_failed':
+      return 'bg-red-50 text-red-700 border-red-200';
+    case 'no_recipients':
+      return 'bg-slate-100 text-slate-700 border-slate-200';
+    case 'processing':
+      return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'queued':
+    default:
+      return 'bg-purple-50 text-purple-700 border-purple-200';
   }
 }
 
@@ -315,8 +346,10 @@ export function ArticleEmailEngagementPanel() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Article</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Intended</TableHead>
                     <TableHead>Sent</TableHead>
-                    <TableHead>Pending</TableHead>
+                    <TableHead>Remaining</TableHead>
                     <TableHead>Failed</TableHead>
                     <TableHead>Opened</TableHead>
                     <TableHead>Read</TableHead>
@@ -337,6 +370,12 @@ export function ArticleEmailEngagementPanel() {
                           </p>
                         </div>
                       </TableCell>
+                      <TableCell className="align-top">
+                        <Badge className={campaignStatusBadgeClass(summary.campaignStatus)}>
+                          {(summary.campaignStatus || 'queued').replace(/_/g, ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{(summary.intendedRecipientCount ?? summary.sent + summary.publishUndelivered + summary.publishFailed).toLocaleString()}</TableCell>
                       <TableCell>{summary.sent.toLocaleString()}</TableCell>
                       <TableCell>{summary.pending.toLocaleString()}</TableCell>
                       <TableCell>{summary.failed.toLocaleString()}</TableCell>
@@ -344,7 +383,7 @@ export function ArticleEmailEngagementPanel() {
                       <TableCell>{summary.read.toLocaleString()}</TableCell>
                       <TableCell>{formatRate(summary.openRate)}</TableCell>
                       <TableCell>{formatRate(summary.readRate)}</TableCell>
-                      <TableCell>{formatDateTime(summary.latestReadAt || summary.latestOpenedAt || summary.latestSentAt)}</TableCell>
+                      <TableCell>{formatDateTime(summary.lastActivityAt || summary.latestReadAt || summary.latestOpenedAt || summary.latestSentAt)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           {summary.publishUndelivered > 0 && (
@@ -359,7 +398,7 @@ export function ArticleEmailEngagementPanel() {
                               ) : (
                                 <RefreshCw className="h-4 w-4" />
                               )}
-                              <span className="ml-1.5">Retry {summary.publishUndelivered}</span>
+                              <span className="ml-1.5">Resume {summary.publishUndelivered}</span>
                             </Button>
                           )}
                           <Button variant="outline" size="sm" onClick={() => void openDetail(summary.articleId)}>
@@ -402,9 +441,24 @@ export function ArticleEmailEngagementPanel() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className={campaignStatusBadgeClass(detail.summary.campaignStatus)}>
+                      {(detail.summary.campaignStatus || 'queued').replace(/_/g, ' ')}
+                    </Badge>
+                    {detail.summary.lastError && (
+                      <p className="text-xs text-red-600 max-w-[420px]">{detail.summary.lastError}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                  <DetailStat
+                    label="Intended"
+                    value={detail.summary.intendedRecipientCount ?? detail.summary.sent + detail.summary.publishUndelivered + detail.summary.publishFailed}
+                  />
                   <DetailStat label="Sent" value={detail.summary.sent} />
-                  <DetailStat label="Pending" value={detail.summary.pending} />
+                  <DetailStat label="Remaining" value={detail.summary.pending} />
                   <DetailStat label="Failed" value={detail.summary.failed} />
                   <DetailStat label="Opened" value={detail.summary.opened} />
                   <DetailStat label="Read" value={detail.summary.read} />
@@ -418,7 +472,7 @@ export function ArticleEmailEngagementPanel() {
                         {detail.summary.publishUndelivered} publish recipient(s) still need delivery attention
                       </p>
                       <p className="text-xs text-amber-700 mt-1">
-                        Retry the pending and failed publish recipients for this article.
+                        Resume the remaining publish recipients for this article.
                       </p>
                     </div>
                     <Button
@@ -431,7 +485,7 @@ export function ArticleEmailEngagementPanel() {
                       ) : (
                         <RefreshCw className="h-4 w-4" />
                       )}
-                      <span className="ml-1.5">Retry Undelivered</span>
+                      <span className="ml-1.5">Resume Remaining</span>
                     </Button>
                   </div>
                 )}

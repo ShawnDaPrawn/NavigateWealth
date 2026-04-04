@@ -30,3 +30,8 @@ Use `supabase/cron/publications-jobs.sql` to create the production cron jobs for
 - In Supabase Dashboard, open `Integrations -> Cron`
 - Confirm both jobs exist and are active
 - Confirm recent runs in `cron.job_run_details`
+- Or run `supabase/cron/verify-publications-jobs.sql` in SQL Editor
+
+## Smoke Test
+
+- Follow `supabase/cron/publications-smoke-test.md` after deploy and cron setup

@@ -5,7 +5,11 @@ import { sendEmail } from './email-service.ts';
 import { createArticleNotificationEmail } from './article-notification-template.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
+  createArticleNotificationQueueFailedCampaign,
+  getArticleNotificationCampaign,
+  getLatestArticleNotificationCampaign,
   getArticleNotificationJob,
+  listArticleNotificationCampaigns,
   processArticleNotificationJobs,
   runArticleNotificationDelivery,
   retryUndeliveredArticleNotifications,
@@ -34,6 +38,7 @@ import {
   markArticleEmailOpened,
   markArticleEmailRead,
   summarizeArticleEmailEngagement,
+  summarizeTrackedRecipientDeliveries,
 } from './publications-email-engagement-service.ts';
 
 const publications = new Hono();
@@ -144,6 +149,63 @@ function calculateReadingTime(text: string): number {
   const wordsPerMinute = 200;
   const wordCount = text.trim().split(/\s+/).length;
   return Math.ceil(wordCount / wordsPerMinute);
+}
+
+function articleTrackingDetails(article: Article | null) {
+  if (!article) return null;
+
+  return {
+    id: article.id,
+    slug: article.slug,
+    title: article.title,
+    published_at: article.published_at,
+  };
+}
+
+function buildCampaignFirstEmailEngagementSummary(
+  article: Article | null,
+  records: Awaited<ReturnType<typeof listArticleEmailTrackingRecords>>,
+  campaign: Awaited<ReturnType<typeof getArticleNotificationCampaign>> | null,
+) {
+  const baseSummary = summarizeArticleEmailEngagement(articleTrackingDetails(article), records);
+  const reshareTotals = summarizeTrackedRecipientDeliveries(records, 'reshare');
+
+  if (!campaign) {
+    return {
+      ...baseSummary,
+      campaignId: null,
+      campaignStatus: null,
+      intendedRecipientCount: baseSummary.sent + baseSummary.publishUndelivered + baseSummary.publishFailed,
+      sendingCount: 0,
+      failedRetryableCount: 0,
+      failedTerminalCount: baseSummary.publishFailed,
+      lastActivityAt: baseSummary.latestReadAt || baseSummary.latestOpenedAt || baseSummary.latestSentAt || baseSummary.publishedAt,
+      lastError: null,
+    };
+  }
+
+  const publishPending = campaign.pendingCount + campaign.sendingCount + campaign.failedRetryableCount;
+  const publishFailed = campaign.failedTerminalCount;
+  const publishSent = campaign.sentCount;
+
+  return {
+    ...baseSummary,
+    campaignId: campaign.id,
+    campaignStatus: campaign.status,
+    intendedRecipientCount: campaign.intendedRecipientCount,
+    sendingCount: campaign.sendingCount,
+    failedRetryableCount: campaign.failedRetryableCount,
+    failedTerminalCount: campaign.failedTerminalCount,
+    lastActivityAt: campaign.lastActivityAt || baseSummary.latestReadAt || baseSummary.latestOpenedAt || baseSummary.latestSentAt || baseSummary.publishedAt,
+    lastError: campaign.lastError,
+    pending: publishPending + reshareTotals.pending,
+    sent: publishSent + reshareTotals.sent,
+    failed: publishFailed + reshareTotals.failed,
+    undelivered: publishPending + reshareTotals.undelivered,
+    publishPending,
+    publishFailed,
+    publishUndelivered: publishPending,
+  };
 }
 
 // ============================================================================
@@ -746,6 +808,7 @@ publications.put('/articles/:id', async (c) => {
     }
     
     let publishNotificationJob: Awaited<ReturnType<typeof sendArticlePublishedNotifications>> | null = null;
+    let publishNotificationCampaign: Awaited<ReturnType<typeof getArticleNotificationCampaign>> | null = null;
     let publishNotificationError: string | null = null;
 
     // If status just changed to published, notify newsletter subscribers
@@ -757,9 +820,18 @@ publications.put('/articles/:id', async (c) => {
           slug: updated.slug,
           excerpt: updated.excerpt,
         });
+        publishNotificationCampaign = await getArticleNotificationCampaign(publishNotificationJob.id);
       } catch (notificationError) {
         publishNotificationError = notificationError instanceof Error ? notificationError.message : 'Notification delivery failed';
         log.error('Article publish notifications via update failed', notificationError);
+        publishNotificationCampaign = await createArticleNotificationQueueFailedCampaign({
+          id: updated.id,
+          title: updated.title,
+          slug: updated.slug,
+          excerpt: updated.excerpt,
+        }, {
+          lastError: publishNotificationError,
+        });
       }
     }
 
@@ -779,6 +851,8 @@ publications.put('/articles/:id', async (c) => {
         titleChanged: body.title !== undefined && body.title !== existing.title,
         notificationRecipientCount: publishNotificationJob?.recipientCount ?? 0,
         notificationJobId: publishNotificationJob?.id ?? null,
+        notificationCampaignId: publishNotificationCampaign?.id ?? null,
+        notificationCampaignStatus: publishNotificationCampaign?.status ?? null,
         notificationStatus: publishNotificationJob?.status ?? null,
         notificationError: publishNotificationError,
       },
@@ -788,10 +862,16 @@ publications.put('/articles/:id', async (c) => {
       success: true,
       data: updated,
       notificationJob: publishNotificationJob,
+      notificationCampaign: publishNotificationCampaign,
       notification: publishNotificationJob ? {
         jobId: publishNotificationJob.id,
+        campaignId: publishNotificationCampaign?.id ?? null,
         recipientCount: publishNotificationJob.recipientCount,
         status: publishNotificationJob.status,
+      } : publishNotificationCampaign ? {
+        campaignId: publishNotificationCampaign.id,
+        status: publishNotificationCampaign.status,
+        error: publishNotificationError,
       } : publishNotificationError ? { error: publishNotificationError } : null,
     });
   } catch (error) {
@@ -825,6 +905,7 @@ publications.post('/articles/:id/publish', async (c) => {
     await kv.set(`article:${id}`, updated);
     
     let notificationJob: Awaited<ReturnType<typeof sendArticlePublishedNotifications>> | null = null;
+    let notificationCampaign: Awaited<ReturnType<typeof getArticleNotificationCampaign>> | null = null;
     let notificationError: string | null = null;
 
     // Queue delivery separately so publish completes quickly and the send can
@@ -837,9 +918,18 @@ publications.post('/articles/:id/publish', async (c) => {
           slug: updated.slug,
           excerpt: updated.excerpt,
         });
+        notificationCampaign = await getArticleNotificationCampaign(notificationJob.id);
       } catch (deliveryError) {
         notificationError = deliveryError instanceof Error ? deliveryError.message : 'Notification delivery failed';
         log.error('Failed to deliver article published notifications', deliveryError);
+        notificationCampaign = await createArticleNotificationQueueFailedCampaign({
+          id: updated.id,
+          title: updated.title,
+          slug: updated.slug,
+          excerpt: updated.excerpt,
+        }, {
+          lastError: notificationError,
+        });
       }
     }
 
@@ -857,6 +947,8 @@ publications.post('/articles/:id/publish', async (c) => {
         notifySubscribers,
         notificationRecipientCount: notificationJob?.recipientCount ?? 0,
         notificationJobId: notificationJob?.id ?? null,
+        notificationCampaignId: notificationCampaign?.id ?? null,
+        notificationCampaignStatus: notificationCampaign?.status ?? null,
         notificationStatus: notificationJob?.status ?? null,
         notificationError,
       },
@@ -867,12 +959,18 @@ publications.post('/articles/:id/publish', async (c) => {
       data: {
         article: updated,
         notificationJob,
+        notificationCampaign,
         notificationError,
       },
       notification: notificationJob ? {
         jobId: notificationJob.id,
+        campaignId: notificationCampaign?.id ?? null,
         recipientCount: notificationJob.recipientCount,
         status: notificationJob.status,
+      } : notificationCampaign ? {
+        campaignId: notificationCampaign.id,
+        status: notificationCampaign.status,
+        error: notificationError,
       } : notificationError ? { error: notificationError } : null,
     });
   } catch (error) {
@@ -953,6 +1051,7 @@ publications.post('/articles/:id/reshare', requireAuth, requireAdmin, asyncHandl
 publications.get('/email-engagement/summary', requireAuth, requireAdmin, asyncHandler(async (c) => {
   const records = await listAllArticleEmailTrackingRecords();
   const articles = await kv.getByPrefix('article:') as Article[];
+  const campaigns = await listArticleNotificationCampaigns({ source: 'publish' });
   const articleMap = new Map(articles.map((article) => [article.id, article]));
 
   const grouped = new Map<string, typeof records>();
@@ -962,19 +1061,28 @@ publications.get('/email-engagement/summary', requireAuth, requireAdmin, asyncHa
     grouped.set(record.articleId, existing);
   }
 
-  const summaries = [...grouped.entries()]
-    .map(([articleId, articleRecords]) => {
+  const latestCampaignByArticle = new Map<string, (typeof campaigns)[number]>();
+  for (const campaign of campaigns) {
+    if (!latestCampaignByArticle.has(campaign.articleId)) {
+      latestCampaignByArticle.set(campaign.articleId, campaign);
+    }
+  }
+
+  const articleIds = new Set<string>([
+    ...grouped.keys(),
+    ...latestCampaignByArticle.keys(),
+  ]);
+
+  const summaries = [...articleIds]
+    .map((articleId) => {
       const article = articleMap.get(articleId) || null;
-      return summarizeArticleEmailEngagement(article ? {
-        id: article.id,
-        slug: article.slug,
-        title: article.title,
-        published_at: article.published_at,
-      } : null, articleRecords);
+      const articleRecords = grouped.get(articleId) || [];
+      const campaign = latestCampaignByArticle.get(articleId) || null;
+      return buildCampaignFirstEmailEngagementSummary(article, articleRecords, campaign);
     })
     .sort((a, b) => {
-      const aTime = new Date(a.latestSentAt || a.publishedAt || 0).getTime();
-      const bTime = new Date(b.latestSentAt || b.publishedAt || 0).getTime();
+      const aTime = new Date(a.lastActivityAt || a.latestSentAt || a.publishedAt || 0).getTime();
+      const bTime = new Date(b.lastActivityAt || b.latestSentAt || b.publishedAt || 0).getTime();
       return bTime - aTime;
     });
 
@@ -989,17 +1097,14 @@ publications.get('/articles/:id/email-engagement', requireAuth, requireAdmin, as
   }
 
   const records = await listArticleEmailTrackingRecords(id);
-  const summary = summarizeArticleEmailEngagement({
-    id: article.id,
-    slug: article.slug,
-    title: article.title,
-    published_at: article.published_at,
-  }, records);
+  const campaign = await getLatestArticleNotificationCampaign(id, 'publish');
+  const summary = buildCampaignFirstEmailEngagementSummary(article, records, campaign);
 
   return c.json({
     success: true,
     data: {
       summary,
+      campaign,
       recipients: records,
     },
   });
@@ -1066,6 +1171,17 @@ publications.get('/notification-jobs/:jobId', requireAuth, requireAdmin, asyncHa
   }
 
   return c.json({ success: true, data: job });
+}));
+
+publications.get('/notification-campaigns/:campaignId', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const campaignId = c.req.param('campaignId');
+  const campaign = await getArticleNotificationCampaign(campaignId);
+
+  if (!campaign) {
+    return c.json({ success: false, error: 'Notification campaign not found' }, 404);
+  }
+
+  return c.json({ success: true, data: campaign });
 }));
 
 publications.post('/notification-jobs/process', requireAuth, requireAdmin, asyncHandler(async (c) => {
@@ -1564,13 +1680,24 @@ publications.post('/cron/process-scheduled', async (c) => {
                 slug: article.slug,
                 excerpt: article.excerpt,
               });
+              const notificationCampaign = await getArticleNotificationCampaign(notificationJob.id);
               log.info(`Scheduled article notifications complete for ${article.id}`, {
                 recipientCount: notificationJob.recipientCount,
                 notificationJobId: notificationJob.id,
+                notificationCampaignId: notificationCampaign?.id ?? null,
+                notificationCampaignStatus: notificationCampaign?.status ?? null,
                 status: notificationJob.status,
               });
             } catch (notificationError) {
               log.error(`Failed to send notifications for scheduled article ${article.id}`, notificationError);
+              await createArticleNotificationQueueFailedCampaign({
+                id: article.id,
+                title: article.title,
+                slug: article.slug,
+                excerpt: article.excerpt,
+              }, {
+                lastError: notificationError instanceof Error ? notificationError.message : 'Notification delivery failed',
+              });
             }
           }
         }
@@ -1630,13 +1757,24 @@ publications.post('/process-scheduled', async (c) => {
                 slug: article.slug,
                 excerpt: article.excerpt,
               });
+              const notificationCampaign = await getArticleNotificationCampaign(notificationJob.id);
               log.info(`Scheduled article notifications complete for ${article.id}`, {
                 recipientCount: notificationJob.recipientCount,
                 notificationJobId: notificationJob.id,
+                notificationCampaignId: notificationCampaign?.id ?? null,
+                notificationCampaignStatus: notificationCampaign?.status ?? null,
                 status: notificationJob.status,
               });
             } catch (notificationError) {
               log.error(`Failed to send notifications for scheduled article ${article.id}`, notificationError);
+              await createArticleNotificationQueueFailedCampaign({
+                id: article.id,
+                title: article.title,
+                slug: article.slug,
+                excerpt: article.excerpt,
+              }, {
+                lastError: notificationError instanceof Error ? notificationError.message : 'Notification delivery failed',
+              });
             }
           } else {
             log.info(`Skipping email notifications for scheduled article ${article.id} — notify_on_publish was disabled`);
@@ -1716,72 +1854,102 @@ publications.get('/stats', async (c) => {
 
 publications.post('/initialize', async (c) => {
   try {
-    // Check if already initialized
+    const body = await c.req.json().catch(() => ({}));
+    const shouldCreateCategories = body?.create_default_categories !== false;
+    const shouldCreateTypes = body?.create_default_types !== false;
+
+    // Check current state and backfill anything missing.
     const existingCategories = await kv.getByPrefix('article_category:');
     const existingTypes = await kv.getByPrefix('article_type:');
-    
-    if (existingCategories.length > 0 || existingTypes.length > 0) {
-      return c.json({ 
-        success: false, 
-        error: 'System already initialized. Categories or types already exist.' 
-      }, 400);
+
+    const needsCategories = existingCategories.length === 0 && shouldCreateCategories;
+    const needsTypes = existingTypes.length === 0 && shouldCreateTypes;
+
+    if (!needsCategories && !needsTypes) {
+      return c.json({
+        success: true,
+        message: 'Publications system already initialized',
+        data: {
+          created: {
+            categories: 0,
+            types: 0,
+          },
+          has_categories: existingCategories.length > 0,
+          has_types: existingTypes.length > 0,
+        },
+      });
     }
-    
+
     const now = new Date().toISOString();
-    
-    // Seed Categories
-    const categories = [
-      { name: 'Market & Economic Insights', icon_key: 'TrendingUp', sort_order: 1 },
-      { name: 'Personal Finance', icon_key: 'PiggyBank', sort_order: 2 },
-      { name: 'Retirement Planning', icon_key: 'Target', sort_order: 3 },
-      { name: 'Risk & Insurance', icon_key: 'Shield', sort_order: 4 },
-      { name: 'Estate & Tax Planning', icon_key: 'FileText', sort_order: 5 },
-      { name: 'Financial Literacy', icon_key: 'GraduationCap', sort_order: 6 },
-      { name: 'Global Markets', icon_key: 'Globe', sort_order: 7 },
-      { name: "Adviser's Corner", icon_key: 'Users', sort_order: 8 },
-    ];
-    
-    for (const cat of categories) {
-      const id = generateId();
-      const category: ArticleCategory = {
-        id,
-        name: cat.name,
-        slug: generateSlug(cat.name),
-        description: `Articles related to ${cat.name}`,
-        icon_key: cat.icon_key,
-        sort_order: cat.sort_order,
-        is_active: true,
-        created_at: now,
-        updated_at: now,
-      };
-      await kv.set(`article_category:${id}`, category);
+
+    let createdCategories = 0;
+    let createdTypes = 0;
+
+    if (needsCategories) {
+      const categories = [
+        { name: 'Market & Economic Insights', icon_key: 'TrendingUp', sort_order: 1 },
+        { name: 'Personal Finance', icon_key: 'PiggyBank', sort_order: 2 },
+        { name: 'Retirement Planning', icon_key: 'Target', sort_order: 3 },
+        { name: 'Risk & Insurance', icon_key: 'Shield', sort_order: 4 },
+        { name: 'Estate & Tax Planning', icon_key: 'FileText', sort_order: 5 },
+        { name: 'Financial Literacy', icon_key: 'GraduationCap', sort_order: 6 },
+        { name: 'Global Markets', icon_key: 'Globe', sort_order: 7 },
+        { name: "Adviser's Corner", icon_key: 'Users', sort_order: 8 },
+      ];
+
+      for (const cat of categories) {
+        const id = generateId();
+        const category: ArticleCategory = {
+          id,
+          name: cat.name,
+          slug: generateSlug(cat.name),
+          description: `Articles related to ${cat.name}`,
+          icon_key: cat.icon_key,
+          sort_order: cat.sort_order,
+          is_active: true,
+          created_at: now,
+          updated_at: now,
+        };
+        await kv.set(`article_category:${id}`, category);
+        createdCategories++;
+      }
     }
-    
-    // Seed Types
-    const types = [
-      { name: 'Insights & Education', sort_order: 1 },
-      { name: 'Market Watch', sort_order: 2 },
-      { name: 'Market News', sort_order: 3 },
-    ];
-    
-    for (const typ of types) {
-      const id = generateId();
-      const type: ArticleType = {
-        id,
-        name: typ.name,
-        slug: generateSlug(typ.name),
-        description: `${typ.name} content`,
-        sort_order: typ.sort_order,
-        is_active: true,
-        created_at: now,
-        updated_at: now,
-      };
-      await kv.set(`article_type:${id}`, type);
+
+    if (needsTypes) {
+      const types = [
+        { name: 'Insights & Education', sort_order: 1 },
+        { name: 'Market Watch', sort_order: 2 },
+        { name: 'Market News', sort_order: 3 },
+      ];
+
+      for (const typ of types) {
+        const id = generateId();
+        const type: ArticleType = {
+          id,
+          name: typ.name,
+          slug: generateSlug(typ.name),
+          description: `${typ.name} content`,
+          sort_order: typ.sort_order,
+          is_active: true,
+          created_at: now,
+          updated_at: now,
+        };
+        await kv.set(`article_type:${id}`, type);
+        createdTypes++;
+      }
     }
-    
-    return c.json({ 
-      success: true, 
-      message: 'Publications system initialized with default categories and types' 
+
+    return c.json({
+      success: true,
+      message: 'Publications system initialized successfully',
+      data: {
+        created: {
+          categories: createdCategories,
+          types: createdTypes,
+        },
+        has_categories: existingCategories.length > 0 || createdCategories > 0,
+        has_types: existingTypes.length > 0 || createdTypes > 0,
+      },
     });
   } catch (error) {
     log.error('Error initializing publications', error);
@@ -1793,7 +1961,7 @@ publications.post('/initialize', async (c) => {
 publications.get('/export', async (c) => {
   try {
     const articles = await kv.getByPrefix('article:');
-    const categories = await kv.getByPrefix('category:');
+    const categories = await kv.getByPrefix('article_category:');
     const types = await kv.getByPrefix('article_type:');
     
     const exportData = {
@@ -1831,7 +1999,7 @@ publications.post('/import', async (c) => {
     // Import categories
     if (body.data.categories && Array.isArray(body.data.categories)) {
       for (const category of body.data.categories) {
-        await kv.set(`category:${category.id}`, category);
+        await kv.set(`article_category:${category.id}`, category);
         imported.categories++;
       }
     }
