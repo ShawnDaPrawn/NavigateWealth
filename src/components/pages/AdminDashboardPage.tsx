@@ -5,7 +5,6 @@ import { AdminModule } from '../admin/layout/types';
 import { AdminNavigationProvider } from '../admin/layout/AdminNavigationContext';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { useAutoContentProcessor } from '../admin/modules/publications/hooks/useAutoContentProcessor';
-import { useArticleNotificationProcessor } from '../admin/modules/publications/hooks/useArticleNotificationProcessor';
 import { useScheduledPublishProcessor } from '../admin/modules/publications/hooks/useScheduledPublishProcessor';
 import { useOverdueDigestProcessor } from '../admin/modules/tasks/hooks/useOverdueDigestProcessor';
 import { useMaintenanceCronProcessor } from '../admin/modules/client-management/hooks/useMaintenanceCronProcessor';
@@ -106,8 +105,6 @@ export function AdminDashboardPage() {
       toast.success(`${count} scheduled article${count === 1 ? '' : 's'} published automatically`);
     },
   });
-
-  useArticleNotificationProcessor();
 
   // Trigger due auto-content pipelines every 15 minutes
   useAutoContentProcessor({

@@ -312,13 +312,6 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
 
     const pollJob = async () => {
       try {
-        if (publishJob.status === 'queued' || publishJob.status === 'processing') {
-          await PublicationsAPI.Articles.processNotificationJobs({
-            jobId: publishJob.id,
-            maxJobs: 1,
-          });
-        }
-
         const latestJob = await PublicationsAPI.Articles.getNotificationJob(publishJob.id);
         if (cancelled) return;
 

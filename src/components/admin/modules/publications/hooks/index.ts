@@ -25,7 +25,6 @@ export * from './useTypeActions';
 export * from './useMarketNews';
 export * from './usePublicationsInit';
 export * from './useScheduledPublishProcessor';
-export * from './useArticleNotificationProcessor';
 export * from './useAutoContentProcessor';
 
 // Newsletter hooks

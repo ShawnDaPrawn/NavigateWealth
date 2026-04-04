@@ -163,6 +163,15 @@ function activeNotificationJobKey(
   return `${ARTICLE_NOTIFICATION_ACTIVE_PREFIX}${articleId}:${source}:${kind}`;
 }
 
+function jobItemFromTrackingRecord(record: ArticleEmailTrackingRecord): ArticleNotificationJobItem {
+  return {
+    email: record.recipientEmail,
+    firstName: record.recipientFirstName,
+    name: record.recipientName,
+    trackingToken: record.token,
+  };
+}
+
 async function getArticleNotificationJobRecord(jobId: string): Promise<ArticleNotificationJob | null> {
   if (!jobId) return null;
   return (await kv.get(notificationJobKey(jobId))) as ArticleNotificationJob | null;
@@ -254,6 +263,47 @@ async function acquireArticleNotificationJobLease(
   return latest;
 }
 
+async function syncRetryJobRecipients(
+  job: ArticleNotificationJob,
+  records: ArticleEmailTrackingRecord[],
+): Promise<ArticleNotificationJobSnapshot> {
+  const desiredItems = records.map(jobItemFromTrackingRecord);
+  const desiredByToken = new Map(desiredItems.map((item) => [item.trackingToken, item]));
+
+  const processedItems = job.items.slice(0, Math.min(job.currentIndex, job.items.length));
+  const remainingItems = job.items
+    .slice(Math.min(job.currentIndex, job.items.length))
+    .filter((item) => desiredByToken.has(item.trackingToken));
+
+  const knownTokens = new Set([
+    ...processedItems.map((item) => item.trackingToken),
+    ...remainingItems.map((item) => item.trackingToken),
+  ]);
+
+  const missingItems = desiredItems.filter((item) => !knownTokens.has(item.trackingToken));
+  const nextItems = [...processedItems, ...remainingItems, ...missingItems];
+
+  if (
+    nextItems.length === job.items.length &&
+    missingItems.length === 0 &&
+    remainingItems.length === job.items.slice(job.currentIndex).length
+  ) {
+    return hydrateArticleNotificationJob(job);
+  }
+
+  const syncedJob: ArticleNotificationJob = {
+    ...job,
+    items: nextItems,
+    recipientCount: nextItems.length,
+    currentIndex: Math.min(processedItems.length, nextItems.length),
+    updatedAt: nowIso(),
+    completedAt: null,
+  };
+
+  await persistArticleNotificationJob(syncedJob);
+  return hydrateArticleNotificationJob(syncedJob);
+}
+
 async function deliverTrackedNotificationRecord(
   article: PublishedArticle,
   record: ArticleEmailTrackingRecord,
@@ -272,16 +322,12 @@ async function deliverTrackedNotificationRecord(
         unsubscribeUrl,
       });
 
-      const delivered = await sendEmail({
-        to: record.recipientEmail,
-        subject: `New article: ${article.title}`,
+      await sendEmail(
+        record.recipientEmail,
+        `New article: ${article.title}`,
         html,
         text,
-      });
-
-      if (!delivered) {
-        throw new Error('SendGrid delivery failed');
-      }
+      );
 
       await markArticleEmailDeliverySent(record.token);
       return;
@@ -383,6 +429,9 @@ async function queueArticleNotificationJob(
   const source = options.source ?? 'publish';
   const existingActiveJob = await getActiveArticleNotificationJob(article.id, source, options.kind);
   if (existingActiveJob) {
+    if (options.kind === 'retry_undelivered') {
+      return syncRetryJobRecipients(existingActiveJob, items as ArticleEmailTrackingRecord[]);
+    }
     return hydrateArticleNotificationJob(existingActiveJob);
   }
 
@@ -589,8 +638,10 @@ export async function getArticleNotificationJob(
 export async function processArticleNotificationJobs(options?: {
   jobId?: string;
   maxJobs?: number;
+  maxBatchesPerJob?: number;
 }): Promise<ArticleNotificationProcessorResult> {
   const maxJobs = Math.max(1, Math.min(options?.maxJobs ?? 1, 5));
+  const maxBatchesPerJob = Math.max(1, Math.min(options?.maxBatchesPerJob ?? 1, 5));
   const jobsToProcess: ArticleNotificationJob[] = [];
 
   if (options?.jobId) {
@@ -602,8 +653,7 @@ export async function processArticleNotificationJobs(options?: {
     const allJobs = await kv.getByPrefix(ARTICLE_NOTIFICATION_JOB_PREFIX) as ArticleNotificationJob[];
     const queuedJobs = allJobs
       .filter((job) => job.status === 'queued' || job.status === 'processing')
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-      .slice(0, maxJobs);
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     jobsToProcess.push(...queuedJobs);
   }
@@ -611,8 +661,12 @@ export async function processArticleNotificationJobs(options?: {
   const snapshots: ArticleNotificationJobSnapshot[] = [];
   let advancedJobs = 0;
   let completedJobs = 0;
+  let inspectedJobs = 0;
 
   for (const job of jobsToProcess) {
+    if (advancedJobs >= maxJobs) break;
+    inspectedJobs++;
+
     const leasedJob = await acquireArticleNotificationJobLease(job);
     if (!leasedJob) continue;
 
@@ -631,48 +685,62 @@ export async function processArticleNotificationJobs(options?: {
       excerpt: leasedJob.articleExcerpt,
     };
 
-    const batch = leasedJob.items.slice(
-      leasedJob.currentIndex,
-      leasedJob.currentIndex + DELIVERY_BATCH_SIZE,
-    );
+    let workingJob = leasedJob;
+    let batchSteps = 0;
 
-    const batchResults = await Promise.allSettled(
-      batch.map(async (item) => {
-        const tracking = await getArticleEmailTrackingRecordByToken(item.trackingToken);
-        if (!tracking) {
-          throw new Error(`Tracking record missing for ${item.email}`);
-        }
+    while (batchSteps < maxBatchesPerJob && workingJob.currentIndex < workingJob.items.length) {
+      const batch = workingJob.items.slice(
+        workingJob.currentIndex,
+        workingJob.currentIndex + DELIVERY_BATCH_SIZE,
+      );
 
-        if (tracking.deliveryStatus === 'sent') {
-          return { email: item.email, skipped: true };
-        }
+      const batchResults = await Promise.allSettled(
+        batch.map(async (item) => {
+          const tracking = await getArticleEmailTrackingRecordByToken(item.trackingToken);
+          if (!tracking) {
+            throw new Error(`Tracking record missing for ${item.email}`);
+          }
 
-        await deliverTrackedNotificationRecord(article, tracking);
-        return { email: item.email, skipped: false };
-      }),
-    );
+          if (tracking.deliveryStatus === 'sent') {
+            return { email: item.email, skipped: true };
+          }
 
-    const errors = batchResults
-      .map((result, index) => {
-        if (result.status === 'fulfilled') return null;
-        return `${batch[index]?.email || 'unknown'}: ${normalizeSendError(result.reason)}`;
-      })
-      .filter((value): value is string => Boolean(value));
+          await deliverTrackedNotificationRecord(article, tracking);
+          return { email: item.email, skipped: false };
+        }),
+      );
 
-    const updatedJob: ArticleNotificationJob = {
-      ...leasedJob,
-      currentIndex: leasedJob.currentIndex + batch.length,
-      updatedAt: nowIso(),
-      lastError: errors[0] ?? leasedJob.lastError,
-      lockId: null,
-      lockExpiresAt: null,
-    };
+      const errors = batchResults
+        .map((result, index) => {
+          if (result.status === 'fulfilled') return null;
+          return `${batch[index]?.email || 'unknown'}: ${normalizeSendError(result.reason)}`;
+        })
+        .filter((value): value is string => Boolean(value));
 
-    await persistArticleNotificationJob(updatedJob);
+      workingJob = {
+        ...workingJob,
+        currentIndex: workingJob.currentIndex + batch.length,
+        updatedAt: nowIso(),
+        lastError: errors[0] ?? workingJob.lastError,
+      };
 
-    const snapshot = updatedJob.currentIndex >= updatedJob.items.length
-      ? await finalizeArticleNotificationJob(updatedJob)
-      : await hydrateArticleNotificationJob(updatedJob);
+      await persistArticleNotificationJob(workingJob);
+      batchSteps++;
+    }
+
+    const snapshot = workingJob.currentIndex >= workingJob.items.length
+      ? await finalizeArticleNotificationJob(workingJob)
+      : await (async () => {
+        const releasableJob: ArticleNotificationJob = {
+          ...workingJob,
+          lockId: null,
+          lockExpiresAt: null,
+          updatedAt: nowIso(),
+        };
+
+        await persistArticleNotificationJob(releasableJob);
+        return hydrateArticleNotificationJob(releasableJob);
+      })();
 
     snapshots.push(snapshot);
     advancedJobs++;
@@ -687,6 +755,7 @@ export async function processArticleNotificationJobs(options?: {
       source: snapshot.source,
       kind: snapshot.kind,
       status: snapshot.status,
+      batchSteps,
       processedCount: snapshot.processedCount,
       pendingCount: snapshot.pendingCount,
       sentCount: snapshot.sentCount,
@@ -695,7 +764,7 @@ export async function processArticleNotificationJobs(options?: {
   }
 
   return {
-    processedJobs: jobsToProcess.length,
+    processedJobs: inspectedJobs,
     advancedJobs,
     completedJobs,
     jobs: snapshots,

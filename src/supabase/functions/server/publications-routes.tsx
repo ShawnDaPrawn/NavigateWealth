@@ -11,6 +11,7 @@ import {
   retryUndeliveredArticleNotifications,
   sendArticlePublishedNotifications,
 } from './publications-notification-service.ts';
+import { startArticleNotificationScheduler } from './publications-notification-scheduler.ts';
 import {
   CreateCategorySchema,
   UpdateCategorySchema,
@@ -41,6 +42,10 @@ const log = createModuleLogger('publications');
 // Root handlers
 publications.get('/', (c) => c.json({ service: 'publications', status: 'active' }));
 publications.get('', (c) => c.json({ service: 'publications', status: 'active' }));
+
+// Start the backend-owned notification scheduler on first module load.
+// This keeps queued article email delivery moving without relying on the admin UI.
+startArticleNotificationScheduler();
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () => createClient(
@@ -1066,10 +1071,47 @@ publications.post('/notification-jobs/process', requireAuth, requireAdmin, async
   const body = await c.req.json().catch(() => ({}));
   const jobId = typeof body.jobId === 'string' && body.jobId.trim() ? body.jobId.trim() : undefined;
   const maxJobs = typeof body.maxJobs === 'number' ? body.maxJobs : undefined;
+  const maxBatchesPerJob = typeof body.maxBatchesPerJob === 'number' ? body.maxBatchesPerJob : undefined;
 
-  const result = await processArticleNotificationJobs({ jobId, maxJobs });
+  const result = await processArticleNotificationJobs({ jobId, maxJobs, maxBatchesPerJob });
   return c.json({ success: true, data: result });
 }));
+
+publications.post('/cron/process-notification-jobs', async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization') || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
+
+    if (
+      (!serviceRoleKey || token !== serviceRoleKey) &&
+      (!superAdminPw || token !== superAdminPw)
+    ) {
+      return c.json({ error: 'Unauthorized - cron auth required' }, 401);
+    }
+
+    const body = await c.req.json().catch(() => ({}));
+    const maxJobs = typeof body.maxJobs === 'number' ? body.maxJobs : undefined;
+    const maxBatchesPerJob = typeof body.maxBatchesPerJob === 'number' ? body.maxBatchesPerJob : undefined;
+    const result = await processArticleNotificationJobs({ maxJobs, maxBatchesPerJob });
+
+    log.info('CRON: Processed article notification jobs', {
+      processedJobs: result.processedJobs,
+      advancedJobs: result.advancedJobs,
+      completedJobs: result.completedJobs,
+    });
+
+    return c.json({
+      success: true,
+      data: result,
+      message: `Processed ${result.advancedJobs} article notification job batch(es)`,
+    });
+  } catch (error) {
+    log.error('CRON: Error processing article notification jobs', error);
+    return c.json({ success: false, error: 'Failed to process article notification jobs' }, 500);
+  }
+});
 
 publications.post('/articles/:id/archive', async (c) => {
   try {
@@ -1535,9 +1577,18 @@ publications.post('/cron/process-scheduled', async (c) => {
     }
 
     log.info(`CRON: Processed ${processedCount} scheduled article(s)`, { published });
+    const notificationResult = await processArticleNotificationJobs({
+      maxJobs: 5,
+      maxBatchesPerJob: 3,
+    });
+
     return c.json({
       success: true,
-      data: { processed: processedCount, published },
+      data: {
+        processed: processedCount,
+        published,
+        notificationJobs: notificationResult,
+      },
       message: `Processed ${processedCount} scheduled articles`,
     });
   } catch (error) {
