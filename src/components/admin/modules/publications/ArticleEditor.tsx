@@ -383,6 +383,9 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
           if (publishResult.notificationJob) {
             setSuccessMessage('Article published. Newsletter delivery has been queued.');
             setPublishJob(publishResult.notificationJob);
+          } else if (publishResult.notificationError) {
+            setSuccessMessage('Article published, but newsletter delivery could not be queued.');
+            setError(publishResult.notificationError);
           } else {
             setSuccessMessage('Article created and published successfully');
             closePublishDialog(true);
@@ -400,6 +403,9 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
         if (publishResult.notificationJob) {
           setSuccessMessage('Article published. Newsletter delivery has been queued.');
           setPublishJob(publishResult.notificationJob);
+        } else if (publishResult.notificationError) {
+          setSuccessMessage('Article published, but newsletter delivery could not be queued.');
+          setError(publishResult.notificationError);
         } else {
           setSuccessMessage('Article published successfully');
           closePublishDialog(true);

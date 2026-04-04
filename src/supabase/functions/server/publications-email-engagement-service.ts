@@ -7,6 +7,7 @@ const ARTICLE_EMAIL_TRACKING_PREFIX = 'article_email_tracking:';
 const ARTICLE_EMAIL_TOKEN_PREFIX = 'article_email_token:';
 const ARTICLE_EMAIL_PUBLISH_RECIPIENT_PREFIX = 'article_email_publish_recipient:';
 const WEBSITE_BASE_URL = 'https://navigatewealth.co';
+const TRACKING_RECORD_PERSIST_BATCH_SIZE = 25;
 
 export type ArticleEmailTrackingSource = 'publish' | 'reshare';
 export type ArticleEmailDeliveryStatus = 'pending' | 'sent' | 'failed';
@@ -105,22 +106,25 @@ async function persistTrackingRecord(record: ArticleEmailTrackingRecord): Promis
 async function persistTrackingRecords(records: ArticleEmailTrackingRecord[]): Promise<void> {
   if (records.length === 0) return;
 
-  const keys: string[] = [];
-  const values: ArticleEmailTrackingRecord[] = [];
+  for (let index = 0; index < records.length; index += TRACKING_RECORD_PERSIST_BATCH_SIZE) {
+    const batch = records.slice(index, index + TRACKING_RECORD_PERSIST_BATCH_SIZE);
+    const keys: string[] = [];
+    const values: ArticleEmailTrackingRecord[] = [];
 
-  for (const record of records) {
-    keys.push(articleTrackingKey(record.articleId, record.token));
-    values.push(record);
-    keys.push(tokenTrackingKey(record.token));
-    values.push(record);
-
-    if (record.source === 'publish') {
-      keys.push(publishRecipientTrackingKey(record.articleId, record.recipientEmail));
+    for (const record of batch) {
+      keys.push(articleTrackingKey(record.articleId, record.token));
       values.push(record);
-    }
-  }
+      keys.push(tokenTrackingKey(record.token));
+      values.push(record);
 
-  await kv.mset(keys, values);
+      if (record.source === 'publish') {
+        keys.push(publishRecipientTrackingKey(record.articleId, record.recipientEmail));
+        values.push(record);
+      }
+    }
+
+    await kv.mset(keys, values);
+  }
 }
 
 function toIsoNow(): string {

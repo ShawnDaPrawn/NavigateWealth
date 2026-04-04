@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
@@ -36,6 +36,8 @@ import type {
   ArticleEmailEngagementRecipient,
   ArticleEmailEngagementSummary,
 } from '../types';
+
+const EMAIL_ENGAGEMENT_CHANGED_EVENT = 'publications:email-engagement-changed';
 
 function asCount(value: number | null | undefined): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
@@ -114,7 +116,7 @@ export function ArticleEmailEngagementPanel() {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [retryingArticleId, setRetryingArticleId] = useState<string | null>(null);
 
-  const loadSummary = async () => {
+  const loadSummary = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -126,13 +128,13 @@ export function ArticleEmailEngagementPanel() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadSummary();
-  }, []);
+  }, [loadSummary]);
 
-  const openDetail = async (articleId: string) => {
+  const openDetail = useCallback(async (articleId: string) => {
     setSelectedArticleId(articleId);
     setIsDetailLoading(true);
     setDetail(null);
@@ -145,7 +147,51 @@ export function ArticleEmailEngagementPanel() {
     } finally {
       setIsDetailLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleRefresh = () => {
+      if (refreshTimeout) return;
+      refreshTimeout = setTimeout(() => {
+        refreshTimeout = null;
+        void loadSummary();
+      }, 300);
+    };
+
+    const handleWindowFocus = () => {
+      scheduleRefresh();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        scheduleRefresh();
+      }
+    };
+
+    const handleEmailEngagementChanged = (event: Event) => {
+      const articleId = (event as CustomEvent<{ articleId?: string }>).detail?.articleId;
+      scheduleRefresh();
+
+      if (selectedArticleId && articleId === selectedArticleId) {
+        void openDetail(selectedArticleId);
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener(EMAIL_ENGAGEMENT_CHANGED_EVENT, handleEmailEngagementChanged);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener(EMAIL_ENGAGEMENT_CHANGED_EVENT, handleEmailEngagementChanged);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadSummary, openDetail, selectedArticleId]);
 
   const retryUndelivered = async (articleId: string) => {
     setRetryingArticleId(articleId);

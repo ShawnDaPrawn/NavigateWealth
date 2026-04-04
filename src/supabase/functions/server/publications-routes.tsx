@@ -867,6 +867,7 @@ publications.post('/articles/:id/publish', async (c) => {
       data: {
         article: updated,
         notificationJob,
+        notificationError,
       },
       notification: notificationJob ? {
         jobId: notificationJob.id,

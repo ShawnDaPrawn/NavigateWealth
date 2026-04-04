@@ -65,6 +65,22 @@ const headers = {
   'Content-Type': 'application/json',
 };
 
+const EMAIL_ENGAGEMENT_CHANGED_EVENT = 'publications:email-engagement-changed';
+
+function notifyEmailEngagementChanged(
+  articleId: string,
+  reason: 'published' | 'retry_queued' | 'notification_job_updated',
+): void {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(new CustomEvent(EMAIL_ENGAGEMENT_CHANGED_EVENT, {
+    detail: {
+      articleId,
+      reason,
+    },
+  }));
+}
+
 /**
  * Get auth headers with user session token for authenticated endpoints.
  * Falls back to anon key if no session is available (§5.1 — client-side auth is UX only).
@@ -274,7 +290,9 @@ export const ArticlesAPI = {
       headers,
       body: JSON.stringify({ notify_subscribers: options?.notify_subscribers ?? true }),
     });
-    return handleResponse<ArticlePublishResponse>(response);
+    const result = await handleResponse<ArticlePublishResponse>(response);
+    notifyEmailEngagementChanged(result.article.id, 'published');
+    return result;
   },
 
   /**
@@ -448,7 +466,9 @@ export const ArticlesAPI = {
         source: input?.source ?? 'publish',
       }),
     });
-    return handleResponse<ArticleNotificationJob>(response);
+    const result = await handleResponse<ArticleNotificationJob>(response);
+    notifyEmailEngagementChanged(result.articleId, 'retry_queued');
+    return result;
   },
 
   async getNotificationJob(jobId: string): Promise<ArticleNotificationJob> {
@@ -456,7 +476,9 @@ export const ArticlesAPI = {
     const response = await fetch(`${BASE_URL}/notification-jobs/${jobId}`, {
       headers: authHeaders,
     });
-    return handleResponse<ArticleNotificationJob>(response);
+    const result = await handleResponse<ArticleNotificationJob>(response);
+    notifyEmailEngagementChanged(result.articleId, 'notification_job_updated');
+    return result;
   },
 
   async processNotificationJobs(input?: {

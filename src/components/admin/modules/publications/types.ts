@@ -1093,6 +1093,7 @@ export interface ArticleNotificationProcessorResult {
 export interface ArticlePublishResponse {
   article: Article;
   notificationJob: ArticleNotificationJob | null;
+  notificationError?: string | null;
 }
 
 export interface ArticleEmailEngagementSummary {
