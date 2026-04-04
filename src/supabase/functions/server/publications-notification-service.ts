@@ -683,10 +683,10 @@ async function queueArticleNotificationJob(
 async function finalizeArticleNotificationJob(
   job: ArticleNotificationJob,
 ): Promise<ArticleNotificationJobSnapshot> {
-  const snapshot = await hydrateArticleNotificationJob(job);
+  const initialSnapshot = await hydrateArticleNotificationJob(job);
   const completedJob: ArticleNotificationJob = {
     ...job,
-    status: snapshot.failedTerminalCount > 0 ? 'completed_with_failures' : 'completed',
+    status: initialSnapshot.failedTerminalCount > 0 ? 'completed_with_failures' : 'completed',
     completedAt: nowIso(),
     updatedAt: nowIso(),
     lockId: null,
