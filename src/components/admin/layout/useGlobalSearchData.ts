@@ -58,25 +58,29 @@ function transformApiUserToSearchable(user: ApiUser): SearchableAccount {
     : user.suspended
       ? 'suspended'
       : accountStatus;
+  const statusLabel = String(displayStatus ?? 'active');
 
   return {
     id: user.id,
     firstName,
     lastName,
-    email: user.email,
+    email: user.email ?? '',
     type: 'client',
-    status: displayStatus,
-    meta: displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1),
+    status: statusLabel,
+    meta: statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1),
   };
 }
 
 function includesSearch(account: SearchableAccount, normalizedSearch: string): boolean {
   if (!normalizedSearch) return true;
+  const fn = (account.firstName ?? '').toLowerCase();
+  const ln = (account.lastName ?? '').toLowerCase();
+  const em = (account.email ?? '').toLowerCase();
   return (
-    account.firstName.toLowerCase().includes(normalizedSearch) ||
-    account.lastName.toLowerCase().includes(normalizedSearch) ||
-    `${account.firstName} ${account.lastName}`.toLowerCase().includes(normalizedSearch) ||
-    account.email.toLowerCase().includes(normalizedSearch)
+    fn.includes(normalizedSearch) ||
+    ln.includes(normalizedSearch) ||
+    `${fn} ${ln}`.includes(normalizedSearch) ||
+    em.includes(normalizedSearch)
   );
 }
 
@@ -114,15 +118,18 @@ export function useGlobalSearchData(enabled: boolean, search: string) {
     queryKey: personnelKeys.lists(),
     queryFn: async () => {
       const list = await personnelApi.fetch();
-      return list.map((p): SearchableAccount => ({
-        id: p.id,
-        firstName: p.firstName,
-        lastName: p.lastName,
-        email: p.email,
-        type: 'personnel',
-        status: p.status,
-        meta: (p.role || 'staff').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-      }));
+      return list.map((p): SearchableAccount => {
+        const personnelStatus = p.status ?? 'active';
+        return {
+          id: p.id,
+          firstName: p.firstName ?? '',
+          lastName: p.lastName ?? '',
+          email: p.email ?? '',
+          type: 'personnel',
+          status: personnelStatus,
+          meta: (p.role || 'staff').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        };
+      });
     },
     staleTime: 5 * 60 * 1000,
     enabled: shouldFetch,

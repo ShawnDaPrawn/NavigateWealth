@@ -32,9 +32,10 @@ const STATUS_BADGE_CONFIG: Record<string, { label: string; className: string }> 
   pending: { label: 'Pending', className: 'bg-blue-100 text-blue-700 border-blue-200' },
 };
 
-function getStatusBadge(status: string) {
-  return STATUS_BADGE_CONFIG[status] ?? {
-    label: status.charAt(0).toUpperCase() + status.slice(1),
+function getStatusBadge(status: string | undefined | null) {
+  const key = (status ?? 'unknown').trim().toLowerCase() || 'unknown';
+  return STATUS_BADGE_CONFIG[key] ?? {
+    label: key.charAt(0).toUpperCase() + key.slice(1),
     className: 'bg-gray-100 text-gray-700 border-gray-200',
   };
 }
