@@ -47,6 +47,10 @@ import {
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 
+/** Matches main public layout — logo through “Get Started” (see Navigation.tsx) */
+const SITE_SHELL =
+  'w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12';
+
 // ═══════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════
@@ -305,34 +309,36 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
   // ═══════════════════════════════════════════════════════════════════
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="max-w-lg w-full shadow-lg">
-          <CardContent className="pt-8 pb-6 px-6 text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 sm:p-6">
+        <div className={cn(SITE_SHELL)}>
+          <Card className="max-w-lg mx-auto w-full shadow-lg">
+            <CardContent className="pt-8 pb-6 px-6 text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle2 className="h-8 w-8 text-green-600" />
+                </div>
               </div>
-            </div>
-            <h2 className="text-xl font-semibold text-gray-900">Will Draft Saved</h2>
-            <p className="text-sm text-gray-600 max-w-sm mx-auto">
-              Your Last Will & Testament draft has been securely saved. A Navigate Wealth
-              adviser will review the draft and contact you to discuss the next steps,
-              including any legal attestation requirements.
-            </p>
-            <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg text-left">
-              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-              <p className="text-xs text-blue-800">
-                <strong>Important:</strong> This is a draft only. It is not legally binding until
-                signed in the presence of two competent witnesses, as required by the
-                Wills Act 7 of 1953 (South Africa).
+              <h2 className="text-xl font-semibold text-gray-900">Will Draft Saved</h2>
+              <p className="text-sm text-gray-600 max-w-sm mx-auto">
+                Your Last Will & Testament draft has been securely saved. A Navigate Wealth
+                adviser will review the draft and contact you to discuss the next steps,
+                including any legal attestation requirements.
               </p>
-            </div>
-            <Separator />
-            <Button onClick={onComplete} className="w-full bg-primary hover:bg-primary/90 text-white">
-              Return to Estate Planning
-            </Button>
-          </CardContent>
-        </Card>
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-primary/5 border border-primary/20 rounded-lg text-left">
+                <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <p className="text-xs text-gray-800">
+                  <strong>Important:</strong> This is a draft only. It is not legally binding until
+                  signed in the presence of two competent witnesses, as required by the
+                  Wills Act 7 of 1953 (South Africa).
+                </p>
+              </div>
+              <Separator />
+              <Button onClick={onComplete} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                Return to Estate Planning
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -411,21 +417,24 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
     <div className="min-h-screen bg-gray-50">
       {/* ── Top Bar ──────────────────────────────────────────────── */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+        <div className={cn(SITE_SHELL, 'py-3.5 sm:py-4 flex items-center justify-between gap-4')}>
           <button
             onClick={currentStep === 1 ? onBack : goBack}
-            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors text-left min-w-0"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 shrink-0" />
             {currentStep === 1 ? 'Back to Estate Planning' : 'Previous Step'}
           </button>
-          <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border-indigo-200">
+          <Badge
+            variant="outline"
+            className="text-xs px-2.5 py-0.5 shrink-0 bg-primary/10 text-primary border-primary/25"
+          >
             Draft Will
           </Badge>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <div className={cn(SITE_SHELL, 'py-8 sm:py-10 space-y-7 sm:space-y-8')}>
         {/* ── Progress Stepper ──────────────────────────────────── */}
         <div className="hidden sm:block">
           <div className="flex items-center justify-between">
@@ -440,7 +449,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                       className={cn(
                         'flex items-center justify-center h-9 w-9 rounded-full border-2 transition-colors',
                         isActive
-                          ? 'border-indigo-600 bg-indigo-600 text-white'
+                          ? 'border-primary bg-primary text-primary-foreground'
                           : isDone
                           ? 'border-green-500 bg-green-500 text-white'
                           : 'border-gray-300 bg-white text-gray-400'
@@ -451,7 +460,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                     <span
                       className={cn(
                         'text-[10px] font-medium text-center leading-tight max-w-[72px]',
-                        isActive ? 'text-indigo-700' : isDone ? 'text-green-700' : 'text-gray-400'
+                        isActive ? 'text-primary' : isDone ? 'text-green-700' : 'text-gray-400'
                       )}
                     >
                       {step.label}
@@ -731,9 +740,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
             {/* ═══ STEP 3: Beneficiaries ═══ */}
             {currentStep === 3 && (
               <div className="space-y-5">
-                <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg">
-                  <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                  <p className="text-xs text-blue-800">
+                <div className="flex items-start gap-2 px-3 py-2.5 bg-primary/5 border border-primary/20 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <p className="text-xs text-gray-800">
                     Specify who should inherit your estate and in what proportion. Share percentages
                     for primary beneficiaries should total 100%.
                   </p>
@@ -956,7 +965,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                       }}
                       className={cn(
                         'min-w-[80px]',
-                        hasMinorChildren === true && 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                        hasMinorChildren === true && 'bg-primary hover:bg-primary/90 text-primary-foreground'
                       )}
                     >
                       Yes
@@ -971,7 +980,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                       }}
                       className={cn(
                         'min-w-[80px]',
-                        hasMinorChildren === false && 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                        hasMinorChildren === false && 'bg-primary hover:bg-primary/90 text-primary-foreground'
                       )}
                     >
                       No
@@ -1127,9 +1136,9 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
             {/* ═══ STEP 5: Special Bequests ═══ */}
             {currentStep === 5 && (
               <div className="space-y-5">
-                <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg">
-                  <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                  <p className="text-xs text-blue-800">
+                <div className="flex items-start gap-2 px-3 py-2.5 bg-primary/5 border border-primary/20 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <p className="text-xs text-gray-800">
                     Special bequests are specific items or amounts you wish to leave to
                     specific people (e.g., a family heirloom, a cash gift, property).
                     These are distributed before the residual estate.
@@ -1260,7 +1269,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                 {/* Personal details summary */}
                 <div className="space-y-2">
                   <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                    <User className="h-4 w-4 text-indigo-500" />
+                    <User className="h-4 w-4 text-primary" />
                     Personal Details
                   </h3>
                   <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
@@ -1283,7 +1292,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                 {/* Executor summary */}
                 <div className="space-y-2">
                   <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-indigo-500" />
+                    <Shield className="h-4 w-4 text-primary" />
                     Executor
                   </h3>
                   <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
@@ -1302,7 +1311,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                 {/* Beneficiaries summary */}
                 <div className="space-y-2">
                   <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                    <Users className="h-4 w-4 text-indigo-500" />
+                    <Users className="h-4 w-4 text-primary" />
                     Beneficiaries
                   </h3>
                   <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
@@ -1318,7 +1327,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                           </span>
                           <Badge
                             variant="outline"
-                            className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200"
+                            className="text-xs bg-primary/10 text-primary border-primary/25"
                           >
                             {b.sharePercentage}%
                           </Badge>
@@ -1343,7 +1352,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                 {hasMinorChildren && guardians.length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                      <Heart className="h-4 w-4 text-indigo-500" />
+                      <Heart className="h-4 w-4 text-primary" />
                       Guardianship
                     </h3>
                     <div className="bg-gray-50 rounded-lg p-3 space-y-1">
@@ -1363,7 +1372,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                 {specialBequests.length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                      <Gift className="h-4 w-4 text-indigo-500" />
+                      <Gift className="h-4 w-4 text-primary" />
                       Special Bequests
                     </h3>
                     <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
@@ -1383,7 +1392,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                 {(residualInstructions || funeralWishes) && (
                   <div className="space-y-2">
                     <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-indigo-500" />
+                      <FileText className="h-4 w-4 text-primary" />
                       Additional Instructions
                     </h3>
                     <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
@@ -1442,7 +1451,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
               type="button"
               onClick={goNext}
               disabled={!stepValid}
-              className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               Next
               <ArrowRight className="h-4 w-4" />
@@ -1452,7 +1461,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white min-w-[160px]"
+              className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground min-w-[160px]"
             >
               {isSubmitting ? (
                 <div className="contents">
