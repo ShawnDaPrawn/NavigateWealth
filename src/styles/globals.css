@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @custom-variant dark (&:is(.dark *));
 
+/* Schedule consultation flow: modal open = only top bars + blank canvas (hide site footer) */
+body.schedule-consultation-modal-open footer.bg-black {
+  display: none !important;
+}
+
 :root {
   --font-size: 14px;
   --background: #f8f9fa;

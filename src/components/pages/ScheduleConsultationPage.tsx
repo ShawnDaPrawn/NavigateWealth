@@ -4,10 +4,12 @@ import { SEO } from '../seo/SEO';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { trackConsultationFlowStarted } from '../../utils/analytics';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Calendar, Mail, Phone } from 'lucide-react';
 
 const CANONICAL = 'https://navigatewealth.co/schedule-consultation';
+
+/** Matches `Navigation` inner container — logo through Get Started alignment */
+const SITE_PAGE_WRAP = 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12';
 
 /**
  * Dedicated entry for “schedule a consultation” (email invites, campaigns).
@@ -38,6 +40,15 @@ export function ScheduleConsultationPage() {
     });
   }, [location.pathname, location.search]);
 
+  useEffect(() => {
+    if (modalOpen) {
+      document.body.classList.add('schedule-consultation-modal-open');
+    } else {
+      document.body.classList.remove('schedule-consultation-modal-open');
+    }
+    return () => document.body.classList.remove('schedule-consultation-modal-open');
+  }, [modalOpen]);
+
   const contactHref = `/contact${location.search || ''}`;
 
   const handleModalOpenChange = (open: boolean) => {
@@ -46,6 +57,8 @@ export function ScheduleConsultationPage() {
       setDismissed(true);
     }
   };
+
+  const showFallback = dismissed;
 
   return (
     <div className="contents">
@@ -56,82 +69,101 @@ export function ScheduleConsultationPage() {
         robotsContent="noindex, follow"
       />
 
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-        <header className="border-b border-gray-100 bg-white/80 backdrop-blur-sm">
-          <div className="max-w-screen-lg mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-primary">Consultation</p>
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900">
-                Schedule your free consultation
-              </h1>
-              <p className="text-sm text-gray-500 mt-0.5">
-                Choose a time that works for you — no obligation.
-              </p>
-            </div>
-            <Button variant="outline" size="sm" className="shrink-0 self-start sm:self-center" asChild>
-              <Link to={contactHref}>Full contact page</Link>
-            </Button>
-          </div>
-        </header>
-
+      <div
+        className={
+          showFallback
+            ? 'min-h-screen bg-gradient-to-b from-gray-50 to-white'
+            : 'min-h-screen bg-white'
+        }
+      >
         <ConsultationModal open={modalOpen} onOpenChange={handleModalOpenChange} />
 
-        {dismissed && (
-          <section
-            className="max-w-screen-lg mx-auto px-4 sm:px-6 py-10 sm:py-14"
-            aria-labelledby="consultation-fallback-heading"
-          >
-            <Card className="border-gray-200 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle id="consultation-fallback-heading" className="text-xl">
+        {/* While booking: empty canvas so the dimmed area stays clean (nav remains from MainLayout) */}
+        {!showFallback && <div className="min-h-[calc(100dvh-5rem)] w-full bg-white" aria-hidden="true" />}
+
+        {showFallback && (
+          <div className={`${SITE_PAGE_WRAP} py-10 sm:py-14 lg:py-16`}>
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between lg:gap-10 mb-8 lg:mb-10">
+              <div className="max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary mb-2">
+                  Consultation
+                </p>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight">
+                  Schedule your free consultation
+                </h1>
+                <p className="text-gray-600 mt-2 text-base sm:text-lg leading-relaxed">
+                  Choose a time that works for you — no obligation.
+                </p>
+              </div>
+              <Button variant="outline" size="default" className="shrink-0 w-full sm:w-auto" asChild>
+                <Link to={contactHref}>Full contact page</Link>
+              </Button>
+            </div>
+
+            <section
+              className="rounded-3xl border border-gray-200 bg-white shadow-xl overflow-hidden"
+              aria-labelledby="consultation-fallback-heading"
+            >
+              <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 px-6 sm:px-8 py-6 sm:py-8 border-b border-gray-100">
+                <h2 id="consultation-fallback-heading" className="text-xl sm:text-2xl font-bold text-gray-900">
                   Other ways to reach us
-                </CardTitle>
-                <p className="text-sm text-gray-600 font-normal pt-1">
+                </h2>
+                <p className="text-sm sm:text-base text-gray-600 mt-2 max-w-3xl leading-relaxed">
                   Prefer not to book online? Reach our team directly or send a message from the full
                   contact page — your campaign parameters stay in the link.
                 </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
+              </div>
+
+              <div className="px-6 sm:px-8 py-8 space-y-8">
                 <ul className="grid sm:grid-cols-2 gap-4 text-sm">
-                  <li className="flex gap-3 rounded-xl border border-gray-100 bg-gray-50/80 p-4">
-                    <Phone className="h-5 w-5 text-primary shrink-0 mt-0.5" aria-hidden />
+                  <li className="flex gap-4 rounded-2xl border border-gray-100 bg-gray-50/90 p-5 sm:p-6">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                      <Phone className="h-5 w-5" aria-hidden />
+                    </div>
                     <div>
-                      <p className="font-medium text-gray-900">Phone</p>
-                      <a href="tel:+27126672505" className="text-primary hover:underline">
+                      <p className="font-semibold text-gray-900">Phone</p>
+                      <a href="tel:+27126672505" className="text-primary font-medium hover:underline mt-0.5 inline-block">
                         +27 (0)12 667 2505
                       </a>
                     </div>
                   </li>
-                  <li className="flex gap-3 rounded-xl border border-gray-100 bg-gray-50/80 p-4">
-                    <Mail className="h-5 w-5 text-primary shrink-0 mt-0.5" aria-hidden />
+                  <li className="flex gap-4 rounded-2xl border border-gray-100 bg-gray-50/90 p-5 sm:p-6">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                      <Mail className="h-5 w-5" aria-hidden />
+                    </div>
                     <div>
-                      <p className="font-medium text-gray-900">Email</p>
-                      <a href="mailto:info@navigatewealth.co" className="text-primary hover:underline">
+                      <p className="font-semibold text-gray-900">Email</p>
+                      <a
+                        href="mailto:info@navigatewealth.co"
+                        className="text-primary font-medium hover:underline mt-0.5 inline-block break-all"
+                      >
                         info@navigatewealth.co
                       </a>
                     </div>
                   </li>
                 </ul>
-                <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-                  <Button asChild className="bg-primary">
+
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center pt-2 border-t border-gray-100">
+                  <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto">
                     <Link to={contactHref}>Open full contact form</Link>
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
+                    size="lg"
                     onClick={() => {
                       setDismissed(false);
                       setModalOpen(true);
                     }}
-                    className="gap-2"
+                    className="gap-2 w-full sm:w-auto"
                   >
-                    <Calendar className="h-4 w-4" aria-hidden />
+                    <Calendar className="h-4 w-4 shrink-0" aria-hidden />
                     Continue scheduling online
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </section>
+              </div>
+            </section>
+          </div>
         )}
       </div>
     </div>
