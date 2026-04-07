@@ -20,7 +20,11 @@ import {
 import {
   Activity,
   AlertCircle,
+  AlertTriangle,
   BookOpenCheck,
+  CheckCircle,
+  Eye,
+  EyeOff,
   Loader2,
   Mail,
   MailOpen,
@@ -35,6 +39,7 @@ import type {
   ArticleEmailEngagementDetail,
   ArticleEmailEngagementRecipient,
   ArticleEmailEngagementSummary,
+  ArticleNotificationProcessorState,
 } from '../types';
 
 const EMAIL_ENGAGEMENT_CHANGED_EVENT = 'publications:email-engagement-changed';
@@ -46,6 +51,8 @@ function asCount(value: number | null | undefined): number {
 function normalizeSummary(summary: ArticleEmailEngagementSummary): ArticleEmailEngagementSummary {
   return {
     ...summary,
+    isDeleted: summary.isDeleted === true,
+    deletedAt: summary.deletedAt ?? null,
     campaignId: summary.campaignId ?? null,
     campaignStatus: summary.campaignStatus ?? null,
     intendedRecipientCount: asCount(summary.intendedRecipientCount),
@@ -98,6 +105,18 @@ function formatRate(value: number): string {
   return `${value.toFixed(1)}%`;
 }
 
+function formatMinutesAgo(value: string | null): string {
+  if (!value) return '-';
+
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return '-';
+
+  const minutes = Math.max(0, (Date.now() - timestamp) / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${Math.round(minutes)} min ago`;
+  return `${(minutes / 60).toFixed(1)} h ago`;
+}
+
 function statusBadgeVariant(status: ArticleEmailDeliveryStatus): string {
   switch (status) {
     case 'sent':
@@ -142,6 +161,8 @@ export function ArticleEmailEngagementPanel() {
   const [summaries, setSummaries] = useState<ArticleEmailEngagementSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processorState, setProcessorState] = useState<ArticleNotificationProcessorState | null>(null);
+  const [includeDeleted, setIncludeDeleted] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ArticleEmailEngagementDetail | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
@@ -152,17 +173,36 @@ export function ArticleEmailEngagementPanel() {
     setError(null);
 
     try {
-      const result = await PublicationsAPI.Articles.getEmailEngagementSummary();
-      setSummaries(result.map(normalizeSummary));
+      const [summaryResult, processorResult] = await Promise.allSettled([
+        PublicationsAPI.Articles.getEmailEngagementSummary({ includeDeleted }),
+        PublicationsAPI.Articles.getNotificationProcessorStatus(),
+      ]);
+
+      if (summaryResult.status === 'rejected') {
+        throw summaryResult.reason;
+      }
+
+      setSummaries(summaryResult.value.map(normalizeSummary));
+      if (processorResult.status === 'fulfilled') {
+        setProcessorState(processorResult.value);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load article email engagement');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [includeDeleted]);
 
   useEffect(() => {
     void loadSummary();
+  }, [loadSummary]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      void loadSummary();
+    }, 30_000);
+
+    return () => clearInterval(intervalId);
   }, [loadSummary]);
 
   const openDetail = useCallback(async (articleId: string) => {
@@ -232,7 +272,9 @@ export function ArticleEmailEngagementPanel() {
         source: 'publish',
       });
 
-      if (result.recipientCount === 0) {
+      if (result.kind === 'publish' && result.pendingCount > 0) {
+        toast.success(`Resumed publish delivery for ${result.pendingCount} remaining recipient(s)`);
+      } else if (result.recipientCount === 0) {
         toast.info('No undelivered publish recipients remain for this article');
       } else {
         toast.success(`Queued retry for ${result.recipientCount} undelivered publish recipient(s)`);
@@ -310,6 +352,72 @@ export function ArticleEmailEngagementPanel() {
 
         <Card>
           <CardHeader className="pb-3">
+            <CardTitle className="text-base">Delivery Processor Health</CardTitle>
+            <CardDescription>
+              Cron is the authoritative driver for article delivery. The browser can help, but delivery should continue without an admin session.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              <MetricCard
+                label="Heartbeat"
+                value={processorState?.lastHeartbeatAt ? formatMinutesAgo(processorState.lastHeartbeatAt) : '-'}
+                icon={Activity}
+                accent={processorState?.stuckJobCount ? 'amber' : 'green'}
+                sub={processorState?.mode ? `Last mode: ${processorState.mode}` : 'No processor heartbeat yet'}
+              />
+              <MetricCard
+                label="Active Jobs"
+                value={(processorState?.activeJobCount ?? 0).toLocaleString()}
+                icon={RefreshCw}
+                accent="blue"
+                sub={`${processorState?.queuedJobCount ?? 0} queued / ${processorState?.processingJobCount ?? 0} processing`}
+              />
+              <MetricCard
+                label="Stuck Jobs"
+                value={(processorState?.stuckJobCount ?? 0).toLocaleString()}
+                icon={AlertTriangle}
+                accent={processorState?.stuckJobCount ? 'amber' : 'green'}
+                sub={processorState?.stuckJobCount
+                  ? `No progress for ${(processorState.staleJobThresholdMs / 60_000).toFixed(0)}+ min`
+                  : 'No stuck jobs detected'}
+              />
+              <MetricCard
+                label="Last Success"
+                value={processorState?.lastSuccessAt ? formatMinutesAgo(processorState.lastSuccessAt) : '-'}
+                icon={CheckCircle}
+                accent={processorState?.lastError ? 'amber' : 'green'}
+                sub={processorState?.lastError ? 'Last processor run hit an error' : 'Processor healthy'}
+              />
+            </div>
+
+            {processorState?.lastError && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p className="font-medium">Last processor error</p>
+                <p className="mt-1">{processorState.lastError}</p>
+              </div>
+            )}
+
+            {processorState?.stuckJobs?.length ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                <p className="text-sm font-medium text-red-800">Stuck delivery jobs</p>
+                <div className="mt-2 space-y-2 text-sm text-red-700">
+                  {processorState.stuckJobs.slice(0, 3).map((job) => (
+                    <div key={job.id} className="rounded-md border border-red-100 bg-white/70 px-3 py-2">
+                      <p className="font-medium">{job.articleTitle}</p>
+                      <p>
+                        {job.phase} phase, {job.pendingCountEstimate} remaining, last progress {formatMinutesAgo(job.lastProgressAt)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <CardTitle className="text-base">Article Email Engagement</CardTitle>
@@ -320,6 +428,14 @@ export function ArticleEmailEngagementPanel() {
               <Button variant="outline" size="sm" onClick={() => void loadSummary()} disabled={isLoading}>
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                 <span className="ml-1.5">Refresh</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIncludeDeleted((current) => !current)}
+              >
+                {includeDeleted ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="ml-1.5">{includeDeleted ? 'Hide Deleted' : 'Show Deleted'}</span>
               </Button>
             </div>
           </CardHeader>
@@ -366,14 +482,25 @@ export function ArticleEmailEngagementPanel() {
                         <div className="min-w-0">
                           <p className="font-medium text-gray-900 truncate max-w-[320px]">{summary.articleTitle}</p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {summary.publishedAt ? `Published ${formatDateTime(summary.publishedAt)}` : 'Tracked via article email send'}
+                            {summary.isDeleted
+                              ? `Deleted ${formatDateTime(summary.deletedAt || null)}`
+                              : summary.publishedAt
+                                ? `Published ${formatDateTime(summary.publishedAt)}`
+                                : 'Tracked via article email send'}
                           </p>
                         </div>
                       </TableCell>
                       <TableCell className="align-top">
-                        <Badge className={campaignStatusBadgeClass(summary.campaignStatus)}>
-                          {(summary.campaignStatus || 'queued').replace(/_/g, ' ')}
-                        </Badge>
+                        <div className="flex flex-col gap-2">
+                          <Badge className={campaignStatusBadgeClass(summary.campaignStatus)}>
+                            {(summary.campaignStatus || 'queued').replace(/_/g, ' ')}
+                          </Badge>
+                          {summary.isDeleted && (
+                            <Badge className="bg-slate-100 text-slate-700 border-slate-200">
+                              deleted article
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>{(summary.intendedRecipientCount ?? summary.sent + summary.publishUndelivered + summary.publishFailed).toLocaleString()}</TableCell>
                       <TableCell>{summary.sent.toLocaleString()}</TableCell>
@@ -386,7 +513,7 @@ export function ArticleEmailEngagementPanel() {
                       <TableCell>{formatDateTime(summary.lastActivityAt || summary.latestReadAt || summary.latestOpenedAt || summary.latestSentAt)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {summary.publishUndelivered > 0 && (
+                          {summary.publishUndelivered > 0 && !summary.isDeleted && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -446,6 +573,11 @@ export function ArticleEmailEngagementPanel() {
                     <Badge className={campaignStatusBadgeClass(detail.summary.campaignStatus)}>
                       {(detail.summary.campaignStatus || 'queued').replace(/_/g, ' ')}
                     </Badge>
+                    {detail.summary.isDeleted && (
+                      <Badge className="bg-slate-100 text-slate-700 border-slate-200">
+                        deleted article
+                      </Badge>
+                    )}
                     {detail.summary.lastError && (
                       <p className="text-xs text-red-600 max-w-[420px]">{detail.summary.lastError}</p>
                     )}
@@ -465,7 +597,7 @@ export function ArticleEmailEngagementPanel() {
                   <DetailStat label="Read Rate" value={formatRate(detail.summary.readRate)} />
                 </div>
 
-                {detail.summary.publishUndelivered > 0 && (
+                {detail.summary.publishUndelivered > 0 && !detail.summary.isDeleted && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-amber-900">

@@ -51,6 +51,7 @@ const ResourcesPage = React.lazy(() => import('./components/pages/ResourcesPage'
 const ArticleDetailPage = React.lazy(() => import('./components/pages/ArticleDetailPage').then(m => ({ default: m.ArticleDetailPage })));
 const DesignSystemPage = React.lazy(() => import('./components/pages/DesignSystemPage').then(m => ({ default: m.DesignSystemPage })));
 const LegalPage = React.lazy(() => import('./components/pages/LegalPage').then(m => ({ default: m.LegalPage })));
+const LegalDocumentPage = React.lazy(() => import('./components/pages/LegalDocumentPage').then(m => ({ default: m.LegalDocumentPage })));
 const ForgotPasswordPage = React.lazy(() => import('./components/pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = React.lazy(() => import('./components/pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 const VerifyEmailPage = React.lazy(() => import('./components/pages/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })));
@@ -157,6 +158,7 @@ export function AppRoutes() {
 
         {/* Legal & Sitemap — always public layout */}
         <Route path="/legal" element={<FlexibleRoute><AppLayout forcePublicLayout><LegalPage /></AppLayout></FlexibleRoute>} />
+        <Route path="/legal/:slug" element={<FlexibleRoute><AppLayout forcePublicLayout><LegalDocumentPage /></AppLayout></FlexibleRoute>} />
         <Route path="/sitemap" element={<FlexibleRoute><AppLayout forcePublicLayout><SitemapPage /></AppLayout></FlexibleRoute>} />
         <Route path="/robots.txt" element={<RobotsTxtPage />} />
         <Route path="/sitemap/xml" element={<SitemapXmlPage />} />

@@ -1059,12 +1059,13 @@ export type ArticleNotificationCampaignStatus =
   | 'no_recipients'
   | 'queue_failed';
 export type ArticleNotificationJobKind = 'publish' | 'retry_undelivered';
+export type ArticleNotificationJobPhase = 'preparing' | 'sending' | 'completed';
 
 export interface ArticleNotificationJobItem {
   email: string;
   firstName: string;
   name: string;
-  trackingToken: string;
+  trackingToken: string | null;
 }
 
 export interface ArticleNotificationJob {
@@ -1078,19 +1079,30 @@ export interface ArticleNotificationJob {
   status: ArticleNotificationJobStatus;
   recipientCount: number;
   currentIndex: number;
+  prepareCursor: number;
   items: ArticleNotificationJobItem[];
   createdAt: string;
   updatedAt: string;
   startedAt: string | null;
   completedAt: string | null;
+  lastProgressAt: string | null;
+  lastPreparedAt: string | null;
+  lastDeliveredAt: string | null;
   lastError: string | null;
   lockId: string | null;
   lockExpiresAt: string | null;
+  phase: ArticleNotificationJobPhase;
+  preparedCount: number;
+  unpreparedCount: number;
   sentCount: number;
   failedCount: number;
+  failedRetryableCount: number;
+  failedTerminalCount: number;
   pendingCount: number;
+  sendingCount: number;
   processedCount: number;
   progressPercent: number;
+  stuck: boolean;
 }
 
 export interface ArticleNotificationProcessorResult {
@@ -1108,7 +1120,10 @@ export interface ArticleNotificationCampaign {
   articleExcerpt: string;
   source: ArticleEmailTrackingSource;
   status: ArticleNotificationCampaignStatus;
+  phase: ArticleNotificationJobPhase;
   intendedRecipientCount: number;
+  preparedCount: number;
+  unpreparedCount: number;
   pendingCount: number;
   sendingCount: number;
   sentCount: number;
@@ -1123,6 +1138,42 @@ export interface ArticleNotificationCampaign {
   lastActivityAt: string | null;
   lastError: string | null;
   jobId: string | null;
+  stuck: boolean;
+}
+
+export interface ArticleNotificationProcessorStuckJob {
+  id: string;
+  articleId: string;
+  articleTitle: string;
+  kind: ArticleNotificationJobKind;
+  source: ArticleEmailTrackingSource;
+  status: ArticleNotificationJobStatus;
+  phase: ArticleNotificationJobPhase;
+  pendingCountEstimate: number;
+  prepareCursor: number;
+  recipientCount: number;
+  lastProgressAt: string | null;
+  updatedAt: string;
+  minutesSinceProgress: number | null;
+}
+
+export interface ArticleNotificationProcessorState {
+  mode: 'manual' | 'cron' | 'scheduler';
+  lastHeartbeatAt: string;
+  lastRunAt: string;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+  maxJobs: number;
+  maxBatchesPerJob: number;
+  processedJobs: number;
+  advancedJobs: number;
+  completedJobs: number;
+  activeJobCount: number;
+  queuedJobCount: number;
+  processingJobCount: number;
+  stuckJobCount: number;
+  staleJobThresholdMs: number;
+  stuckJobs: ArticleNotificationProcessorStuckJob[];
 }
 
 export interface ArticlePublishResponse {
@@ -1137,6 +1188,8 @@ export interface ArticleEmailEngagementSummary {
   articleTitle: string;
   articleSlug: string;
   publishedAt: string | null;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
   campaignId?: string | null;
   campaignStatus?: ArticleNotificationCampaignStatus | null;
   intendedRecipientCount?: number;

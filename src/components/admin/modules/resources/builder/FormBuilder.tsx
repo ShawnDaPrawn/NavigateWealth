@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Toolbox } from './Toolbox';
 import { FormCanvas } from './FormCanvas';
+import { InteractiveFormRenderer } from './InteractiveFormRenderer';
 import { PropertiesPanel } from './PropertiesPanel';
 import { FormBlock, BlockType } from './types';
 import { useUndoRedo } from './hooks/useUndoRedo';

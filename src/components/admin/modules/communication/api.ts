@@ -9,6 +9,7 @@ import {
   CommunicationCampaign,
   BackendCampaign,
   ActivityLogEntry,
+  CampaignHistoryPageResult,
   AttachmentFile,
   CommunicationLog,
   SendMessageResponse,
@@ -55,6 +56,79 @@ const mapTemplateToFrontend = (data: BackendTemplate): EmailTemplate => ({
 });
 
 // Helper to map frontend EmailTemplate to backend Template
+function stripHtmlTags(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ');
+}
+
+function decodeHtmlEntities(text: string): string {
+  if (typeof document !== 'undefined') {
+    const ta = document.createElement('textarea');
+    ta.innerHTML = text;
+    return ta.value;
+  }
+  return text
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#160;/gi, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+/** Plain-text preview for campaign history: no tags, decoded entities, merge tokens shown as ellipsis. */
+function buildCampaignMessagePreview(bodyHtml: string | undefined, maxLen = 120): string {
+  if (!bodyHtml?.trim()) return '';
+  let plain = stripHtmlTags(bodyHtml);
+  plain = decodeHtmlEntities(plain);
+  plain = plain.replace(/\{\{[^}]+\}\}/g, '…');
+  plain = plain.replace(/\s+/g, ' ').trim();
+  if (maxLen <= 0 || plain.length <= maxLen) return plain;
+  return `${plain.slice(0, Math.max(0, maxLen - 1))}…`;
+}
+
+function decodePlainHistoryText(text: string | undefined): string | undefined {
+  if (!text?.trim()) return undefined;
+  let t = decodeHtmlEntities(text);
+  t = t.replace(/\{\{[^}]+\}\}/g, '…');
+  t = t.replace(/\s+/g, ' ').trim();
+  return t;
+}
+
+function mapCampaignsToActivityLog(campaigns: BackendCampaign[]): ActivityLogEntry[] {
+  return campaigns
+    .map((campaign) => {
+      const createdBy = campaign.createdBy || 'system';
+      const userName =
+        campaign.createdByName ||
+        (createdBy === 'admin' ? 'Administrator' : createdBy === 'system' ? 'System' : createdBy);
+      const groupName =
+        typeof campaign.selectedGroup?.name === 'string' ? campaign.selectedGroup.name : undefined;
+
+      return {
+        id: campaign.id,
+        timestamp: campaign.createdAt ? new Date(campaign.createdAt) : new Date(0),
+        userId: createdBy,
+        userName,
+        channel: campaign.channel,
+        recipientType: campaign.recipientType,
+        recipientCount:
+          campaign.stats?.total ||
+          campaign.selectedRecipients?.length ||
+          (campaign.selectedGroup ? campaign.selectedGroup.clientCount : 0) ||
+          0,
+        groupName,
+        subject: decodePlainHistoryText(campaign.subject),
+        messagePreview: buildCampaignMessagePreview(campaign.bodyHtml, 120),
+        messagePreviewFull: buildCampaignMessagePreview(campaign.bodyHtml, 8000),
+        attachmentCount: campaign.attachments?.length || 0,
+        templateUsed: 'Custom Email',
+        status: campaign.status,
+      };
+    })
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+}
+
 const mapTemplateToBackend = (template: EmailTemplate): Omit<BackendTemplate, 'id' | 'createdAt' | 'isSystem'> => ({
   name: template.name,
   enabled: template.enabled,
@@ -171,7 +245,9 @@ export const communicationApi = {
 
   // Campaigns
   async getAllCampaigns(): Promise<CommunicationCampaign[]> {
-    const response = await api.get<{ campaigns: CommunicationCampaign[] }>(ENDPOINTS.CAMPAIGNS);
+    const response = await api.get<{ campaigns: CommunicationCampaign[] }>(
+      `${ENDPOINTS.CAMPAIGNS}?all=1`,
+    );
     return response.campaigns || [];
   },
 
@@ -185,24 +261,46 @@ export const communicationApi = {
   },
 
   // History & Logs
+  /** Paginated + filtered campaign history (server-side). */
+  async getHistoryPage(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    channel?: string;
+    recipientType?: string;
+    createdBy?: string;
+  }): Promise<CampaignHistoryPageResult> {
+    const page = params.page ?? 1;
+    const limit = params.limit ?? 50;
+    const q = new URLSearchParams();
+    q.set('page', String(page));
+    q.set('limit', String(limit));
+    if (params.search?.trim()) q.set('search', params.search.trim());
+    if (params.channel && params.channel !== 'all') q.set('channel', params.channel);
+    if (params.recipientType && params.recipientType !== 'all') {
+      q.set('recipientType', params.recipientType);
+    }
+    if (params.createdBy && params.createdBy !== 'all') q.set('createdBy', params.createdBy);
+    const response = await api.get<{
+      campaigns: BackendCampaign[];
+      total: number;
+      page: number;
+      limit: number;
+      senderOptions?: { userId: string; label: string }[];
+    }>(`${ENDPOINTS.CAMPAIGNS}?${q.toString()}`);
+    return {
+      entries: mapCampaignsToActivityLog(response.campaigns || []),
+      total: response.total ?? 0,
+      page: response.page ?? page,
+      limit: response.limit ?? limit,
+      senderOptions: response.senderOptions ?? [],
+    };
+  },
+
+  /** Paginated campaign rows (server page/limit, no extra filters). */
   async getHistory(page = 1, limit = 50): Promise<ActivityLogEntry[]> {
-    const response = await api.get<{ campaigns: BackendCampaign[] }>(`${ENDPOINTS.CAMPAIGNS}?page=${page}&limit=${limit}`);
-    const campaigns = response.campaigns || [];
-    
-    return campaigns.map((campaign) => ({
-      id: campaign.id,
-      timestamp: new Date(campaign.createdAt),
-      userId: campaign.createdBy || 'system',
-      userName: campaign.createdBy === 'admin' ? 'Administrator' : (campaign.createdBy || 'System'),
-      channel: campaign.channel,
-      recipientType: campaign.recipientType,
-      recipientCount: campaign.stats?.total || campaign.selectedRecipients?.length || (campaign.selectedGroup ? campaign.selectedGroup.clientCount : 0) || 0,
-      subject: campaign.subject,
-      messagePreview: campaign.bodyHtml ? campaign.bodyHtml.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...' : '',
-      attachmentCount: campaign.attachments?.length || 0,
-      templateUsed: 'Custom Email',
-      status: campaign.status
-    })).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    const r = await this.getHistoryPage({ page, limit });
+    return r.entries;
   },
 
   async getClientLogs(clientId: string): Promise<CommunicationLog[]> {

@@ -2176,6 +2176,9 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
               ) : (
                 <PolicyOverviewTab
                   clientId={client.id}
+                  clientDisplayName={
+                    [client.firstName, client.lastName].filter(Boolean).join(' ').trim() || undefined
+                  }
                   variant="embedded"
                 />
               )}

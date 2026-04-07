@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { BasePdfLayout, BASE_PDF_CSS } from './templates/BasePdfLayout';
+import { BASE_PDF_CSS, getPdfDimensions, type PdfOrientation, type PdfPageSize } from './templates/BasePdfLayout';
 import { LETTER_CSS } from './templates/LetterheadPdfLayout';
 import type { LetterMeta } from './templates/LetterheadPdfLayout';
 import type { FormBlock } from './builder/types';
+import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../utils/pdfPrintTitle';
 import { ZoomIn, ZoomOut, Maximize, X, Download, FileText, Loader2 } from 'lucide-react';
 
 interface PdfTemplateViewerProps {
@@ -10,6 +11,8 @@ interface PdfTemplateViewerProps {
   onOpenChange: (open: boolean) => void;
   title?: string;
   children?: React.ReactNode;
+  pageSize?: PdfPageSize;
+  orientation?: PdfOrientation;
   /** When true, uses LETTER_CSS instead of BASE_PDF_CSS for print */
   isLetter?: boolean;
   /** Letter metadata — required for Word export when isLetter is true */
@@ -23,6 +26,8 @@ export const PdfTemplateViewer = ({
   onOpenChange,
   title = "Client Consent Form",
   children,
+  pageSize = 'A4',
+  orientation = 'portrait',
   isLetter = false,
   letterMeta,
   letterBlocks,
@@ -46,7 +51,7 @@ export const PdfTemplateViewer = ({
     if (!doc) return;
 
     // Get the preview container content
-    const previewContainer = document.querySelector('.pdf-preview-container');
+    const previewContainer = contentRef.current?.querySelector('.pdf-preview-container');
     if (!previewContainer) {
       console.error('Preview container not found');
       return;
@@ -58,6 +63,7 @@ export const PdfTemplateViewer = ({
     // Use LETTER_CSS for letters (which already includes BASE_PDF_CSS),
     // or BASE_PDF_CSS for standard forms
     const layoutCSS = isLetter ? LETTER_CSS : BASE_PDF_CSS;
+    const pageDimensions = getPdfDimensions(pageSize, orientation);
 
     // Print overrides differ for letter vs form pages
     const letterPrintOverrides = `
@@ -66,8 +72,8 @@ export const PdfTemplateViewer = ({
         margin: 0 !important;
         border: none !important;
         box-shadow: none !important;
-        width: 210mm !important;
-        height: 297mm !important;
+        width: ${pageDimensions.widthMm}mm !important;
+        height: ${pageDimensions.heightMm}mm !important;
         position: relative !important;
         overflow: visible !important;
         page-break-after: always !important;
@@ -80,7 +86,7 @@ export const PdfTemplateViewer = ({
       }
 
       .letter-content {
-        height: 297mm !important;
+        height: ${pageDimensions.heightMm}mm !important;
         padding: var(--margin-top) var(--margin-right) var(--margin-bottom-with-footer) var(--margin-left) !important;
         position: relative !important;
       }
@@ -117,8 +123,8 @@ export const PdfTemplateViewer = ({
         margin: 0 !important;
         border: none !important;
         box-shadow: none !important;
-        width: 210mm !important;
-        min-height: 297mm !important;
+        width: ${pageDimensions.widthMm}mm !important;
+        min-height: ${pageDimensions.heightMm}mm !important;
         position: relative !important;
         overflow: hidden !important;
       }
@@ -141,20 +147,20 @@ export const PdfTemplateViewer = ({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${title.replace(/\s+/g, '_')}</title>
+          <title>${escapeHtmlText(navigateWealthPdfDocumentTitle(title))}</title>
           <style>
             /* Layout styles */
             ${layoutCSS}
             
-            /* Overrides for exact A4 printing with no browser margins */
+            /* Overrides for exact printing with no browser margins */
             @media print {
               @page {
-                size: A4;
+                size: ${pageSize} ${orientation};
                 margin: 0 !important; 
               }
               
               html, body {
-                width: 210mm;
+                width: ${pageDimensions.widthMm}mm;
                 margin: 0 !important;
                 padding: 0 !important;
                 background: white;

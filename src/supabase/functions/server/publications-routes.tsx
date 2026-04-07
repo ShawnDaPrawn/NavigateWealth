@@ -9,13 +9,13 @@ import {
   getArticleNotificationCampaign,
   getLatestArticleNotificationCampaign,
   getArticleNotificationJob,
+  getArticleNotificationProcessorState,
   listArticleNotificationCampaigns,
   processArticleNotificationJobs,
+  resumeArticleNotificationDelivery,
   runArticleNotificationDelivery,
-  retryUndeliveredArticleNotifications,
   sendArticlePublishedNotifications,
 } from './publications-notification-service.ts';
-import { startArticleNotificationScheduler } from './publications-notification-scheduler.ts';
 import {
   CreateCategorySchema,
   UpdateCategorySchema,
@@ -47,10 +47,6 @@ const log = createModuleLogger('publications');
 // Root handlers
 publications.get('/', (c) => c.json({ service: 'publications', status: 'active' }));
 publications.get('', (c) => c.json({ service: 'publications', status: 'active' }));
-
-// Start the backend-owned notification scheduler on first module load.
-// This keeps queued article email delivery moving without relying on the admin UI.
-startArticleNotificationScheduler();
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () => createClient(
@@ -115,6 +111,19 @@ export interface Article {
   press_category?: 'company_news' | 'product_launch' | 'awards' | 'team_news' | 'industry_insights' | null;
 }
 
+const PUBLICATIONS_CRON_AUTH_KEY = 'system:publications:cron_auth_token';
+const PUBLICATIONS_CRON_SHARED_HEADER = 'x-publications-cron-auth';
+
+interface DeletedArticleRecord {
+  id: string;
+  title: string;
+  slug: string;
+  published_at?: string | null;
+  deleted_at: string;
+  deleted_by: string;
+  previous_status: Article['status'];
+}
+
 export interface ArticleTag {
   id: string;
   name: string;
@@ -162,17 +171,61 @@ function articleTrackingDetails(article: Article | null) {
   };
 }
 
+function deletedArticleTrackingDetails(article: DeletedArticleRecord | null) {
+  if (!article) return null;
+
+  return {
+    id: article.id,
+    slug: article.slug,
+    title: article.title,
+    published_at: article.published_at || undefined,
+  };
+}
+
+async function isAuthorizedPublicationsCronRequest(
+  authToken: string,
+  sharedToken?: string | null,
+): Promise<boolean> {
+  const normalizedAuthToken = authToken.trim();
+  const normalizedSharedToken = (sharedToken || '').trim();
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
+  if (
+    (serviceRoleKey && normalizedAuthToken === serviceRoleKey)
+    || (superAdminPw && normalizedAuthToken === superAdminPw)
+  ) {
+    return true;
+  }
+
+  try {
+    const sharedCronToken = await kv.get(PUBLICATIONS_CRON_AUTH_KEY);
+    return typeof sharedCronToken === 'string'
+      && sharedCronToken.trim().length > 0
+      && normalizedSharedToken.length > 0
+      && normalizedSharedToken === sharedCronToken;
+  } catch (error) {
+    log.warn('Unable to load publications cron auth token from KV', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
 function buildCampaignFirstEmailEngagementSummary(
   article: Article | null,
+  deletedArticle: DeletedArticleRecord | null,
   records: Awaited<ReturnType<typeof listArticleEmailTrackingRecords>>,
   campaign: Awaited<ReturnType<typeof getArticleNotificationCampaign>> | null,
 ) {
-  const baseSummary = summarizeArticleEmailEngagement(articleTrackingDetails(article), records);
+  const articleDetails = articleTrackingDetails(article) || deletedArticleTrackingDetails(deletedArticle);
+  const baseSummary = summarizeArticleEmailEngagement(articleDetails, records);
   const reshareTotals = summarizeTrackedRecipientDeliveries(records, 'reshare');
 
   if (!campaign) {
     return {
       ...baseSummary,
+      isDeleted: Boolean(deletedArticle),
+      deletedAt: deletedArticle?.deleted_at ?? null,
       campaignId: null,
       campaignStatus: null,
       intendedRecipientCount: baseSummary.sent + baseSummary.publishUndelivered + baseSummary.publishFailed,
@@ -190,6 +243,8 @@ function buildCampaignFirstEmailEngagementSummary(
 
   return {
     ...baseSummary,
+    isDeleted: Boolean(deletedArticle),
+    deletedAt: deletedArticle?.deleted_at ?? null,
     campaignId: campaign.id,
     campaignStatus: campaign.status,
     intendedRecipientCount: campaign.intendedRecipientCount,
@@ -206,6 +261,28 @@ function buildCampaignFirstEmailEngagementSummary(
     publishFailed,
     publishUndelivered: publishPending,
   };
+}
+
+async function kickArticleNotificationJob(
+  jobId: string | null | undefined,
+) {
+  if (!jobId) return null;
+
+  try {
+    const result = await processArticleNotificationJobs({
+      jobId,
+      maxJobs: 1,
+      maxBatchesPerJob: 1,
+    });
+
+    return result.jobs[0] ?? await getArticleNotificationJob(jobId);
+  } catch (error) {
+    log.warn('Failed to kick article notification job immediately', {
+      jobId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
 }
 
 // ============================================================================
@@ -820,6 +897,9 @@ publications.put('/articles/:id', async (c) => {
           slug: updated.slug,
           excerpt: updated.excerpt,
         });
+        if (publishNotificationJob.recipientCount > 0) {
+          publishNotificationJob = await kickArticleNotificationJob(publishNotificationJob.id) ?? publishNotificationJob;
+        }
         publishNotificationCampaign = await getArticleNotificationCampaign(publishNotificationJob.id);
       } catch (notificationError) {
         publishNotificationError = notificationError instanceof Error ? notificationError.message : 'Notification delivery failed';
@@ -918,6 +998,9 @@ publications.post('/articles/:id/publish', async (c) => {
           slug: updated.slug,
           excerpt: updated.excerpt,
         });
+        if (notificationJob.recipientCount > 0) {
+          notificationJob = await kickArticleNotificationJob(notificationJob.id) ?? notificationJob;
+        }
         notificationCampaign = await getArticleNotificationCampaign(notificationJob.id);
       } catch (deliveryError) {
         notificationError = deliveryError instanceof Error ? deliveryError.message : 'Notification delivery failed';
@@ -1049,10 +1132,13 @@ publications.post('/articles/:id/reshare', requireAuth, requireAdmin, asyncHandl
 }));
 
 publications.get('/email-engagement/summary', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const includeDeleted = c.req.query('include_deleted') === 'true';
   const records = await listAllArticleEmailTrackingRecords();
   const articles = await kv.getByPrefix('article:') as Article[];
+  const deletedArticles = await kv.getByPrefix('article_deleted:') as DeletedArticleRecord[];
   const campaigns = await listArticleNotificationCampaigns({ source: 'publish' });
   const articleMap = new Map(articles.map((article) => [article.id, article]));
+  const deletedArticleMap = new Map(deletedArticles.map((article) => [article.id, article]));
 
   const grouped = new Map<string, typeof records>();
   for (const record of records) {
@@ -1071,15 +1157,18 @@ publications.get('/email-engagement/summary', requireAuth, requireAdmin, asyncHa
   const articleIds = new Set<string>([
     ...grouped.keys(),
     ...latestCampaignByArticle.keys(),
+    ...deletedArticleMap.keys(),
   ]);
 
   const summaries = [...articleIds]
     .map((articleId) => {
       const article = articleMap.get(articleId) || null;
+      const deletedArticle = deletedArticleMap.get(articleId) || null;
       const articleRecords = grouped.get(articleId) || [];
       const campaign = latestCampaignByArticle.get(articleId) || null;
-      return buildCampaignFirstEmailEngagementSummary(article, articleRecords, campaign);
+      return buildCampaignFirstEmailEngagementSummary(article, deletedArticle, articleRecords, campaign);
     })
+    .filter((summary) => includeDeleted || !summary.isDeleted)
     .sort((a, b) => {
       const aTime = new Date(a.lastActivityAt || a.latestSentAt || a.publishedAt || 0).getTime();
       const bTime = new Date(b.lastActivityAt || b.latestSentAt || b.publishedAt || 0).getTime();
@@ -1092,13 +1181,15 @@ publications.get('/email-engagement/summary', requireAuth, requireAdmin, asyncHa
 publications.get('/articles/:id/email-engagement', requireAuth, requireAdmin, asyncHandler(async (c) => {
   const id = c.req.param('id');
   const article = await kv.get(`article:${id}`) as Article | null;
-  if (!article) {
+  const deletedArticle = await kv.get(`article_deleted:${id}`) as DeletedArticleRecord | null;
+  const records = await listArticleEmailTrackingRecords(id);
+  const campaign = await getLatestArticleNotificationCampaign(id, 'publish');
+
+  if (!article && !deletedArticle && records.length === 0 && !campaign) {
     return c.json({ success: false, error: 'Article not found' }, 404);
   }
 
-  const records = await listArticleEmailTrackingRecords(id);
-  const campaign = await getLatestArticleNotificationCampaign(id, 'publish');
-  const summary = buildCampaignFirstEmailEngagementSummary(article, records, campaign);
+  const summary = buildCampaignFirstEmailEngagementSummary(article, deletedArticle, records, campaign);
 
   return c.json({
     success: true,
@@ -1126,7 +1217,7 @@ publications.post('/articles/:id/retry-undelivered', requireAuth, requireAdmin, 
     return c.json({ success: false, error: 'Only published articles can retry delivery' }, 400);
   }
 
-  const notificationJob = await retryUndeliveredArticleNotifications({
+  const notificationJob = await resumeArticleNotificationDelivery({
     id: article.id,
     title: article.title,
     slug: article.slug,
@@ -1134,6 +1225,9 @@ publications.post('/articles/:id/retry-undelivered', requireAuth, requireAdmin, 
   }, {
     source: parsed.data.source,
   });
+  const liveNotificationJob = notificationJob.recipientCount > 0
+    ? await kickArticleNotificationJob(notificationJob.id) ?? notificationJob
+    : notificationJob;
 
   const adminUserId = c.get('userId') || 'system';
   AdminAuditService.record({
@@ -1147,17 +1241,17 @@ publications.post('/articles/:id/retry-undelivered', requireAuth, requireAdmin, 
     entityId: id,
     metadata: {
       source: parsed.data.source,
-      recipientCount: notificationJob.recipientCount,
-      notificationJobId: notificationJob.id,
-      notificationStatus: notificationJob.status,
+      recipientCount: liveNotificationJob.recipientCount,
+      notificationJobId: liveNotificationJob.id,
+      notificationStatus: liveNotificationJob.status,
     },
   }).catch(() => {});
 
   return c.json({
     success: true,
-    data: notificationJob,
-    message: notificationJob.recipientCount > 0
-      ? `Queued retry for ${notificationJob.recipientCount} undelivered recipient(s)`
+    data: liveNotificationJob,
+    message: liveNotificationJob.recipientCount > 0
+      ? `Queued retry for ${liveNotificationJob.recipientCount} undelivered recipient(s)`
       : 'No undelivered recipients remain for this source',
   });
 }));
@@ -1190,28 +1284,32 @@ publications.post('/notification-jobs/process', requireAuth, requireAdmin, async
   const maxJobs = typeof body.maxJobs === 'number' ? body.maxJobs : undefined;
   const maxBatchesPerJob = typeof body.maxBatchesPerJob === 'number' ? body.maxBatchesPerJob : undefined;
 
-  const result = await processArticleNotificationJobs({ jobId, maxJobs, maxBatchesPerJob });
+  const result = await processArticleNotificationJobs({ jobId, maxJobs, maxBatchesPerJob, mode: 'manual' });
   return c.json({ success: true, data: result });
+}));
+
+publications.get('/notification-jobs/processor-status', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const state = await getArticleNotificationProcessorState();
+  return c.json({ success: true, data: state });
 }));
 
 publications.post('/cron/process-notification-jobs', async (c) => {
   try {
     const authHeader = c.req.header('Authorization') || '';
     const token = authHeader.replace(/^Bearer\s+/i, '');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
-
-    if (
-      (!serviceRoleKey || token !== serviceRoleKey) &&
-      (!superAdminPw || token !== superAdminPw)
-    ) {
+    const sharedCronToken = c.req.header(PUBLICATIONS_CRON_SHARED_HEADER) || '';
+    if (!await isAuthorizedPublicationsCronRequest(token, sharedCronToken)) {
       return c.json({ error: 'Unauthorized - cron auth required' }, 401);
     }
 
     const body = await c.req.json().catch(() => ({}));
     const maxJobs = typeof body.maxJobs === 'number' ? body.maxJobs : undefined;
     const maxBatchesPerJob = typeof body.maxBatchesPerJob === 'number' ? body.maxBatchesPerJob : undefined;
-    const result = await processArticleNotificationJobs({ maxJobs, maxBatchesPerJob });
+    const result = await processArticleNotificationJobs({
+      maxJobs,
+      maxBatchesPerJob,
+      mode: 'cron',
+    });
 
     log.info('CRON: Processed article notification jobs', {
       processedJobs: result.processedJobs,
@@ -1385,6 +1483,24 @@ publications.post('/articles/:id/schedule', async (c) => {
 publications.delete('/articles/:id', async (c) => {
   try {
     const id = c.req.param('id');
+    const article = await kv.get(`article:${id}`) as Article | null;
+
+    if (!article) {
+      return c.json({ success: false, error: 'Article not found' }, 404);
+    }
+
+    const deletedAt = new Date().toISOString();
+    const deletedArticle: DeletedArticleRecord = {
+      id: article.id,
+      title: article.title,
+      slug: article.slug,
+      published_at: article.published_at ?? null,
+      deleted_at: deletedAt,
+      deleted_by: 'system',
+      previous_status: article.status,
+    };
+
+    await kv.set(`article_deleted:${id}`, deletedArticle);
     await kv.del(`article:${id}`);
     
     // Also delete any tag links
@@ -1399,10 +1515,15 @@ publications.delete('/articles/:id', async (c) => {
       actorRole: 'admin',
       category: 'configuration',
       action: 'article_deleted',
-      summary: 'Article deleted',
+      summary: `Article deleted: ${article.title}`,
       severity: 'warning',
       entityType: 'article',
       entityId: id,
+      metadata: {
+        title: article.title,
+        previousStatus: article.status,
+        deletedAt,
+      },
     }).catch(() => {});
     
     return c.json({ success: true });
@@ -1632,20 +1753,17 @@ publications.get('/articles/:articleId/tags', async (c) => {
 /**
  * POST /cron/process-scheduled
  * Cron-safe endpoint for scheduled article publishing.
- * Authenticated via SUPABASE_SERVICE_ROLE_KEY or SUPER_ADMIN_PASSWORD.
+ * Authenticated via a Supabase JWT plus the shared publications cron header,
+ * or directly via SUPABASE_SERVICE_ROLE_KEY / SUPER_ADMIN_PASSWORD.
  */
 publications.post('/cron/process-scheduled', async (c) => {
   try {
     const authHeader = c.req.header('Authorization') || '';
     const token = authHeader.replace(/^Bearer\s+/i, '');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
+    const sharedCronToken = c.req.header(PUBLICATIONS_CRON_SHARED_HEADER) || '';
 
-    if (
-      (!serviceRoleKey || token !== serviceRoleKey) &&
-      (!superAdminPw || token !== superAdminPw)
-    ) {
-      return c.json({ error: 'Unauthorized — cron auth required' }, 401);
+    if (!await isAuthorizedPublicationsCronRequest(token, sharedCronToken)) {
+      return c.json({ error: 'Unauthorized - cron auth required' }, 401);
     }
 
     log.info('CRON: Processing scheduled articles');
@@ -1674,12 +1792,15 @@ publications.post('/cron/process-scheduled', async (c) => {
 
           if (shouldNotify) {
             try {
-              const notificationJob = await sendArticlePublishedNotifications({
+              let notificationJob = await sendArticlePublishedNotifications({
                 id: article.id,
                 title: article.title,
                 slug: article.slug,
                 excerpt: article.excerpt,
               });
+              if (notificationJob.recipientCount > 0) {
+                notificationJob = await kickArticleNotificationJob(notificationJob.id) ?? notificationJob;
+              }
               const notificationCampaign = await getArticleNotificationCampaign(notificationJob.id);
               log.info(`Scheduled article notifications complete for ${article.id}`, {
                 recipientCount: notificationJob.recipientCount,
@@ -1706,8 +1827,7 @@ publications.post('/cron/process-scheduled', async (c) => {
 
     log.info(`CRON: Processed ${processedCount} scheduled article(s)`, { published });
     const notificationResult = await processArticleNotificationJobs({
-      maxJobs: 5,
-      maxBatchesPerJob: 3,
+      mode: 'cron',
     });
 
     return c.json({
@@ -1751,12 +1871,15 @@ publications.post('/process-scheduled', async (c) => {
           // Notify newsletter subscribers only if opted-in at scheduling time
           if (shouldNotify) {
             try {
-              const notificationJob = await sendArticlePublishedNotifications({
+              let notificationJob = await sendArticlePublishedNotifications({
                 id: article.id,
                 title: article.title,
                 slug: article.slug,
                 excerpt: article.excerpt,
               });
+              if (notificationJob.recipientCount > 0) {
+                notificationJob = await kickArticleNotificationJob(notificationJob.id) ?? notificationJob;
+              }
               const notificationCampaign = await getArticleNotificationCampaign(notificationJob.id);
               log.info(`Scheduled article notifications complete for ${article.id}`, {
                 recipientCount: notificationJob.recipientCount,
@@ -2824,3 +2947,4 @@ publications.delete('/careers/admin/:id', requireAuth, asyncHandler(async (c) =>
 }));
 
 export default publications;
+

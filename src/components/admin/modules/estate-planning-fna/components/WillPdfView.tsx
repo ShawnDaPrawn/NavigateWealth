@@ -17,6 +17,7 @@ import { Button } from '../../../../ui/button';
 import { Loader2, Printer, X, Download } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
 import { BasePdfLayout, BASE_PDF_CSS } from '../../resources/templates/BasePdfLayout';
 import { downloadWillPdf, type WillRecord as WillRecordPdf } from '../utils/will-pdf-generator';
 
@@ -797,6 +798,10 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
     const data = will.data;
     const displayDate = formatDate(will.createdAt);
     const status = will.status === 'draft' ? 'DRAFT' : will.status.toUpperCase();
+    const fullName = (data.personalDetails.fullName || '').trim();
+    const willTitleForPrint = fullName
+      ? `Last Will and Testament - ${fullName}`
+      : 'Last Will and Testament';
 
     // Build the sections HTML
     const sectionsHtml = `
@@ -977,7 +982,7 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
     printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
-  <title>Last Will and Testament - ${data.personalDetails.fullName} - Navigate Wealth</title>
+  <title>${escapeHtmlText(navigateWealthPdfDocumentTitle(willTitleForPrint))}</title>
   <style>
     ${BASE_PDF_CSS}
     /* Override for print: allow content to flow across pages naturally */

@@ -350,6 +350,9 @@ export const resourceKeys = {
   all: ['resources'] as const,
   lists: () => [...resourceKeys.all, 'list'] as const,
   detail: (id: string) => [...resourceKeys.all, 'detail', id] as const,
+  legalDocuments: () => [...resourceKeys.all, 'legal-documents'] as const,
+  legalDocument: (slug: string) => [...resourceKeys.legalDocuments(), slug] as const,
+  legalDocumentVersions: (slug: string) => [...resourceKeys.legalDocument(slug), 'versions'] as const,
 } as const;
 
 // ============================================================================

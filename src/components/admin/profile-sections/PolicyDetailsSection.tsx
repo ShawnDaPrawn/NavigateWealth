@@ -107,6 +107,7 @@ export function PolicyDetailsSection({ selectedClient }: PolicyDetailsSectionPro
       {activePolicyTab === 'overview' && (
         <PolicyOverviewTab 
           clientId={selectedClient?.id || 'client_1'}
+          clientDisplayName={clientDisplayName}
           onRunFNA={(categoryId) => setActivePolicyTab(categoryId)}
           onAddPolicy={(categoryId) => setActivePolicyTab(categoryId)}
           onViewDetails={(categoryId) => setActivePolicyTab(categoryId)}

@@ -140,8 +140,10 @@ export function Step4Finalise({ calculations, adjustments, onPublish, onBack, cl
     setIsExportingPdf(true);
     try {
       const pdfComponent = <RiskPlanningFNAPdfExport calculations={calculations} adjustments={adjustments} clientName={clientName} clientId={clientId} />;
+      const dateStr = new Date().toISOString().split('T')[0];
       await exportComponentToPdf(pdfComponent, {
-        filename: `RiskPlanningFNA_${clientName}_${new Date().toISOString().split('T')[0]}.pdf`
+        filename: `RiskPlanningFNA_${clientName}_${dateStr}.pdf`,
+        printTitle: `Risk Planning FNA - ${clientName} (${dateStr})`,
       });
       // Toast AFTER print dialog closes, not before
       toast.success('PDF export complete');

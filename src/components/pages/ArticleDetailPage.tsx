@@ -43,6 +43,7 @@ import {
 import { toast } from 'sonner@2.0.3';
 import DOMPurify from 'dompurify';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
 import { API_CONFIG } from '../../utils/api/config';
 import { cn } from '../ui/utils';
 
@@ -511,7 +512,7 @@ function ShareActions({ title, excerpt }: { title: string; excerpt?: string }) {
     const issueDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
     const fullHtml = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${title}</title>
+<html><head><meta charset="utf-8"><title>${escapeHtmlText(navigateWealthPdfDocumentTitle(title))}</title>
 <style>
   /*
    * @page margins provide safe zones on every printed page.

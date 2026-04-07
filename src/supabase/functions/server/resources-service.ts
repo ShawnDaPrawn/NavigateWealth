@@ -6,9 +6,19 @@
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ValidationError, NotFoundError, APIError } from './error.middleware.ts';
-import type { Resource, ResourceFilters } from './resources-types.ts';
+import type {
+  LegalDocumentDefinition,
+  LegalDocumentVersion,
+  Resource,
+  ResourceFilters,
+} from './resources-types.ts';
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 import { ZipWriter, Uint8ArrayWriter, Uint8ArrayReader, BlobReader, Reader, Writer } from "npm:@zip.js/zip.js";
+import {
+  LEGAL_DOCUMENTS_BY_SLUG,
+  LEGAL_MIGRATION_PRIORITY_SLUGS,
+  LEGAL_DOCUMENTS_REGISTRY,
+} from '../../../shared/legal-documents-registry.ts';
 
 const log = createModuleLogger('resources-service');
 
@@ -72,6 +82,260 @@ const BUCKET_NAME = 'make-91ed8379-resource-zips';
 // Helper to generate unique ID
 function generateId(): string {
   return crypto.randomUUID();
+}
+
+function legalDefinitionKey(slug: string): string {
+  return `legal_document_definition:${slug}`;
+}
+
+function legalVersionKey(slug: string, versionId: string): string {
+  return `legal_document_version:${slug}:${versionId}`;
+}
+
+function incrementLegalVersion(versionNumber?: string | null): string {
+  const fallback = '1.0';
+  if (!versionNumber) return fallback;
+
+  const match = versionNumber.trim().match(/^(\d+)\.(\d+)$/);
+  if (!match) return versionNumber.trim() || fallback;
+
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  return `${major}.${minor + 1}`;
+}
+
+function slugifyHeading(value: string): string {
+  const normalized = value
+    .toLowerCase()
+    .replace(/&nbsp;/g, ' ')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+
+  return normalized || `section-${crypto.randomUUID().slice(0, 8)}`;
+}
+
+function sanitizeLegalHtml(sourceHtml: string): string {
+  const withoutDangerousTags = sourceHtml
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, '')
+    .replace(/<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<object[\s\S]*?>[\s\S]*?<\/object>/gi, '')
+    .replace(/<embed[\s\S]*?>[\s\S]*?<\/embed>/gi, '');
+
+  return withoutDangerousTags
+    .replace(/\s+on[a-z]+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*'[^']*'/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*[^\s>]+/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/\u00a0/g, ' ')
+    .trim();
+}
+
+function normalizeLegalDocumentContent(sourceHtml: string) {
+  const sanitizedHtml = sanitizeLegalHtml(sourceHtml || '');
+  const wrappedHtml = `<div id="legal-root">${sanitizedHtml || '<p></p>'}</div>`;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(wrappedHtml, 'text/html');
+  const root = doc?.querySelector('#legal-root');
+
+  if (!root) {
+    return {
+      sourceHtml: '<p></p>',
+      normalizedContent: {
+        html: '<p></p>',
+        plainText: '',
+        wordCount: 0,
+        headingCount: 0,
+      },
+      toc: [] as Array<{ id: string; title: string; level: number }>,
+      blocks: [
+        {
+          id: generateId(),
+          type: 'text',
+          data: { content: '<p></p>' },
+        },
+      ],
+    };
+  }
+
+  root.querySelectorAll('script, style, iframe, object, embed').forEach((node) => node.remove());
+  root.querySelectorAll<HTMLElement>('*').forEach((element) => {
+    for (const attr of Array.from(element.attributes)) {
+      if (attr.name.toLowerCase().startsWith('on')) {
+        element.removeAttribute(attr.name);
+      }
+    }
+  });
+
+  const seenIds = new Set<string>();
+  const toc = Array.from(root.querySelectorAll('h1, h2, h3')).map((heading) => {
+    const title = heading.textContent?.replace(/\s+/g, ' ').trim() || 'Untitled section';
+    const level = Number(heading.tagName.slice(1));
+    let id = heading.getAttribute('id')?.trim() || slugifyHeading(title);
+
+    while (seenIds.has(id)) {
+      id = `${id}-${seenIds.size + 1}`;
+    }
+
+    seenIds.add(id);
+    heading.setAttribute('id', id);
+
+    return { id, title, level };
+  });
+
+  const normalizedHtml = root.innerHTML.trim() || '<p></p>';
+  const plainText = root.textContent?.replace(/\s+/g, ' ').trim() || '';
+  const wordCount = plainText ? plainText.split(/\s+/).length : 0;
+
+  return {
+    sourceHtml: normalizedHtml,
+    normalizedContent: {
+      html: normalizedHtml,
+      plainText,
+      wordCount,
+      headingCount: toc.length,
+    },
+    toc,
+    blocks: [
+      {
+        id: generateId(),
+        type: 'text',
+        data: { content: normalizedHtml },
+      },
+    ],
+  };
+}
+
+function buildLegalTocFromBlocks(blocks: Array<Record<string, unknown>> | undefined) {
+  const seenIds = new Set<string>();
+
+  return (blocks || [])
+    .filter((block) => block?.type === 'section_header')
+    .map((block, index) => {
+      const data = (block.data || {}) as Record<string, unknown>;
+      const number = typeof data.number === 'string' && data.number.trim() ? `${data.number.trim()} ` : '';
+      const title = typeof data.title === 'string' && data.title.trim()
+        ? `${number}${data.title.trim()}`.trim()
+        : `Section ${index + 1}`;
+      let id = slugifyHeading(title);
+
+      while (seenIds.has(id)) {
+        id = `${id}-${seenIds.size + 1}`;
+      }
+
+      seenIds.add(id);
+
+      return {
+        id,
+        title,
+        level: 2,
+      };
+    });
+}
+
+function escapeLegalHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function convertLegacyBlocksToLegalHtml(blocks: Array<Record<string, unknown>> | undefined, fallbackTitle: string) {
+  const legacyBlocks = Array.isArray(blocks) ? blocks : [];
+  const html = legacyBlocks
+    .map((block, index) => {
+      const type = typeof block?.type === 'string' ? block.type : '';
+      const data = (block?.data || {}) as Record<string, unknown>;
+
+      if (type === 'section_header') {
+        const rawTitle = typeof data.title === 'string' && data.title.trim() ? data.title.trim() : fallbackTitle;
+        const number = typeof data.number === 'string' && data.number.trim() ? `${data.number.trim()} ` : '';
+        const heading = `${number}${rawTitle}`.trim();
+        return `<h2>${escapeLegalHtml(heading)}</h2>`;
+      }
+
+      if (type === 'text') {
+        return typeof data.content === 'string' && data.content.trim() ? data.content.trim() : '';
+      }
+
+      if (type === 'page_break') {
+        return '<div class="legal-page-break"></div>';
+      }
+
+      if (type === 'signature') {
+        const signatories = Array.isArray(data.signatories) ? data.signatories : [];
+        const signatureHtml = signatories.map((entry) => {
+          const label = typeof entry === 'object' && entry && typeof (entry as Record<string, unknown>).label === 'string'
+            ? String((entry as Record<string, unknown>).label)
+            : 'Signature';
+
+          return `
+            <div class="legal-signature-line">
+              <div class="line"></div>
+              <span>${escapeLegalHtml(label)}</span>
+            </div>
+          `;
+        }).join('');
+
+        return signatureHtml ? `<div class="legal-signatures">${signatureHtml}</div>` : '';
+      }
+
+      if (type === 'field_grid') {
+        const fields = Array.isArray(data.fields) ? data.fields : [];
+        if (fields.length === 0) return '';
+
+        const rows = fields.map((field) => {
+          const label = typeof field === 'object' && field && typeof (field as Record<string, unknown>).label === 'string'
+            ? String((field as Record<string, unknown>).label)
+            : 'Field';
+
+          return `<tr><th>${escapeLegalHtml(label)}</th><td></td></tr>`;
+        }).join('');
+
+        return `<table><tbody>${rows}</tbody></table>`;
+      }
+
+      if (type === 'table') {
+        const hasRowHeaders = Boolean(data.hasRowHeaders);
+        const hasColumnHeaders = Boolean(data.hasColumnHeaders);
+        const columnHeaders = Array.isArray(data.columnHeaders) ? data.columnHeaders : [];
+        const rowHeaders = Array.isArray(data.rowHeaders) ? data.rowHeaders : [];
+        const rows = Array.isArray(data.rows) ? data.rows : [];
+
+        const thead = hasColumnHeaders
+          ? `<thead><tr>${hasRowHeaders ? '<th></th>' : ''}${columnHeaders.map((header) => `<th>${escapeLegalHtml(String(header || ''))}</th>`).join('')}</tr></thead>`
+          : '';
+
+        const tbody = rows.map((row, rowIndex) => {
+          const record = (row || {}) as Record<string, unknown>;
+          const cells = Array.isArray(record.cells) ? record.cells : [];
+          const rowHeader = hasRowHeaders ? `<th>${escapeLegalHtml(String(rowHeaders[rowIndex] || ''))}</th>` : '';
+          return `
+            <tr>
+              ${rowHeader}
+              ${cells.map((cell) => {
+                const value = typeof cell === 'object' && cell && typeof (cell as Record<string, unknown>).value === 'string'
+                  ? String((cell as Record<string, unknown>).value)
+                  : '';
+                return `<td>${escapeLegalHtml(value)}</td>`;
+              }).join('')}
+            </tr>
+          `;
+        }).join('');
+
+        return `<table>${thead}<tbody>${tbody}</tbody></table>`;
+      }
+
+      return index === 0 ? `<p></p>` : '';
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  return html.trim() || `<h1>${escapeLegalHtml(fallbackTitle)}</h1><p></p>`;
 }
 
 // Interface for RSS items
@@ -286,11 +550,719 @@ export class ResourcesService {
   // LEGAL DOCUMENTS
   // ============================================================================
 
+  private async bootstrapLegalDocumentDefinition(
+    entry: (typeof LEGAL_DOCUMENTS_REGISTRY)[number],
+  ): Promise<LegalDocumentDefinition> {
+    const pointer = await kv.get(`legal_form:${entry.slug}`);
+    const legacyResource = pointer?.resourceId
+      ? await kv.get(`resource:${pointer.resourceId}`) as Resource | null
+      : null;
+    const existing = await kv.get(legalDefinitionKey(entry.slug)) as LegalDocumentDefinition | null;
+    if (existing) {
+      const needsLegacyLink = legacyResource && existing.legacyResourceId !== legacyResource.id;
+      const needsMetadataRefresh = (
+        existing.title !== entry.name
+        || existing.section !== entry.section
+        || existing.description !== entry.description
+        || (existing.migrationPriority || 'normal') !== (entry.migrationPriority || 'normal')
+      );
+
+      if (needsLegacyLink || needsMetadataRefresh) {
+        const nextDefinition: LegalDocumentDefinition = {
+          ...existing,
+          title: entry.name,
+          section: entry.section,
+          description: entry.description,
+          migrationPriority: entry.migrationPriority || 'normal',
+          status: existing.status,
+          renderMode: existing.renderMode,
+          legacyResourceId: legacyResource?.id || existing.legacyResourceId,
+          updatedAt: new Date().toISOString(),
+        };
+
+        await kv.set(legalDefinitionKey(entry.slug), nextDefinition);
+        if (legacyResource) {
+          await this.bootstrapLegacyLegalDocumentVersion(nextDefinition, legacyResource);
+        }
+        return (await kv.get(legalDefinitionKey(entry.slug))) as LegalDocumentDefinition;
+      }
+
+      if (legacyResource && !existing.currentPublishedVersionId) {
+        await this.bootstrapLegacyLegalDocumentVersion(existing, legacyResource);
+        return (await kv.get(legalDefinitionKey(entry.slug))) as LegalDocumentDefinition;
+      }
+
+      return existing;
+    }
+
+    const now = new Date().toISOString();
+
+    const definition: LegalDocumentDefinition = {
+      id: generateId(),
+      slug: entry.slug,
+      title: entry.name,
+      section: entry.section,
+      description: entry.description,
+      migrationPriority: entry.migrationPriority || 'normal',
+      status: legacyResource ? (legacyResource.status || 'published') : 'draft',
+      renderMode: legacyResource ? 'legacy_resource' : 'versioned_document',
+      currentPublishedVersionId: null,
+      currentDraftVersionId: null,
+      legacyResourceId: legacyResource?.id || null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await kv.set(legalDefinitionKey(entry.slug), definition);
+
+    if (legacyResource) {
+      await this.bootstrapLegacyLegalDocumentVersion(definition, legacyResource);
+    }
+
+    return (await kv.get(legalDefinitionKey(entry.slug))) as LegalDocumentDefinition;
+  }
+
+  private async bootstrapLegacyLegalDocumentVersion(
+    definition: LegalDocumentDefinition,
+    legacyResource: Resource,
+  ): Promise<void> {
+    const existingVersions = await this.listLegalDocumentVersions(definition.slug);
+    if (existingVersions.length > 0) {
+      return;
+    }
+
+    const versionId = generateId();
+    const createdAt = legacyResource.createdAt || new Date().toISOString();
+    const version: LegalDocumentVersion = {
+      id: versionId,
+      documentId: definition.id,
+      slug: definition.slug,
+      title: legacyResource.title || definition.title,
+      section: definition.section,
+      versionNumber: legacyResource.version || '1.0',
+      status: 'published',
+      contentFormat: 'legacy_blocks',
+      createdAt,
+      updatedAt: createdAt,
+      publishedAt: createdAt,
+      effectiveDate: null,
+      createdBy: 'legacy-resource-bootstrap',
+      publishedBy: 'legacy-resource-bootstrap',
+      changeSummary: 'Bootstrapped from legacy legal resource.',
+      blocks: Array.isArray(legacyResource.blocks) ? legacyResource.blocks : [],
+      sourceHtml: null,
+      normalizedContent: null,
+      toc: [],
+      pdfConfig: {
+        pageSize: 'A4',
+        orientation: 'portrait',
+      },
+    };
+
+    const nextDefinition: LegalDocumentDefinition = {
+      ...definition,
+      status: 'published',
+      currentPublishedVersionId: versionId,
+      updatedAt: new Date().toISOString(),
+      legacyResourceId: legacyResource.id,
+    };
+
+    await Promise.all([
+      kv.set(legalVersionKey(definition.slug, versionId), version),
+      kv.set(legalDefinitionKey(definition.slug), nextDefinition),
+    ]);
+  }
+
+  private async ensureLegalDocumentDefinitions(): Promise<void> {
+    for (const entry of LEGAL_DOCUMENTS_REGISTRY) {
+      await this.bootstrapLegalDocumentDefinition(entry);
+    }
+  }
+
+  async listLegalDocumentDefinitions(): Promise<LegalDocumentDefinition[]> {
+    await this.ensureLegalDocumentDefinitions();
+
+    const definitions = await kv.listByPrefix('legal_document_definition:') as Array<{
+      key: string;
+      value: LegalDocumentDefinition;
+    }>;
+
+    const sectionOrder = new Map(
+      ['legal-notices', 'privacy-data-protection', 'regulatory-disclosures', 'other']
+        .map((section, index) => [section, index]),
+    );
+
+    return definitions
+      .map((row) => row.value)
+      .sort((a, b) => {
+        const sectionDelta = (sectionOrder.get(a.section) ?? 99) - (sectionOrder.get(b.section) ?? 99);
+        if (sectionDelta !== 0) return sectionDelta;
+        return a.title.localeCompare(b.title);
+      });
+  }
+
+  async getLegalDocumentDefinition(slug: string): Promise<LegalDocumentDefinition | null> {
+    if (!LEGAL_DOCUMENTS_BY_SLUG[slug]) {
+      return null;
+    }
+
+    await this.bootstrapLegalDocumentDefinition(LEGAL_DOCUMENTS_BY_SLUG[slug]);
+    return await kv.get(legalDefinitionKey(slug)) as LegalDocumentDefinition | null;
+  }
+
+  async listLegalDocumentVersions(slug: string): Promise<LegalDocumentVersion[]> {
+    const rows = await kv.listByPrefix(`legal_document_version:${slug}:`) as Array<{
+      key: string;
+      value: LegalDocumentVersion;
+    }>;
+
+    return rows
+      .map((row) => row.value)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getLegalDocumentAdmin(slug: string): Promise<{
+    definition: LegalDocumentDefinition;
+    versions: LegalDocumentVersion[];
+    currentPublishedVersion: LegalDocumentVersion | null;
+    currentDraftVersion: LegalDocumentVersion | null;
+  } | null> {
+    const definition = await this.getLegalDocumentDefinition(slug);
+    if (!definition) {
+      return null;
+    }
+
+    const versions = await this.listLegalDocumentVersions(slug);
+    const currentPublishedVersion = definition.currentPublishedVersionId
+      ? versions.find((version) => version.id === definition.currentPublishedVersionId) || null
+      : null;
+    const currentDraftVersion = definition.currentDraftVersionId
+      ? versions.find((version) => version.id === definition.currentDraftVersionId) || null
+      : null;
+
+    return {
+      definition,
+      versions,
+      currentPublishedVersion,
+      currentDraftVersion,
+    };
+  }
+
+  async createLegalDocumentDraft(
+    slug: string,
+    input: {
+      versionNumber: string;
+      effectiveDate?: string | null;
+      changeSummary?: string | null;
+      sourceHtml: string;
+      pdfConfig?: {
+        pageSize: 'A4' | 'A3';
+        orientation: 'portrait' | 'landscape';
+      };
+    },
+    actorId: string,
+  ) {
+    const definition = await this.getLegalDocumentDefinition(slug);
+    if (!definition) {
+      throw new NotFoundError('Legal document not found');
+    }
+
+    const existingDraft = definition.currentDraftVersionId
+      ? await kv.get(legalVersionKey(slug, definition.currentDraftVersionId)) as LegalDocumentVersion | null
+      : null;
+
+    if (existingDraft) {
+      return await this.updateLegalDocumentDraft(slug, existingDraft.id, input, actorId);
+    }
+
+    const normalized = normalizeLegalDocumentContent(input.sourceHtml);
+    const now = new Date().toISOString();
+    const versionId = generateId();
+    const versions = await this.listLegalDocumentVersions(slug);
+    const publishedVersion = definition.currentPublishedVersionId
+      ? versions.find((version) => version.id === definition.currentPublishedVersionId) || null
+      : null;
+
+    const draftVersion: LegalDocumentVersion = {
+      id: versionId,
+      documentId: definition.id,
+      slug,
+      title: definition.title,
+      section: definition.section,
+      versionNumber: input.versionNumber.trim() || incrementLegalVersion(publishedVersion?.versionNumber),
+      status: 'draft',
+      contentFormat: 'normalized_rich_text',
+      createdAt: now,
+      updatedAt: now,
+      publishedAt: null,
+      effectiveDate: input.effectiveDate?.trim() || null,
+      createdBy: actorId,
+      publishedBy: null,
+      changeSummary: input.changeSummary?.trim() || null,
+      blocks: normalized.blocks,
+      sourceHtml: normalized.sourceHtml,
+      normalizedContent: normalized.normalizedContent,
+      toc: normalized.toc,
+      pdfConfig: input.pdfConfig || {
+        pageSize: 'A4',
+        orientation: 'portrait',
+      },
+    };
+
+    const nextDefinition: LegalDocumentDefinition = {
+      ...definition,
+      status: definition.currentPublishedVersionId ? definition.status : 'draft',
+      currentDraftVersionId: versionId,
+      updatedAt: now,
+    };
+
+    await Promise.all([
+      kv.set(legalVersionKey(slug, versionId), draftVersion),
+      kv.set(legalDefinitionKey(slug), nextDefinition),
+    ]);
+
+    return await this.getLegalDocumentAdmin(slug);
+  }
+
+  async updateLegalDocumentDraft(
+    slug: string,
+    versionId: string,
+    input: {
+      versionNumber: string;
+      effectiveDate?: string | null;
+      changeSummary?: string | null;
+      sourceHtml: string;
+      pdfConfig?: {
+        pageSize: 'A4' | 'A3';
+        orientation: 'portrait' | 'landscape';
+      };
+    },
+    actorId: string,
+  ) {
+    const definition = await this.getLegalDocumentDefinition(slug);
+    if (!definition) {
+      throw new NotFoundError('Legal document not found');
+    }
+
+    const existingVersion = await kv.get(legalVersionKey(slug, versionId)) as LegalDocumentVersion | null;
+    if (!existingVersion || existingVersion.status !== 'draft') {
+      throw new ValidationError('Only draft legal document versions can be updated');
+    }
+
+    if (definition.currentDraftVersionId && definition.currentDraftVersionId !== versionId) {
+      throw new ValidationError('This draft is no longer the active working draft');
+    }
+
+    const normalized = normalizeLegalDocumentContent(input.sourceHtml);
+    const now = new Date().toISOString();
+    const nextDefinition: LegalDocumentDefinition = {
+      ...definition,
+      currentDraftVersionId: versionId,
+      updatedAt: now,
+    };
+
+    const updatedDraft: LegalDocumentVersion = {
+      ...existingVersion,
+      title: definition.title,
+      section: definition.section,
+      versionNumber: input.versionNumber.trim() || existingVersion.versionNumber,
+      updatedAt: now,
+      effectiveDate: input.effectiveDate?.trim() || null,
+      changeSummary: input.changeSummary?.trim() || null,
+      blocks: normalized.blocks,
+      sourceHtml: normalized.sourceHtml,
+      normalizedContent: normalized.normalizedContent,
+      toc: normalized.toc,
+      pdfConfig: input.pdfConfig || existingVersion.pdfConfig || {
+        pageSize: 'A4',
+        orientation: 'portrait',
+      },
+      createdBy: existingVersion.createdBy || actorId,
+    };
+
+    await Promise.all([
+      kv.set(legalVersionKey(slug, versionId), updatedDraft),
+      kv.set(legalDefinitionKey(slug), nextDefinition),
+    ]);
+
+    return await this.getLegalDocumentAdmin(slug);
+  }
+
+  async publishLegalDocumentDraft(
+    slug: string,
+    versionId: string,
+    actorId: string,
+  ) {
+    const definition = await this.getLegalDocumentDefinition(slug);
+    if (!definition) {
+      throw new NotFoundError('Legal document not found');
+    }
+
+    if (definition.currentDraftVersionId !== versionId) {
+      throw new ValidationError('Only the active draft can be published');
+    }
+
+    const draftVersion = await kv.get(legalVersionKey(slug, versionId)) as LegalDocumentVersion | null;
+    if (!draftVersion || draftVersion.status !== 'draft') {
+      throw new ValidationError('Legal draft not found');
+    }
+
+    if (draftVersion.contentFormat !== 'normalized_rich_text') {
+      throw new ValidationError('Only normalized legal drafts can be published');
+    }
+
+    if (!draftVersion.sourceHtml?.trim()) {
+      throw new ValidationError('Legal draft content is required before publishing');
+    }
+
+    if (!draftVersion.effectiveDate?.trim()) {
+      throw new ValidationError('An effective date is required before publishing a legal document');
+    }
+
+    if (!draftVersion.changeSummary?.trim() || draftVersion.changeSummary.trim().length < 12) {
+      throw new ValidationError('Add a meaningful change summary before publishing this legal document');
+    }
+
+    if (!draftVersion.toc?.length) {
+      throw new ValidationError('Add at least one heading before publishing this legal document');
+    }
+
+    const now = new Date().toISOString();
+    const writes: Promise<unknown>[] = [];
+
+    if (definition.currentPublishedVersionId && definition.currentPublishedVersionId !== versionId) {
+      const previousPublished = await kv.get(
+        legalVersionKey(slug, definition.currentPublishedVersionId),
+      ) as LegalDocumentVersion | null;
+
+      if (previousPublished) {
+        writes.push(kv.set(
+          legalVersionKey(slug, previousPublished.id),
+          {
+            ...previousPublished,
+            status: 'archived',
+            updatedAt: now,
+          } satisfies LegalDocumentVersion,
+        ));
+      }
+    }
+
+    const publishedVersion: LegalDocumentVersion = {
+      ...draftVersion,
+      status: 'published',
+      updatedAt: now,
+      publishedAt: now,
+      publishedBy: actorId,
+    };
+
+    const nextDefinition: LegalDocumentDefinition = {
+      ...definition,
+      status: 'published',
+      renderMode: 'versioned_document',
+      currentPublishedVersionId: versionId,
+      currentDraftVersionId: null,
+      updatedAt: now,
+    };
+
+    writes.push(
+      kv.set(legalVersionKey(slug, versionId), publishedVersion),
+      kv.set(legalDefinitionKey(slug), nextDefinition),
+    );
+
+    await Promise.all(writes);
+    return await this.getLegalDocumentAdmin(slug);
+  }
+
+  async archiveLegalDocumentVersion(
+    slug: string,
+    versionId: string,
+  ) {
+    const definition = await this.getLegalDocumentDefinition(slug);
+    if (!definition) {
+      throw new NotFoundError('Legal document not found');
+    }
+
+    if (definition.currentPublishedVersionId === versionId) {
+      throw new ValidationError('Publish a replacement before archiving the current live version');
+    }
+
+    if (definition.currentDraftVersionId === versionId) {
+      throw new ValidationError('Archive is only available for inactive versions');
+    }
+
+    const version = await kv.get(legalVersionKey(slug, versionId)) as LegalDocumentVersion | null;
+    if (!version) {
+      throw new NotFoundError('Legal document version not found');
+    }
+
+    if (version.status === 'archived') {
+      return await this.getLegalDocumentAdmin(slug);
+    }
+
+    await kv.set(
+      legalVersionKey(slug, versionId),
+      {
+        ...version,
+        status: 'archived',
+        updatedAt: new Date().toISOString(),
+      } satisfies LegalDocumentVersion,
+    );
+
+    return await this.getLegalDocumentAdmin(slug);
+  }
+
+  async duplicateLegalDocumentVersionToDraft(
+    slug: string,
+    versionId: string,
+    actorId: string,
+  ) {
+    const definition = await this.getLegalDocumentDefinition(slug);
+    if (!definition) {
+      throw new NotFoundError('Legal document not found');
+    }
+
+    const sourceVersion = await kv.get(legalVersionKey(slug, versionId)) as LegalDocumentVersion | null;
+    if (!sourceVersion) {
+      throw new NotFoundError('Legal document version not found');
+    }
+
+    const now = new Date().toISOString();
+    const nextDraftId = generateId();
+    const normalizedLegacyCopy = sourceVersion.contentFormat === 'legacy_blocks'
+      ? normalizeLegalDocumentContent(convertLegacyBlocksToLegalHtml(sourceVersion.blocks, definition.title))
+      : null;
+    const nextDraft: LegalDocumentVersion = {
+      ...sourceVersion,
+      id: nextDraftId,
+      status: 'draft',
+      contentFormat: normalizedLegacyCopy ? 'normalized_rich_text' : sourceVersion.contentFormat,
+      createdAt: now,
+      updatedAt: now,
+      publishedAt: null,
+      publishedBy: null,
+      createdBy: actorId,
+      blocks: normalizedLegacyCopy ? normalizedLegacyCopy.blocks : sourceVersion.blocks,
+      sourceHtml: normalizedLegacyCopy ? normalizedLegacyCopy.sourceHtml : sourceVersion.sourceHtml,
+      normalizedContent: normalizedLegacyCopy ? normalizedLegacyCopy.normalizedContent : sourceVersion.normalizedContent,
+      toc: normalizedLegacyCopy ? normalizedLegacyCopy.toc : sourceVersion.toc,
+      changeSummary: sourceVersion.status === 'published'
+        ? `Draft created from published version v${sourceVersion.versionNumber}.${normalizedLegacyCopy ? ' Converted from legacy builder content.' : ''}`
+        : `Draft created from version v${sourceVersion.versionNumber}.${normalizedLegacyCopy ? ' Converted from legacy builder content.' : ''}`,
+    };
+
+    const writes: Promise<unknown>[] = [
+      kv.set(legalVersionKey(slug, nextDraftId), nextDraft),
+    ];
+
+    if (definition.currentDraftVersionId) {
+      const existingDraft = await kv.get(
+        legalVersionKey(slug, definition.currentDraftVersionId),
+      ) as LegalDocumentVersion | null;
+
+      if (existingDraft) {
+        writes.push(kv.set(
+          legalVersionKey(slug, existingDraft.id),
+          {
+            ...existingDraft,
+            status: 'archived',
+            updatedAt: now,
+          } satisfies LegalDocumentVersion,
+        ));
+      }
+    }
+
+    const nextDefinition: LegalDocumentDefinition = {
+      ...definition,
+      currentDraftVersionId: nextDraftId,
+      updatedAt: now,
+    };
+
+    writes.push(kv.set(legalDefinitionKey(slug), nextDefinition));
+    await Promise.all(writes);
+
+    return await this.getLegalDocumentAdmin(slug);
+  }
+
+  private async getLegacyLegalResource(
+    slug: string,
+    definition?: LegalDocumentDefinition | null,
+  ): Promise<Resource | null> {
+    const activeDefinition = definition || await this.getLegalDocumentDefinition(slug);
+    if (!activeDefinition) {
+      return null;
+    }
+
+    if (activeDefinition.legacyResourceId) {
+      const linkedResource = await kv.get(`resource:${activeDefinition.legacyResourceId}`) as Resource | null;
+      if (linkedResource) {
+        return linkedResource;
+      }
+    }
+
+    const pointer = await kv.get(`legal_form:${slug}`);
+    if (!pointer?.resourceId) {
+      return null;
+    }
+
+    return await kv.get(`resource:${pointer.resourceId}`) as Resource | null;
+  }
+
+  async migrateLegacyLegalDocumentToDraft(
+    slug: string,
+    actorId: string,
+  ) {
+    const definition = await this.getLegalDocumentDefinition(slug);
+    if (!definition) {
+      throw new NotFoundError('Legal document not found');
+    }
+
+    const currentDraft = definition.currentDraftVersionId
+      ? await kv.get(legalVersionKey(slug, definition.currentDraftVersionId)) as LegalDocumentVersion | null
+      : null;
+
+    if (currentDraft && currentDraft.contentFormat === 'normalized_rich_text') {
+      return await this.getLegalDocumentAdmin(slug);
+    }
+
+    const legacyResource = await this.getLegacyLegalResource(slug, definition);
+    if (!legacyResource) {
+      throw new ValidationError('No legacy legal resource is available to migrate');
+    }
+
+    const versions = await this.listLegalDocumentVersions(slug);
+    const publishedVersion = definition.currentPublishedVersionId
+      ? versions.find((version) => version.id === definition.currentPublishedVersionId) || null
+      : null;
+    const legacySnapshot = publishedVersion?.contentFormat === 'legacy_blocks' ? publishedVersion : null;
+    const htmlSource = convertLegacyBlocksToLegalHtml(
+      legacySnapshot?.blocks?.length ? legacySnapshot.blocks : legacyResource.blocks,
+      definition.title,
+    );
+    const normalized = normalizeLegalDocumentContent(htmlSource);
+    const now = new Date().toISOString();
+    const versionId = generateId();
+
+    const draftVersion: LegalDocumentVersion = {
+      id: versionId,
+      documentId: definition.id,
+      slug,
+      title: definition.title,
+      section: definition.section,
+      versionNumber: legacySnapshot?.versionNumber || legacyResource.version || '1.0',
+      status: 'draft',
+      contentFormat: 'normalized_rich_text',
+      createdAt: now,
+      updatedAt: now,
+      publishedAt: null,
+      effectiveDate: legacySnapshot?.effectiveDate || null,
+      createdBy: actorId,
+      publishedBy: null,
+      changeSummary: 'Migration draft created from the legacy legal resource.',
+      blocks: normalized.blocks,
+      sourceHtml: normalized.sourceHtml,
+      normalizedContent: normalized.normalizedContent,
+      toc: normalized.toc,
+      pdfConfig: legacySnapshot?.pdfConfig || {
+        pageSize: 'A4',
+        orientation: 'portrait',
+      },
+    };
+
+    const writes: Promise<unknown>[] = [
+      kv.set(legalVersionKey(slug, versionId), draftVersion),
+    ];
+
+    if (currentDraft) {
+      writes.push(kv.set(
+        legalVersionKey(slug, currentDraft.id),
+        {
+          ...currentDraft,
+          status: 'archived',
+          updatedAt: now,
+        } satisfies LegalDocumentVersion,
+      ));
+    }
+
+    const nextDefinition: LegalDocumentDefinition = {
+      ...definition,
+      currentDraftVersionId: versionId,
+      updatedAt: now,
+    };
+
+    writes.push(kv.set(legalDefinitionKey(slug), nextDefinition));
+    await Promise.all(writes);
+
+    return await this.getLegalDocumentAdmin(slug);
+  }
+
+  async migratePriorityLegacyLegalDocuments(actorId: string): Promise<{
+    migrated: string[];
+    skipped: string[];
+    failed: Array<{ slug: string; error: string }>;
+  }> {
+    const migrated: string[] = [];
+    const skipped: string[] = [];
+    const failed: Array<{ slug: string; error: string }> = [];
+
+    for (const slug of LEGAL_MIGRATION_PRIORITY_SLUGS) {
+      try {
+        const definition = await this.getLegalDocumentDefinition(slug);
+        if (!definition) {
+          skipped.push(slug);
+          continue;
+        }
+
+        if (definition.renderMode === 'versioned_document') {
+          skipped.push(slug);
+          continue;
+        }
+
+        const currentDraft = definition.currentDraftVersionId
+          ? await kv.get(legalVersionKey(slug, definition.currentDraftVersionId)) as LegalDocumentVersion | null
+          : null;
+
+        if (currentDraft && currentDraft.contentFormat === 'normalized_rich_text') {
+          skipped.push(slug);
+          continue;
+        }
+
+        await this.migrateLegacyLegalDocumentToDraft(slug, actorId);
+        migrated.push(slug);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown migration failure';
+        failed.push({ slug, error: message });
+      }
+    }
+
+    return { migrated, skipped, failed };
+  }
+
   /**
    * Get a legal document by slug.
    * Reads the pointer `legal_form:{slug}` → resolves to `resource:{resourceId}`.
    */
   async getLegalDocument(slug: string): Promise<Resource | null> {
+    const definition = await this.getLegalDocumentDefinition(slug);
+    if (definition?.renderMode === 'versioned_document' && definition.currentPublishedVersionId) {
+      const version = await kv.get(
+        legalVersionKey(slug, definition.currentPublishedVersionId),
+      ) as LegalDocumentVersion | null;
+
+      if (version) {
+        return {
+          id: version.id,
+          title: version.title,
+          description: definition.description,
+          category: 'Legal',
+          createdAt: version.updatedAt,
+          blocks: version.blocks,
+          clientTypes: ['Universal'],
+          version: version.versionNumber,
+          status: version.status,
+        };
+      }
+    }
+
     const pointer = await kv.get(`legal_form:${slug}`);
     if (!pointer || !pointer.resourceId) {
       return null;
@@ -298,6 +1270,77 @@ export class ResourcesService {
 
     const resource = await kv.get(`resource:${pointer.resourceId}`);
     return resource || null;
+  }
+
+  async getLegalDocumentPublic(slug: string): Promise<{
+    id: string;
+    title: string;
+    description?: string;
+    blocks: Record<string, unknown>[];
+    version: string;
+    updatedAt: string;
+    effectiveDate: string | null;
+    section: string | null;
+    toc: Array<{ id: string; title: string; level: number }>;
+    contentHtml: string | null;
+    renderMode: LegalDocumentRenderMode;
+    pdfConfig: {
+      pageSize: 'A4' | 'A3';
+      orientation: 'portrait' | 'landscape';
+    };
+  } | null> {
+    const definition = await this.getLegalDocumentDefinition(slug);
+
+    if (definition?.renderMode === 'versioned_document' && definition.currentPublishedVersionId) {
+      const version = await kv.get(
+        legalVersionKey(slug, definition.currentPublishedVersionId),
+      ) as LegalDocumentVersion | null;
+
+      if (version) {
+        return {
+          id: version.id,
+          title: version.title,
+          description: definition.description,
+          blocks: version.blocks || [],
+          version: version.versionNumber,
+          updatedAt: version.updatedAt,
+          effectiveDate: version.effectiveDate || null,
+          section: definition.section,
+          toc: version.toc || [],
+          contentHtml: version.sourceHtml || null,
+          renderMode: definition.renderMode,
+          pdfConfig: version.pdfConfig || {
+            pageSize: 'A4',
+            orientation: 'portrait',
+          },
+        };
+      }
+    }
+
+    const resource = await this.getLegalDocument(slug);
+    if (!resource) {
+      return null;
+    }
+
+    const blocks = Array.isArray(resource.blocks) ? resource.blocks : [];
+
+    return {
+      id: resource.id,
+      title: resource.title,
+      description: resource.description,
+      blocks,
+      version: resource.version || '1.0',
+      updatedAt: resource.createdAt,
+      effectiveDate: null,
+      section: definition?.section || LEGAL_DOCUMENTS_BY_SLUG[slug]?.section || null,
+      toc: buildLegalTocFromBlocks(blocks),
+      contentHtml: null,
+      renderMode: definition?.renderMode || 'legacy_resource',
+      pdfConfig: {
+        pageSize: 'A4',
+        orientation: 'portrait',
+      },
+    };
   }
 
   /**
@@ -308,12 +1351,13 @@ export class ResourcesService {
    * @returns { seeded, skipped, total }
    */
   async seedLegalDocuments(
-    registry: Array<{ slug: string; name: string; section: string; description: string }>,
+    registry?: Array<{ slug: string; name: string; section: string; description: string }>,
   ): Promise<{ seeded: number; skipped: number; total: number }> {
+    const sourceRegistry = registry && registry.length > 0 ? registry : LEGAL_DOCUMENTS_REGISTRY;
     let seeded = 0;
     let skipped = 0;
 
-    for (const doc of registry) {
+    for (const doc of sourceRegistry) {
       // Check if pointer already exists with a valid resource
       const existing = await kv.get(`legal_form:${doc.slug}`);
       if (existing?.resourceId) {
@@ -360,12 +1404,19 @@ export class ResourcesService {
         kv.set(`legal_form:${doc.slug}`, { resourceId, slug: doc.slug, name: doc.name, section: doc.section, createdAt: now }),
       ]);
 
+      await this.bootstrapLegalDocumentDefinition({
+        slug: doc.slug,
+        name: doc.name,
+        section: doc.section as (typeof LEGAL_DOCUMENTS_REGISTRY)[number]['section'],
+        description: doc.description,
+      });
+
       seeded++;
       log.info('Legal document seeded', { slug: doc.slug, resourceId });
     }
 
-    log.success('Legal document seeding complete', { seeded, skipped, total: registry.length });
-    return { seeded, skipped, total: registry.length };
+    log.success('Legal document seeding complete', { seeded, skipped, total: sourceRegistry.length });
+    return { seeded, skipped, total: sourceRegistry.length };
   }
 
   // ============================================================================

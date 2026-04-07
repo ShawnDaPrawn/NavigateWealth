@@ -1,5 +1,7 @@
 // PDF Generation utility for Navigate Wealth Portfolio Reports
 
+import { withNavigateWealthPrintTitle } from './pdfPrintTitle';
+
 export interface ClientPortfolioData {
   // Personal Info
   clientName: string;
@@ -95,13 +97,24 @@ export async function generateAndDownloadPDF(clientData: ClientPortfolioData) {
   
   // Wait for render
   await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Trigger print dialog (which can save as PDF)
-  window.print();
-  
-  // Cleanup
+
+  const name = (clientData.clientName || '').trim();
+  const reportDate = clientData.reportDate?.trim();
+  let titleSuffix: string;
+  if (name && reportDate) {
+    titleSuffix = `Portfolio Report - ${name} (${reportDate})`;
+  } else if (name) {
+    titleSuffix = `Portfolio Report - ${name}`;
+  } else if (reportDate) {
+    titleSuffix = `Portfolio Report (${reportDate})`;
+  } else {
+    titleSuffix = 'Portfolio Report';
+  }
+
+  withNavigateWealthPrintTitle(titleSuffix, () => window.print(), 1200);
+
   setTimeout(() => {
     root.unmount();
     document.body.removeChild(container);
-  }, 1000);
+  }, 1500);
 }

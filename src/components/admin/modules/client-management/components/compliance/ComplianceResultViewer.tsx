@@ -49,6 +49,7 @@ import {
 import { projectId } from '../../../../../../utils/supabase/info';
 import { getAuthToken } from './compliance-auth';
 import { BASE_PDF_CSS } from '../../../resources/templates/BasePdfLayout';
+import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../../utils/pdfPrintTitle';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1097,7 +1098,7 @@ function generateReportHtml(activity: ComplianceActivity, result: CheckResult, c
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${activity.type} \u2014 ${clientName}</title>
+  <title>${escapeHtmlText(navigateWealthPdfDocumentTitle(`${activity.type} \u2014 ${clientName}`))}</title>
   <style>
     ${BASE_PDF_CSS}
 

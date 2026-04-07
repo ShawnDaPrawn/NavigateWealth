@@ -3,6 +3,7 @@ import { Dialog, DialogContent } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { PDFPortfolioReport } from '../modules/portfolio/PDFPortfolioReport';
 import { ClientPortfolioData } from '../../utils/pdfGenerator';
+import { withNavigateWealthPrintTitle } from '../../utils/pdfPrintTitle';
 import { Download, X, Printer } from 'lucide-react';
 
 interface PortfolioReportModalProps {
@@ -14,14 +15,28 @@ interface PortfolioReportModalProps {
 export function PortfolioReportModal({ isOpen, onClose, clientData }: PortfolioReportModalProps) {
   const printContentRef = useRef<HTMLDivElement>(null);
 
+  const runPrintWithTitle = () => {
+    const name = (clientData.clientName || '').trim();
+    const reportDate = clientData.reportDate?.trim();
+    let suffix: string;
+    if (name && reportDate) {
+      suffix = `Portfolio Report - ${name} (${reportDate})`;
+    } else if (name) {
+      suffix = `Portfolio Report - ${name}`;
+    } else if (reportDate) {
+      suffix = `Portfolio Report (${reportDate})`;
+    } else {
+      suffix = 'Portfolio Report';
+    }
+    withNavigateWealthPrintTitle(suffix, () => window.print());
+  };
+
   const handlePrint = () => {
-    // Trigger browser print - the print styles will handle showing only the print version
-    window.print();
+    runPrintWithTitle();
   };
 
   const handleDownload = () => {
-    // Same as print - users can "Save as PDF" in the print dialog
-    window.print();
+    runPrintWithTitle();
   };
 
   return (

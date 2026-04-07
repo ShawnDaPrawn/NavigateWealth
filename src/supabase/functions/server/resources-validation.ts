@@ -32,3 +32,14 @@ export const RetirementScenarioSchema = z.object({
     inflationRate: z.number().min(0).max(100).optional(),
   }).passthrough(),
 });
+
+export const UpsertLegalDocumentDraftSchema = z.object({
+  versionNumber: z.string().min(1, 'Version number is required').max(50),
+  effectiveDate: z.string().max(100).nullable().optional(),
+  changeSummary: z.string().max(2000).nullable().optional(),
+  sourceHtml: z.string().max(250_000, 'Legal document content is too large'),
+  pdfConfig: z.object({
+    pageSize: z.enum(['A4', 'A3']).default('A4'),
+    orientation: z.enum(['portrait', 'landscape']).default('portrait'),
+  }).optional(),
+});

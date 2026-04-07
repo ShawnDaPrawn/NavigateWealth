@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useSearchParams, useLocation } from 'react-router';
+import { Link, useSearchParams, useLocation } from 'react-router';
 import DOMPurify from 'dompurify';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
 import { BASE_PDF_CSS } from '../admin/modules/resources/templates/BasePdfLayout';
 
 // ============================================================================
@@ -402,7 +403,7 @@ export function LegalPage() {
     printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
-  <title>${viewerDocument.title} - Navigate Wealth</title>
+  <title>${escapeHtmlText(navigateWealthPdfDocumentTitle(viewerDocument.title))}</title>
   <style>${BASE_PDF_CSS}</style>
 </head>
 <body>
@@ -465,7 +466,6 @@ export function LegalPage() {
   const DocumentList = ({ documents }: { documents: LegalDocument[] }) => (
     <div className="divide-y divide-gray-100">
       {documents.map((doc) => {
-        const isLoading = loadingSlug === doc.id;
         return (
           <div 
             key={doc.id}
@@ -474,18 +474,15 @@ export function LegalPage() {
             <span className="text-gray-900 font-medium">{doc.name}</span>
             <div className="flex items-center gap-2 ml-4 shrink-0">
               <Button
+                asChild
                 variant="outline"
                 size="sm"
-                onClick={() => handleViewDocument(doc.id)}
-                disabled={isLoading}
                 className="text-gray-600 hover:text-purple-600 hover:border-purple-200 hover:bg-purple-50"
               >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
+                <Link to={`/legal/${doc.id}`}>
                   <Eye className="h-4 w-4 mr-2" />
-                )}
-                {isLoading ? 'Loading...' : 'View'}
+                  Read
+                </Link>
               </Button>
             </div>
           </div>

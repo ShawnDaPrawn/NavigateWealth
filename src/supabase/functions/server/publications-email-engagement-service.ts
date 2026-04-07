@@ -7,7 +7,12 @@ const ARTICLE_EMAIL_TRACKING_PREFIX = 'article_email_tracking:';
 const ARTICLE_EMAIL_TOKEN_PREFIX = 'article_email_token:';
 const ARTICLE_EMAIL_PUBLISH_RECIPIENT_PREFIX = 'article_email_publish_recipient:';
 const WEBSITE_BASE_URL = 'https://navigatewealth.co';
-const TRACKING_RECORD_PERSIST_BATCH_SIZE = 25;
+// Each publish recipient currently fans out to three KV entries
+// (article, token, and publish recipient lookup). Large bulk upserts were
+// timing out in production during article publish, so keep batches small.
+const TRACKING_RECORD_PERSIST_BATCH_SIZE = 5;
+const TRACKING_RECORD_LOOKUP_BATCH_SIZE = 100;
+const TRACKING_RECORD_LIST_PAGE_SIZE = 100;
 
 export type ArticleEmailTrackingSource = 'publish' | 'reshare';
 export type ArticleEmailDeliveryStatus =
@@ -95,6 +100,42 @@ function tokenTrackingKey(token: string): string {
 
 function publishRecipientTrackingKey(articleId: string, recipientEmail: string): string {
   return `${ARTICLE_EMAIL_PUBLISH_RECIPIENT_PREFIX}${articleId}:${recipientEmail.trim().toLowerCase()}`;
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+async function listTrackingRecordsByPrefix(prefix: string): Promise<ArticleEmailTrackingRecord[]> {
+  const records: ArticleEmailTrackingRecord[] = [];
+  let startAfter: string | undefined;
+
+  while (true) {
+    const rows = await kv.listByPrefix(prefix, {
+      startAfter,
+      limit: TRACKING_RECORD_LIST_PAGE_SIZE,
+    }) as Array<{ key: string; value: ArticleEmailTrackingRecord | null | undefined }>;
+
+    if (rows.length === 0) {
+      return records;
+    }
+
+    for (const row of rows) {
+      if (row.value) {
+        records.push(withTrackingDefaults(row.value));
+      }
+    }
+
+    if (rows.length < TRACKING_RECORD_LIST_PAGE_SIZE) {
+      return records;
+    }
+
+    startAfter = rows[rows.length - 1]?.key;
+  }
 }
 
 async function persistTrackingRecord(record: ArticleEmailTrackingRecord): Promise<void> {
@@ -260,16 +301,25 @@ export async function createArticleEmailTrackingRecords(
 ): Promise<ArticleEmailTrackingRecord[]> {
   if (inputs.length === 0) return [];
 
-  const existingPublishRecords = await Promise.all(
-    inputs.map((input) => {
+  const existingPublishRecords = new Array<ArticleEmailTrackingRecord | null>(inputs.length).fill(null);
+  const publishLookups = inputs
+    .map((input, index) => {
       const source = input.source ?? 'publish';
-      if (source !== 'publish') return Promise.resolve(null);
+      if (source !== 'publish') return null;
 
-      return kv.get(
-        publishRecipientTrackingKey(input.article.id, input.recipient.email.trim().toLowerCase()),
-      ) as Promise<ArticleEmailTrackingRecord | null>;
-    }),
-  );
+      return {
+        index,
+        key: publishRecipientTrackingKey(input.article.id, input.recipient.email.trim().toLowerCase()),
+      };
+    })
+    .filter((lookup): lookup is { index: number; key: string } => Boolean(lookup));
+
+  for (const batch of chunkArray(publishLookups, TRACKING_RECORD_LOOKUP_BATCH_SIZE)) {
+    const batchResults = await kv.mget(batch.map((lookup) => lookup.key)) as Array<ArticleEmailTrackingRecord | null | undefined>;
+    batch.forEach((lookup, batchIndex) => {
+      existingPublishRecords[lookup.index] = batchResults[batchIndex] ?? null;
+    });
+  }
 
   const records = inputs.map((input, index) => {
     const source = input.source ?? 'publish';
@@ -418,8 +468,8 @@ export async function markArticleEmailRead(token: string): Promise<ArticleEmailT
 }
 
 export async function listArticleEmailTrackingRecords(articleId: string): Promise<ArticleEmailTrackingRecord[]> {
-  const records = await kv.getByPrefix(`${ARTICLE_EMAIL_TRACKING_PREFIX}${articleId}:`) as ArticleEmailTrackingRecord[];
-  return records.map((record) => withTrackingDefaults(record)).sort((a, b) => {
+  const records = await listTrackingRecordsByPrefix(`${ARTICLE_EMAIL_TRACKING_PREFIX}${articleId}:`);
+  return records.sort((a, b) => {
     const aTime = new Date(a.lastReadAt || a.lastOpenedAt || a.sentAt || a.createdAt).getTime();
     const bTime = new Date(b.lastReadAt || b.lastOpenedAt || b.sentAt || b.createdAt).getTime();
     return bTime - aTime;
@@ -427,8 +477,8 @@ export async function listArticleEmailTrackingRecords(articleId: string): Promis
 }
 
 export async function listAllArticleEmailTrackingRecords(): Promise<ArticleEmailTrackingRecord[]> {
-  const records = await kv.getByPrefix(ARTICLE_EMAIL_TRACKING_PREFIX) as ArticleEmailTrackingRecord[];
-  return records.map((record) => withTrackingDefaults(record)).sort((a, b) => {
+  const records = await listTrackingRecordsByPrefix(ARTICLE_EMAIL_TRACKING_PREFIX);
+  return records.sort((a, b) => {
     const aTime = new Date(a.sentAt || a.createdAt).getTime();
     const bTime = new Date(b.sentAt || b.createdAt).getTime();
     return bTime - aTime;

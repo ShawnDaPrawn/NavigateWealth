@@ -15,6 +15,7 @@ import { createPlainTextEmail, createEmailTemplate, sendEmail, getFooterSettings
 import { createModuleLogger } from './stderr-logger.ts';
 import {
   addNewsletterSubscriber,
+  backfillLegacyNewsletterSubscribersToGroup,
   removeNewsletterSubscriber,
 } from './newsletter-group-service.ts';
 import {
@@ -25,7 +26,7 @@ import {
   AdminUpdateSubscriberSchema,
 } from './newsletter-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
-import { requireAuth } from './auth-mw.ts';
+import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 
@@ -446,6 +447,9 @@ app.get("/unsubscribe", async (c) => {
  * GET /admin/subscribers — List all newsletter subscribers
  */
 app.get('/admin/subscribers', requireAuth, asyncHandler(async (c) => {
+  await backfillLegacyNewsletterSubscribersToGroup().catch((error) => {
+    log.error('Newsletter group backfill failed during subscriber listing', error);
+  });
   const subscribers = await listSubscribers();
   return c.json({ success: true, subscribers, total: subscribers.length });
 }));
@@ -593,8 +597,22 @@ app.post('/admin/update', requireAuth, asyncHandler(async (c) => {
  * GET /admin/stats — Newsletter KPI summary
  */
 app.get('/admin/stats', requireAuth, asyncHandler(async (c) => {
+  await backfillLegacyNewsletterSubscribersToGroup().catch((error) => {
+    log.error('Newsletter group backfill failed during stats load', error);
+  });
   const data = await getStats();
   return c.json({ success: true, data });
+}));
+
+app.post('/admin/backfill-group', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const result = await backfillLegacyNewsletterSubscribersToGroup();
+  return c.json({
+    success: true,
+    message: result.subscriberCount > 0
+      ? `Backfilled ${result.subscriberCount} legacy subscriber(s) into Newsletter Contacts`
+      : 'Newsletter Contacts legacy backfill already completed',
+    data: result,
+  });
 }));
 
 export default app;

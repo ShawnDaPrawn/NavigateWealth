@@ -56,6 +56,7 @@ import {
 import { toast } from 'sonner@2.0.3';
 import { MessageRenderer } from '../../../../shared/MessageRenderer';
 import { api } from '../../../../../utils/api/client';
+import { navigateWealthPdfSaveFileName } from '../../../../../utils/pdfPrintTitle';
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -1149,8 +1150,13 @@ function generateTextPdf(willText: string, clientName: string): void {
     }
 
     addFooter(doc, pageNum, documentTitle);
-    const safeName = clientName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
-    doc.save(`${safeName}_Last_Will_and_Testament.pdf`);
+    doc.save(
+      navigateWealthPdfSaveFileName(
+        clientName.trim()
+          ? `Last Will and Testament - ${clientName.trim()}`
+          : 'Last Will and Testament',
+      ),
+    );
   });
 }
 

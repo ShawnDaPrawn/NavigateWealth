@@ -11,6 +11,7 @@ import { Separator } from '../ui/separator';
 import { FileText, Eye, Loader2, Printer } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
 import { BASE_PDF_CSS } from '../admin/modules/resources/templates/BasePdfLayout';
 
 // ============================================================================
@@ -266,7 +267,7 @@ function printDocument(doc: NonNullable<LegalDocument>) {
   printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
-  <title>${doc.title} - Navigate Wealth</title>
+  <title>${escapeHtmlText(navigateWealthPdfDocumentTitle(doc.title))}</title>
   <style>${BASE_PDF_CSS}</style>
 </head>
 <body>

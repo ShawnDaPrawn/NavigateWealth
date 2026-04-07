@@ -8,13 +8,14 @@
  * - External content integration
  */
 
-import { Hono } from 'npm:hono';
+import { Context, Hono } from 'npm:hono';
 import { requireAuth, requireAdmin, requireSuperAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ResourcesService } from './resources-service.ts';
 import {
   CreateResourceSchema,
+  UpsertLegalDocumentDraftSchema,
   UpdateResourceSchema,
   RetirementScenarioSchema,
 } from './resources-validation.ts';
@@ -24,6 +25,32 @@ import { AdminAuditService } from './admin-audit-service.ts';
 const app = new Hono();
 const log = createModuleLogger('resources');
 const service = new ResourcesService();
+
+function recordLegalAudit(
+  c: Context,
+  payload: {
+    action: string;
+    summary: string;
+    entityId: string;
+    severity?: 'info' | 'warning' | 'critical';
+    metadata?: Record<string, unknown>;
+  },
+) {
+  const actorId = c.get('userId') || 'admin';
+  const actorRole = c.get('userRole') || 'admin';
+
+  AdminAuditService.record({
+    actorId,
+    actorRole,
+    category: 'configuration',
+    action: payload.action,
+    summary: payload.summary,
+    severity: payload.severity || 'info',
+    entityType: 'legal_document',
+    entityId: payload.entityId,
+    metadata: payload.metadata,
+  }).catch(() => {});
+}
 
 // Health check — uses a distinct path to avoid colliding with the resource listing at GET /
 app.get('/health', (c) => c.json({ service: 'resources', status: 'active' }));
@@ -44,23 +71,16 @@ app.get('/legal/:slug', asyncHandler(async (c) => {
     return c.json({ error: 'Slug parameter is required' }, 400);
   }
 
-  const resource = await service.getLegalDocument(slug);
+  const document = await service.getLegalDocumentPublic(slug);
 
-  if (!resource) {
+  if (!document) {
     return c.json({ available: false, slug }, 200);
   }
 
   return c.json({
     available: true,
     slug,
-    document: {
-      id: resource.id,
-      title: resource.title,
-      description: resource.description,
-      blocks: resource.blocks || [],
-      version: resource.version,
-      updatedAt: resource.createdAt, // createdAt serves as last-modified for KV resources
-    },
+    document,
   });
 }));
 
@@ -70,15 +90,231 @@ app.get('/legal/:slug', asyncHandler(async (c) => {
  * Admin-only.
  */
 app.post('/legal/seed', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const body = await c.req.json();
-  const registry = body.documents;
-
-  if (!registry || !Array.isArray(registry)) {
-    return c.json({ error: 'Request body must contain a "documents" array' }, 400);
-  }
+  const body = await c.req.json().catch(() => ({}));
+  const registry = Array.isArray(body.documents) ? body.documents : undefined;
 
   const result = await service.seedLegalDocuments(registry);
   return c.json({ success: true, ...result });
+}));
+
+/**
+ * GET /resources/admin/legal-documents
+ * Admin-only list of the new legal document definitions.
+ * Milestone 1 foundation: powers the dedicated legal document admin shell.
+ */
+app.get('/admin/legal-documents', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const documents = await service.listLegalDocumentDefinitions();
+  return c.json({ documents });
+}));
+
+/**
+ * POST /resources/admin/legal-documents/migrate-priority
+ * Create normalized migration drafts for the high-priority legacy legal documents.
+ */
+app.post('/admin/legal-documents/migrate-priority', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const userId = c.get('userId') || 'admin';
+  const result = await service.migratePriorityLegacyLegalDocuments(userId);
+
+  recordLegalAudit(c, {
+    action: 'legal_document_priority_migration_started',
+    summary: 'Priority legal document migration drafts created',
+    entityId: 'priority-legal-migration',
+    metadata: result,
+  });
+
+  return c.json(result);
+}));
+
+/**
+ * GET /resources/admin/legal-documents/:slug
+ * Admin-only detail view for a single legal document definition plus versions.
+ */
+app.get('/admin/legal-documents/:slug', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const slug = c.req.param('slug');
+  const result = await service.getLegalDocumentAdmin(slug);
+
+  if (!result) {
+    return c.json({ error: 'Legal document not found' }, 404);
+  }
+
+  return c.json(result);
+}));
+
+/**
+ * GET /resources/admin/legal-documents/:slug/versions
+ * Admin-only version history endpoint.
+ */
+app.get('/admin/legal-documents/:slug/versions', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const slug = c.req.param('slug');
+  const definition = await service.getLegalDocumentDefinition(slug);
+  if (!definition) {
+    return c.json({ error: 'Legal document not found' }, 404);
+  }
+
+  const versions = await service.listLegalDocumentVersions(slug);
+  return c.json({ versions });
+}));
+
+/**
+ * GET /resources/admin/legal-documents/:slug/audit
+ * Admin-only audit history for a legal document.
+ */
+app.get('/admin/legal-documents/:slug/audit', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const slug = c.req.param('slug');
+  const definition = await service.getLegalDocumentDefinition(slug);
+  if (!definition) {
+    return c.json({ error: 'Legal document not found' }, 404);
+  }
+
+  const limitParam = Number(c.req.query('limit') || '25');
+  const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(100, limitParam)) : 25;
+  const entries = await AdminAuditService.query({
+    entityType: 'legal_document',
+    entityId: slug,
+    limit,
+  });
+
+  return c.json({ entries });
+}));
+
+/**
+ * POST /resources/admin/legal-documents/:slug/migrate
+ * Create a normalized migration draft from the legacy legal resource for review.
+ */
+app.post('/admin/legal-documents/:slug/migrate', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const slug = c.req.param('slug');
+  const userId = c.get('userId') || 'admin';
+  const result = await service.migrateLegacyLegalDocumentToDraft(slug, userId);
+
+  recordLegalAudit(c, {
+    action: 'legal_document_migration_draft_created',
+    summary: `Legacy legal document migrated to draft: ${slug}`,
+    entityId: slug,
+    metadata: {
+      draftVersionId: result?.currentDraftVersion?.id || null,
+      publishedVersionId: result?.currentPublishedVersion?.id || null,
+    },
+  });
+
+  return c.json(result);
+}));
+
+/**
+ * POST /resources/admin/legal-documents/:slug/drafts
+ * Create the active draft for a legal document.
+ */
+app.post('/admin/legal-documents/:slug/drafts', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const slug = c.req.param('slug');
+  const userId = c.get('userId') || 'admin';
+  const body = await c.req.json();
+  const parsed = UpsertLegalDocumentDraftSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+  }
+
+  const result = await service.createLegalDocumentDraft(slug, parsed.data, userId);
+  recordLegalAudit(c, {
+    action: 'legal_document_draft_created',
+    summary: `Legal document draft created: ${slug}`,
+    entityId: slug,
+    metadata: {
+      draftVersionId: result?.currentDraftVersion?.id || null,
+      versionNumber: result?.currentDraftVersion?.versionNumber || parsed.data.versionNumber,
+    },
+  });
+  return c.json(result);
+}));
+
+/**
+ * PUT /resources/admin/legal-documents/:slug/versions/:versionId
+ * Update the active draft version content and metadata.
+ */
+app.put('/admin/legal-documents/:slug/versions/:versionId', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const slug = c.req.param('slug');
+  const versionId = c.req.param('versionId');
+  const userId = c.get('userId') || 'admin';
+  const body = await c.req.json();
+  const parsed = UpsertLegalDocumentDraftSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+  }
+
+  const result = await service.updateLegalDocumentDraft(slug, versionId, parsed.data, userId);
+  recordLegalAudit(c, {
+    action: 'legal_document_draft_updated',
+    summary: `Legal document draft updated: ${slug}`,
+    entityId: slug,
+    metadata: {
+      draftVersionId: versionId,
+      versionNumber: parsed.data.versionNumber,
+    },
+  });
+  return c.json(result);
+}));
+
+/**
+ * POST /resources/admin/legal-documents/:slug/versions/:versionId/publish
+ * Publish the active legal draft and switch the public slug to the versioned renderer.
+ */
+app.post('/admin/legal-documents/:slug/versions/:versionId/publish', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const slug = c.req.param('slug');
+  const versionId = c.req.param('versionId');
+  const userId = c.get('userId') || 'admin';
+
+  const result = await service.publishLegalDocumentDraft(slug, versionId, userId);
+
+  recordLegalAudit(c, {
+    action: 'legal_document_published',
+    summary: `Legal document published: ${slug}`,
+    entityId: slug,
+    metadata: { versionId },
+  });
+
+  return c.json(result);
+}));
+
+/**
+ * POST /resources/admin/legal-documents/:slug/versions/:versionId/archive
+ * Archive an inactive legal document version.
+ */
+app.post('/admin/legal-documents/:slug/versions/:versionId/archive', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const slug = c.req.param('slug');
+  const versionId = c.req.param('versionId');
+  const userId = c.get('userId') || 'admin';
+
+  const result = await service.archiveLegalDocumentVersion(slug, versionId);
+
+  recordLegalAudit(c, {
+    action: 'legal_document_version_archived',
+    summary: `Legal document version archived: ${slug}`,
+    entityId: slug,
+    metadata: { versionId },
+  });
+
+  return c.json(result);
+}));
+
+/**
+ * POST /resources/admin/legal-documents/:slug/versions/:versionId/duplicate
+ * Create a fresh working draft from any existing legal document version.
+ */
+app.post('/admin/legal-documents/:slug/versions/:versionId/duplicate', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  const slug = c.req.param('slug');
+  const versionId = c.req.param('versionId');
+  const userId = c.get('userId') || 'admin';
+
+  const result = await service.duplicateLegalDocumentVersionToDraft(slug, versionId, userId);
+
+  recordLegalAudit(c, {
+    action: 'legal_document_version_duplicated',
+    summary: `Legal document draft created from version: ${slug}`,
+    entityId: slug,
+    metadata: { versionId },
+  });
+
+  return c.json(result);
 }));
 
 // ============================================================================

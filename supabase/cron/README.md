@@ -11,12 +11,13 @@ Use `supabase/cron/publications-jobs.sql` to create the production cron jobs for
 - `publications-process-notification-jobs`
   - Runs every 30 seconds.
   - Advances queued article email delivery independently of the admin browser.
-  - Processes up to 5 jobs and up to 3 send batches per job on each run.
+  - Processes up to 5 jobs and up to 4 send batches per job on each run.
 
 ## Before you run it
 
 - In Supabase Dashboard, make sure `pg_cron`, `pg_net`, and `vault` are enabled.
-- Replace `__SUPABASE_SERVICE_ROLE_KEY__` in the SQL file with your actual project service role key.
+- Replace `__SUPABASE_ANON_KEY__` in the SQL file with the project anon key used for Edge Function gateway access.
+- Replace `__PUBLICATIONS_CRON_AUTH_TOKEN__` in the SQL file with the shared token stored in KV under `system:publications:cron_auth_token`.
 
 ## Where to run it
 

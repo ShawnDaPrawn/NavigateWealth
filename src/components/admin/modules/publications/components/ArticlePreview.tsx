@@ -9,8 +9,8 @@
  * @module publications/components/ArticlePreview
  */
 
-import React, { useRef, useEffect } from 'react';
-import { X, Calendar, Clock, User, Monitor, Smartphone, Tablet } from 'lucide-react';
+import React, { useEffect, useMemo } from 'react';
+import { X, Calendar, Clock, User, Monitor, Smartphone, Tablet, AlertCircle } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
@@ -191,9 +191,54 @@ function processContent(content: string): string {
   return html;
 }
 
-// Determine if content is HTML or markdown
+/**
+ * Word / legal exports often paste as full HTML documents. The preview only needs
+ * the body fragment; otherwise isHtmlContent can mis-detect and markdown
+ * processing mangles the content.
+ */
+function normalizeHtmlDocumentToFragment(html: string): string {
+  const t = html.trim();
+  if (!t) return t;
+  const looksLikeFullDoc = /^<!DOCTYPE/i.test(t) || /<html[\s>]/i.test(t);
+  if (!looksLikeFullDoc) return t;
+
+  const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(t);
+  if (bodyMatch?.[1]) return bodyMatch[1].trim();
+
+  let rest = t.replace(/<head[\s\S]*?<\/head>/gi, '');
+  rest = rest.replace(/^[\s\S]*?<!DOCTYPE[^>]*>/i, '');
+  rest = rest.replace(/^[\s\S]*?<html[^>]*>/i, '');
+  rest = rest.replace(/<\/html>\s*$/i, '').trim();
+  return rest || t;
+}
+
+// Determine if content is HTML or markdown (legal/Word: DOCTYPE, comments, XML prolog)
 function isHtmlContent(content: string): boolean {
-  return /<[a-z][\s\S]*>/i.test(content.trim());
+  const t = content.replace(/^\uFEFF/, '').trim();
+  if (!t) return false;
+  if (/^<!DOCTYPE/i.test(t)) return true;
+  if (/^<\?xml/i.test(t)) return true;
+  if (/^<!--/.test(t)) return true;
+  if (/^<\/?[a-z][a-z0-9]*(?:\s|>|\/)/i.test(t)) return true;
+  if (/^<![\s\S]*?>/i.test(t)) return true;
+  const head = t.slice(0, 800);
+  if (/<[a-z][a-z0-9]*[\s>\/]/i.test(head) || /<\/[a-z][a-z0-9]*>/i.test(head)) return true;
+  return /<[a-z][\s\S]*>/i.test(t);
+}
+
+function buildPreviewHtml(bodyContent: string): { ok: true; html: string } | { ok: false; message: string } {
+  try {
+    const normalized = normalizeHtmlDocumentToFragment(bodyContent);
+    const rawHtml = isHtmlContent(normalized)
+      ? normalized
+      : processContent(normalized);
+    const sanitisedHtml = DOMPurify.sanitize(rawHtml);
+    const enhancedHtml = enhanceArticleHtml(sanitisedHtml);
+    return { ok: true, html: enhancedHtml };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Preview could not be rendered';
+    return { ok: false, message };
+  }
 }
 
 export function ArticlePreview({
@@ -205,12 +250,7 @@ export function ArticlePreview({
   const categoryName = categories.find((c) => c.id === article.category_id)?.name;
   const bodyContent = article.body || article.content || '';
 
-  // Convert markdown to HTML if needed, then sanitise and enhance
-  const rawHtml = isHtmlContent(bodyContent)
-    ? bodyContent
-    : processContent(bodyContent);
-  const sanitisedHtml = DOMPurify.sanitize(rawHtml);
-  const enhancedHtml = enhanceArticleHtml(sanitisedHtml);
+  const previewHtml = useMemo(() => buildPreviewHtml(bodyContent), [bodyContent]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -262,7 +302,7 @@ export function ArticlePreview({
                   variant="outline"
                   className="text-white/80 border-white/25 text-xs"
                 >
-                  Insights &amp; Education
+                  {types?.find((t) => t.id === article.type_id)?.name || 'Insights & Education'}
                 </Badge>
                 {article.is_featured && (
                   <Badge className="bg-amber-500 text-white border-0 text-xs">
@@ -332,23 +372,37 @@ export function ArticlePreview({
 
               {/* Body */}
               {bodyContent ? (
-                <div
-                  className={cn(
-                    'preview-body',
-                    'prose prose-lg max-w-none',
-                    'prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight',
-                    'prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-5 prose-h2:pb-3 prose-h2:border-b prose-h2:border-gray-100',
-                    'prose-h3:text-xl prose-h3:mt-10 prose-h3:mb-4',
-                    'prose-p:text-gray-700 prose-p:leading-[1.85] prose-p:mb-5 prose-p:text-[16px]',
-                    'prose-a:text-purple-600 prose-a:font-medium prose-a:no-underline hover:prose-a:underline',
-                    'prose-strong:text-gray-900 prose-strong:font-semibold',
-                    'prose-ul:my-6 prose-ol:my-6',
-                    'prose-li:text-gray-700 prose-li:my-2 prose-li:leading-relaxed',
-                    'prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8',
-                    'prose-code:text-purple-600 prose-code:bg-purple-50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-medium'
-                  )}
-                  dangerouslySetInnerHTML={{ __html: enhancedHtml }}
-                />
+                previewHtml.ok ? (
+                  <div
+                    className={cn(
+                      'preview-body',
+                      'prose prose-lg max-w-none',
+                      'prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight',
+                      'prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-5 prose-h2:pb-3 prose-h2:border-b prose-h2:border-gray-100',
+                      'prose-h3:text-xl prose-h3:mt-10 prose-h3:mb-4',
+                      'prose-p:text-gray-700 prose-p:leading-[1.85] prose-p:mb-5 prose-p:text-[16px]',
+                      'prose-a:text-purple-600 prose-a:font-medium prose-a:no-underline hover:prose-a:underline',
+                      'prose-strong:text-gray-900 prose-strong:font-semibold',
+                      'prose-ul:my-6 prose-ol:my-6',
+                      'prose-li:text-gray-700 prose-li:my-2 prose-li:leading-relaxed',
+                      'prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8',
+                      'prose-code:text-purple-600 prose-code:bg-purple-50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-medium'
+                    )}
+                    dangerouslySetInnerHTML={{ __html: previewHtml.html }}
+                  />
+                ) : (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-6 flex gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-red-900">Preview failed</p>
+                      <p className="text-sm text-red-800 mt-1">{previewHtml.message}</p>
+                      <p className="text-xs text-red-700/90 mt-3">
+                        Legal and Word-style HTML often starts with a DOCTYPE or comments. If this persists, try
+                        pasting only the body content, or save and view the live article.
+                      </p>
+                    </div>
+                  </div>
+                )
               ) : (
                 <div className="py-12 text-center">
                   <p className="text-gray-400 italic text-lg">

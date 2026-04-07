@@ -498,12 +498,38 @@ app.post('/email-footer', requireAuth, requireAdmin, asyncHandler(async (c) => {
 
 /**
  * GET /communication/campaigns
- * Get all campaigns
+ * - Default: paginated + optional filters (search, channel, recipientType, createdBy) + senderOptions.
+ * - ?all=1 — full list (use sparingly; for exports / legacy callers).
  */
 app.get('/campaigns', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const campaigns = await service.getAllCampaigns();
-  
-  return c.json({ campaigns });
+  if (c.req.query('all') === '1') {
+    const result = await service.listAllCampaignsWithCreatorNames();
+    return c.json(result);
+  }
+
+  const page = Math.max(1, parseInt(c.req.query('page') || '1', 10) || 1);
+  const limitParsed = parseInt(c.req.query('limit') || '50', 10);
+  const limit = Math.min(100, Math.max(1, Number.isFinite(limitParsed) ? limitParsed : 50));
+
+  const search = c.req.query('search')?.trim() || undefined;
+  const channelRaw = c.req.query('channel')?.trim();
+  const channel =
+    channelRaw === 'email' || channelRaw === 'whatsapp' ? channelRaw : undefined;
+  const rtRaw = c.req.query('recipientType')?.trim();
+  const recipientType =
+    rtRaw === 'single' || rtRaw === 'multiple' || rtRaw === 'group' ? rtRaw : undefined;
+  const createdBy = c.req.query('createdBy')?.trim() || undefined;
+
+  const result = await service.listCampaignsFiltered({
+    page,
+    limit,
+    search,
+    channel,
+    recipientType,
+    createdBy,
+  });
+
+  return c.json(result);
 }));
 
 /**
@@ -548,7 +574,7 @@ app.post('/campaigns/:id/send', requireAuth, requireAdmin, asyncHandler(async (c
   
   log.info('Admin: Sending campaign', { adminUserId, campaignId });
   
-  const result = await service.sendCampaign(campaignId);
+  const result = await service.sendCampaign(campaignId, adminUserId);
   
   log.success('Campaign sent', { adminUserId, campaignId });
 

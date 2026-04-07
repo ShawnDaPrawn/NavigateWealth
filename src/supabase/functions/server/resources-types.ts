@@ -57,6 +57,57 @@ export interface Resource {
   status?: 'draft' | 'published' | 'archived';
 }
 
+export type LegalDocumentLifecycleStatus = 'draft' | 'published' | 'archived';
+export type LegalDocumentRenderMode = 'legacy_resource' | 'versioned_document';
+export type LegalDocumentContentFormat = 'legacy_blocks' | 'normalized_rich_text';
+export type LegalDocumentSection =
+  | 'legal-notices'
+  | 'privacy-data-protection'
+  | 'regulatory-disclosures'
+  | 'other';
+
+export interface LegalDocumentDefinition {
+  id: string;
+  slug: string;
+  title: string;
+  section: LegalDocumentSection;
+  description: string;
+  status: LegalDocumentLifecycleStatus;
+  renderMode: LegalDocumentRenderMode;
+  migrationPriority?: 'high' | 'normal';
+  currentPublishedVersionId: string | null;
+  currentDraftVersionId: string | null;
+  legacyResourceId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LegalDocumentVersion {
+  id: string;
+  documentId: string;
+  slug: string;
+  title: string;
+  section: LegalDocumentSection;
+  versionNumber: string;
+  status: LegalDocumentLifecycleStatus;
+  contentFormat: LegalDocumentContentFormat;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string | null;
+  effectiveDate: string | null;
+  createdBy: string;
+  publishedBy: string | null;
+  changeSummary: string | null;
+  blocks: Record<string, unknown>[];
+  sourceHtml: string | null;
+  normalizedContent: Record<string, unknown> | null;
+  toc: Array<{ id: string; title: string; level: number }>;
+  pdfConfig: {
+    pageSize: 'A4' | 'A3';
+    orientation: 'portrait' | 'landscape';
+  };
+}
+
 // Resource filters
 export interface ResourceFilters {
   category?: ResourceCategory | string;

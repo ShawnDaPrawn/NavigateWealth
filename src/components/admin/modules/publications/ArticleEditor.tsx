@@ -23,6 +23,7 @@ import {
   Clock,
   Mail,
   History,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '../../../ui/utils';
 import { ImageUploader } from './ImageUploader';
@@ -151,6 +152,8 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [publishJob, setPublishJob] = useState<ArticleNotificationJob | null>(null);
   const [publishCampaign, setPublishCampaign] = useState<ArticleNotificationCampaign | null>(null);
+  const [isPublishingNow, setIsPublishingNow] = useState(false);
+  const [publishActivityStep, setPublishActivityStep] = useState<'preparing' | 'saving' | 'publishing' | 'queueing'>('preparing');
   const [autoSlug, setAutoSlug] = useState(!isEditMode);
   const [scheduledDate, setScheduledDate] = useState('');
 
@@ -300,10 +303,11 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
     !publishCampaign && publishJob && (publishJob.status === 'queued' || publishJob.status === 'processing')
   );
   const publishInFlight = publishCampaignInFlight || publishJobInFlight;
+  const publishDialogBusy = isProcessing || isPublishingNow || publishInFlight;
 
   // Escape key handler for the custom publish dialog
   useEffect(() => {
-    if (!showPublishDialog || isProcessing || publishInFlight) return;
+    if (!showPublishDialog || publishDialogBusy) return;
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setShowPublishDialog(false);
     };
@@ -313,7 +317,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
     };
-  }, [showPublishDialog, isProcessing, publishInFlight]);
+  }, [showPublishDialog, publishDialogBusy]);
 
   useEffect(() => {
     if (!publishCampaign?.id || !showPublishDialog) return;
@@ -385,6 +389,8 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
     setShowPublishDialog(false);
     setPublishJob(null);
     setPublishCampaign(null);
+    setIsPublishingNow(false);
+    setPublishActivityStep('preparing');
 
     if (navigateBack) {
       onSaved();
@@ -393,6 +399,8 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
 
   const handlePublishConfirm = async () => {
     setError(null);
+    setIsPublishingNow(true);
+    setPublishActivityStep('preparing');
     try {
       // Build server-compatible payload from formData
       const serverPayload: CreateArticleInput = {
@@ -416,16 +424,19 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       };
 
       if (!article?.id && !isEditMode) {
+        setPublishActivityStep('saving');
         // For new articles: create via API directly, then publish.
         // We bypass handleCreate from useArticleActions because its onSuccess
         // calls onSaved() which navigates away before handlePublish can run.
         const newArticle = await PublicationsAPI.Articles.createArticle(serverPayload);
         if (newArticle?.id) {
+          setPublishActivityStep('publishing');
           const publishResult = await PublicationsAPI.Articles.publishArticle(newArticle.id, {
             notify_subscribers: notifySubscribers,
           });
 
           if (publishResult.notificationCampaign) {
+            setPublishActivityStep('queueing');
             setPublishCampaign(publishResult.notificationCampaign);
             setPublishJob(publishResult.notificationJob);
 
@@ -438,9 +449,11 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
               setSuccessMessage('Article published. Newsletter delivery has been queued.');
             }
           } else if (publishResult.notificationJob) {
+            setPublishActivityStep('queueing');
             setSuccessMessage('Article published. Newsletter delivery has been queued.');
             setPublishJob(publishResult.notificationJob);
           } else if (publishResult.notificationError) {
+            setPublishActivityStep('queueing');
             setSuccessMessage('Article published, but newsletter delivery could not be queued.');
             setError(publishResult.notificationError);
           } else {
@@ -451,13 +464,16 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       } else if (article?.id) {
         // For existing articles: save any pending changes first, then publish.
         if (isDirty) {
+          setPublishActivityStep('saving');
           await PublicationsAPI.Articles.updateArticle({ id: article.id, ...serverPayload });
         }
+        setPublishActivityStep('publishing');
         const publishResult = await PublicationsAPI.Articles.publishArticle(article.id, {
           notify_subscribers: notifySubscribers,
         });
 
         if (publishResult.notificationCampaign) {
+          setPublishActivityStep('queueing');
           setPublishCampaign(publishResult.notificationCampaign);
           setPublishJob(publishResult.notificationJob);
 
@@ -470,9 +486,11 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
             setSuccessMessage('Article published. Newsletter delivery has been queued.');
           }
         } else if (publishResult.notificationJob) {
+          setPublishActivityStep('queueing');
           setSuccessMessage('Article published. Newsletter delivery has been queued.');
           setPublishJob(publishResult.notificationJob);
         } else if (publishResult.notificationError) {
+          setPublishActivityStep('queueing');
           setSuccessMessage('Article published, but newsletter delivery could not be queued.');
           setError(publishResult.notificationError);
         } else {
@@ -484,6 +502,8 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
       const msg = err instanceof Error ? err.message : 'Failed to publish article';
       setError(msg);
       console.error('Publish error:', err);
+    } finally {
+      setIsPublishingNow(false);
     }
   };
 
@@ -951,6 +971,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
             view_count: article?.view_count || 0
           } as Article}
           categories={categories}
+          types={types}
           onClose={() => setActiveTab('editor')}
         />
       )}
@@ -1005,7 +1026,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
-            onClick={!isProcessing && !publishCampaign && !publishJob ? () => closePublishDialog(false) : undefined}
+            onClick={!publishDialogBusy && !publishCampaign && !publishJob ? () => closePublishDialog(false) : undefined}
             aria-hidden="true"
           />
           {/* Dialog */}
@@ -1020,7 +1041,66 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
               className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              {!publishCampaign && !publishJob ? (
+              {isPublishingNow && !publishCampaign && !publishJob ? (
+                <>
+                  <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-4">
+                    <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                  </div>
+
+                  <h3 id="publish-dialog-title" className="text-xl mb-2 text-gray-900">
+                    Publishing Article
+                  </h3>
+                  <p id="publish-dialog-description" className="text-gray-600 mb-5">
+                    Please keep this window open while we prepare the article, publish it live, and queue newsletter delivery.
+                  </p>
+
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-blue-950">Live publish activity</p>
+                        <p className="text-xs text-blue-700 mt-1">
+                          This can take a moment while the newsletter audience is prepared.
+                        </p>
+                      </div>
+                      <Sparkles className="h-4 w-4 text-blue-500" />
+                    </div>
+
+                    <Progress value={
+                      publishActivityStep === 'preparing' ? 20 :
+                      publishActivityStep === 'saving' ? 45 :
+                      publishActivityStep === 'publishing' ? 70 :
+                      90
+                    } className="h-2.5" indicatorClassName="bg-blue-600" />
+
+                    <div className="space-y-2">
+                      <PublishActivityRow
+                        label="Preparing publish request"
+                        status={publishActivityStep === 'preparing' ? 'active' : 'done'}
+                      />
+                      <PublishActivityRow
+                        label={isEditMode ? 'Saving latest article changes' : 'Creating article record'}
+                        status={publishActivityStep === 'saving'
+                          ? 'active'
+                          : publishActivityStep === 'publishing' || publishActivityStep === 'queueing'
+                            ? 'done'
+                            : 'pending'}
+                      />
+                      <PublishActivityRow
+                        label="Publishing article to the website"
+                        status={publishActivityStep === 'publishing'
+                          ? 'active'
+                          : publishActivityStep === 'queueing'
+                            ? 'done'
+                            : 'pending'}
+                      />
+                      <PublishActivityRow
+                        label={notifySubscribers ? 'Queueing newsletter delivery' : 'Finalizing publish'}
+                        status={publishActivityStep === 'queueing' ? 'active' : 'pending'}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : !publishCampaign && !publishJob ? (
                 <>
                   <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-4">
                     <CheckCircle className="w-6 h-6 text-green-600" />
@@ -1057,16 +1137,16 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                     <Button
                       variant="outline"
                       onClick={() => closePublishDialog(false)}
-                      disabled={isProcessing}
+                      disabled={publishDialogBusy}
                     >
                       Cancel
                     </Button>
                     <Button
                       className="bg-green-600 hover:bg-green-700 text-white"
                       onClick={handlePublishConfirm}
-                      disabled={isProcessing}
+                      disabled={publishDialogBusy}
                     >
-                      {isProcessing ? 'Publishing...' : 'Publish Now'}
+                      {publishDialogBusy ? 'Publishing...' : 'Publish Now'}
                     </Button>
                   </div>
                 </>
@@ -1236,6 +1316,32 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
           currentBody={formData.body}
         />
       )}
+    </div>
+  );
+}
+
+function PublishActivityRow({
+  label,
+  status,
+}: {
+  label: string;
+  status: 'pending' | 'active' | 'done';
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg bg-white/80 border border-blue-100 px-3 py-2">
+      {status === 'done' ? (
+        <CheckCircle className="h-4 w-4 text-green-600" />
+      ) : status === 'active' ? (
+        <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+      ) : (
+        <div className="h-4 w-4 rounded-full border border-slate-300 bg-slate-100" />
+      )}
+      <span className={cn(
+        'text-sm',
+        status === 'active' ? 'text-blue-950 font-medium' : status === 'done' ? 'text-slate-800' : 'text-slate-500'
+      )}>
+        {label}
+      </span>
     </div>
   );
 }

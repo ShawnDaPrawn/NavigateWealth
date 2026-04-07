@@ -4,22 +4,29 @@
  */
 
 import { createRoot } from 'react-dom/client';
+import { withNavigateWealthPrintTitle } from '../../../../../utils/pdfPrintTitle';
 
 export interface PdfExportOptions {
+  /** Legacy; used as fallback for print title when printTitle is omitted */
   filename?: string;
+  /** Text after "Navigate Wealth - " for browser Save-as-PDF filename */
+  printTitle?: string;
 }
 
-/**
- * Export a React component to PDF using browser print
- */
+function resolvePrintTitleSuffix(options: PdfExportOptions): string {
+  const explicit = options.printTitle?.trim();
+  if (explicit) return explicit;
+  const fn = options.filename?.trim();
+  if (fn && !/^document\.pdf$/i.test(fn)) {
+    return fn.replace(/\.pdf$/i, '').replace(/_/g, ' ');
+  }
+  return 'Document';
+}
+
 export async function exportComponentToPdf(
   component: React.ReactElement,
   options: PdfExportOptions = {}
 ): Promise<void> {
-  const {
-    filename = 'document.pdf',
-  } = options;
-
   return new Promise((resolve, reject) => {
     try {
       // Create a temporary container
@@ -39,10 +46,11 @@ export async function exportComponentToPdf(
       const root = createRoot(printContainer);
       root.render(component);
 
+      const titleSuffix = resolvePrintTitleSuffix(options);
+
       // Wait for rendering to complete (longer timeout for complex documents)
       setTimeout(() => {
-        // Trigger print dialog
-        window.print();
+        withNavigateWealthPrintTitle(titleSuffix, () => window.print(), 1200);
 
         // Cleanup after print
         setTimeout(() => {

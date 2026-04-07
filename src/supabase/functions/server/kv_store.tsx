@@ -17,6 +17,8 @@ const client = () => createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
 );
 
+const prefixUpperBound = (prefix: string): string => `${prefix}\uffff`;
+
 // Set stores a key-value pair in the database.
 export const set = async (key: string, value: any): Promise<void> => {
   const supabase = client()
@@ -60,11 +62,12 @@ export const mset = async (keys: string[], values: any[]): Promise<void> => {
 // Gets multiple key-value pairs from the database.
 export const mget = async (keys: string[]): Promise<any[]> => {
   const supabase = client()
-  const { data, error } = await supabase.from("kv_store_91ed8379").select("value").in("key", keys);
+  const { data, error } = await supabase.from("kv_store_91ed8379").select("key, value").in("key", keys);
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value) ?? [];
+  const valuesByKey = new Map((data ?? []).map((row) => [row.key, row.value]));
+  return keys.map((key) => valuesByKey.get(key));
 };
 
 // Deletes multiple key-value pairs from the database.
@@ -79,9 +82,46 @@ export const mdel = async (keys: string[]): Promise<void> => {
 // Search for key-value pairs by prefix.
 export const getByPrefix = async (prefix: string): Promise<any[]> => {
   const supabase = client()
-  const { data, error } = await supabase.from("kv_store_91ed8379").select("key, value").like("key", prefix + "%");
+  const { data, error } = await supabase
+    .from("kv_store_91ed8379")
+    .select("key, value")
+    .gte("key", prefix)
+    .lt("key", prefixUpperBound(prefix))
+    .order("key", { ascending: true });
   if (error) {
     throw new Error(error.message);
   }
   return data?.map((d) => d.value) ?? [];
+};
+
+// Lists key/value pairs by prefix with pagination.
+export const listByPrefix = async (
+  prefix: string,
+  options?: { offset?: number; limit?: number; startAfter?: string },
+): Promise<Array<{ key: string; value: any }>> => {
+  const supabase = client()
+  const limit = Math.max(1, options?.limit ?? 100);
+  let query = supabase
+    .from("kv_store_91ed8379")
+    .select("key, value")
+    .gte("key", prefix)
+    .lt("key", prefixUpperBound(prefix))
+    .order("key", { ascending: true });
+
+  if (options?.startAfter) {
+    query = query.gt("key", options.startAfter);
+  } else {
+    const offset = Math.max(0, options?.offset ?? 0);
+    query = query.range(offset, offset + limit - 1);
+  }
+
+  if (options?.startAfter) {
+    query = query.range(0, limit - 1);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data ?? [];
 };

@@ -51,6 +51,7 @@ import type {
   ArticleNotificationJob,
   ArticleNotificationCampaign,
   ArticleNotificationProcessorResult,
+  ArticleNotificationProcessorState,
 } from './types';
 
 // ============================================================================
@@ -269,6 +270,7 @@ export const ArticlesAPI = {
       headers,
     });
     await handleResponse<void>(response);
+    notifyEmailEngagementChanged(id, 'notification_campaign_updated');
   },
 
   /**
@@ -437,9 +439,13 @@ export const ArticlesAPI = {
     return handleResponse<ArticleReshareResponse>(response);
   },
 
-  async getEmailEngagementSummary(): Promise<ArticleEmailEngagementSummary[]> {
+  async getEmailEngagementSummary(options?: { includeDeleted?: boolean }): Promise<ArticleEmailEngagementSummary[]> {
     const authHeaders = await getAuthHeaders();
-    const response = await fetch(`${BASE_URL}/email-engagement/summary`, {
+    const params = new URLSearchParams();
+    if (options?.includeDeleted) {
+      params.set('include_deleted', 'true');
+    }
+    const response = await fetch(`${BASE_URL}/email-engagement/summary${params.toString() ? `?${params.toString()}` : ''}`, {
       headers: authHeaders,
     });
     return handleResponse<ArticleEmailEngagementSummary[]>(response);
@@ -495,6 +501,7 @@ export const ArticlesAPI = {
   async processNotificationJobs(input?: {
     jobId?: string;
     maxJobs?: number;
+    maxBatchesPerJob?: number;
   }): Promise<ArticleNotificationProcessorResult> {
     const authHeaders = await getAuthHeaders();
     const response = await fetch(`${BASE_URL}/notification-jobs/process`, {
@@ -503,9 +510,18 @@ export const ArticlesAPI = {
       body: JSON.stringify({
         jobId: input?.jobId,
         maxJobs: input?.maxJobs,
+        maxBatchesPerJob: input?.maxBatchesPerJob,
       }),
     });
     return handleResponse<ArticleNotificationProcessorResult>(response);
+  },
+
+  async getNotificationProcessorStatus(): Promise<ArticleNotificationProcessorState | null> {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${BASE_URL}/notification-jobs/processor-status`, {
+      headers: authHeaders,
+    });
+    return handleResponse<ArticleNotificationProcessorState | null>(response);
   },
 };
 

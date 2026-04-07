@@ -762,6 +762,19 @@ export const BASE_PDF_CSS = `
     }
 `;
 
+export type PdfPageSize = 'A4' | 'A3';
+export type PdfOrientation = 'portrait' | 'landscape';
+
+export function getPdfDimensions(pageSize: PdfPageSize, orientation: PdfOrientation) {
+  const portrait = pageSize === 'A3'
+    ? { widthMm: 297, heightMm: 420 }
+    : { widthMm: 210, heightMm: 297 };
+
+  return orientation === 'landscape'
+    ? { widthMm: portrait.heightMm, heightMm: portrait.widthMm }
+    : portrait;
+}
+
 interface PdfPageProps {
   children: ReactNode;
   pageNum: number;
@@ -849,14 +862,18 @@ export const BasePdfLayout = ({
   docTitle = "Document Title",
   issueDate,
   formCode,
-  version
+  version,
+  pageSize = 'A4',
+  orientation = 'portrait',
 }: { 
   children?: ReactNode,
   pages?: ReactNode[],
   docTitle?: string,
   issueDate?: string,
   formCode?: string,
-  version?: string
+  version?: string,
+  pageSize?: PdfPageSize,
+  orientation?: PdfOrientation,
 }) => {
   // Default to current date in dd/mm/yyyy format
   const displayDate = issueDate || new Date().toLocaleDateString('en-GB', {
@@ -864,10 +881,23 @@ export const BasePdfLayout = ({
     month: '2-digit',
     year: 'numeric'
   });
+  const dimensions = getPdfDimensions(pageSize, orientation);
+  const pageOverrides = `
+    :root {
+      --a4-w: ${dimensions.widthMm}mm;
+      --a4-h: ${dimensions.heightMm}mm;
+    }
+
+    @page {
+      size: ${pageSize} ${orientation};
+      margin: 0;
+    }
+  `;
 
   return (
     <div className="contents">
       <style dangerouslySetInnerHTML={{ __html: BASE_PDF_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: pageOverrides }} />
       <div className="pdf-preview-container">
         <div className="pdf-viewport">
           

@@ -31,6 +31,7 @@ import {
   TableFooter
 } from '../../ui/table';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
+import { withNavigateWealthPrintTitle } from '../../../utils/pdfPrintTitle';
 import { toast } from 'sonner@2.0.3';
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { DEFAULT_SCHEMAS } from './default-schemas';
@@ -55,6 +56,8 @@ const SECTIONS = [
 
 interface PolicyOverviewTabProps {
   clientId: string;
+  /** Used for Save-as-PDF default filename when printing the overview */
+  clientDisplayName?: string;
   onRunFNA?: (categoryId: string) => void;
   onAddPolicy?: (categoryId: string) => void;
   onViewDetails?: (categoryId: string) => void;
@@ -63,13 +66,22 @@ interface PolicyOverviewTabProps {
 }
 
 export function PolicyOverviewTab({ 
-  clientId, 
+  clientId,
+  clientDisplayName,
   onRunFNA,
   onAddPolicy,
   onViewDetails,
   variant = 'full',
 }: PolicyOverviewTabProps) {
   const isEmbedded = variant === 'embedded';
+
+  const handlePrintOverview = () => {
+    const name = clientDisplayName?.trim();
+    const suffix = name
+      ? `Financial Portfolio Overview - ${name}`
+      : 'Financial Portfolio Overview';
+    withNavigateWealthPrintTitle(suffix, () => window.print());
+  };
 
   return (
     <div className={isEmbedded ? 'space-y-4' : 'space-y-8 animate-in fade-in duration-500'}>
@@ -79,7 +91,7 @@ export function PolicyOverviewTab({
              <h2 className="text-2xl font-bold text-gray-900">Financial Portfolio Overview</h2>
              <p className="text-gray-600">Comprehensive summary of all policies based on your product structure.</p>
            </div>
-           <Button onClick={() => window.print()} variant="outline">
+           <Button onClick={handlePrintOverview} variant="outline">
              Download Report
            </Button>
         </div>

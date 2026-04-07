@@ -62,6 +62,7 @@ const UniversalKeyManager = React.lazy(() => import('./UniversalKeyManager').the
 const ZipEncryptTool = React.lazy(() => import('./tools/ZipEncryptTool').then(m => ({ default: m.ZipEncryptTool })));
 const PdfDecryptTool = React.lazy(() => import('./tools/PdfDecryptTool').then(m => ({ default: m.PdfDecryptTool })));
 const CorporateIdentityTab = React.lazy(() => import('./components/CorporateIdentityTab').then(m => ({ default: m.CorporateIdentityTab })));
+const LegalDocumentsManager = React.lazy(() => import('./legal-documents/LegalDocumentsManager'));
 
 /** Shared spinner for lazy-loaded sub-components */
 function LazyFallback() {
@@ -438,15 +439,19 @@ export function ResourcesModule() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs defaultValue="forms" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 h-12">
-          <TabsTrigger value="forms" className="flex items-center gap-2 text-base">
-            <FileText className="h-4 w-4" />
-            Forms & Documents
-          </TabsTrigger>
-          <TabsTrigger value="tools" className="flex items-center gap-2 text-base">
-            <Settings className="h-4 w-4" />
-            Tools
+        <Tabs defaultValue="forms" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6 h-12">
+            <TabsTrigger value="forms" className="flex items-center gap-2 text-base">
+              <FileText className="h-4 w-4" />
+              Forms & Documents
+            </TabsTrigger>
+            <TabsTrigger value="legal-docs" className="flex items-center gap-2 text-base">
+              <Scale className="h-4 w-4" />
+              Legal Documents
+            </TabsTrigger>
+            <TabsTrigger value="tools" className="flex items-center gap-2 text-base">
+              <Settings className="h-4 w-4" />
+              Tools
           </TabsTrigger>
           <TabsTrigger value="calculators" className="flex items-center gap-2 text-base">
             <PenTool className="h-4 w-4" />
@@ -891,6 +896,12 @@ export function ResourcesModule() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="legal-docs">
+          <Suspense fallback={<LazyFallback />}>
+            <LegalDocumentsManager />
+          </Suspense>
         </TabsContent>
 
         {/* Tools Tab */}

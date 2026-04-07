@@ -224,6 +224,94 @@ export interface ResourceResponse {
   status?: 'draft' | 'published' | 'archived';
 }
 
+export type LegalDocumentLifecycleStatus = 'draft' | 'published' | 'archived';
+export type LegalDocumentRenderMode = 'legacy_resource' | 'versioned_document';
+export type LegalDocumentSection =
+  | 'legal-notices'
+  | 'privacy-data-protection'
+  | 'regulatory-disclosures'
+  | 'other';
+
+export interface LegalDocumentDefinitionResponse {
+  id: string;
+  slug: string;
+  title: string;
+  section: LegalDocumentSection;
+  description: string;
+  status: LegalDocumentLifecycleStatus;
+  renderMode: LegalDocumentRenderMode;
+  migrationPriority?: 'high' | 'normal';
+  currentPublishedVersionId: string | null;
+  currentDraftVersionId: string | null;
+  legacyResourceId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LegalDocumentVersionResponse {
+  id: string;
+  documentId: string;
+  slug: string;
+  title: string;
+  section: LegalDocumentSection;
+  versionNumber: string;
+  status: LegalDocumentLifecycleStatus;
+  contentFormat: 'legacy_blocks' | 'normalized_rich_text';
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string | null;
+  effectiveDate: string | null;
+  createdBy: string;
+  publishedBy: string | null;
+  changeSummary: string | null;
+  blocks: FormBlock[];
+  sourceHtml: string | null;
+  normalizedContent: Record<string, unknown> | null;
+  toc: Array<{ id: string; title: string; level: number }>;
+  pdfConfig: {
+    pageSize: 'A4' | 'A3';
+    orientation: 'portrait' | 'landscape';
+  };
+}
+
+export interface LegalDocumentDetailResponse {
+  definition: LegalDocumentDefinitionResponse;
+  versions: LegalDocumentVersionResponse[];
+  currentPublishedVersion: LegalDocumentVersionResponse | null;
+  currentDraftVersion: LegalDocumentVersionResponse | null;
+}
+
+export interface LegalDocumentMigrationBatchResponse {
+  migrated: string[];
+  skipped: string[];
+  failed: Array<{ slug: string; error: string }>;
+}
+
+export interface LegalDocumentAuditEntry {
+  id: string;
+  timestamp: string;
+  actorId: string;
+  actorRole: string;
+  category: string;
+  action: string;
+  summary: string;
+  severity: 'info' | 'warning' | 'critical';
+  entityType?: string;
+  entityId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpsertLegalDocumentDraftRequest {
+  versionNumber: string;
+  effectiveDate?: string | null;
+  changeSummary?: string | null;
+  sourceHtml: string;
+  pdfConfig?: {
+    pageSize: 'A4' | 'A3';
+    orientation: 'portrait' | 'landscape';
+  };
+}
+
 /**
  * List resources filters (API)
  */

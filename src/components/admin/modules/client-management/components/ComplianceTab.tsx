@@ -53,6 +53,7 @@ import {
 import { toast } from 'sonner@2.0.3';
 import { projectId } from '../../../../../utils/supabase/info';
 import { BASE_PDF_CSS } from '../../resources/templates/BasePdfLayout';
+import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
 import { getAuthToken } from './compliance/compliance-auth';
 
 import { Client } from '../types';
@@ -1167,7 +1168,7 @@ function generateDossierHtml({
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Compliance Dossier \u2014 ${clientName}</title>
+  <title>${escapeHtmlText(navigateWealthPdfDocumentTitle(`Compliance Dossier \u2014 ${clientName}`))}</title>
   <style>
     ${BASE_PDF_CSS}
 

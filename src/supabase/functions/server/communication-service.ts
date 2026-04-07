@@ -47,6 +47,72 @@ function splitFullName(fullName?: string): { firstName: string; surname: string 
   };
 }
 
+const ADMIN_USER_ID_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isLikelyAuthUserId(id: string): boolean {
+  return ADMIN_USER_ID_UUID_RE.test(id);
+}
+
+async function resolveAdminDisplayName(adminUserId: string): Promise<string> {
+  const id = (adminUserId || '').trim();
+  if (!id || id === 'system') return 'System';
+  if (id === 'admin') return 'Administrator';
+  if (!isLikelyAuthUserId(id)) return id;
+
+  try {
+    const profile = (await kv.get(`personnel:profile:${id}`)) as Record<string, unknown> | null;
+    if (profile) {
+      const fn = String(profile.firstName || '');
+      const ln = String(profile.lastName || '');
+      const name = `${fn} ${ln}`.trim();
+      if (name) return name;
+      const em = String(profile.email || '').trim();
+      if (em) return em;
+    }
+  } catch {
+    // ignore KV errors
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    const { data: { user }, error } = await supabase.auth.admin.getUserById(id);
+    if (!error && user) {
+      const meta = (user.user_metadata || {}) as Record<string, unknown>;
+      const full =
+        (typeof meta.full_name === 'string' && meta.full_name) ||
+        (typeof meta.name === 'string' && meta.name) ||
+        (typeof meta.display_name === 'string' && meta.display_name);
+      if (full && String(full).trim()) return String(full).trim();
+      if (user.email) return user.email;
+    }
+  } catch {
+    // ignore auth lookup errors
+  }
+
+  return 'Staff member';
+}
+
+async function resolveAdminDisplayNames(ids: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(ids.map((x) => (x || '').trim()).filter(Boolean))];
+  const entries = await Promise.all(
+    unique.map(async (id) => [id, await resolveAdminDisplayName(id)] as const),
+  );
+  return new Map(entries);
+}
+
+function stripHtmlForSearch(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+export interface CampaignSenderOption {
+  userId: string;
+  label: string;
+}
+
 export class CommunicationService {
   
   /**
@@ -792,8 +858,149 @@ export class CommunicationService {
     log.success('Email footer settings saved');
   }
   
+  /** Enrich campaigns with `createdByName` (personnel profile, then Auth). */
+  async enrichCampaignsWithCreatorNames(campaigns: Campaign[]): Promise<Campaign[]> {
+    if (campaigns.length === 0) return campaigns;
+    const nameMap = await resolveAdminDisplayNames(
+      campaigns.map((c) => c.createdBy || 'system'),
+    );
+    return campaigns.map((c) => {
+      const key = (c.createdBy || 'system').trim();
+      return {
+        ...c,
+        createdByName: nameMap.get(key) ?? (key === 'system' ? 'System' : key),
+      };
+    });
+  }
+
+  private buildSenderOptions(rows: Campaign[]): CampaignSenderOption[] {
+    const senderMap = new Map<string, string>();
+    for (const c of rows) {
+      const id = (c.createdBy || 'system').trim();
+      const label = (c.createdByName || id).trim();
+      if (!senderMap.has(id)) senderMap.set(id, label);
+    }
+    return [...senderMap.entries()]
+      .map(([userId, label]) => ({ userId, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }
+
   /**
-   * Get all campaigns
+   * Filter, sort (newest first), paginate campaigns for admin UI.
+   * One KV read of all campaigns; filtering is in-memory (KV has no query index).
+   */
+  async listCampaignsFiltered(options: {
+    page: number;
+    limit: number;
+    search?: string;
+    channel?: 'email' | 'whatsapp';
+    recipientType?: 'single' | 'multiple' | 'group';
+    createdBy?: string;
+  }): Promise<{
+    campaigns: Campaign[];
+    total: number;
+    page: number;
+    limit: number;
+    senderOptions: CampaignSenderOption[];
+  }> {
+    const page = Math.max(1, options.page);
+    const limit = Math.min(100, Math.max(1, options.limit));
+
+    const all = await repo.getAllCampaigns();
+    let rows = await this.enrichCampaignsWithCreatorNames(all);
+    rows.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    const senderOptions = this.buildSenderOptions(rows);
+
+    if (options.channel === 'email' || options.channel === 'whatsapp') {
+      rows = rows.filter((c) => c.channel === options.channel);
+    }
+
+    if (
+      options.recipientType === 'single' ||
+      options.recipientType === 'multiple' ||
+      options.recipientType === 'group'
+    ) {
+      rows = rows.filter((c) => c.recipientType === options.recipientType);
+    }
+
+    if (options.createdBy) {
+      const want = options.createdBy.trim();
+      rows = rows.filter((c) => (c.createdBy || 'system').trim() === want);
+    }
+
+    const q = options.search?.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((c) => {
+        const subj = (c.subject || '').toLowerCase();
+        const body = stripHtmlForSearch(c.bodyHtml || '');
+        const name = (c.createdByName || '').toLowerCase();
+        const byId = (c.createdBy || '').toLowerCase();
+        const groupName =
+          typeof c.selectedGroup?.name === 'string'
+            ? c.selectedGroup.name.toLowerCase()
+            : '';
+        return (
+          subj.includes(q) ||
+          body.includes(q) ||
+          name.includes(q) ||
+          byId.includes(q) ||
+          groupName.includes(q)
+        );
+      });
+    }
+
+    const total = rows.length;
+    const offset = (page - 1) * limit;
+    const campaigns = rows.slice(offset, offset + limit);
+
+    return { campaigns, total, page, limit, senderOptions };
+  }
+
+  /**
+   * Paginated campaigns (no filters) — backwards compatible for simple callers.
+   */
+  async listCampaigns(options: { page: number; limit: number }): Promise<{
+    campaigns: Campaign[];
+    total: number;
+    page: number;
+    limit: number;
+    senderOptions: CampaignSenderOption[];
+  }> {
+    return await this.listCampaignsFiltered({
+      page: options.page,
+      limit: options.limit,
+    });
+  }
+
+  /**
+   * All campaigns with creator names (for callers that omit pagination query params).
+   */
+  async listAllCampaignsWithCreatorNames(): Promise<{
+    campaigns: Campaign[];
+    total: number;
+    page: number;
+    limit: number;
+    senderOptions: CampaignSenderOption[];
+  }> {
+    const all = await repo.getAllCampaigns();
+    const enriched = await this.enrichCampaignsWithCreatorNames(all);
+    enriched.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    return {
+      campaigns: enriched,
+      total: enriched.length,
+      page: 1,
+      limit: enriched.length,
+      senderOptions: this.buildSenderOptions(enriched),
+    };
+  }
+
+  /**
+   * Get all campaigns (no name enrichment — for jobs / internal use).
    */
   async getAllCampaigns(): Promise<Campaign[]> {
     return await repo.getAllCampaigns();
@@ -873,9 +1080,9 @@ export class CommunicationService {
   }
 
   /**
-   * Send campaign
+   * Send campaign (adminUserId is stored on per-recipient logs and communication_history).
    */
-  async sendCampaign(campaignId: string): Promise<{ success: boolean; sent: number }> {
+  async sendCampaign(campaignId: string, adminUserId: string): Promise<{ success: boolean; sent: number }> {
     const campaign = await repo.getCampaignById(campaignId);
     
     if (!campaign) {
@@ -992,7 +1199,7 @@ export class CommunicationService {
         const recipientEmail = recipientEmailMap.get(recipientId);
         const recipientInfo = recipientInfoMap.get(recipientId);
         
-        await this.sendMessage('system', {
+        await this.sendMessage(adminUserId, {
           recipients: [recipientId],
           subject: campaign.subject,
           content: campaign.bodyHtml,

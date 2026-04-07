@@ -21,6 +21,7 @@ import { format, isSameDay, isSameMonth, isSameYear } from 'date-fns';
 import { toast } from 'sonner@2.0.3';
 import type { CalendarEvent } from '../types';
 import { BasePdfLayout, BASE_PDF_CSS } from '../../resources/templates/BasePdfLayout';
+import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
 
 interface CalendarPDFExportModalProps {
   open: boolean;
@@ -139,7 +140,7 @@ export function CalendarPDFExportModal({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Calendar Export - ${period}</title>
+          <title>${escapeHtmlText(navigateWealthPdfDocumentTitle(`Calendar Export - ${period}`))}</title>
           <style>
             ${BASE_PDF_CSS}
             

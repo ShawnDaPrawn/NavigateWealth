@@ -5,6 +5,12 @@
 
 import { api } from '../../../../utils/api/client';
 import {
+  LegalDocumentDefinitionResponse,
+  LegalDocumentDetailResponse,
+  LegalDocumentMigrationBatchResponse,
+  LegalDocumentAuditEntry,
+  LegalDocumentVersionResponse,
+  UpsertLegalDocumentDraftRequest,
   ResourceResponse,
   CreateResourceRequest,
   UpdateResourceRequest,
@@ -102,6 +108,80 @@ export const resourcesApi = {
     byClientType: Record<string, number>;
   }> {
     return api.get('/resources/stats');
+  },
+
+  async getLegalDocuments(): Promise<LegalDocumentDefinitionResponse[]> {
+    const response = await api.get<{ documents: LegalDocumentDefinitionResponse[] }>('/resources/admin/legal-documents');
+    return response.documents || [];
+  },
+
+  async getLegalDocument(slug: string): Promise<LegalDocumentDetailResponse> {
+    return api.get<LegalDocumentDetailResponse>(`/resources/admin/legal-documents/${slug}`);
+  },
+
+  async getLegalDocumentVersions(slug: string): Promise<LegalDocumentVersionResponse[]> {
+    const response = await api.get<{ versions: LegalDocumentVersionResponse[] }>(
+      `/resources/admin/legal-documents/${slug}/versions`,
+    );
+    return response.versions || [];
+  },
+
+  async getLegalDocumentAudit(slug: string): Promise<LegalDocumentAuditEntry[]> {
+    const response = await api.get<{ entries: LegalDocumentAuditEntry[] }>(`/resources/admin/legal-documents/${slug}/audit`);
+    return response.entries || [];
+  },
+
+  async migrateLegalDocument(slug: string): Promise<LegalDocumentDetailResponse> {
+    return api.post<LegalDocumentDetailResponse>(`/resources/admin/legal-documents/${slug}/migrate`);
+  },
+
+  async migratePriorityLegalDocuments(): Promise<LegalDocumentMigrationBatchResponse> {
+    return api.post<LegalDocumentMigrationBatchResponse>('/resources/admin/legal-documents/migrate-priority');
+  },
+
+  async createLegalDocumentDraft(
+    slug: string,
+    payload: UpsertLegalDocumentDraftRequest,
+  ): Promise<LegalDocumentDetailResponse> {
+    return api.post<LegalDocumentDetailResponse>(`/resources/admin/legal-documents/${slug}/drafts`, payload);
+  },
+
+  async updateLegalDocumentDraft(
+    slug: string,
+    versionId: string,
+    payload: UpsertLegalDocumentDraftRequest,
+  ): Promise<LegalDocumentDetailResponse> {
+    return api.put<LegalDocumentDetailResponse>(
+      `/resources/admin/legal-documents/${slug}/versions/${versionId}`,
+      payload,
+    );
+  },
+
+  async publishLegalDocumentDraft(
+    slug: string,
+    versionId: string,
+  ): Promise<LegalDocumentDetailResponse> {
+    return api.post<LegalDocumentDetailResponse>(
+      `/resources/admin/legal-documents/${slug}/versions/${versionId}/publish`,
+    );
+  },
+
+  async archiveLegalDocumentVersion(
+    slug: string,
+    versionId: string,
+  ): Promise<LegalDocumentDetailResponse> {
+    return api.post<LegalDocumentDetailResponse>(
+      `/resources/admin/legal-documents/${slug}/versions/${versionId}/archive`,
+    );
+  },
+
+  async duplicateLegalDocumentVersion(
+    slug: string,
+    versionId: string,
+  ): Promise<LegalDocumentDetailResponse> {
+    return api.post<LegalDocumentDetailResponse>(
+      `/resources/admin/legal-documents/${slug}/versions/${versionId}/duplicate`,
+    );
   },
 };
 

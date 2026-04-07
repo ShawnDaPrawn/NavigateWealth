@@ -7,6 +7,7 @@
  */
 
 import jsPDF from 'jspdf';
+import { navigateWealthPdfSaveFileName } from '../../../../../utils/pdfPrintTitle';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -790,8 +791,14 @@ export function generateWillPdf(will: WillRecord): jsPDF {
 
 export function downloadWillPdf(will: WillRecord): void {
   const doc = generateWillPdf(will);
-  const typeSuffix = will.type === 'living_will' ? 'Living_Will' : 'Last_Will';
-  const clientName = (will.data.personalDetails.fullName || 'Client').replace(/\s+/g, '_');
-  const fileName = `${clientName}_${typeSuffix}_v${will.version}_${will.status}.pdf`;
-  doc.save(fileName);
+  const fullName = (will.data.personalDetails.fullName || '').trim();
+  const docLabel =
+    will.type === 'living_will'
+      ? fullName
+        ? `Living Will - ${fullName}`
+        : 'Living Will'
+      : fullName
+        ? `Last Will and Testament - ${fullName}`
+        : 'Last Will and Testament';
+  doc.save(navigateWealthPdfSaveFileName(docLabel));
 }

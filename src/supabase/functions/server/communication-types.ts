@@ -116,6 +116,8 @@ export interface Campaign {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+  /** Resolved at list time for admin UI (not persisted in KV). */
+  createdByName?: string;
 }
 
 export interface CampaignCreate {

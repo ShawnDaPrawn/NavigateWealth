@@ -188,6 +188,7 @@ export interface BackendCampaign {
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
+  createdByName?: string;
 }
 
 // Log/History Types
@@ -204,6 +205,20 @@ export interface CommunicationLog {
   attachments?: AttachmentFile[];
 }
 
+/** Paginated communication history from GET /communication/campaigns */
+export interface CampaignHistorySenderOption {
+  userId: string;
+  label: string;
+}
+
+export interface CampaignHistoryPageResult {
+  entries: ActivityLogEntry[];
+  total: number;
+  page: number;
+  limit: number;
+  senderOptions: CampaignHistorySenderOption[];
+}
+
 export interface ActivityLogEntry {
   id: string;
   timestamp: Date;
@@ -212,8 +227,12 @@ export interface ActivityLogEntry {
   channel: CommunicationChannel;
   recipientType: RecipientType;
   recipientCount: number;
+  /** Group name when recipientType is `group` (from campaign.selectedGroup). */
+  groupName?: string;
   subject?: string;
   messagePreview: string;
+  /** Longer plain-text body preview for detail panel. */
+  messagePreviewFull?: string;
   attachmentCount: number;
   templateUsed?: string;
   status: 'sent' | 'scheduled' | 'draft' | 'failed' | 'completed' | 'sending';

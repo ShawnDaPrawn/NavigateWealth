@@ -12,6 +12,7 @@ import { ArrowLeft, Save, Calculator, RefreshCw, Download, ChevronDown, ChevronU
 import { toast } from 'sonner@2.0.3';
 import { RetirementInputs, RetirementResults, RetirementScenario, ProjectionYear } from './types';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
 import { RetirementReportTemplate } from './RetirementReportTemplate';
 
 // Helper to get auth token
@@ -466,13 +467,11 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
         setTimeout(() => resolve(), 500);
       });
 
-      // Generate filename suggestion
       const timestamp = new Date().toISOString().split('T')[0];
-      const filename = `${clientName.replace(/ /g, '_')}_Retirement_Plan_${timestamp}`;
+      const titlePart = `${scenarioName || 'Retirement Plan'} - ${clientName} (${timestamp})`;
 
-      // Set document title for PDF filename suggestion
       const originalTitle = document.title;
-      document.title = filename;
+      document.title = navigateWealthPdfDocumentTitle(titlePart);
 
       // Show toast
       toast.info('Print dialog opening...', {

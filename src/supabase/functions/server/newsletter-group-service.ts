@@ -22,6 +22,22 @@ const log = createModuleLogger('newsletter-group');
 /** Well-known ID for the Newsletter Contacts group */
 const NEWSLETTER_GROUP_ID = 'sys_newsletter_contacts';
 const NEWSLETTER_GROUP_NAME = 'Newsletter Contacts';
+const LEGACY_BACKFILL_STATE_KEY = 'newsletter:group_backfill:legacy_subscribers';
+const NEWSLETTER_PREFIX = 'newsletter:';
+const NEWSLETTER_BACKFILL_BATCH_SIZE = 200;
+
+interface NewsletterSubscriptionRecord {
+  email: string;
+  name?: string;
+  confirmed?: boolean;
+  active?: boolean;
+}
+
+interface NewsletterGroupBackfillState {
+  completedAt: string;
+  subscriberCount: number;
+  batchCount: number;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +73,10 @@ async function ensureNewsletterGroup(): Promise<Group> {
   }
 
   return group;
+}
+
+export async function getNewsletterGroupBackfillState(): Promise<NewsletterGroupBackfillState | null> {
+  return await kv.get(LEGACY_BACKFILL_STATE_KEY) as NewsletterGroupBackfillState | null;
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
@@ -344,4 +364,82 @@ export async function updateNewsletterSubscriberContact(
   } catch (error) {
     log.error('Failed to update subscriber in Newsletter Contacts group', error);
   }
+}
+
+/**
+ * Backfill older confirmed active newsletter KV records into the Newsletter
+ * Contacts group as external contacts.
+ *
+ * This intentionally avoids profile/client matching so the repair stays fast
+ * and bounded even when the KV table is large. Recipient de-duplication is
+ * still handled by email when campaigns are queued.
+ */
+export async function backfillLegacyNewsletterSubscribersToGroup(): Promise<NewsletterGroupBackfillState> {
+  const existingState = await getNewsletterGroupBackfillState();
+  if (existingState) {
+    return existingState;
+  }
+
+  const group = await ensureNewsletterGroup();
+  const externalContacts: ExternalContact[] = [...(group.externalContacts || [])];
+  const existingEmails = new Set(externalContacts.map((contact) => contact.email.toLowerCase()));
+
+  let lastKey: string | undefined;
+  let batchCount = 0;
+  let subscriberCount = 0;
+
+  while (true) {
+    const rows = await kv.listByPrefix(NEWSLETTER_PREFIX, {
+      limit: NEWSLETTER_BACKFILL_BATCH_SIZE,
+      startAfter: lastKey,
+    });
+
+    if (rows.length === 0) {
+      break;
+    }
+
+    batchCount++;
+
+    for (const row of rows) {
+      const subscription = row.value as NewsletterSubscriptionRecord | null;
+      const email = subscription?.email?.trim().toLowerCase();
+      if (!email || !subscription?.confirmed || subscription.active === false) continue;
+      if (existingEmails.has(email)) continue;
+
+      existingEmails.add(email);
+      subscriberCount++;
+      externalContacts.push({
+        email,
+        name: subscription.name?.trim() || undefined,
+        source: 'newsletter-legacy-backfill',
+        subscribedAt: new Date().toISOString(),
+      });
+    }
+
+    if (rows.length < NEWSLETTER_BACKFILL_BATCH_SIZE) {
+      break;
+    }
+
+    lastKey = rows[rows.length - 1]?.key;
+  }
+
+  const now = new Date().toISOString();
+  if (subscriberCount > 0) {
+    await kv.set(`communication:groups:${NEWSLETTER_GROUP_ID}`, {
+      ...group,
+      externalContacts,
+      clientCount: (group.clientIds || []).length + externalContacts.length,
+      updatedAt: now,
+    });
+  }
+
+  const state: NewsletterGroupBackfillState = {
+    completedAt: now,
+    subscriberCount,
+    batchCount,
+  };
+
+  await kv.set(LEGACY_BACKFILL_STATE_KEY, state);
+  log.info('Legacy newsletter subscriber backfill completed', state);
+  return state;
 }
