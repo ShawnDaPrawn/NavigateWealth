@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import DOMPurify from 'dompurify';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
@@ -29,7 +28,6 @@ import {
   RotateCcw,
   Save,
   ScrollText,
-  Settings,
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { RichTextEditor } from '../../publications/RichTextEditor';
@@ -37,6 +35,7 @@ import { resourcesApi } from '../api';
 import { LEGAL_SECTION_LABELS } from '../legal-constants';
 import { LegalDocumentPdfDialog, LegalDocumentPdfLayout } from '../../../../shared/LegalDocumentPdf';
 import { LEGAL_MIGRATION_PRIORITY_SLUGS } from '../../../../../shared/legal-documents-registry';
+import { normalizeClipboardLegalHtml, sanitizeLegalDocumentHtml } from '../../../../../utils/legalHtml';
 import type {
   LegalDocumentDefinitionResponse,
   LegalDocumentDetailResponse,
@@ -158,7 +157,7 @@ function getDraftGovernance(sourceHtml: string, effectiveDate: string, changeSum
   }
 
   if (headings === 0) {
-    blockers.push('Add at least one heading so the document has structure and a contents trail.');
+    warnings.push('No headings detected. The document can still publish, but the web TOC and PDF structure will be weaker.');
   }
 
   if (tables > 0) {
@@ -398,6 +397,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
   const [pageSize, setPageSize] = useState(initialDraft.pdfConfig.pageSize);
   const [orientation, setOrientation] = useState(initialDraft.pdfConfig.orientation);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [editorTab, setEditorTab] = useState<'editor' | 'source' | 'preview' | 'pdf-preview'>('editor');
 
   useEffect(() => {
     setVersionNumber(initialDraft.versionNumber);
@@ -413,8 +413,11 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
     () => getDraftGovernance(sourceHtml, effectiveDate, changeSummary, pageSize, orientation),
     [changeSummary, effectiveDate, orientation, pageSize, sourceHtml],
   );
-  const sanitizedPreview = useMemo(() => DOMPurify.sanitize(sourceHtml || '<p></p>'), [sourceHtml]);
+  const sanitizedPreview = useMemo(() => sanitizeLegalDocumentHtml(sourceHtml || '<p></p>'), [sourceHtml]);
   const hasDraft = Boolean(detail.currentDraftVersion);
+  const liveVersionLabel = detail.currentPublishedVersion?.versionNumber
+    ? `v${detail.currentPublishedVersion.versionNumber}`
+    : 'legacy version';
   const isDirty = (
     versionNumber !== initialDraft.versionNumber
     || effectiveDate !== initialDraft.effectiveDate
@@ -475,7 +478,9 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
         queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocument(detail.definition.slug) }),
         queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocumentVersions(detail.definition.slug) }),
       ]);
-      toast.success('Legal document published');
+      toast.success('Legal document published', {
+        description: 'The live legal page now uses this versioned document instead of the legacy source.',
+      });
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : 'Failed to publish legal document';
@@ -512,20 +517,84 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
     versionNumber,
   ]);
 
+  const handlePasteFromClipboard = async () => {
+    if (typeof window === 'undefined' || !navigator?.clipboard) {
+      toast.error('Clipboard access is not available in this browser.');
+      return;
+    }
+
+    try {
+      let html = '';
+      let text = '';
+
+      if (navigator.clipboard.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          if (item.types.includes('text/html')) {
+            html = await (await item.getType('text/html')).text();
+            break;
+          }
+
+          if (!text && item.types.includes('text/plain')) {
+            text = await (await item.getType('text/plain')).text();
+          }
+        }
+      }
+
+      if (!html) {
+        text = text || await navigator.clipboard.readText();
+      }
+
+      const fallbackHtml = text
+        ? text
+            .split(/\n{2,}/)
+            .map((paragraph) => paragraph.trim())
+            .filter(Boolean)
+            .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+            .join('')
+        : '<p></p>';
+
+      setSourceHtml(normalizeClipboardLegalHtml(html, fallbackHtml));
+      setEditorTab('source');
+      toast.success('Clipboard content imported', {
+        description: 'Review the source, web preview, and PDF preview before publishing.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Clipboard import failed';
+      toast.error('Could not import clipboard content', { description: message });
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-violet-200 bg-violet-50/70 p-4">
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-gray-900">
-              <BookOpenText className="h-5 w-5 text-violet-700" />
-              <h3 className="font-semibold">Paste-first legal editor</h3>
+              <BookOpenText className="h-5 w-5 text-emerald-700" />
+              <h3 className="font-semibold">Legal document draft</h3>
             </div>
-            <p className="mt-2 text-sm text-violet-900/80">
-              Paste your legal wording directly into the editor. This draft stays private to admin and does not change the live legal page until you publish the version.
+            <p className="mt-2 text-sm text-emerald-900/80">
+              Save your draft, review the web and PDF output, then publish to replace the live legal page for this slug.
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-emerald-900/80">
+              <Badge variant="outline" className="border-emerald-200 bg-white text-emerald-700">
+                Live now: {detail.definition.renderMode === 'legacy_resource' ? 'Legacy document' : `Versioned ${liveVersionLabel}`}
+              </Badge>
+              <Badge variant="outline" className="border-emerald-200 bg-white text-emerald-700">
+                After publish: this draft becomes the live document
+              </Badge>
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handlePasteFromClipboard()}
+            >
+              <Copy className="mr-2 h-4 w-4" />
+              Paste From Clipboard
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -568,9 +637,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Draft metadata</CardTitle>
-              <CardDescription>
-                Set the version and change note for this working legal draft.
-              </CardDescription>
+              <CardDescription>Set the version details for the legal document you want to make live.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -615,6 +682,9 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 md:col-span-2">
+                Use `Paste From Clipboard` when you want the closest carry-over from Word or Google Docs. Use the visual editor for cleanup, or the HTML/source tab when you need tighter control over formatting.
+              </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="legal-change-summary">Change summary</Label>
                 <Textarea
@@ -628,11 +698,15 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
             </CardContent>
           </Card>
 
-          <Tabs defaultValue="editor" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+          <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'editor' | 'source' | 'preview' | 'pdf-preview')} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="editor" className="gap-2">
                 <BookOpenText className="h-4 w-4" />
-                Editor
+                Visual Editor
+              </TabsTrigger>
+              <TabsTrigger value="source" className="gap-2">
+                <FileText className="h-4 w-4" />
+                HTML Source
               </TabsTrigger>
               <TabsTrigger value="preview" className="gap-2">
                 <Eye className="h-4 w-4" />
@@ -652,9 +726,39 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                     onChange={setSourceHtml}
                     placeholder="Paste your legal document here, then refine the formatting."
                     minHeight="min-h-[520px]"
+                    preset="legal"
+                    enableAI={false}
+                    enableSlashMenu={false}
                     articleTitle={detail.definition.title}
                     articleExcerpt={detail.definition.description}
                     articleCategory="Legal"
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="source">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-base">HTML/source import</CardTitle>
+                      <CardDescription>
+                        Best for preserving complex formatting from Word or Google Docs before you do any visual cleanup.
+                      </CardDescription>
+                    </div>
+                    <Button type="button" variant="outline" onClick={() => void handlePasteFromClipboard()}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Paste Again
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    value={sourceHtml}
+                    onChange={(event) => setSourceHtml(event.target.value)}
+                    className="min-h-[520px] font-mono text-xs leading-6"
+                    placeholder="<h1>Terms of Use</h1>..."
                   />
                 </CardContent>
               </Card>
@@ -710,7 +814,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Publish readiness</CardTitle>
+              <CardTitle className="text-base">Live publishing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
@@ -720,12 +824,13 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
                 )}
                 <span className="font-medium text-gray-900">
-                  {governance.blockers.length === 0 ? 'Ready to publish once saved' : 'Blocked until the governance items below are fixed'}
+                  {governance.blockers.length === 0 ? 'Ready to replace the live document once saved' : 'Blocked until the items below are fixed'}
                 </span>
               </div>
               <div>Active draft: <span className="font-medium text-gray-900">{hasDraft ? `v${detail.currentDraftVersion?.versionNumber}` : 'Not created yet'}</span></div>
+              <div>Live version now: <span className="font-medium text-gray-900">{detail.definition.renderMode === 'legacy_resource' ? 'Legacy document' : liveVersionLabel}</span></div>
               <div>Last saved: <span className="font-medium text-gray-900">{formatDate(detail.currentDraftVersion?.updatedAt)}</span></div>
-              <div>Public site source: <span className="font-medium text-gray-900">{detail.definition.renderMode === 'legacy_resource' ? 'Legacy legal resource' : 'Versioned legal document'}</span></div>
+              <div>Publish target: <span className="font-medium text-gray-900">/legal/{detail.definition.slug}</span></div>
               {governance.blockers.length > 0 && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">
                   <div className="mb-2 font-medium">Publish blockers</div>
@@ -751,7 +856,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Content insights</CardTitle>
+              <CardTitle className="text-base">Document insights</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
               <div>Words: <span className="font-medium text-gray-900">{htmlStats.wordCount}</span></div>
@@ -769,13 +874,13 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
               <p>
-                The editor supports direct paste, headings, lists, tables, links, and inline formatting.
+                Use the visual editor for headings, lists, links, tables, and quick cleanup.
               </p>
               <p>
-                Save before publishing. Publishing switches the public legal slug over to this versioned document.
+                Use HTML/source when pasted formatting is sensitive and the visual editor changes too much.
               </p>
               <p>
-                PDF preview uses the shared branded legal export so you can catch pagination issues before publishing.
+                Publishing switches the public legal slug over to this versioned document immediately.
               </p>
             </CardContent>
           </Card>
@@ -900,7 +1005,7 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="draft" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="draft" className="gap-2">
               <FileClock className="h-4 w-4" />
               Draft
@@ -912,10 +1017,6 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
             <TabsTrigger value="versions" className="gap-2">
               <History className="h-4 w-4" />
               Versions
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
             </TabsTrigger>
             <TabsTrigger value="audit" className="gap-2">
               <ScrollText className="h-4 w-4" />
@@ -931,11 +1032,11 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Current published source</CardTitle>
+                  <CardTitle className="text-base">Live website source</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <div>Render mode: <span className="font-medium text-gray-900">{definition.renderMode}</span></div>
-                  <div>Published version: <span className="font-medium text-gray-900">{currentPublishedVersion ? `v${currentPublishedVersion.versionNumber}` : 'None'}</span></div>
+                  <div>Live renderer: <span className="font-medium text-gray-900">{definition.renderMode === 'legacy_resource' ? 'Legacy legal resource' : 'Versioned legal document'}</span></div>
+                  <div>Live version: <span className="font-medium text-gray-900">{currentPublishedVersion ? `v${currentPublishedVersion.versionNumber}` : 'Legacy resource only'}</span></div>
                   <div>Legacy resource link: <span className="font-medium text-gray-900">{definition.legacyResourceId || 'Not linked'}</span></div>
                   <div>Updated: <span className="font-medium text-gray-900">{formatDate(definition.updatedAt)}</span></div>
                 </CardContent>
@@ -1009,34 +1110,6 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
               onDuplicate={(versionId) => void duplicateMutation.mutateAsync(versionId)}
               actionVersionId={actionVersionId}
             />
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Document identity</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <div>Slug: <span className="font-medium text-gray-900">{definition.slug}</span></div>
-                  <div>Section: <span className="font-medium text-gray-900">{LEGAL_SECTION_LABELS[definition.section]}</span></div>
-                  <div>Status: <span className="font-medium text-gray-900">{definition.status}</span></div>
-                  <div>Render mode: <span className="font-medium text-gray-900">{definition.renderMode}</span></div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Milestone readiness</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <div>Migration priority: <span className="font-medium text-gray-900">{definition.migrationPriority === 'high' ? 'High' : 'Standard'}</span></div>
-                  <div>Migration state: <span className="font-medium text-gray-900">{migrationState}</span></div>
-                  <div>Published version id: <span className="font-medium text-gray-900">{definition.currentPublishedVersionId || 'None'}</span></div>
-                  <div>Draft version id: <span className="font-medium text-gray-900">{definition.currentDraftVersionId || 'None'}</span></div>
-                  <div>Legacy resource id: <span className="font-medium text-gray-900">{definition.legacyResourceId || 'None'}</span></div>
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
 
           <TabsContent value="audit" className="space-y-4">

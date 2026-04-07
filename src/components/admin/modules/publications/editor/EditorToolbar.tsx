@@ -49,6 +49,7 @@ interface EditorToolbarProps {
   onInsertImage: () => void;
   onToggleAI?: () => void;
   isAIOpen?: boolean;
+  preset?: 'full' | 'legal';
 }
 
 interface ToolbarButtonProps {
@@ -139,8 +140,9 @@ function CalloutMenu({
   );
 }
 
-export function EditorToolbar({ editor, onInsertImage, onToggleAI, isAIOpen }: EditorToolbarProps) {
+export function EditorToolbar({ editor, onInsertImage, onToggleAI, isAIOpen, preset = 'full' }: EditorToolbarProps) {
   const [showCalloutMenu, setShowCalloutMenu] = useState(false);
+  const showAdvancedBlocks = preset === 'full';
 
   const insertLink = useCallback(() => {
     const previousUrl = editor.getAttributes('link').href;
@@ -286,32 +288,40 @@ export function EditorToolbar({ editor, onInsertImage, onToggleAI, isAIOpen }: E
           <Unlink className="h-4 w-4" />
         </ToolbarButton>
       )}
-      <ToolbarButton
-        onClick={onInsertImage}
-        title="Insert Image"
-      >
-        <ImageIcon className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        isActive={editor.isActive('blockquote')}
-        title="Block Quote"
-      >
-        <Quote className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        isActive={editor.isActive('codeBlock')}
-        title="Code Block"
-      >
-        <Code className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().setHorizontalRule().run()}
-        title="Horizontal Rule"
-      >
-        <Minus className="h-4 w-4" />
-      </ToolbarButton>
+      {showAdvancedBlocks && (
+        <ToolbarButton
+          onClick={onInsertImage}
+          title="Insert Image"
+        >
+          <ImageIcon className="h-4 w-4" />
+        </ToolbarButton>
+      )}
+      {showAdvancedBlocks && (
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          isActive={editor.isActive('blockquote')}
+          title="Block Quote"
+        >
+          <Quote className="h-4 w-4" />
+        </ToolbarButton>
+      )}
+      {showAdvancedBlocks && (
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          isActive={editor.isActive('codeBlock')}
+          title="Code Block"
+        >
+          <Code className="h-4 w-4" />
+        </ToolbarButton>
+      )}
+      {showAdvancedBlocks && (
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          title="Horizontal Rule"
+        >
+          <Minus className="h-4 w-4" />
+        </ToolbarButton>
+      )}
       <ToolbarButton
         onClick={insertTable}
         isActive={editor.isActive('table')}
@@ -320,24 +330,26 @@ export function EditorToolbar({ editor, onInsertImage, onToggleAI, isAIOpen }: E
         <TableIcon className="h-4 w-4" />
       </ToolbarButton>
 
-      <Divider />
+      {showAdvancedBlocks && <Divider />}
 
       {/* Callout blocks */}
-      <div className="relative">
-        <ToolbarButton
-          onClick={() => setShowCalloutMenu(!showCalloutMenu)}
-          isActive={editor.isActive('callout')}
-          title="Insert Callout"
-        >
-          <Lightbulb className="h-4 w-4" />
-        </ToolbarButton>
-        {showCalloutMenu && (
-          <CalloutMenu
-            editor={editor}
-            onClose={() => setShowCalloutMenu(false)}
-          />
-        )}
-      </div>
+      {showAdvancedBlocks && (
+        <div className="relative">
+          <ToolbarButton
+            onClick={() => setShowCalloutMenu(!showCalloutMenu)}
+            isActive={editor.isActive('callout')}
+            title="Insert Callout"
+          >
+            <Lightbulb className="h-4 w-4" />
+          </ToolbarButton>
+          {showCalloutMenu && (
+            <CalloutMenu
+              editor={editor}
+              onClose={() => setShowCalloutMenu(false)}
+            />
+          )}
+        </div>
+      )}
 
       <Divider />
 

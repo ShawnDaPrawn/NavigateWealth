@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import DOMPurify from 'dompurify';
 import { Link, useParams } from 'react-router';
 import { ArrowLeft, CalendarDays, Download, FileText, Loader2, ShieldCheck } from 'lucide-react';
 import { SEO, createWebPageSchema } from '../seo/SEO';
@@ -10,6 +9,7 @@ import { Separator } from '../ui/separator';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { LEGAL_DOCUMENTS_BY_SLUG, LEGAL_SECTION_LABELS } from '../../shared/legal-documents-registry';
 import { LegalDocumentPdfDialog } from '../shared/LegalDocumentPdf';
+import { sanitizeLegalDocumentHtml } from '../../utils/legalHtml';
 
 type LegalBlock = {
   id?: string;
@@ -210,7 +210,7 @@ export function LegalDocumentPage() {
   }, [document]);
 
   const sanitizedArticleHtml = useMemo(
-    () => DOMPurify.sanitize(articleHtml, { USE_PROFILES: { html: true } }),
+    () => sanitizeLegalDocumentHtml(articleHtml),
     [articleHtml],
   );
 

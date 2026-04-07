@@ -118,6 +118,9 @@ function slugifyHeading(value: string): string {
 
 function sanitizeLegalHtml(sourceHtml: string): string {
   const withoutDangerousTags = sourceHtml
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\?xml[\s\S]*?\?>/gi, '')
+    .replace(/<\/?[a-z0-9_-]+:[^>]*>/gi, '')
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, '')
     .replace(/<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, '')
@@ -125,10 +128,48 @@ function sanitizeLegalHtml(sourceHtml: string): string {
     .replace(/<embed[\s\S]*?>[\s\S]*?<\/embed>/gi, '');
 
   return withoutDangerousTags
+    .replace(/\s+xmlns(:[a-z0-9_-]+)?="[^"]*"/gi, '')
+    .replace(/\s+xmlns(:[a-z0-9_-]+)?='[^']*'/gi, '')
+    .replace(/\s+xml:[a-z0-9_-]+="[^"]*"/gi, '')
+    .replace(/\s+xml:[a-z0-9_-]+='[^']*'/gi, '')
     .replace(/\s+on[a-z]+\s*=\s*"[^"]*"/gi, '')
     .replace(/\s+on[a-z]+\s*=\s*'[^']*'/gi, '')
     .replace(/\s+on[a-z]+\s*=\s*[^\s>]+/gi, '')
     .replace(/javascript:/gi, '')
+    .replace(/\s+style="([^"]*)"/gi, (_, styles: string) => {
+      const cleaned = styles
+        .split(';')
+        .map((rule) => rule.trim())
+        .filter(Boolean)
+        .filter((rule) => {
+          const property = rule.split(':')[0]?.trim().toLowerCase() || '';
+          return property.length > 0
+            && !property.startsWith('mso-')
+            && property !== 'tab-stops'
+            && property !== 'layout-grid-mode'
+            && property !== 'behavior';
+        })
+        .join('; ');
+
+      return cleaned ? ` style="${cleaned}"` : '';
+    })
+    .replace(/\s+style='([^']*)'/gi, (_, styles: string) => {
+      const cleaned = styles
+        .split(';')
+        .map((rule) => rule.trim())
+        .filter(Boolean)
+        .filter((rule) => {
+          const property = rule.split(':')[0]?.trim().toLowerCase() || '';
+          return property.length > 0
+            && !property.startsWith('mso-')
+            && property !== 'tab-stops'
+            && property !== 'layout-grid-mode'
+            && property !== 'behavior';
+        })
+        .join('; ');
+
+      return cleaned ? ` style='${cleaned}'` : '';
+    })
     .replace(/\u00a0/g, ' ')
     .trim();
 }
@@ -923,10 +964,6 @@ export class ResourcesService {
       throw new ValidationError('Add a meaningful change summary before publishing this legal document');
     }
 
-    if (!draftVersion.toc?.length) {
-      throw new ValidationError('Add at least one heading before publishing this legal document');
-    }
-
     const now = new Date().toISOString();
     const writes: Promise<unknown>[] = [];
 
@@ -1243,12 +1280,12 @@ export class ResourcesService {
    */
   async getLegalDocument(slug: string): Promise<Resource | null> {
     const definition = await this.getLegalDocumentDefinition(slug);
-    if (definition?.renderMode === 'versioned_document' && definition.currentPublishedVersionId) {
+    if (definition?.currentPublishedVersionId) {
       const version = await kv.get(
         legalVersionKey(slug, definition.currentPublishedVersionId),
       ) as LegalDocumentVersion | null;
 
-      if (version) {
+      if (version && (definition.renderMode === 'versioned_document' || version.contentFormat === 'normalized_rich_text')) {
         return {
           id: version.id,
           title: version.title,
@@ -1291,12 +1328,12 @@ export class ResourcesService {
   } | null> {
     const definition = await this.getLegalDocumentDefinition(slug);
 
-    if (definition?.renderMode === 'versioned_document' && definition.currentPublishedVersionId) {
+    if (definition?.currentPublishedVersionId) {
       const version = await kv.get(
         legalVersionKey(slug, definition.currentPublishedVersionId),
       ) as LegalDocumentVersion | null;
 
-      if (version) {
+      if (version && (definition.renderMode === 'versioned_document' || version.contentFormat === 'normalized_rich_text')) {
         return {
           id: version.id,
           title: version.title,
@@ -1308,7 +1345,7 @@ export class ResourcesService {
           section: definition.section,
           toc: version.toc || [],
           contentHtml: version.sourceHtml || null,
-          renderMode: definition.renderMode,
+          renderMode: 'versioned_document',
           pdfConfig: version.pdfConfig || {
             pageSize: 'A4',
             orientation: 'portrait',

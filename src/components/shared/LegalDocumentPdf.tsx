@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import DOMPurify from 'dompurify';
 import { BasePdfLayout } from '../admin/modules/resources/templates/BasePdfLayout';
 import { PdfTemplateViewer } from '../admin/modules/resources/PdfTemplateViewer';
+import { sanitizeLegalDocumentHtml } from '../../utils/legalHtml';
 
 export type LegalPdfConfig = {
   pageSize: 'A4' | 'A3';
@@ -572,7 +572,7 @@ function renderPage(chunks: PdfChunk[], pageIndex: number) {
 export function LegalDocumentPdfLayout({ document }: { document: LegalPdfDocumentData }) {
   const pdfConfig = document.pdfConfig || DEFAULT_PDF_CONFIG;
   const sanitizedHtml = useMemo(
-    () => DOMPurify.sanitize(document.html || '<p></p>', { USE_PROFILES: { html: true } }),
+    () => sanitizeLegalDocumentHtml(document.html || '<p></p>'),
     [document.html],
   );
   const toc = useMemo(

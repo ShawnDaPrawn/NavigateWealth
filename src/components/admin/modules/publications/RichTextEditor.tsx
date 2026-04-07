@@ -51,6 +51,9 @@ interface RichTextEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   minHeight?: string;
+  preset?: 'full' | 'legal';
+  enableAI?: boolean;
+  enableSlashMenu?: boolean;
   /** Article metadata for AI context */
   articleTitle?: string;
   articleExcerpt?: string;
@@ -66,6 +69,9 @@ export function RichTextEditor({
   onChange,
   placeholder = 'Start writing, or type "/" for commands…',
   minHeight = 'min-h-[500px]',
+  preset = 'full',
+  enableAI = true,
+  enableSlashMenu = true,
   articleTitle,
   articleExcerpt,
   articleCategory,
@@ -204,6 +210,12 @@ export function RichTextEditor({
 
   // Slash command detection
   useEffect(() => {
+    if (!enableSlashMenu) {
+      setSlashOpen(false);
+      setSlashQuery('');
+      return;
+    }
+
     if (!editor) return;
 
     const handleTransaction = () => {
@@ -240,7 +252,7 @@ export function RichTextEditor({
     return () => {
       editor.off('transaction', handleTransaction);
     };
-  }, [editor]);
+  }, [editor, enableSlashMenu]);
 
   // Listen for custom image insert event from slash menu
   useEffect(() => {
@@ -292,8 +304,9 @@ export function RichTextEditor({
       <EditorToolbar
         editor={editor}
         onInsertImage={() => setShowImageDialog(true)}
-        onToggleAI={() => setShowAIPanel(!showAIPanel)}
-        isAIOpen={showAIPanel}
+        onToggleAI={enableAI ? () => setShowAIPanel(!showAIPanel) : undefined}
+        isAIOpen={enableAI ? showAIPanel : false}
+        preset={preset}
       />
 
       {/* Editor body + AI panel layout */}
@@ -302,23 +315,25 @@ export function RichTextEditor({
         <div className="flex-1 min-w-0">
           <div className={cn(
             'border border-gray-200 border-t-0 bg-white overflow-auto relative',
-            showAIPanel ? 'rounded-bl-xl' : 'rounded-b-xl'
+            enableAI && showAIPanel ? 'rounded-bl-xl' : 'rounded-b-xl'
           )}>
             <EditorContent editor={editor} />
 
             {/* Slash command menu */}
-            <SlashCommandMenu
-              editor={editor}
-              isOpen={slashOpen}
-              onClose={() => setSlashOpen(false)}
-              query={slashQuery}
-              position={slashPos}
-            />
+            {enableSlashMenu && (
+              <SlashCommandMenu
+                editor={editor}
+                isOpen={slashOpen}
+                onClose={() => setSlashOpen(false)}
+                query={slashQuery}
+                position={slashPos}
+              />
+            )}
           </div>
         </div>
 
         {/* AI Writing Panel */}
-        {showAIPanel && (
+        {enableAI && showAIPanel && (
           <div className={cn(
             'border border-gray-200 border-t-0 border-l-0 rounded-br-xl overflow-hidden',
             'transition-all duration-200'
@@ -346,9 +361,11 @@ export function RichTextEditor({
             </span>
           )}
         </div>
-        <div className="text-gray-400">
-          Type <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">/</kbd> for commands
-        </div>
+        {enableSlashMenu ? (
+          <div className="text-gray-400">
+            Type <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">/</kbd> for commands
+          </div>
+        ) : <div />}
       </div>
 
       {/* Image insert dialog */}
