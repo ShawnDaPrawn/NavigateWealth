@@ -246,9 +246,9 @@ export function LegalDocumentPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-50">
-        <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-screen-2xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center rounded-3xl border border-stone-200 bg-white py-24 shadow-sm">
-            <Loader2 className="mr-3 h-6 w-6 animate-spin text-emerald-700" />
+            <Loader2 className="mr-3 h-6 w-6 animate-spin text-sky-700" />
             <span className="text-sm font-medium text-stone-700">Loading legal document…</span>
           </div>
         </div>
@@ -289,7 +289,7 @@ export function LegalDocumentPage() {
         structuredData={createWebPageSchema(seoTitle, seoDescription, `https://navigatewealth.co/legal/${slug}`)}
       />
 
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-screen-2xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-wrap items-center gap-3">
           <Button asChild variant="outline" className="border-stone-300 bg-white/90">
             <Link to={`/legal?section=${document.section || registryEntry?.section || 'legal-notices'}`}>
@@ -297,7 +297,7 @@ export function LegalDocumentPage() {
               Back to legal hub
             </Link>
           </Button>
-          <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+          <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">
             {sectionLabel}
           </Badge>
           <Badge variant="outline" className="border-stone-300 text-stone-700">
@@ -305,14 +305,14 @@ export function LegalDocumentPage() {
           </Badge>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6">
             <Card className="overflow-hidden border-stone-200 bg-white shadow-sm">
               <CardContent className="p-0">
-                <div className="border-b border-stone-200 bg-[radial-gradient(circle_at_top_left,#d1fae5_0%,#ffffff_38%,#f5f5f4_100%)] px-6 py-8 sm:px-8">
+                <div className="border-b border-stone-200 bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,#ffffff_42%,#f5f5f4_100%)] px-6 py-8 sm:px-8 lg:px-10">
                   <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="max-w-3xl">
-                      <div className="mb-4 flex items-center gap-2 text-sm font-medium text-emerald-800">
+                    <div className="max-w-4xl">
+                      <div className="mb-4 flex items-center gap-2 text-sm font-medium text-sky-800">
                         <ShieldCheck className="h-4 w-4" />
                         Navigate Wealth legal publication
                       </div>
@@ -326,7 +326,7 @@ export function LegalDocumentPage() {
                       )}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button onClick={openPdfPreview} className="bg-emerald-700 hover:bg-emerald-800">
+                      <Button onClick={openPdfPreview} className="bg-sky-700 hover:bg-sky-800">
                         <Download className="mr-2 h-4 w-4" />
                         Download PDF
                       </Button>
@@ -351,7 +351,7 @@ export function LegalDocumentPage() {
                   </div>
                 </div>
 
-                <div className="px-6 py-8 sm:px-8">
+                <div className="px-6 py-8 sm:px-8 lg:px-10">
                   <article
                     className="prose prose-stone max-w-none prose-headings:scroll-mt-28 prose-headings:font-semibold prose-headings:tracking-tight prose-h1:text-3xl prose-h2:mt-12 prose-h2:border-t prose-h2:border-stone-200 prose-h2:pt-8 prose-h2:text-2xl prose-h3:mt-8 prose-h3:text-xl prose-p:leading-8 prose-li:leading-8 prose-table:block prose-table:w-full prose-th:bg-stone-100 prose-th:text-stone-900 prose-td:align-top"
                     dangerouslySetInnerHTML={{ __html: sanitizedArticleHtml }}
@@ -365,7 +365,7 @@ export function LegalDocumentPage() {
             <Card className="border-stone-200 bg-white/95 shadow-sm backdrop-blur">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base text-stone-900">
-                  <FileText className="h-4 w-4 text-emerald-700" />
+                  <FileText className="h-4 w-4 text-sky-700" />
                   On this page
                 </CardTitle>
                 <CardDescription>
@@ -394,7 +394,7 @@ export function LegalDocumentPage() {
             <Card className="border-stone-200 bg-white/95 shadow-sm">
               <CardContent className="p-4 text-sm text-stone-600">
                 <div className="flex items-center gap-2 font-medium text-stone-900">
-                  <CalendarDays className="h-4 w-4 text-emerald-700" />
+                  <CalendarDays className="h-4 w-4 text-sky-700" />
                   Reading details
                 </div>
                 <Separator className="my-3" />
