@@ -187,7 +187,7 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
     shortLabel: 'Meeting',
     description: 'Book a consultation with one of our financial advisers',
     iconName: 'Calendar',
-    path: '/contact?subject=consultation',
+    path: '/schedule-consultation',
     emailSubject: 'Schedule Your Consultation — Navigate Wealth',
     emailBody: '<p>We\'d like to invite you to schedule a consultation with one of our qualified financial advisers.</p><p>Whether you have questions about your existing portfolio, want to explore new options, or need guidance on a specific financial matter — we\'re here to help.</p>',
     emailButtonLabel: 'Book My Consultation',

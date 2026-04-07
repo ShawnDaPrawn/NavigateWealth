@@ -131,8 +131,6 @@ export function ConsultationModal({
   onOpenChange,
 }: ConsultationModalProps) {
   const modalOpen = open !== undefined ? open : isOpen || false;
-  const handleOpenChange =
-    onOpenChange || (onClose ? (openState: boolean) => !openState && onClose() : () => {});
 
   const [currentStep, setCurrentStep] = useState<Step>('meeting-type');
   const [selectedMeetingType, setSelectedMeetingType] = useState<'virtual' | 'telephonic'>('virtual');
@@ -193,6 +191,20 @@ export function ConsultationModal({
     setFormData({ name: '', email: '', phone: '', additionalNotes: '' });
   }, []);
 
+  const handleDialogOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) {
+        resetForm();
+      }
+      if (onOpenChange) {
+        onOpenChange(nextOpen);
+      } else if (!nextOpen && onClose) {
+        onClose();
+      }
+    },
+    [resetForm, onOpenChange, onClose],
+  );
+
   const handleSubmit = async () => {
     if (!selectedDate || !selectedTime) {
       toast.error('Please select a date and time');
@@ -245,13 +257,17 @@ export function ConsultationModal({
 
   const handleClose = () => {
     resetForm();
-    handleOpenChange(false);
+    if (onOpenChange) {
+      onOpenChange(false);
+    } else if (onClose) {
+      onClose();
+    }
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <Dialog open={modalOpen} onOpenChange={handleClose}>
+    <Dialog open={modalOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-[680px] max-w-none max-h-[100dvh] sm:max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 rounded-none sm:rounded-lg inset-0 sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] translate-x-0 translate-y-0 border-0 sm:border">
         {/* ── Success State ── */}
         {isSuccess ? (

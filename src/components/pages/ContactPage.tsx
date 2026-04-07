@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { SEO, createContactPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Button } from '../ui/button';
@@ -14,6 +15,9 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from 'sonner@2.0.3';
 
 export function ContactPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [thankYouModalOpen, setThankYouModalOpen] = useState(false);
   const [activeClientType, setActiveClientType] = useState('individuals');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,6 +37,15 @@ export function ContactPage() {
 
   // Contact page structured data
   const contactPageStructuredData = createContactPageSchema();
+
+  // Legacy invite links used ?subject=consultation — send them to the dedicated flow (UTMs preserved).
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search);
+    if (sp.get('subject') !== 'consultation') return;
+    sp.delete('subject');
+    const rest = sp.toString();
+    navigate(`/schedule-consultation${rest ? `?${rest}` : ''}`, { replace: true });
+  }, [location.search, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

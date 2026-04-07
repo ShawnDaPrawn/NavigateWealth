@@ -44,6 +44,9 @@ const ServicesPage = React.lazy(() => import('./components/pages/ServicesPage').
 const AboutPage = React.lazy(() => import('./components/pages/AboutPage').then(m => ({ default: m.AboutPage })));
 const TeamPage = React.lazy(() => import('./components/pages/TeamPage').then(m => ({ default: m.TeamPage })));
 const ContactPage = React.lazy(() => import('./components/pages/ContactPage').then(m => ({ default: m.ContactPage })));
+const ScheduleConsultationPage = React.lazy(() =>
+  import('./components/pages/ScheduleConsultationPage').then(m => ({ default: m.ScheduleConsultationPage })),
+);
 const ResourcesPage = React.lazy(() => import('./components/pages/ResourcesPage').then(m => ({ default: m.ResourcesPage })));
 const ArticleDetailPage = React.lazy(() => import('./components/pages/ArticleDetailPage').then(m => ({ default: m.ArticleDetailPage })));
 const DesignSystemPage = React.lazy(() => import('./components/pages/DesignSystemPage').then(m => ({ default: m.DesignSystemPage })));
@@ -116,6 +119,26 @@ export function AppRoutes() {
         <Route path="/about" element={<FlexibleRoute><AppLayout forcePublicLayout><AboutPage /></AppLayout></FlexibleRoute>} />
         <Route path="/team" element={<FlexibleRoute><AppLayout forcePublicLayout><TeamPage /></AppLayout></FlexibleRoute>} />
         <Route path="/contact" element={<FlexibleRoute><AppLayout forcePublicLayout><ContactPage /></AppLayout></FlexibleRoute>} />
+        <Route
+          path="/schedule-consultation"
+          element={
+            <FlexibleRoute>
+              <AppLayout forcePublicLayout>
+                <ScheduleConsultationPage />
+              </AppLayout>
+            </FlexibleRoute>
+          }
+        />
+        <Route
+          path="/contact/consultation"
+          element={
+            <FlexibleRoute>
+              <AppLayout forcePublicLayout>
+                <ScheduleConsultationPage />
+              </AppLayout>
+            </FlexibleRoute>
+          }
+        />
         <Route path="/resources" element={<FlexibleRoute><AppLayout forcePublicLayout><ResourcesPage /></AppLayout></FlexibleRoute>} />
         <Route path="/resources/article/:slug" element={<FlexibleRoute><AppLayout forcePublicLayout><ArticleDetailPage /></AppLayout></FlexibleRoute>} />
         <Route path="/design-system" element={<FlexibleRoute><AppLayout forcePublicLayout><DesignSystemPage /></AppLayout></FlexibleRoute>} />
