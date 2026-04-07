@@ -11,10 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Skeleton } from '../../../../ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Textarea } from '../../../../ui/textarea';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../../ui/collapsible';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import {
   AlertTriangle,
   Archive,
   BookOpenText,
+  ChevronDown,
   CheckCircle2,
   Copy,
   Eye,
@@ -22,18 +25,16 @@ import {
   FileStack,
   FileText,
   History,
-  Sparkles,
-  Monitor,
   Printer,
   RotateCcw,
   Save,
-  ScrollText,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { RichTextEditor } from '../../publications/RichTextEditor';
 import { resourcesApi } from '../api';
 import { LEGAL_SECTION_LABELS } from '../legal-constants';
-import { LegalDocumentPdfDialog, LegalDocumentPdfLayout } from '../../../../shared/LegalDocumentPdf';
+import { LegalDocumentPdfDialog } from '../../../../shared/LegalDocumentPdf';
 import { LEGAL_MIGRATION_PRIORITY_SLUGS } from '../../../../../shared/legal-documents-registry';
 import { normalizeClipboardLegalHtml, sanitizeLegalDocumentHtml } from '../../../../../utils/legalHtml';
 import type {
@@ -397,7 +398,9 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
   const [pageSize, setPageSize] = useState(initialDraft.pdfConfig.pageSize);
   const [orientation, setOrientation] = useState(initialDraft.pdfConfig.orientation);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
-  const [editorTab, setEditorTab] = useState<'editor' | 'source' | 'preview' | 'pdf-preview'>('editor');
+  const [webPreviewOpen, setWebPreviewOpen] = useState(false);
+  const [editorTab, setEditorTab] = useState<'editor' | 'source'>('editor');
+  const [showSetup, setShowSetup] = useState(false);
 
   useEffect(() => {
     setVersionNumber(initialDraft.versionNumber);
@@ -557,7 +560,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
       setSourceHtml(normalizeClipboardLegalHtml(html, fallbackHtml));
       setEditorTab('source');
       toast.success('Clipboard content imported', {
-        description: 'Review the source, web preview, and PDF preview before publishing.',
+        description: 'Review the source first, then open the previews only if you need them.',
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Clipboard import failed';
@@ -568,14 +571,14 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex items-center gap-2 text-gray-900">
               <BookOpenText className="h-5 w-5 text-emerald-700" />
               <h3 className="font-semibold">Legal document draft</h3>
             </div>
             <p className="mt-2 text-sm text-emerald-900/80">
-              Save your draft, review the web and PDF output, then publish to replace the live legal page for this slug.
+              Edit the document, save the draft, then publish when you want this version to replace the live legal page.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-emerald-900/80">
               <Badge variant="outline" className="border-emerald-200 bg-white text-emerald-700">
@@ -593,7 +596,15 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
               onClick={() => void handlePasteFromClipboard()}
             >
               <Copy className="mr-2 h-4 w-4" />
-              Paste From Clipboard
+              Paste document
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setWebPreviewOpen(true)}>
+              <Eye className="mr-2 h-4 w-4" />
+              Web preview
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setPdfPreviewOpen(true)}>
+              <Printer className="mr-2 h-4 w-4" />
+              PDF preview
             </Button>
             <Button
               type="button"
@@ -617,7 +628,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
               disabled={saveMutation.isPending || !sourceHtml.trim() || !versionNumber.trim()}
             >
               <Save className="mr-2 h-4 w-4" />
-              {saveMutation.isPending ? 'Saving…' : 'Save Draft'}
+              {saveMutation.isPending ? 'Saving…' : 'Save draft'}
             </Button>
             <Button
               type="button"
@@ -626,7 +637,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
               disabled={publishMutation.isPending || saveMutation.isPending || isDirty || !detail.currentDraftVersion?.id || governance.blockers.length > 0}
             >
               <FileText className="mr-2 h-4 w-4" />
-              {publishMutation.isPending ? 'Publishing…' : 'Publish Draft'}
+              {publishMutation.isPending ? 'Publishing…' : 'Publish live'}
             </Button>
           </div>
         </div>
@@ -636,8 +647,20 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Draft metadata</CardTitle>
-              <CardDescription>Set the version details for the legal document you want to make live.</CardDescription>
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <CardTitle className="text-base">Document setup</CardTitle>
+                  <CardDescription>Keep only the essentials open while you edit.</CardDescription>
+                </div>
+                <Collapsible open={showSetup} onOpenChange={setShowSetup}>
+                  <CollapsibleTrigger asChild>
+                    <Button type="button" variant="ghost" size="sm">
+                      {showSetup ? 'Hide PDF settings' : 'Show PDF settings'}
+                      <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showSetup ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                </Collapsible>
+              </div>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -658,32 +681,8 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                   onChange={(event) => setEffectiveDate(event.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>PDF page size</Label>
-                <Select value={pageSize} onValueChange={(value) => setPageSize(value as 'A4' | 'A3')}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select page size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A4">A4</SelectItem>
-                    <SelectItem value="A3">A3</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>PDF orientation</Label>
-                <Select value={orientation} onValueChange={(value) => setOrientation(value as 'portrait' | 'landscape')}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select orientation" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="portrait">Portrait</SelectItem>
-                    <SelectItem value="landscape">Landscape</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 md:col-span-2">
-                Use `Paste From Clipboard` when you want the closest carry-over from Word or Google Docs. Use the visual editor for cleanup, or the HTML/source tab when you need tighter control over formatting.
+                Start with `Paste document` for the cleanest carry-over from Word or Google Docs. If formatting is sensitive, switch to `HTML/source` and publish from there without over-editing in the visual editor.
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="legal-change-summary">Change summary</Label>
@@ -695,31 +694,55 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                   rows={3}
                 />
               </div>
+              <Collapsible open={showSetup} onOpenChange={setShowSetup} className="md:col-span-2">
+                <CollapsibleContent className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>PDF page size</Label>
+                    <Select value={pageSize} onValueChange={(value) => setPageSize(value as 'A4' | 'A3')}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select page size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A4">A4</SelectItem>
+                        <SelectItem value="A3">A3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>PDF orientation</Label>
+                    <Select value={orientation} onValueChange={(value) => setOrientation(value as 'portrait' | 'landscape')}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select orientation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="portrait">Portrait</SelectItem>
+                        <SelectItem value="landscape">Landscape</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </CardContent>
           </Card>
 
-          <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'editor' | 'source' | 'preview' | 'pdf-preview')} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'editor' | 'source')} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="editor" className="gap-2">
                 <BookOpenText className="h-4 w-4" />
-                Visual Editor
+                Visual editor
               </TabsTrigger>
               <TabsTrigger value="source" className="gap-2">
                 <FileText className="h-4 w-4" />
-                HTML Source
-              </TabsTrigger>
-              <TabsTrigger value="preview" className="gap-2">
-                <Eye className="h-4 w-4" />
-                Web Preview
-              </TabsTrigger>
-              <TabsTrigger value="pdf-preview" className="gap-2">
-                <Printer className="h-4 w-4" />
-                PDF Preview
+                HTML/source
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="editor">
               <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Editor</CardTitle>
+                  <CardDescription>Use this for cleanup, headings, lists, links, and tables after import.</CardDescription>
+                </CardHeader>
                 <CardContent className="p-0">
                   <RichTextEditor
                     value={sourceHtml}
@@ -742,14 +765,14 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <CardTitle className="text-base">HTML/source import</CardTitle>
+                      <CardTitle className="text-base">HTML/source</CardTitle>
                       <CardDescription>
-                        Best for preserving complex formatting from Word or Google Docs before you do any visual cleanup.
+                        Best when pasted legal formatting is sensitive and you want maximum control.
                       </CardDescription>
                     </div>
                     <Button type="button" variant="outline" onClick={() => void handlePasteFromClipboard()}>
                       <Copy className="mr-2 h-4 w-4" />
-                      Paste Again
+                      Paste again
                     </Button>
                   </div>
                 </CardHeader>
@@ -763,58 +786,13 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                 </CardContent>
               </Card>
             </TabsContent>
-
-            <TabsContent value="preview">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Client-facing reading preview</CardTitle>
-                  <CardDescription>
-                    This is the draft web-reading preview for the public legal page.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-xl border border-gray-200 bg-white p-8">
-                    <article
-                      className="prose prose-gray max-w-none prose-headings:tracking-tight prose-p:leading-7 prose-li:leading-7"
-                      dangerouslySetInnerHTML={{ __html: sanitizedPreview }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="pdf-preview">
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-base">PDF preview</CardTitle>
-                      <CardDescription>
-                        This uses the branded legal PDF layout with smart page grouping, so long legal documents export more cleanly.
-                      </CardDescription>
-                    </div>
-                    <Button type="button" variant="outline" onClick={() => setPdfPreviewOpen(true)}>
-                      <Monitor className="mr-2 h-4 w-4" />
-                      Open full preview
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="max-h-[720px] overflow-auto rounded-xl border border-gray-200 bg-stone-100 p-4">
-                    <div className="origin-top scale-[0.72] sm:scale-[0.78]">
-                      <LegalDocumentPdfLayout document={pdfDocument} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
           </Tabs>
         </div>
 
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Live publishing</CardTitle>
+              <CardTitle className="text-base">Publish</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
@@ -824,16 +802,17 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
                 )}
                 <span className="font-medium text-gray-900">
-                  {governance.blockers.length === 0 ? 'Ready to replace the live document once saved' : 'Blocked until the items below are fixed'}
+                  {governance.blockers.length === 0 ? 'Ready once the draft is saved' : 'Fix these before publishing'}
                 </span>
               </div>
-              <div>Active draft: <span className="font-medium text-gray-900">{hasDraft ? `v${detail.currentDraftVersion?.versionNumber}` : 'Not created yet'}</span></div>
-              <div>Live version now: <span className="font-medium text-gray-900">{detail.definition.renderMode === 'legacy_resource' ? 'Legacy document' : liveVersionLabel}</span></div>
-              <div>Last saved: <span className="font-medium text-gray-900">{formatDate(detail.currentDraftVersion?.updatedAt)}</span></div>
-              <div>Publish target: <span className="font-medium text-gray-900">/legal/{detail.definition.slug}</span></div>
+              <div>Draft: <span className="font-medium text-gray-900">{hasDraft ? `v${detail.currentDraftVersion?.versionNumber}` : 'Not saved yet'}</span></div>
+              <div>Live: <span className="font-medium text-gray-900">{detail.definition.renderMode === 'legacy_resource' ? 'Legacy document' : liveVersionLabel}</span></div>
+              <div>Target: <span className="font-medium text-gray-900">/legal/{detail.definition.slug}</span></div>
+              <div>Words: <span className="font-medium text-gray-900">{htmlStats.wordCount}</span></div>
+              <div>Section: <span className="font-medium text-gray-900">{LEGAL_SECTION_LABELS[detail.definition.section]}</span></div>
               {governance.blockers.length > 0 && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">
-                  <div className="mb-2 font-medium">Publish blockers</div>
+                  <div className="mb-2 font-medium">Blockers</div>
                   <div className="space-y-1">
                     {governance.blockers.map((item) => (
                       <div key={item}>{item}</div>
@@ -843,7 +822,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
               )}
               {governance.warnings.length > 0 && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-slate-700">
-                  <div className="mb-2 font-medium text-slate-900">Preview warnings</div>
+                  <div className="mb-2 font-medium text-slate-900">Warnings</div>
                   <div className="space-y-1">
                     {governance.warnings.map((item) => (
                       <div key={item}>{item}</div>
@@ -853,39 +832,25 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
               )}
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Document insights</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <div>Words: <span className="font-medium text-gray-900">{htmlStats.wordCount}</span></div>
-              <div>Headings: <span className="font-medium text-gray-900">{htmlStats.headingCount}</span></div>
-              <div>Tables: <span className="font-medium text-gray-900">{governance.tables}</span></div>
-              <div>Manual breaks: <span className="font-medium text-gray-900">{governance.manualBreaks}</span></div>
-              <div>Section: <span className="font-medium text-gray-900">{LEGAL_SECTION_LABELS[detail.definition.section]}</span></div>
-              <div>PDF: <span className="font-medium text-gray-900">{pageSize} {orientation}</span></div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Working notes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                Use the visual editor for headings, lists, links, tables, and quick cleanup.
-              </p>
-              <p>
-                Use HTML/source when pasted formatting is sensitive and the visual editor changes too much.
-              </p>
-              <p>
-                Publishing switches the public legal slug over to this versioned document immediately.
-              </p>
-            </CardContent>
-          </Card>
         </div>
       </div>
+
+      <Dialog open={webPreviewOpen} onOpenChange={setWebPreviewOpen}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Web preview</DialogTitle>
+            <DialogDescription>
+              This is how the current draft will read on the legal page once published.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[75vh] overflow-auto rounded-xl border border-gray-200 bg-white p-8">
+            <article
+              className="prose prose-gray max-w-none prose-headings:tracking-tight prose-p:leading-7 prose-li:leading-7"
+              dangerouslySetInnerHTML={{ __html: sanitizedPreview }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <LegalDocumentPdfDialog
         open={pdfPreviewOpen}
@@ -1005,22 +970,18 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="draft" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="draft" className="gap-2">
               <FileClock className="h-4 w-4" />
               Draft
             </TabsTrigger>
             <TabsTrigger value="published" className="gap-2">
               <FileText className="h-4 w-4" />
-              Published
+              Live
             </TabsTrigger>
-            <TabsTrigger value="versions" className="gap-2">
+            <TabsTrigger value="history" className="gap-2">
               <History className="h-4 w-4" />
-              Versions
-            </TabsTrigger>
-            <TabsTrigger value="audit" className="gap-2">
-              <ScrollText className="h-4 w-4" />
-              Audit
+              History
             </TabsTrigger>
           </TabsList>
 
@@ -1101,7 +1062,7 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
             )}
           </TabsContent>
 
-          <TabsContent value="versions">
+          <TabsContent value="history" className="space-y-4">
             <VersionList
               definition={definition}
               versions={versions}
@@ -1110,12 +1071,10 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
               onDuplicate={(versionId) => void duplicateMutation.mutateAsync(versionId)}
               actionVersionId={actionVersionId}
             />
-          </TabsContent>
 
-          <TabsContent value="audit" className="space-y-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Legal document audit trail</CardTitle>
+                <CardTitle className="text-base">Audit trail</CardTitle>
                 <CardDescription>
                   Recent create, update, migration, publish, archive, and rollback actions for this legal document.
                 </CardDescription>
