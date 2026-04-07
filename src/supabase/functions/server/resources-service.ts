@@ -174,60 +174,65 @@ function sanitizeLegalHtml(sourceHtml: string): string {
     .trim();
 }
 
-function normalizeLegalDocumentContent(sourceHtml: string) {
-  const sanitizedHtml = sanitizeLegalHtml(sourceHtml || '');
-  const wrappedHtml = `<div id="legal-root">${sanitizedHtml || '<p></p>'}</div>`;
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(wrappedHtml, 'text/html');
-  const root = doc?.querySelector('#legal-root');
+function decodeLegalHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+}
 
-  if (!root) {
-    return {
-      sourceHtml: '<p></p>',
-      normalizedContent: {
-        html: '<p></p>',
-        plainText: '',
-        wordCount: 0,
-        headingCount: 0,
-      },
-      toc: [] as Array<{ id: string; title: string; level: number }>,
-      blocks: [
-        {
-          id: generateId(),
-          type: 'text',
-          data: { content: '<p></p>' },
-        },
-      ],
-    };
+function stripLegalHtmlTags(value: string): string {
+  return decodeLegalHtmlEntities(
+    value
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<\/(p|div|section|article|li|tr|td|th|h1|h2|h3|h4|h5|h6)>/gi, ' ')
+      .replace(/<[^>]+>/g, ' '),
+  )
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function upsertHeadingIdAttribute(attributes: string, id: string): string {
+  if (!attributes.trim()) {
+    return ` id="${id}"`;
   }
 
-  root.querySelectorAll('script, style, iframe, object, embed').forEach((node) => node.remove());
-  root.querySelectorAll<HTMLElement>('*').forEach((element) => {
-    for (const attr of Array.from(element.attributes)) {
-      if (attr.name.toLowerCase().startsWith('on')) {
-        element.removeAttribute(attr.name);
-      }
-    }
-  });
+  if (/(\s|^)id\s*=\s*(['"])[^'"]*\2/i.test(attributes)) {
+    return attributes.replace(/(\s|^)id\s*=\s*(['"])[^'"]*\2/i, (match, prefix) => `${prefix}id="${id}"`);
+  }
 
+  return `${attributes} id="${id}"`;
+}
+
+function normalizeLegalDocumentContent(sourceHtml: string) {
+  const sanitizedHtml = sanitizeLegalHtml(sourceHtml || '');
   const seenIds = new Set<string>();
-  const toc = Array.from(root.querySelectorAll('h1, h2, h3')).map((heading) => {
-    const title = heading.textContent?.replace(/\s+/g, ' ').trim() || 'Untitled section';
-    const level = Number(heading.tagName.slice(1));
-    let id = heading.getAttribute('id')?.trim() || slugifyHeading(title);
+  const toc: Array<{ id: string; title: string; level: number }> = [];
 
-    while (seenIds.has(id)) {
-      id = `${id}-${seenIds.size + 1}`;
-    }
+  const normalizedHtml = (sanitizedHtml || '<p></p>').replace(
+    /<h([1-3])([^>]*)>([\s\S]*?)<\/h\1>/gi,
+    (_match, levelText: string, attributes: string, innerHtml: string) => {
+      const title = stripLegalHtmlTags(innerHtml) || 'Untitled section';
+      const level = Number(levelText);
+      const existingIdMatch = attributes.match(/(?:\s|^)id\s*=\s*(['"])([^'"]+)\1/i);
+      let id = existingIdMatch?.[2]?.trim() || slugifyHeading(title);
 
-    seenIds.add(id);
-    heading.setAttribute('id', id);
+      while (seenIds.has(id)) {
+        id = `${id}-${seenIds.size + 1}`;
+      }
 
-    return { id, title, level };
-  });
+      seenIds.add(id);
+      toc.push({ id, title, level });
 
-  const normalizedHtml = root.innerHTML.trim() || '<p></p>';
-  const plainText = root.textContent?.replace(/\s+/g, ' ').trim() || '';
+      const nextAttributes = upsertHeadingIdAttribute(attributes || '', id);
+      return `<h${levelText}${nextAttributes}>${innerHtml}</h${levelText}>`;
+    },
+  ).trim() || '<p></p>';
+
+  const plainText = stripLegalHtmlTags(normalizedHtml);
   const wordCount = plainText ? plainText.split(/\s+/).length : 0;
 
   return {
@@ -721,12 +726,24 @@ export class ResourcesService {
   }
 
   async listLegalDocumentDefinitions(): Promise<LegalDocumentDefinition[]> {
-    await this.ensureLegalDocumentDefinitions();
-
-    const definitions = await kv.listByPrefix('legal_document_definition:') as Array<{
+    let definitions = await kv.listByPrefix('legal_document_definition:') as Array<{
       key: string;
       value: LegalDocumentDefinition;
     }>;
+
+    const existingSlugs = new Set(definitions.map((row) => row.value?.slug).filter(Boolean));
+    const missingEntries = LEGAL_DOCUMENTS_REGISTRY.filter((entry) => !existingSlugs.has(entry.slug));
+
+    if (missingEntries.length > 0) {
+      for (const entry of missingEntries) {
+        await this.bootstrapLegalDocumentDefinition(entry);
+      }
+
+      definitions = await kv.listByPrefix('legal_document_definition:') as Array<{
+        key: string;
+        value: LegalDocumentDefinition;
+      }>;
+    }
 
     const sectionOrder = new Map(
       ['legal-notices', 'privacy-data-protection', 'regulatory-disclosures', 'other']
@@ -745,6 +762,11 @@ export class ResourcesService {
   async getLegalDocumentDefinition(slug: string): Promise<LegalDocumentDefinition | null> {
     if (!LEGAL_DOCUMENTS_BY_SLUG[slug]) {
       return null;
+    }
+
+    const existing = await kv.get(legalDefinitionKey(slug)) as LegalDocumentDefinition | null;
+    if (existing) {
+      return existing;
     }
 
     await this.bootstrapLegalDocumentDefinition(LEGAL_DOCUMENTS_BY_SLUG[slug]);

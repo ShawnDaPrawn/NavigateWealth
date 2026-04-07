@@ -892,11 +892,13 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
   const { definition, currentPublishedVersion, versions } = detail;
   const queryClient = useQueryClient();
   const [actionVersionId, setActionVersionId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'draft' | 'published' | 'history'>('draft');
   const migrationState = getMigrationState(detail);
   const auditQuery = useQuery({
     queryKey: [...resourceKeys.legalDocument(definition.slug), 'audit'],
     queryFn: () => resourcesApi.getLegalDocumentAudit(definition.slug),
     staleTime: 60 * 1000,
+    enabled: activeTab === 'history',
   });
 
   const invalidateLegalQueries = async () => {
@@ -1000,7 +1002,7 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="draft" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'draft' | 'published' | 'history')} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="draft" className="gap-2">
               <FileClock className="h-4 w-4" />
