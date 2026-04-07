@@ -220,6 +220,26 @@ function getMigrationState(detail: LegalDocumentDetailResponse) {
   return 'legacy-only';
 }
 
+function syncLegalDocumentCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  detail: LegalDocumentDetailResponse,
+) {
+  queryClient.setQueryData(resourceKeys.legalDocument(detail.definition.slug), detail);
+  queryClient.setQueryData(resourceKeys.legalDocumentVersions(detail.definition.slug), detail.versions);
+  queryClient.setQueryData<LegalDocumentDefinitionResponse[] | undefined>(
+    resourceKeys.legalDocuments(),
+    (existing) => {
+      if (!existing) return [detail.definition];
+      const next = existing.map((item) => (
+        item.slug === detail.definition.slug ? detail.definition : item
+      ));
+      return next.some((item) => item.slug === detail.definition.slug)
+        ? next
+        : [...next, detail.definition];
+    },
+  );
+}
+
 function MigrationBadge({ state }: { state: 'legacy-only' | 'draft-ready' | 'migrated' }) {
   const palette = state === 'migrated'
     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -401,6 +421,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
   const [webPreviewOpen, setWebPreviewOpen] = useState(false);
   const [editorTab, setEditorTab] = useState<'editor' | 'source'>('editor');
   const [showSetup, setShowSetup] = useState(false);
+  const [draftVersionId, setDraftVersionId] = useState(detail.currentDraftVersion?.id || null);
 
   useEffect(() => {
     setVersionNumber(initialDraft.versionNumber);
@@ -409,7 +430,8 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
     setSourceHtml(initialDraft.sourceHtml);
     setPageSize(initialDraft.pdfConfig.pageSize);
     setOrientation(initialDraft.pdfConfig.orientation);
-  }, [initialDraft]);
+    setDraftVersionId(detail.currentDraftVersion?.id || null);
+  }, [detail.currentDraftVersion?.id, initialDraft]);
 
   const htmlStats = useMemo(() => getHtmlStats(sourceHtml), [sourceHtml]);
   const governance = useMemo(
@@ -443,21 +465,23 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
         },
       };
 
-      if (detail.currentDraftVersion?.id) {
+      if (draftVersionId) {
         return resourcesApi.updateLegalDocumentDraft(
           detail.definition.slug,
-          detail.currentDraftVersion.id,
+          draftVersionId,
           payload,
         );
       }
 
       return resourcesApi.createLegalDocumentDraft(detail.definition.slug, payload);
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      syncLegalDocumentCache(queryClient, result);
+      setDraftVersionId(result.currentDraftVersion?.id || null);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocuments() }),
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocument(detail.definition.slug) }),
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocumentVersions(detail.definition.slug) }),
+        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocuments(), refetchType: 'none' }),
+        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocument(detail.definition.slug), refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocumentVersions(detail.definition.slug), refetchType: 'none' }),
       ]);
       toast.success(hasDraft ? 'Legal draft updated' : 'Legal draft created');
     },
@@ -469,17 +493,20 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
 
   const publishMutation = useMutation({
     mutationFn: async () => {
-      if (!detail.currentDraftVersion?.id) {
+      const targetDraftVersionId = draftVersionId || detail.currentDraftVersion?.id || null;
+      if (!targetDraftVersionId) {
         throw new Error('Save the draft before publishing it');
       }
 
-      return resourcesApi.publishLegalDocumentDraft(detail.definition.slug, detail.currentDraftVersion.id);
+      return resourcesApi.publishLegalDocumentDraft(detail.definition.slug, targetDraftVersionId);
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      syncLegalDocumentCache(queryClient, result);
+      setDraftVersionId(result.currentDraftVersion?.id || null);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocuments() }),
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocument(detail.definition.slug) }),
-        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocumentVersions(detail.definition.slug) }),
+        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocuments(), refetchType: 'none' }),
+        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocument(detail.definition.slug), refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: resourceKeys.legalDocumentVersions(detail.definition.slug), refetchType: 'none' }),
       ]);
       toast.success('Legal document published', {
         description: 'The live legal page now uses this versioned document instead of the legacy source.',
@@ -634,7 +661,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
               type="button"
               variant="secondary"
               onClick={() => void publishMutation.mutateAsync()}
-              disabled={publishMutation.isPending || saveMutation.isPending || isDirty || !detail.currentDraftVersion?.id || governance.blockers.length > 0}
+              disabled={publishMutation.isPending || saveMutation.isPending || isDirty || !draftVersionId || governance.blockers.length > 0}
             >
               <FileText className="mr-2 h-4 w-4" />
               {publishMutation.isPending ? 'Publishing…' : 'Publish live'}
@@ -886,7 +913,8 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
       setActionVersionId(versionId);
       return resourcesApi.publishLegalDocumentDraft(definition.slug, versionId);
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      syncLegalDocumentCache(queryClient, result);
       await invalidateLegalQueries();
       toast.success('Legal document published');
     },
@@ -904,7 +932,8 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
       setActionVersionId(versionId);
       return resourcesApi.archiveLegalDocumentVersion(definition.slug, versionId);
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      syncLegalDocumentCache(queryClient, result);
       await invalidateLegalQueries();
       toast.success('Legal document version archived');
     },
@@ -922,7 +951,8 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
       setActionVersionId(versionId);
       return resourcesApi.duplicateLegalDocumentVersion(definition.slug, versionId);
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      syncLegalDocumentCache(queryClient, result);
       await invalidateLegalQueries();
       toast.success('Draft created from selected version');
     },
@@ -940,7 +970,8 @@ function DetailShell({ detail }: { detail: LegalDocumentDetailResponse }) {
       setActionVersionId('migrate');
       return resourcesApi.migrateLegalDocument(definition.slug);
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      syncLegalDocumentCache(queryClient, result);
       await invalidateLegalQueries();
       toast.success('Migration draft prepared from the legacy legal document');
     },
