@@ -28,6 +28,7 @@ import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
+import * as kv from './kv_store.tsx';
 
 const app = new Hono();
 const log = createModuleLogger('sitemap');
@@ -55,7 +56,7 @@ const getSupabase = () => createClient(
  *
  * Google ignores <priority> and <changefreq> — only <loc> and <lastmod> matter.
  * Only canonical, indexable public pages belong here.
- * Individual articles are excluded — the /resources hub page is what we want ranked.
+ * Individual published articles are included (to avoid relying on crawl discovery).
  */
 const SITEMAP_URLS: SitemapEntry[] = [
   { loc: '/', lastmod: '2026-04-02' },
@@ -83,12 +84,67 @@ const SITEMAP_URLS: SitemapEntry[] = [
   { loc: '/legal', lastmod: '2026-01-01' },
 ];
 
+function toDateOnly(value: string | undefined | null): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+type ArticleKv = {
+  slug?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  published_at?: string;
+};
+
+async function getArticleEntries(): Promise<SitemapEntry[]> {
+  const entries: SitemapEntry[] = [];
+  try {
+    const articles = (await kv.getByPrefix('article:')) as ArticleKv[];
+    for (const a of articles) {
+      if (!a || a.status !== 'published') continue;
+      const slug = typeof a.slug === 'string' ? a.slug.trim() : '';
+      if (!slug) continue;
+      const lastmod =
+        toDateOnly(a.updated_at) ||
+        toDateOnly(a.published_at) ||
+        toDateOnly(a.created_at) ||
+        new Date().toISOString().slice(0, 10);
+      entries.push({
+        loc: `/resources/article/${encodeURIComponent(slug)}`,
+        lastmod,
+      });
+    }
+  } catch {
+    // Best-effort only — sitemap still works with static URLs.
+  }
+  return entries;
+}
+
+async function getSitemapUrls(): Promise<SitemapEntry[]> {
+  const all = [...SITEMAP_URLS, ...(await getArticleEntries())];
+  const seen = new Set<string>();
+  const deduped: SitemapEntry[] = [];
+  for (const e of all) {
+    if (!e?.loc) continue;
+    if (seen.has(e.loc)) continue;
+    seen.add(e.loc);
+    deduped.push(e);
+  }
+  return deduped;
+}
+
 /** Generate the full XML sitemap string — only <loc> and <lastmod>, no priority/changefreq */
-function generateSitemapXml(): string {
-  const entries = SITEMAP_URLS.map(
-    (u) =>
-      `  <url>\n    <loc>${BASE_URL}${u.loc}</loc>\n    <lastmod>${u.lastmod}</lastmod>\n  </url>`
-  ).join('\n');
+async function generateSitemapXml(): Promise<string> {
+  const urls = await getSitemapUrls();
+  const entries = urls
+    .map(
+      (u) =>
+        `  <url>\n    <loc>${BASE_URL}${u.loc}</loc>\n    <lastmod>${u.lastmod}</lastmod>\n  </url>`,
+    )
+    .join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`;
 }
@@ -97,8 +153,8 @@ function generateSitemapXml(): string {
 // The lazy router strips the prefix, so routes here are relative to /
 
 /** GET /xml — returns the XML sitemap directly (requires auth) */
-app.get('/xml', (c) => {
-  const xml = generateSitemapXml();
+app.get('/xml', asyncHandler(async (c) => {
+  const xml = await generateSitemapXml();
 
   return new Response(xml, {
     headers: {
@@ -106,7 +162,7 @@ app.get('/xml', (c) => {
       'Cache-Control': 'public, max-age=86400',
     },
   });
-});
+}));
 
 /**
  * POST /publish — generates sitemap XML and uploads to a PUBLIC Supabase Storage bucket.
@@ -119,7 +175,8 @@ app.get('/xml', (c) => {
  */
 app.post('/publish', asyncHandler(async (c) => {
   const supabase = getSupabase();
-  const xml = generateSitemapXml();
+  const xml = await generateSitemapXml();
+  const urls = await getSitemapUrls();
 
   // Ensure the public bucket exists (idempotent)
   const { data: buckets } = await supabase.storage.listBuckets();
@@ -159,7 +216,7 @@ app.post('/publish', asyncHandler(async (c) => {
   return c.json({
     success: true,
     publicUrl,
-    urlCount: SITEMAP_URLS.length,
+    urlCount: urls.length,
     lastmod: new Date().toISOString().split('T')[0],
     message: 'Sitemap published to public storage. Use the publicUrl in robots.txt and Google Search Console.',
   });
@@ -170,6 +227,7 @@ app.get('/', (c) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const publicUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${SITEMAP_FILE}`;
 
+  // Best-effort count; avoids KV reads for a simple status endpoint.
   return c.json({
     service: 'sitemap',
     status: 'active',

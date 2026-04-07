@@ -11,7 +11,6 @@ const buildDate = new Intl.DateTimeFormat('en-CA', {
 // Google ignores <priority> and <changefreq> — only <loc> and <lastmod> matter.
 // lastmod should reflect genuinely meaningful content changes.
 // Only canonical, indexable public pages belong here. No auth, dashboard, or admin routes.
-// Individual articles are excluded — the /resources hub page is what we want ranked.
 const sitemapEntries = [
   { path: '/', lastmod: buildDate },
   { path: '/services', lastmod: buildDate },
@@ -127,8 +126,122 @@ Sitemap: ${siteUrl}/sitemap.xml
 }
 
 function main() {
-  fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), generateSitemapXml(), 'utf8');
-  fs.writeFileSync(path.join(publicDir, 'robots.txt'), generateRobotsTxt(), 'utf8');
+  Promise.resolve()
+    .then(async () => {
+      const articleEntries = await fetchPublishedArticleEntries();
+      if (articleEntries.length) {
+        sitemapEntries.push(...articleEntries);
+      }
 
-  console.log(`Generated sitemap and robots for ${siteUrl} (${sitemapEntries.length} URLs)`);
+      // De-dupe paths (defensive)
+      const seen = new Set();
+      const deduped = [];
+      for (const e of sitemapEntries) {
+        if (!e?.path) continue;
+        if (seen.has(e.path)) continue;
+        seen.add(e.path);
+        deduped.push(e);
+      }
+      sitemapEntries.length = 0;
+      sitemapEntries.push(...deduped);
+
+      fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), generateSitemapXml(), 'utf8');
+      fs.writeFileSync(path.join(publicDir, 'robots.txt'), generateRobotsTxt(), 'utf8');
+
+      console.log(`Generated sitemap and robots for ${siteUrl} (${sitemapEntries.length} URLs)`);
+    })
+    .catch((err) => {
+      console.error('Failed to generate SEO files:', err);
+      process.exitCode = 1;
+    });
+}
+
+function toDateOnly(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: process.env.SITEMAP_TIMEZONE || DEFAULT_TIMEZONE,
+  }).format(d);
+}
+
+async function fetchPublishedArticleEntries() {
+  // Pull published articles from the public Edge Function endpoint.
+  // This ensures the sitemap reflects live content, and avoids listing draft/unpublished posts.
+  const projectRef = process.env.SUPABASE_PROJECT_REF || 'vpjmdsltwrnpefzcgdmz';
+  const fnBase =
+    process.env.SUPABASE_FUNCTIONS_BASE_URL ||
+    `https://${projectRef}.supabase.co/functions/v1/make-server-91ed8379`;
+
+  const url = `${fnBase}/publications/articles?status=published&limit=1000`;
+  try {
+    const anonKey = readSupabaseAnonKey();
+    const res = await fetch(url, { headers: { 'accept': 'application/json' } });
+    if (!res.ok) {
+      // Some Supabase function gateways require an Authorization header even for public routes.
+      if (res.status === 401 && anonKey) {
+        const retry = await fetch(url, {
+          headers: {
+            accept: 'application/json',
+            Authorization: `Bearer ${anonKey}`,
+          },
+        });
+        if (!retry.ok) {
+          console.warn(`[sitemap] Skipping articles (HTTP ${retry.status})`);
+          return [];
+        }
+        const json = await retry.json();
+        const rows = Array.isArray(json?.data) ? json.data : [];
+        return rowsToArticleEntries(rows);
+      }
+
+      console.warn(`[sitemap] Skipping articles (HTTP ${res.status})`);
+      return [];
+    }
+
+    const json = await res.json();
+    const rows = Array.isArray(json?.data) ? json.data : [];
+    return rowsToArticleEntries(rows);
+  } catch (e) {
+    console.warn('[sitemap] Skipping articles (fetch failed)', e?.message || e);
+    return [];
+  }
+}
+
+function rowsToArticleEntries(rows) {
+  const entries = [];
+  for (const a of rows) {
+    const slug = typeof a?.slug === 'string' ? a.slug.trim() : '';
+    if (!slug) continue;
+
+    const lastmod =
+      toDateOnly(a.updated_at) ||
+      toDateOnly(a.published_at) ||
+      toDateOnly(a.created_at) ||
+      buildDate;
+
+    entries.push({
+      path: `/resources/article/${encodeURIComponent(slug)}`,
+      lastmod,
+    });
+  }
+  return entries;
+}
+
+function readSupabaseAnonKey() {
+  // Prefer explicit env var for CI; fall back to reading repo constant.
+  const envKey =
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    process.env.PUBLIC_SUPABASE_ANON_KEY;
+  if (envKey && String(envKey).trim()) return String(envKey).trim();
+
+  try {
+    const p = path.resolve('src/utils/supabase/info.tsx');
+    const src = fs.readFileSync(p, 'utf8');
+    const m = src.match(/export\s+const\s+publicAnonKey\s*=\s*\"([^\"]+)\"/);
+    return m?.[1] ? m[1].trim() : null;
+  } catch {
+    return null;
+  }
 }
