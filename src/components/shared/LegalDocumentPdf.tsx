@@ -1,12 +1,17 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BasePdfLayout, getPdfDimensions } from '../admin/modules/resources/templates/BasePdfLayout';
 import { PdfTemplateViewer } from '../admin/modules/resources/PdfTemplateViewer';
-import { normalizeLegalDocumentAnchors, sanitizeLegalDocumentHtml } from '../../utils/legalHtml';
 import {
   resolveLegalPdfRendererVersion,
   type LegalPdfRendererResolution,
   type LegalPdfRendererVersion,
 } from './legalPdfRendererConfig';
+import {
+  buildLegalPagedPrintSource,
+  DEFAULT_LEGAL_PDF_CONFIG,
+  getNormalizedLegalPdfDocument,
+  LEGAL_PDF_CONTENT_CSS,
+} from './legalPdfPrintDocument';
 
 export type LegalPdfConfig = {
   pageSize: 'A4' | 'A3';
@@ -38,192 +43,7 @@ type PdfChunk = {
   forceBreakAfter?: boolean;
 };
 
-const DEFAULT_PDF_CONFIG: LegalPdfConfig = {
-  pageSize: 'A4',
-  orientation: 'portrait',
-};
-
 const PDF_MIN_LINES_ABOVE_FOOTER = 2;
-
-const LEGAL_PDF_CONTENT_CSS = `
-  .legal-pdf-body {
-    color: #111827;
-    font-size: 10px;
-    line-height: 1.68;
-  }
-
-  .legal-pdf-block {
-    margin: 0;
-    display: flow-root;
-  }
-
-  .legal-pdf-block.allow-split {
-    page-break-inside: auto;
-    break-inside: auto;
-  }
-
-  .legal-pdf-body h1,
-  .legal-pdf-body h2,
-  .legal-pdf-body h3,
-  .legal-pdf-body h4 {
-    color: #111827;
-    page-break-after: avoid;
-    break-after: avoid;
-  }
-
-  .legal-pdf-body h1 {
-    font-size: 15px !important;
-    font-weight: 800 !important;
-    margin: 0 0 3.6mm !important;
-  }
-
-  .legal-pdf-body h2 {
-    font-size: 13px !important;
-    font-weight: 800 !important;
-    margin: 7mm 0 2.4mm !important;
-    padding: 0 0 1.2mm !important;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .legal-pdf-body h3 {
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    margin: 5.2mm 0 2mm !important;
-  }
-
-  .legal-pdf-body h4 {
-    font-size: 10.2px !important;
-    font-weight: 700 !important;
-    margin: 4mm 0 1.6mm !important;
-  }
-
-  .legal-pdf-body p,
-  .legal-pdf-body li,
-  .legal-pdf-body blockquote {
-    font-size: 10px;
-    line-height: 1.68;
-    orphans: 3;
-    widows: 3;
-  }
-
-  .legal-pdf-body p {
-    margin: 0 0 3mm;
-  }
-
-  .legal-pdf-body p.legal-pdf-paragraph-fragment {
-    margin: 0;
-  }
-
-  .legal-pdf-body p.legal-pdf-paragraph-fragment.last-fragment {
-    margin: 0 0 3mm;
-  }
-
-  .legal-pdf-body ul,
-  .legal-pdf-body ol {
-    margin: 0 0 3.5mm;
-    padding-left: 5.2mm;
-  }
-
-  .legal-pdf-body li {
-    margin-bottom: 1.5mm;
-  }
-
-  .legal-pdf-body table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 9px;
-    margin: 0;
-  }
-
-  .legal-pdf-body thead {
-    display: table-header-group;
-  }
-
-  .legal-pdf-body th,
-  .legal-pdf-body td {
-    border: 1px solid #d1d5db;
-    padding: 2.2mm 2.4mm;
-    text-align: left;
-    vertical-align: top;
-  }
-
-  .legal-pdf-body th {
-    background: #f5f5f4;
-    font-weight: 700;
-    color: #1f2937;
-  }
-
-  .legal-pdf-table-wrap {
-    overflow: hidden;
-    border-radius: 4px;
-    margin: 0 0 3.5mm;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-
-  .legal-pdf-body blockquote {
-    margin: 0 0 3mm;
-    padding: 3mm 4mm;
-    background: #fafaf9;
-    border-left: 3px solid #2563eb;
-    color: #374151;
-  }
-
-  .legal-pdf-signatures,
-  .legal-signatures {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 5mm;
-    margin-top: 4mm;
-  }
-
-  .legal-pdf-signature-line,
-  .legal-signature-line {
-    min-height: 16mm;
-  }
-
-  .legal-pdf-signature-line .line,
-  .legal-signature-line .line {
-    height: 11mm;
-    border-bottom: 1px solid #6b7280;
-    margin-bottom: 1.6mm;
-  }
-
-  .legal-pdf-signature-line span,
-  .legal-signature-line span {
-    display: block;
-    font-size: 8.6px;
-    font-weight: 600;
-    color: #4b5563;
-  }
-
-  .legal-pdf-body a {
-    color: #2563eb;
-    text-decoration: none;
-  }
-
-  .legal-pdf-body strong {
-    color: #111827;
-    font-weight: 700;
-  }
-
-  .legal-pdf-body em {
-    font-style: italic;
-  }
-
-  .legal-pdf-body u {
-    text-decoration: underline;
-  }
-
-  .legal-pdf-body .legal-page-break,
-  .legal-pdf-page-break {
-    height: 0;
-    border: 0;
-    margin: 0;
-    page-break-after: always;
-    break-after: page;
-  }
-`;
 
 function formatLongDate(value: string | null | undefined): string {
   if (!value) return 'Not set';
@@ -664,22 +484,14 @@ function renderPage(chunks: PdfChunk[], pageIndex: number) {
 }
 
 export function LegacyLegalDocumentPdfLayout({ document }: { document: LegalPdfDocumentData }) {
-  const pdfConfig = document.pdfConfig || DEFAULT_PDF_CONFIG;
-  const sanitizedHtml = useMemo(
-    () => sanitizeLegalDocumentHtml(document.html || '<p></p>'),
-    [document.html],
+  const pdfConfig = document.pdfConfig || DEFAULT_LEGAL_PDF_CONFIG;
+  const normalizedDocument = useMemo(
+    () => getNormalizedLegalPdfDocument({
+      ...document,
+      toc: document.toc && document.toc.length > 0 ? document.toc : deriveTocFromHtml(document.html || '<p></p>'),
+    }),
+    [document],
   );
-  const normalizedDocument = useMemo(() => {
-    const anchored = normalizeLegalDocumentAnchors(
-      sanitizedHtml,
-      document.toc && document.toc.length > 0 ? document.toc : deriveTocFromHtml(sanitizedHtml),
-    );
-
-    return {
-      html: anchored.html,
-      toc: anchored.toc,
-    };
-  }, [document.toc, sanitizedHtml]);
 
   const pages = useMemo(() => {
     const chunks = [
@@ -707,12 +519,103 @@ export function LegacyLegalDocumentPdfLayout({ document }: { document: LegalPdfD
 }
 
 function PagedLegalDocumentPdfLayout({ document }: { document: LegalPdfDocumentData }) {
-  return <LegacyLegalDocumentPdfLayout document={document} />;
+  const previewHostRef = useRef<HTMLDivElement | null>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const pagedSource = useMemo(
+    () => buildLegalPagedPrintSource(document),
+    [document],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function renderPagedPreview() {
+      if (!previewHostRef.current || typeof window === 'undefined') {
+        return;
+      }
+
+      setStatus('loading');
+      setErrorMessage(null);
+      previewHostRef.current.innerHTML = '';
+
+      try {
+        const { Previewer } = await import('pagedjs');
+
+        if (cancelled || !previewHostRef.current) {
+          return;
+        }
+
+        const template = window.document.createElement('template');
+        template.innerHTML = pagedSource.markup.trim();
+
+        const previewer = new Previewer();
+        await previewer.preview(
+          template.content.cloneNode(true) as DocumentFragment,
+          [{ [`${window.location.href}#legal-paged-inline`]: pagedSource.styles }],
+          previewHostRef.current,
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        setStatus('ready');
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setStatus('error');
+        setErrorMessage(error instanceof Error ? error.message : 'Paged preview could not be prepared');
+      }
+    }
+
+    void renderPagedPreview();
+
+    return () => {
+      cancelled = true;
+      if (previewHostRef.current) {
+        previewHostRef.current.innerHTML = '';
+      }
+    };
+  }, [pagedSource]);
+
+  if (status === 'error') {
+    return (
+      <>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Paged preview fell back to the legacy renderer in this session.
+          {errorMessage ? ` ${errorMessage}` : ''}
+        </div>
+        <LegacyLegalDocumentPdfLayout document={document} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: pagedSource.styles }} />
+      <div className="legal-paged-preview-root">
+        {status === 'loading' && (
+          <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-sm text-slate-600">
+            Building paged legal preview...
+          </div>
+        )}
+        <div
+          ref={previewHostRef}
+          className={status === 'loading' ? 'hidden' : ''}
+          data-legal-pdf-renderer="paged"
+        />
+      </div>
+    </>
+  );
 }
 
 function resolveActiveLegalPdfRenderer(): LegalPdfRendererResolution {
   return resolveLegalPdfRendererVersion({
-    pagedAvailable: false,
+    pagedAvailable: true,
   });
 }
 
@@ -727,9 +630,9 @@ export function LegalDocumentPdfLayout({
     ? {
         defaultVersion: 'legacy' as const,
         requestedVersion: rendererVersion,
-        effectiveVersion: rendererVersion === 'paged' ? 'legacy' as const : rendererVersion,
+        effectiveVersion: rendererVersion,
         source: 'default' as const,
-        pagedAvailable: false,
+        pagedAvailable: true,
       }
     : resolveActiveLegalPdfRenderer();
 
@@ -751,8 +654,9 @@ export function LegalDocumentPdfDialog({
 }) {
   if (!document) return null;
 
-  const pdfConfig = document.pdfConfig || DEFAULT_PDF_CONFIG;
+  const pdfConfig = document.pdfConfig || DEFAULT_LEGAL_PDF_CONFIG;
   const rendererResolution = resolveActiveLegalPdfRenderer();
+  const pageSelector = rendererResolution.effectiveVersion === 'paged' ? '.pagedjs_page' : '.pdf-page';
 
   return (
     <PdfTemplateViewer
@@ -763,6 +667,7 @@ export function LegalDocumentPdfDialog({
       orientation={pdfConfig.orientation}
       renderPdfFromPreview
       primaryActionLabel="Download PDF"
+      pageSelector={pageSelector}
     >
       <LegalDocumentPdfLayout
         document={document}

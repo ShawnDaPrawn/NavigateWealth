@@ -26,6 +26,7 @@ interface PdfTemplateViewerProps {
   /** Generate a true PDF from the preview pages instead of opening browser print */
   renderPdfFromPreview?: boolean;
   primaryActionLabel?: string;
+  pageSelector?: string;
 }
 
 export const PdfTemplateViewer = ({ 
@@ -40,6 +41,7 @@ export const PdfTemplateViewer = ({
   letterBlocks,
   renderPdfFromPreview = false,
   primaryActionLabel,
+  pageSelector,
 }: PdfTemplateViewerProps) => {
   const [scale, setScale] = useState(1);
   const [wordExporting, setWordExporting] = useState(false);
@@ -88,8 +90,8 @@ export const PdfTemplateViewer = ({
         await document.fonts.ready;
       }
 
-      const pageSelector = isLetter ? '.letter-page' : '.pdf-page';
-      const pageNodes = Array.from(clone.querySelectorAll<HTMLElement>(pageSelector));
+      const activePageSelector = pageSelector || (isLetter ? '.letter-page' : '.pdf-page');
+      const pageNodes = Array.from(clone.querySelectorAll<HTMLElement>(activePageSelector));
       if (pageNodes.length === 0) {
         throw new Error('No preview pages were found for PDF export');
       }
