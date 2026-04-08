@@ -43,13 +43,6 @@ export const PdfTemplateViewer = ({
   const handleResetZoom = () => setScale(1);
 
   const handleDownload = () => {
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-    
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
     // Get the preview container content
     const previewContainer = contentRef.current?.querySelector('.pdf-preview-container');
     if (!previewContainer) {
@@ -57,8 +50,13 @@ export const PdfTemplateViewer = ({
       return;
     }
 
-    // Clone the node
-    const contentClone = previewContainer.cloneNode(true) as HTMLElement;
+    const printWindow = window.open('', '_blank', 'width=1200,height=900');
+    if (!printWindow) {
+      console.error('Print window could not be opened');
+      return;
+    }
+
+    const contentMarkup = previewContainer.outerHTML;
 
     // Use LETTER_CSS for letters (which already includes BASE_PDF_CSS),
     // or BASE_PDF_CSS for standard forms
@@ -149,16 +147,26 @@ export const PdfTemplateViewer = ({
         width: auto !important;
       }
     `;
-    
-    doc.open();
-    doc.write(`
+
+    printWindow.document.open();
+    printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>${escapeHtmlText(navigateWealthPdfDocumentTitle(title))}</title>
           <style>
             /* Layout styles */
             ${layoutCSS}
+
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: #ffffff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
             
             /* Overrides for exact printing with no browser margins */
             @media print {
@@ -192,22 +200,32 @@ export const PdfTemplateViewer = ({
           </style>
         </head>
         <body>
-          ${contentClone.outerHTML}
+          ${contentMarkup}
         </body>
       </html>
     `);
-    doc.close();
+    printWindow.document.close();
 
-    // Trigger print
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      
-      // Cleanup
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 1000);
-    }, 500);
+    const triggerPrint = async () => {
+      try {
+        if (printWindow.document.fonts?.ready) {
+          await printWindow.document.fonts.ready;
+        }
+      } catch (error) {
+        console.warn('[PdfTemplateViewer] Waiting for print fonts failed', error);
+      }
+
+      window.setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+
+        window.setTimeout(() => {
+          printWindow.close();
+        }, 1000);
+      }, 300);
+    };
+
+    void triggerPrint();
   };
 
   /** Download as Word (.docx) — letter mode only */
