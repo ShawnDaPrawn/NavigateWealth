@@ -105,6 +105,14 @@ const LEGAL_PDF_CONTENT_CSS = `
     margin: 0 0 3mm;
   }
 
+  .legal-pdf-body p.legal-pdf-paragraph-fragment {
+    margin: 0;
+  }
+
+  .legal-pdf-body p.legal-pdf-paragraph-fragment.last-fragment {
+    margin: 0 0 3mm;
+  }
+
   .legal-pdf-body ul,
   .legal-pdf-body ol {
     margin: 0 0 3.5mm;
@@ -439,35 +447,69 @@ function splitParagraphNode(node: HTMLElement): string[] {
     return [outerHtml(node)];
   }
 
-  const segments: string[] = [];
-  const scratch = window.document.createElement('div');
+  const lineHtmlSegments: string[] = [];
+  const lineScratch = window.document.createElement('div');
 
-  const flush = () => {
-    const inner = scratch.innerHTML.trim();
-    const text = scratch.textContent?.replace(/\s+/g, ' ').trim() || '';
+  const flushLine = () => {
+    const inner = lineScratch.innerHTML.trim();
+    const text = lineScratch.textContent?.replace(/\s+/g, ' ').trim() || '';
     if (!inner || !text) {
-      scratch.innerHTML = '';
+      lineScratch.innerHTML = '';
       return;
     }
-
-    const paragraph = node.cloneNode(false) as HTMLElement;
-    paragraph.innerHTML = inner;
-    segments.push(paragraph.outerHTML);
-    scratch.innerHTML = '';
+    lineHtmlSegments.push(inner);
+    lineScratch.innerHTML = '';
   };
 
   Array.from(node.childNodes).forEach((child) => {
     if (child.nodeType === window.Node.ELEMENT_NODE && (child as HTMLElement).tagName === 'BR') {
-      flush();
+      flushLine();
       return;
     }
 
-    scratch.appendChild(child.cloneNode(true));
+    lineScratch.appendChild(child.cloneNode(true));
   });
 
-  flush();
+  flushLine();
 
-  return segments.length > 0 ? segments : [outerHtml(node)];
+  if (lineHtmlSegments.length <= 1) {
+    return [outerHtml(node)];
+  }
+
+  const groupedSegments: string[][] = [];
+  let currentGroup: string[] = [];
+  let currentChars = 0;
+  const maxLinesPerChunk = 4;
+  const maxCharsPerChunk = 360;
+
+  lineHtmlSegments.forEach((lineHtml) => {
+    const lineChars = textFromHtml(lineHtml).length;
+    const wouldOverflow = currentGroup.length > 0
+      && (currentGroup.length >= maxLinesPerChunk || currentChars + lineChars > maxCharsPerChunk);
+
+    if (wouldOverflow) {
+      groupedSegments.push(currentGroup);
+      currentGroup = [];
+      currentChars = 0;
+    }
+
+    currentGroup.push(lineHtml);
+    currentChars += lineChars;
+  });
+
+  if (currentGroup.length > 0) {
+    groupedSegments.push(currentGroup);
+  }
+
+  return groupedSegments.map((group, index) => {
+    const paragraph = node.cloneNode(false) as HTMLElement;
+    paragraph.classList.add('legal-pdf-paragraph-fragment');
+    if (index === groupedSegments.length - 1) {
+      paragraph.classList.add('last-fragment');
+    }
+    paragraph.innerHTML = group.join('<br>');
+    return paragraph.outerHTML;
+  });
 }
 
 function mmToPx(value: number): number {
