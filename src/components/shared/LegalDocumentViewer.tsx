@@ -1,39 +1,34 @@
-import React, { useState, useCallback, useRef } from 'react';
-import DOMPurify from 'dompurify';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  ArrowUpRight,
+  CalendarDays,
+  Download,
+  FileText,
+  ShieldCheck,
+} from 'lucide-react';
+import { toast } from 'sonner@2.0.3';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
+import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
 import { Separator } from '../ui/separator';
-import { FileText, Eye, Loader2, Printer } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
-import { BASE_PDF_CSS } from '../admin/modules/resources/templates/BasePdfLayout';
+import { LEGAL_DOCUMENTS_BY_SLUG, LEGAL_SECTION_LABELS } from '../../shared/legal-documents-registry';
+import { LegalDocumentPdfDialog } from './LegalDocumentPdf';
+import {
+  LEGAL_DOCUMENT_CONTENT_CLASS,
+  LEGAL_DOCUMENT_CONTENT_STYLE,
+  normalizeLegalDocumentAnchors,
+  sanitizeLegalDocumentHtml,
+} from '../../utils/legalHtml';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface LegalDocumentResponse {
-  available: boolean;
-  slug: string;
-  document?: {
-    id: string;
-    title: string;
-    description?: string;
-    blocks: FormBlock[];
-    version: string;
-    updatedAt: string;
-  };
-}
-
-type LegalDocument = LegalDocumentResponse['document'];
-
-type FormBlock = {
+interface FormBlock {
   type: string;
   id?: string;
   data?: {
@@ -41,301 +36,137 @@ type FormBlock = {
     title?: string;
     content?: string;
     columns?: number;
-    fields?: { label?: string; key?: string }[];
-    signatories?: { label?: string; key?: string }[];
+    fields?: Array<{ label?: string; key?: string }>;
+    signatories?: Array<{ label?: string; key?: string }>;
     hasColumnHeaders?: boolean;
     columnHeaders?: string[];
     hasRowHeaders?: boolean;
     rowHeaders?: string[];
-    rows?: { id?: string; cells?: unknown[] }[];
+    rows?: Array<{ id?: string; cells?: Array<{ value?: string }> }>;
     showDate?: boolean;
   };
-};
-
-// ============================================================================
-// BLOCK RENDERER (read-only HTML for legal documents)
-// ============================================================================
-
-function LegalBlockRenderer({ blocks, title }: { blocks: FormBlock[]; title: string }) {
-  return (
-    <div className="max-w-4xl mx-auto p-8 bg-white text-gray-900 print:p-4">
-      {/* Document header */}
-      <div className="text-center mb-8 border-b border-gray-200 pb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">{title}</h1>
-        <p className="text-sm text-gray-500">Navigate Wealth</p>
-      </div>
-
-      {/* Render each block */}
-      {blocks.map((block: FormBlock, idx: number) => {
-        switch (block.type) {
-          case 'section_header':
-            return (
-              <div key={block.id || idx} className="mt-6 mb-3">
-                <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wide">
-                  {block.data?.number ? `${block.data.number} ` : ''}
-                  {block.data?.title || ''}
-                </h2>
-                <Separator className="mt-1" />
-              </div>
-            );
-
-          case 'text':
-            return (
-              <div
-                key={block.id || idx}
-                className="mb-4 text-sm leading-relaxed text-gray-700 prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.data?.content || '') }}
-              />
-            );
-
-          case 'field_grid':
-            return (
-              <div
-                key={block.id || idx}
-                className="mb-4 grid gap-3"
-                style={{ gridTemplateColumns: `repeat(${block.data?.columns || 2}, 1fr)` }}
-              >
-                {(block.data?.fields || []).map((field: { label?: string; key?: string }, fi: number) => (
-                  <div key={fi} className="border border-gray-200 rounded p-2">
-                    <span className="text-xs font-medium text-gray-500 block mb-1">
-                      {field.label || `Field ${fi + 1}`}
-                    </span>
-                    <div className="h-6 border-b border-gray-300" />
-                  </div>
-                ))}
-              </div>
-            );
-
-          case 'signature':
-            return (
-              <div key={block.id || idx} className="mb-4 mt-6 grid grid-cols-2 gap-8">
-                {(block.data?.signatories || []).map((sig: { label?: string; key?: string }, si: number) => (
-                  <div key={si} className="space-y-2">
-                    <div className="h-16 border-b-2 border-gray-400" />
-                    <p className="text-xs font-medium text-gray-600">{sig.label || 'Signature'}</p>
-                    {block.data?.showDate && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-gray-500">Date:</span>
-                        <div className="flex-1 border-b border-gray-300 h-4" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
-
-          case 'table':
-            return (
-              <div key={block.id || idx} className="mb-4 overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-300 text-sm">
-                  {block.data?.hasColumnHeaders && (
-                    <thead>
-                      <tr className="bg-gray-100">
-                        {block.data?.hasRowHeaders && <th className="border border-gray-300 p-2" />}
-                        {(block.data?.columnHeaders || []).map((h: string, hi: number) => (
-                          <th key={hi} className="border border-gray-300 p-2 text-left font-semibold text-gray-700">
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                  )}
-                  <tbody>
-                    {(block.data?.rows || []).map((row: { id?: string; cells?: unknown[] }, ri: number) => (
-                      <tr key={row.id || ri}>
-                        {block.data?.hasRowHeaders && (
-                          <td className="border border-gray-300 p-2 font-semibold text-gray-700 bg-gray-50">
-                            {(block.data?.rowHeaders || [])[ri] || ''}
-                          </td>
-                        )}
-                        {(row.cells || []).map((cell: { type?: string; value?: string }, ci: number) => (
-                          <td key={ci} className="border border-gray-300 p-2 text-gray-600">
-                            {cell.value || ''}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            );
-
-          case 'page_break':
-            return (
-              <div key={block.id || idx} className="my-6 border-t-2 border-dashed border-gray-300 print:break-before-page" />
-            );
-
-          default:
-            return null;
-        }
-      })}
-
-      {/* Footer */}
-      <div className="mt-12 pt-4 border-t border-gray-200 text-center">
-        <p className="text-xs text-gray-400">
-          Navigate Wealth &bull; FSP No. 51816 &bull; Reg. No. 2021/218961/07
-        </p>
-      </div>
-    </div>
-  );
 }
 
-// ============================================================================
-// PRINT HELPER
-// ============================================================================
+interface LegalDocumentResponse {
+  available: boolean;
+  slug: string;
+  document?: {
+    slug?: string;
+    id: string;
+    title: string;
+    description?: string;
+    blocks: FormBlock[];
+    version: string;
+    updatedAt: string;
+    effectiveDate?: string | null;
+    section?: string | null;
+    toc?: Array<{ id: string; title: string; level: number }>;
+    contentHtml?: string | null;
+    renderMode?: 'legacy_resource' | 'versioned_document';
+    pdfConfig?: {
+      pageSize: 'A4' | 'A3';
+      orientation: 'portrait' | 'landscape';
+    };
+  };
+}
 
-function printDocument(doc: NonNullable<LegalDocument>) {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    toast.error('Pop-up blocked. Please allow pop-ups for this site.');
-    return;
-  }
+type LegalDocument = LegalDocumentResponse['document'];
 
-  const displayDate = new Date().toLocaleDateString('en-GB', {
+const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+
+function formatLongDate(value: string | null | undefined): string {
+  if (!value) return 'Not set';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString('en-ZA', {
     day: '2-digit',
-    month: '2-digit',
+    month: 'long',
     year: 'numeric',
   });
+}
 
-  const blocksHtml = (doc.blocks || []).map((block: FormBlock) => {
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function blocksToHtml(blocks: FormBlock[]): string {
+  return blocks.map((block, index) => {
     switch (block.type) {
-      case 'section_header':
-        return `
-          <div class="section">
-            <div class="section-head">
-              ${block.data?.number ? `<span class="num">${block.data.number}</span>` : ''}
-              <h2>${block.data?.title || ''}</h2>
-            </div>
-          </div>`;
+      case 'section_header': {
+        const title = block.data?.title || `Section ${index + 1}`;
+        const heading = `${block.data?.number ? `${block.data.number} ` : ''}${title}`.trim();
+        const id = heading
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .trim()
+          .replace(/\s+/g, '-')
+          || `section-${index + 1}`;
+
+        return `<h2 id="${escapeHtml(id)}">${escapeHtml(heading)}</h2>`;
+      }
 
       case 'text':
-        return `<div style="font-size:9.5px;line-height:1.6;margin-bottom:3mm;">${block.data?.content || ''}</div>`;
+        return block.data?.content || '';
 
-      case 'field_grid': {
-        const cols = block.data?.columns || 2;
-        const fieldArr = block.data?.fields || [];
-        let rows = '';
-        for (let i = 0; i < fieldArr.length; i += cols) {
-          const rowCells = fieldArr.slice(i, i + cols).map((f: { label?: string }) => `
-            <td style="border:1px solid var(--border);padding:5px 6px;vertical-align:top;width:${100 / cols}%;">
-              <div style="font-size:8px;font-weight:700;color:#4b5563;margin-bottom:2px;">${f.label || ''}</div>
-              <div class="field"></div>
-            </td>`).join('');
-          rows += `<tr>${rowCells}</tr>`;
-        }
-        return `<table style="width:100%;border-collapse:collapse;margin-bottom:3mm;">${rows}</table>`;
+      case 'table': {
+        const hasRowHeaders = Boolean(block.data?.hasRowHeaders);
+        const headerCells = (block.data?.columnHeaders || [])
+          .map((header) => `<th>${escapeHtml(header)}</th>`)
+          .join('');
+        const headerRow = block.data?.hasColumnHeaders
+          ? `<thead><tr>${hasRowHeaders ? '<th></th>' : ''}${headerCells}</tr></thead>`
+          : '';
+
+        const bodyRows = (block.data?.rows || []).map((row, rowIndex) => {
+          const rowHeader = hasRowHeaders
+            ? `<th>${escapeHtml((block.data?.rowHeaders || [])[rowIndex] || '')}</th>`
+            : '';
+          const cells = (row.cells || [])
+            .map((cell) => `<td>${escapeHtml(cell.value || '')}</td>`)
+            .join('');
+          return `<tr>${rowHeader}${cells}</tr>`;
+        }).join('');
+
+        return `<div class="legal-table-wrap"><table>${headerRow}<tbody>${bodyRows}</tbody></table></div>`;
       }
 
       case 'signature': {
-        const sigs = (block.data?.signatories || []).map((s: { label?: string }) => `
-          <div style="flex:1;">
-            <div class="signature-box" style="border:1px solid var(--border);border-radius:4px;margin-bottom:2mm;"></div>
-            <div style="font-size:8.5px;font-weight:600;color:#4b5563;">${s.label || 'Signature'}</div>
-            ${block.data?.showDate ? '<div style="margin-top:2mm;border-bottom:1px solid var(--border);font-size:8px;color:var(--muted);">Date: ____________________</div>' : ''}
-          </div>`).join('');
-        return `<div style="display:flex;gap:10mm;margin-top:6mm;margin-bottom:4mm;">${sigs}</div>`;
-      }
-
-      case 'table': {
-        let thead = '';
-        if (block.data?.hasColumnHeaders) {
-          const ths = (block.data?.columnHeaders || []).map((h: string) =>
-            `<th style="border:1px solid var(--border);padding:5px 6px;background:var(--soft);font-weight:700;color:#374151;text-align:left;font-size:9px;">${h}</th>`
-          ).join('');
-          thead = `<thead><tr>${block.data?.hasRowHeaders ? '<th style="border:1px solid var(--border);padding:5px 6px;background:var(--soft);"></th>' : ''}${ths}</tr></thead>`;
-        }
-        const tbody = (block.data?.rows || []).map((row: { cells?: unknown[] }, ri: number) => {
-          const rh = block.data?.hasRowHeaders
-            ? `<td style="border:1px solid var(--border);padding:5px 6px;background:var(--soft);font-weight:700;color:#374151;font-size:9px;">${(block.data?.rowHeaders || [])[ri] || ''}</td>`
-            : '';
-          const cells = (row.cells || []).map((c: { type?: string; value?: string }) =>
-            `<td style="border:1px solid var(--border);padding:5px 6px;font-size:9px;">${c.value || ''}</td>`
-          ).join('');
-          return `<tr>${rh}${cells}</tr>`;
-        }).join('');
-        return `<table style="width:100%;border-collapse:collapse;margin-bottom:3mm;">${thead}<tbody>${tbody}</tbody></table>`;
+        const signatories = (block.data?.signatories || []).map((signatory) => (
+          `<div class="legal-signature-line"><div class="line"></div><span>${escapeHtml(signatory.label || 'Signature')}</span></div>`
+        )).join('');
+        return `<div class="legal-signatures">${signatories}</div>`;
       }
 
       case 'page_break':
-        return '<div style="page-break-after:always;"></div>';
+        return '<div class="legal-page-break"></div>';
 
       default:
         return '';
     }
-  }).join('\n');
-
-  printWindow.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <title>${escapeHtmlText(navigateWealthPdfDocumentTitle(doc.title))}</title>
-  <style>${BASE_PDF_CSS}</style>
-</head>
-<body>
-  <div class="pdf-preview-container">
-    <div class="pdf-viewport">
-      <div class="pdf-page">
-        <div class="pdf-content">
-          <div class="top-masthead">
-            <div class="masthead-left">LEGAL DOCUMENT</div>
-            <div class="masthead-right">
-              <strong>Wealthfront (Pty) Ltd</strong> t/a Navigate Wealth &nbsp;|&nbsp; <strong>FSP 54606</strong><br/>
-              Email: info@navigatewealth.co
-            </div>
-          </div>
-          <header class="page-header-full">
-            <div class="header-row">
-              <div class="brand-block">
-                <div class="logo">Navigate <span class="wealth">Wealth</span></div>
-                <div class="brand-subline">Independent Financial Advisory Services</div>
-              </div>
-              <div class="doc-block">
-                <h1 class="doc-title">${doc.title}</h1>
-                <div class="meta-grid">
-                  <div class="meta-k">Issue date</div>
-                  <div class="meta-v">${displayDate}</div>
-                  <div class="meta-k">Version</div>
-                  <div class="meta-v">${doc.version || '1.0'}</div>
-                </div>
-              </div>
-            </div>
-          </header>
-          <hr class="section-divider" style="border-top:2px solid #6b7280;margin:4mm 0 6mm 0;" />
-          <main>
-            ${blocksHtml}
-          </main>
-          <footer class="pdf-footer">
-            <div class="footer-row">
-              <div class="footer-page">Page 1 of 1</div>
-              <div class="footer-text">
-                Wealthfront (Pty) Ltd, trading as Navigate Wealth, is an Authorised Financial Services Provider - FSP 54606.
-                Registration Number: 2024/071953/07. Located at Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178.
-                For inquiries, please contact us at Tel: (012) 667 2505.
-              </div>
-            </div>
-          </footer>
-        </div>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`);
-  printWindow.document.close();
-
-  setTimeout(() => {
-    printWindow.print();
-  }, 300);
+  }).join('');
 }
 
-// ============================================================================
-// PUBLIC HOOK — useLegalDocumentViewer
-// ============================================================================
+function deriveTocFromBlocks(blocks: FormBlock[]) {
+  return blocks
+    .filter((block) => block.type === 'section_header')
+    .map((block, index) => {
+      const title = `${block.data?.number ? `${block.data.number} ` : ''}${block.data?.title || `Section ${index + 1}`}`.trim();
+      const id = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        || `section-${index + 1}`;
 
-const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+      return { id, title, level: 2 };
+    });
+}
 
-/**
- * Hook that provides legal document viewer state and handlers.
- * Returns the Dialog component to render plus a trigger function.
- */
 export function useLegalDocumentViewer() {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerLoading, setViewerLoading] = useState(false);
@@ -364,7 +195,10 @@ export function useLegalDocumentViewer() {
         return;
       }
 
-      setViewerDocument(data.document);
+      setViewerDocument({
+        ...data.document,
+        slug: data.slug,
+      });
       setViewerOpen(true);
     } catch (error) {
       console.error('Error fetching legal document:', error);
@@ -376,9 +210,8 @@ export function useLegalDocumentViewer() {
   }, []);
 
   const handlePrint = useCallback(() => {
-    if (!viewerDocument) return;
-    printDocument(viewerDocument);
-  }, [viewerDocument]);
+    setViewerOpen(true);
+  }, []);
 
   return {
     openDocument: handleViewDocument,
@@ -391,64 +224,273 @@ export function useLegalDocumentViewer() {
   };
 }
 
-// ============================================================================
-// PUBLIC COMPONENT — LegalDocumentDialog
-// ============================================================================
-
 interface LegalDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   document: LegalDocument | null;
-  onPrint: () => void;
+  onPrint?: () => void;
 }
 
 export function LegalDocumentDialog({
   open,
   onOpenChange,
   document,
-  onPrint,
 }: LegalDocumentDialogProps) {
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+
+  const registryEntry = document?.slug ? LEGAL_DOCUMENTS_BY_SLUG[document.slug] : null;
+  const sectionLabel = document?.section && document.section in LEGAL_SECTION_LABELS
+    ? LEGAL_SECTION_LABELS[document.section as keyof typeof LEGAL_SECTION_LABELS]
+    : registryEntry?.section
+      ? LEGAL_SECTION_LABELS[registryEntry.section]
+      : 'Legal Document';
+
+  const articleHtml = useMemo(() => {
+    if (!document) return '<p></p>';
+    return document.contentHtml || blocksToHtml(document.blocks || []);
+  }, [document]);
+
+  const sanitizedArticleHtml = useMemo(
+    () => sanitizeLegalDocumentHtml(articleHtml),
+    [articleHtml],
+  );
+
+  const normalizedDocumentContent = useMemo(() => {
+    if (!document) {
+      return {
+        html: '<p></p>',
+        toc: [] as Array<{ id: string; title: string; level: number }>,
+      };
+    }
+
+    const preferredToc = document.toc?.length
+      ? document.toc
+      : deriveTocFromBlocks(document.blocks || []);
+
+    return normalizeLegalDocumentAnchors(sanitizedArticleHtml, preferredToc);
+  }, [document, sanitizedArticleHtml]);
+
+  const toc = normalizedDocumentContent.toc;
+
+  const pdfDocument = useMemo(() => {
+    if (!document) return null;
+
+    return {
+      title: document.title,
+      description: document.description || null,
+      version: document.version,
+      effectiveDate: document.effectiveDate || null,
+      updatedAt: document.updatedAt,
+      sectionLabel,
+      html: normalizedDocumentContent.html,
+      toc,
+      pdfConfig: document.pdfConfig,
+    };
+  }, [document, normalizedDocumentContent.html, sectionLabel, toc]);
+
+  const handleTocNavigate = useCallback((event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    event.preventDefault();
+    if (!contentRef.current) return;
+
+    const target = window.document.getElementById(id);
+    if (!target || !contentRef.current.contains(target)) return;
+
+    target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }, []);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-3 border-b bg-white sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-semibold text-gray-900 pr-8">
-              {document?.title || 'Legal Document'}
-            </DialogTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onPrint}
-                className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
-              >
-                <Printer className="h-4 w-4" />
-                Print / Save as PDF
-              </Button>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="h-[92vh] max-w-6xl overflow-hidden border-stone-200 bg-transparent p-0 shadow-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{document?.title || 'Legal document'}</DialogTitle>
+            <DialogDescription>
+              Review Navigate Wealth legal documentation without leaving the signup flow.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-stone-200 bg-[linear-gradient(180deg,#f5f5f4_0%,#fafaf9_18%,#ffffff_100%)] shadow-2xl">
+            <style dangerouslySetInnerHTML={{ __html: LEGAL_DOCUMENT_CONTENT_STYLE }} />
+
+            <div className="border-b border-stone-200 bg-white/90 px-5 py-4 backdrop-blur sm:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+                    Navigate Wealth legal library
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-stone-950 sm:text-xl">
+                    {document?.title || 'Legal document'}
+                  </div>
+                </div>
+                {document && (
+                  <Button onClick={() => setPdfPreviewOpen(true)} className="bg-sky-700 hover:bg-sky-800">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download PDF
+                  </Button>
+                )}
+              </div>
             </div>
+
+            <div ref={contentRef} className="flex-1 overflow-y-auto">
+              {document ? (
+                <div className="mx-auto max-w-screen-2xl px-4 py-5 sm:px-6">
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+                    <Card className="overflow-hidden border-stone-200 bg-white shadow-sm">
+                      <CardContent className="p-0">
+                        <div className="border-b border-stone-200 bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,#ffffff_42%,#f5f5f4_100%)] px-6 py-7 sm:px-8">
+                          <div className="mb-4 flex flex-wrap items-center gap-3">
+                            <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">
+                              {sectionLabel}
+                            </Badge>
+                            <div className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                              Version {document.version}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="max-w-3xl">
+                              <div className="mb-4 flex items-center gap-2 text-sm font-medium text-sky-800">
+                                <ShieldCheck className="h-4 w-4" />
+                                Navigate Wealth legal publication
+                              </div>
+                              <h2 className="text-3xl font-semibold tracking-tight text-stone-950">
+                                {document.title}
+                              </h2>
+                              {document.description && (
+                                <p className="mt-4 max-w-2xl text-base leading-7 text-stone-600">
+                                  {document.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                            <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
+                              <div className="text-xs uppercase tracking-wide text-stone-500">Effective date</div>
+                              <div className="mt-1 text-sm font-medium text-stone-900">
+                                {formatLongDate(document.effectiveDate)}
+                              </div>
+                            </div>
+                            <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
+                              <div className="text-xs uppercase tracking-wide text-stone-500">Last updated</div>
+                              <div className="mt-1 text-sm font-medium text-stone-900">
+                                {formatLongDate(document.updatedAt)}
+                              </div>
+                            </div>
+                            <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
+                              <div className="text-xs uppercase tracking-wide text-stone-500">Reader mode</div>
+                              <div className="mt-1 text-sm font-medium text-stone-900">
+                                {document.renderMode === 'versioned_document' ? 'Versioned legal document' : 'Legal document'}
+                              </div>
+                              <div className="mt-1 text-xs font-medium uppercase tracking-wide text-stone-500">
+                                Version {document.version}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="px-6 py-8 sm:px-8">
+                          <article
+                            className={`${LEGAL_DOCUMENT_CONTENT_CLASS} prose-headings:scroll-mt-24`}
+                            dangerouslySetInnerHTML={{ __html: normalizedDocumentContent.html }}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <div className="hidden space-y-4 lg:block">
+                      <Card className="border-stone-200 bg-white/95 shadow-sm backdrop-blur">
+                        <CardContent className="p-5">
+                          <div className="flex items-center gap-2 text-base font-semibold text-stone-900">
+                            <FileText className="h-4 w-4 text-sky-700" />
+                            On this page
+                          </div>
+                          <p className="mt-2 text-sm text-stone-500">
+                            Jump to the sections most relevant to you.
+                          </p>
+                          <div className="mt-4 space-y-2">
+                            {toc.length > 0 ? (
+                              toc.map((entry) => (
+                                <a
+                                  key={entry.id}
+                                  href={`#${entry.id}`}
+                                  onClick={(event) => handleTocNavigate(event, entry.id)}
+                                  className={`block rounded-lg px-3 py-2 text-sm transition hover:bg-stone-100 hover:text-stone-950 ${
+                                    entry.level > 2 ? 'pl-6 text-stone-500' : 'text-stone-700'
+                                  }`}
+                                >
+                                  {entry.title}
+                                </a>
+                              ))
+                            ) : (
+                              <p className="text-sm text-stone-500">
+                                This document does not have indexed sections yet.
+                              </p>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border-stone-200 bg-white/95 shadow-sm">
+                        <CardContent className="p-4 text-sm text-stone-600">
+                          <div className="flex items-center gap-2 font-medium text-stone-900">
+                            <CalendarDays className="h-4 w-4 text-sky-700" />
+                            Reading details
+                          </div>
+                          <Separator className="my-3" />
+                          <div>
+                            Section: <span className="font-medium text-stone-900">{sectionLabel}</span>
+                          </div>
+                          <div className="mt-2">
+                            Version: <span className="font-medium text-stone-900">{document.version}</span>
+                          </div>
+                          <div className="mt-2">
+                            Effective: <span className="font-medium text-stone-900">{formatLongDate(document.effectiveDate)}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center px-6 py-16">
+                  <div className="max-w-md text-center text-stone-500">
+                    <FileText className="mx-auto mb-4 h-12 w-12 opacity-40" />
+                    <p className="font-medium text-stone-700">Document content not yet available</p>
+                    <p className="mt-2 text-sm">
+                      The compliance team is preparing this document for client viewing.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {document && (
+              <div className="border-t border-stone-200 bg-white/90 px-5 py-3 sm:px-6">
+                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
+                  <div>
+                    Please review these terms carefully before continuing with your signup.
+                  </div>
+                  <div className="inline-flex items-center gap-1 font-medium text-sky-800">
+                    Read in full screen on the legal hub
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-          {document?.version && (
-            <p className="text-xs text-gray-500 mt-1">
-              Version {document.version}
-            </p>
-          )}
-        </DialogHeader>
-        <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
-          {document?.blocks && document.blocks.length > 0 ? (
-            <LegalBlockRenderer
-              blocks={document.blocks}
-              title={document.title}
-            />
-          ) : (
-            <div className="p-12 text-center text-gray-500">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-40" />
-              <p className="font-medium">Document content not yet available</p>
-              <p className="text-sm mt-1">The compliance team is preparing this document.</p>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <LegalDocumentPdfDialog
+        open={pdfPreviewOpen}
+        onOpenChange={setPdfPreviewOpen}
+        document={pdfDocument}
+      />
+    </>
   );
 }
