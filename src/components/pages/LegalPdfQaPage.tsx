@@ -5,6 +5,14 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { LEGAL_PDF_QA_FIXTURES, analyzeLegalPagedPreview, type LegalPdfQaAnalysis, type LegalPdfQaFixture } from '../shared/legalPdfQa';
 import { LegalDocumentPdfLayout, type LegalPdfDocumentData } from '../shared/LegalDocumentPdf';
 import { normalizeLegalDocumentAnchors, sanitizeLegalDocumentHtml } from '../../utils/legalHtml';
+import {
+  clearStoredLegalPdfRendererOverride,
+  DEFAULT_LEGAL_PDF_RENDERER_VERSION,
+  getStoredLegalPdfRendererOverride,
+  resolveLegalPdfRendererVersion,
+  setStoredLegalPdfRendererOverride,
+  type LegalPdfRendererVersion,
+} from '../shared/legalPdfRendererConfig';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -128,11 +136,16 @@ export function LegalPdfQaPage() {
     error: null,
     activeRenderer: 'paged',
   });
+  const [rendererResolution, setRendererResolution] = useState(() => resolveLegalPdfRendererVersion({ pagedAvailable: true }));
 
   const previewRef = useRef<HTMLDivElement | null>(null);
   const runTokenRef = useRef(0);
 
   const activeResult = activeSlug ? results[activeSlug] : undefined;
+
+  const refreshRendererResolution = useCallback(() => {
+    setRendererResolution(resolveLegalPdfRendererVersion({ pagedAvailable: true }));
+  }, []);
 
   const startFixtureRun = useCallback(async (slug: string) => {
     const fixture = LEGAL_PDF_QA_FIXTURES.find((item) => item.slug === slug);
@@ -193,6 +206,15 @@ export function LegalPdfQaPage() {
     void startFixtureRun(slug);
   }, [startFixtureRun]);
 
+  const applyRendererOverride = useCallback((version: LegalPdfRendererVersion | null) => {
+    if (version) {
+      setStoredLegalPdfRendererOverride(version);
+    } else {
+      clearStoredLegalPdfRendererOverride();
+    }
+    refreshRendererResolution();
+  }, [refreshRendererResolution]);
+
   useEffect(() => {
     if (!activeDocument || !activeSlug || !renderState.ready || renderState.activeRenderer !== 'paged') {
       return;
@@ -231,6 +253,10 @@ export function LegalPdfQaPage() {
       setActiveSlug(LEGAL_PDF_QA_FIXTURES[0].slug);
     }
   }, [activeSlug]);
+
+  useEffect(() => {
+    refreshRendererResolution();
+  }, [refreshRendererResolution]);
 
   const summary = useMemo(() => {
     const values = Object.values(results);
@@ -274,7 +300,7 @@ export function LegalPdfQaPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Suite Summary</CardTitle>
-                <CardDescription>Track rollout readiness before we switch the paged renderer on more broadly.</CardDescription>
+                <CardDescription>Track rollout readiness and keep rollback one click away if the paged renderer misbehaves.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border bg-white px-4 py-3">
@@ -292,6 +318,42 @@ export function LegalPdfQaPage() {
                 <div className="rounded-xl border bg-white px-4 py-3">
                   <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Pending</div>
                   <div className="mt-2 text-2xl font-semibold text-slate-700">{summary.idle}</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Renderer Rollout Control</CardTitle>
+                <CardDescription>
+                  Global default is <strong>{DEFAULT_LEGAL_PDF_RENDERER_VERSION}</strong>. Use these local overrides for testing or instant rollback on this browser.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-xl border bg-white px-4 py-3 text-sm text-slate-700">
+                  <div><strong>Effective renderer:</strong> {rendererResolution.effectiveVersion}</div>
+                  <div><strong>Resolution source:</strong> {rendererResolution.source}</div>
+                  <div><strong>Stored override:</strong> {getStoredLegalPdfRendererOverride() || 'none'}</div>
+                  <div className="mt-2 text-xs text-slate-500">
+                    Emergency rollback also remains available via <code>?legalPdfRenderer=legacy</code>.
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={rendererResolution.source === 'storage' && rendererResolution.requestedVersion === 'legacy' ? 'default' : 'outline'}
+                    onClick={() => applyRendererOverride('legacy')}
+                  >
+                    Force legacy locally
+                  </Button>
+                  <Button
+                    variant={rendererResolution.source === 'storage' && rendererResolution.requestedVersion === 'paged' ? 'default' : 'outline'}
+                    onClick={() => applyRendererOverride('paged')}
+                  >
+                    Force paged locally
+                  </Button>
+                  <Button variant="ghost" onClick={() => applyRendererOverride(null)}>
+                    Clear local override
+                  </Button>
                 </div>
               </CardContent>
             </Card>

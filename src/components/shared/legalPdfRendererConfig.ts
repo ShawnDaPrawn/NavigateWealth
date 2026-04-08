@@ -8,7 +8,7 @@ export type LegalPdfRendererResolution = {
   pagedAvailable: boolean;
 };
 
-export const DEFAULT_LEGAL_PDF_RENDERER_VERSION: LegalPdfRendererVersion = 'legacy';
+export const DEFAULT_LEGAL_PDF_RENDERER_VERSION: LegalPdfRendererVersion = 'paged';
 export const LEGAL_PDF_RENDERER_QUERY_PARAM = 'legalPdfRenderer';
 export const LEGAL_PDF_RENDERER_STORAGE_KEY = 'nw:legal-pdf-renderer';
 
@@ -19,6 +19,21 @@ function normalizeLegalPdfRendererVersion(value: string | null | undefined): Leg
     return normalized;
   }
   return null;
+}
+
+export function getStoredLegalPdfRendererOverride(): LegalPdfRendererVersion | null {
+  if (typeof window === 'undefined') return null;
+  return normalizeLegalPdfRendererVersion(window.localStorage.getItem(LEGAL_PDF_RENDERER_STORAGE_KEY));
+}
+
+export function setStoredLegalPdfRendererOverride(version: LegalPdfRendererVersion) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(LEGAL_PDF_RENDERER_STORAGE_KEY, version);
+}
+
+export function clearStoredLegalPdfRendererOverride() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(LEGAL_PDF_RENDERER_STORAGE_KEY);
 }
 
 export function resolveLegalPdfRendererVersion({
@@ -46,9 +61,9 @@ export function resolveLegalPdfRendererVersion({
     }
   }
 
-  const effectiveVersion = requestedVersion === 'paged' && pagedAvailable
-    ? 'paged'
-    : DEFAULT_LEGAL_PDF_RENDERER_VERSION;
+  const effectiveVersion: LegalPdfRendererVersion = requestedVersion === 'paged'
+    ? (pagedAvailable ? 'paged' : 'legacy')
+    : 'legacy';
 
   return {
     defaultVersion: DEFAULT_LEGAL_PDF_RENDERER_VERSION,
@@ -58,4 +73,3 @@ export function resolveLegalPdfRendererVersion({
     pagedAvailable,
   };
 }
-
