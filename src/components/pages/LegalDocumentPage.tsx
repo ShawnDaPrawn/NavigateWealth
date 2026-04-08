@@ -240,6 +240,23 @@ export function LegalDocumentPage() {
     setPdfPreviewOpen(true);
   }, [document]);
 
+  const handleTocNavigate = useCallback((event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    event.preventDefault();
+
+    if (typeof window === 'undefined') return;
+
+    const target = document.getElementById(id);
+    if (!target) return;
+
+    const offset = 180;
+    const top = target.getBoundingClientRect().top + window.scrollY - offset;
+    window.history.replaceState(null, '', `#${id}`);
+    window.scrollTo({
+      top: Math.max(top, 0),
+      behavior: 'smooth',
+    });
+  }, []);
+
   const seoTitle = document ? `${document.title} | Navigate Wealth Legal` : 'Legal Document | Navigate Wealth';
   const seoDescription = document?.description || `Read the ${registryEntry?.name || 'legal document'} from Navigate Wealth.`;
 
@@ -300,9 +317,6 @@ export function LegalDocumentPage() {
           <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">
             {sectionLabel}
           </Badge>
-          <Badge variant="outline" className="border-stone-300 text-stone-700">
-            Version {document.version}
-          </Badge>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -347,6 +361,9 @@ export function LegalDocumentPage() {
                       <div className="mt-1 text-sm font-medium text-stone-900">
                         {document.renderMode === 'versioned_document' ? 'Versioned legal document' : 'Legacy legal document'}
                       </div>
+                      <div className="mt-1 text-xs font-medium uppercase tracking-wide text-stone-500">
+                        Version {document.version}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -378,6 +395,7 @@ export function LegalDocumentPage() {
                     <a
                       key={entry.id}
                       href={`#${entry.id}`}
+                      onClick={(event) => handleTocNavigate(event, entry.id)}
                       className={`block rounded-lg px-3 py-2 text-sm transition hover:bg-stone-100 hover:text-stone-950 ${
                         entry.level > 2 ? 'pl-6 text-stone-500' : 'text-stone-700'
                       }`}
