@@ -52,6 +52,7 @@ const ArticleDetailPage = React.lazy(() => import('./components/pages/ArticleDet
 const DesignSystemPage = React.lazy(() => import('./components/pages/DesignSystemPage').then(m => ({ default: m.DesignSystemPage })));
 const LegalPage = React.lazy(() => import('./components/pages/LegalPage').then(m => ({ default: m.LegalPage })));
 const LegalDocumentPage = React.lazy(() => import('./components/pages/LegalDocumentPage').then(m => ({ default: m.LegalDocumentPage })));
+const LegalPdfQaPage = React.lazy(() => import('./components/pages/LegalPdfQaPage').then(m => ({ default: m.LegalPdfQaPage })));
 const ForgotPasswordPage = React.lazy(() => import('./components/pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = React.lazy(() => import('./components/pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 const VerifyEmailPage = React.lazy(() => import('./components/pages/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })));
@@ -230,6 +231,7 @@ export function AppRoutes() {
         
         {/* Admin */}
         <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+        <Route path="/admin/legal-pdf-qa" element={<AdminRoute><LegalPdfQaPage /></AdminRoute>} />
         
         
         {/* Public functional routes (standalone — no MainLayout, need explicit error boundaries) */}
