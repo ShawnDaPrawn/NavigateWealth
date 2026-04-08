@@ -20,6 +20,7 @@ const LEGAL_HTML_SANITIZE_CONFIG = {
 } as const;
 
 export const LEGAL_DOCUMENT_CONTENT_CLASS = [
+  'legal-document-content',
   'prose',
   'prose-stone',
   'prose-lg',
@@ -77,6 +78,47 @@ export const LEGAL_DOCUMENT_CONTENT_CLASS = [
   '[&_p:empty]:block',
   '[&_p:empty]:h-5',
 ].join(' ');
+
+export const LEGAL_DOCUMENT_CONTENT_STYLE = `
+  .legal-document-content ul {
+    list-style-type: disc !important;
+    list-style-position: outside;
+    margin: 1rem 0;
+    padding-left: 1.5rem !important;
+  }
+
+  .legal-document-content ol {
+    list-style-type: decimal !important;
+    list-style-position: outside;
+    margin: 1rem 0;
+    padding-left: 1.5rem !important;
+  }
+
+  .legal-document-content li {
+    display: list-item !important;
+    margin: 0.35rem 0;
+    padding-left: 0.25rem;
+  }
+
+  .legal-document-content li::marker {
+    color: #78716c;
+  }
+
+  .legal-document-content li > ul {
+    list-style-type: circle !important;
+    margin-top: 0.35rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .legal-document-content li > ol {
+    margin-top: 0.35rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .legal-document-content li > p {
+    margin: 0.25rem 0;
+  }
+`;
 
 export type LegalDocumentTocItem = {
   id: string;

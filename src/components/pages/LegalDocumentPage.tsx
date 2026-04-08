@@ -11,6 +11,7 @@ import { LEGAL_DOCUMENTS_BY_SLUG, LEGAL_SECTION_LABELS } from '../../shared/lega
 import { LegalDocumentPdfDialog } from '../shared/LegalDocumentPdf';
 import {
   LEGAL_DOCUMENT_CONTENT_CLASS,
+  LEGAL_DOCUMENT_CONTENT_STYLE,
   normalizeLegalDocumentAnchors,
   sanitizeLegalDocumentHtml,
 } from '../../utils/legalHtml';
@@ -315,6 +316,7 @@ export function LegalDocumentPage() {
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f5f5f4_0%,#fafaf9_18%,#ffffff_100%)]">
+      <style dangerouslySetInnerHTML={{ __html: LEGAL_DOCUMENT_CONTENT_STYLE }} />
       <SEO
         title={seoTitle}
         description={seoDescription}

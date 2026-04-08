@@ -36,7 +36,12 @@ import { resourcesApi } from '../api';
 import { LEGAL_SECTION_LABELS } from '../legal-constants';
 import { LegalDocumentPdfDialog } from '../../../../shared/LegalDocumentPdf';
 import { LEGAL_MIGRATION_PRIORITY_SLUGS } from '../../../../../shared/legal-documents-registry';
-import { LEGAL_DOCUMENT_CONTENT_CLASS, normalizeClipboardLegalHtml, sanitizeLegalDocumentHtml } from '../../../../../utils/legalHtml';
+import {
+  LEGAL_DOCUMENT_CONTENT_CLASS,
+  LEGAL_DOCUMENT_CONTENT_STYLE,
+  normalizeClipboardLegalHtml,
+  sanitizeLegalDocumentHtml,
+} from '../../../../../utils/legalHtml';
 import type {
   LegalDocumentDefinitionResponse,
   LegalDocumentDetailResponse,
@@ -597,6 +602,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
 
   return (
     <div className="space-y-4">
+      <style dangerouslySetInnerHTML={{ __html: LEGAL_DOCUMENT_CONTENT_STYLE }} />
       <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
