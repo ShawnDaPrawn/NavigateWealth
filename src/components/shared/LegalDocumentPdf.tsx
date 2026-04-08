@@ -612,15 +612,15 @@ function PagedLegalDocumentPdfLayout({
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: pagedSource.styles }} />
-      <div className="legal-paged-preview-root">
+      <div className="legal-paged-preview-root relative">
         {status === 'loading' && (
-          <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-sm text-slate-600">
+          <div className="absolute inset-0 z-10 flex min-h-[240px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/80 px-6 py-10 text-sm text-slate-600 backdrop-blur-[1px]">
             Building paged legal preview...
           </div>
         )}
         <div
           ref={previewHostRef}
-          className={status === 'loading' ? 'hidden' : ''}
+          className={status === 'loading' ? 'min-h-[240px] opacity-0' : ''}
           data-legal-pdf-renderer="paged"
         />
       </div>

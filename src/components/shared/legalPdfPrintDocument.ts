@@ -234,6 +234,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
   const normalized = getNormalizedLegalPdfDocument(document);
   const mastheadLabel = (document.sectionLabel || document.title || 'LEGAL DOCUMENT').toUpperCase();
   const issueDate = formatLongDate(document.updatedAt || document.effectiveDate);
+  const mastheadMeta = 'Wealthfront (Pty) Ltd t/a Navigate Wealth | FSP 54606 | Email: info@navigatewealth.co';
   const footerText = 'Wealthfront (Pty) Ltd, trading as Navigate Wealth, is an Authorised Financial Services Provider - FSP 54606. Registration Number: 2024/071953/07. Located at Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178. For inquiries, please contact us at Tel: (012) 667 2505.';
 
   const styles = `
@@ -242,7 +243,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       margin: 18mm 16mm 23mm 16mm;
 
       @top-left {
-        content: string(legal-masthead-label);
+        content: "${mastheadLabel.replace(/"/g, '\\"')}";
         font-size: 8px;
         font-weight: 700;
         color: #1f2937;
@@ -250,7 +251,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       }
 
       @top-right {
-        content: string(legal-masthead-meta);
+        content: "${mastheadMeta.replace(/"/g, '\\"')}";
         font-size: 7px;
         color: #4b5563;
         text-align: right;
@@ -292,26 +293,6 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
 
     .legal-paged-document {
       width: 100%;
-    }
-
-    .legal-paged-running-meta {
-      position: running(legal-masthead-meta-box);
-    }
-
-    .legal-paged-string-source {
-      height: 0;
-      overflow: hidden;
-      opacity: 0;
-      pointer-events: none;
-      position: absolute;
-    }
-
-    .legal-paged-string-source.masthead-label {
-      string-set: legal-masthead-label content(text);
-    }
-
-    .legal-paged-string-source.masthead-meta {
-      string-set: legal-masthead-meta content(text);
     }
 
     .legal-paged-cover {
@@ -421,9 +402,6 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
 
   const markup = `
     <div class="legal-paged-document">
-      <div class="legal-paged-string-source masthead-label">${escapeHtml(mastheadLabel)}</div>
-      <div class="legal-paged-string-source masthead-meta">Wealthfront (Pty) Ltd t/a Navigate Wealth | FSP 54606 | Email: info@navigatewealth.co</div>
-
       <section class="legal-paged-cover">
         <div class="legal-paged-top-masthead">
           <div class="legal-paged-brand">
