@@ -518,7 +518,17 @@ export function LegacyLegalDocumentPdfLayout({ document }: { document: LegalPdfD
   );
 }
 
-function PagedLegalDocumentPdfLayout({ document }: { document: LegalPdfDocumentData }) {
+function PagedLegalDocumentPdfLayout({
+  document,
+  onRenderStateChange,
+}: {
+  document: LegalPdfDocumentData;
+  onRenderStateChange?: (state: {
+    ready: boolean;
+    error: string | null;
+    activeRenderer: LegalPdfRendererVersion;
+  }) => void;
+}) {
   const previewHostRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -538,6 +548,7 @@ function PagedLegalDocumentPdfLayout({ document }: { document: LegalPdfDocumentD
 
       setStatus('loading');
       setErrorMessage(null);
+      onRenderStateChange?.({ ready: false, error: null, activeRenderer: 'paged' });
       previewHostRef.current.innerHTML = '';
 
       try {
@@ -562,13 +573,16 @@ function PagedLegalDocumentPdfLayout({ document }: { document: LegalPdfDocumentD
         }
 
         setStatus('ready');
+        onRenderStateChange?.({ ready: true, error: null, activeRenderer: 'paged' });
       } catch (error) {
         if (cancelled) {
           return;
         }
 
+        const message = error instanceof Error ? error.message : 'Paged preview could not be prepared';
         setStatus('error');
-        setErrorMessage(error instanceof Error ? error.message : 'Paged preview could not be prepared');
+        setErrorMessage(message);
+        onRenderStateChange?.({ ready: true, error: message, activeRenderer: 'legacy' });
       }
     }
 
@@ -576,11 +590,12 @@ function PagedLegalDocumentPdfLayout({ document }: { document: LegalPdfDocumentD
 
     return () => {
       cancelled = true;
+      onRenderStateChange?.({ ready: false, error: null, activeRenderer: 'paged' });
       if (previewHostRef.current) {
         previewHostRef.current.innerHTML = '';
       }
     };
-  }, [pagedSource]);
+  }, [onRenderStateChange, pagedSource]);
 
   if (status === 'error') {
     return (
@@ -622,9 +637,15 @@ function resolveActiveLegalPdfRenderer(): LegalPdfRendererResolution {
 export function LegalDocumentPdfLayout({
   document,
   rendererVersion,
+  onPagedRendererStateChange,
 }: {
   document: LegalPdfDocumentData;
   rendererVersion?: LegalPdfRendererVersion;
+  onPagedRendererStateChange?: (state: {
+    ready: boolean;
+    error: string | null;
+    activeRenderer: LegalPdfRendererVersion;
+  }) => void;
 }) {
   const resolution = rendererVersion
     ? {
@@ -637,7 +658,12 @@ export function LegalDocumentPdfLayout({
     : resolveActiveLegalPdfRenderer();
 
   if (resolution.effectiveVersion === 'paged') {
-    return <PagedLegalDocumentPdfLayout document={document} />;
+    return (
+      <PagedLegalDocumentPdfLayout
+        document={document}
+        onRenderStateChange={onPagedRendererStateChange}
+      />
+    );
   }
 
   return <LegacyLegalDocumentPdfLayout document={document} />;
@@ -652,11 +678,29 @@ export function LegalDocumentPdfDialog({
   onOpenChange: (open: boolean) => void;
   document: LegalPdfDocumentData | null;
 }) {
+  const rendererResolution = resolveActiveLegalPdfRenderer();
+  const [pagedRenderState, setPagedRenderState] = useState<{
+    ready: boolean;
+    error: string | null;
+    activeRenderer: LegalPdfRendererVersion;
+  }>({
+    ready: rendererResolution.effectiveVersion !== 'paged',
+    error: null,
+    activeRenderer: rendererResolution.effectiveVersion,
+  });
+
+  useEffect(() => {
+    setPagedRenderState({
+      ready: rendererResolution.effectiveVersion !== 'paged',
+      error: null,
+      activeRenderer: rendererResolution.effectiveVersion,
+    });
+  }, [document, rendererResolution.effectiveVersion]);
+
   if (!document) return null;
 
   const pdfConfig = document.pdfConfig || DEFAULT_LEGAL_PDF_CONFIG;
-  const rendererResolution = resolveActiveLegalPdfRenderer();
-  const pageSelector = rendererResolution.effectiveVersion === 'paged' ? '.pagedjs_page' : '.pdf-page';
+  const activePageSelector = pagedRenderState.activeRenderer === 'paged' ? '.pagedjs_page' : '.pdf-page';
 
   return (
     <PdfTemplateViewer
@@ -667,11 +711,14 @@ export function LegalDocumentPdfDialog({
       orientation={pdfConfig.orientation}
       renderPdfFromPreview
       primaryActionLabel="Download PDF"
-      pageSelector={pageSelector}
+      pageSelector={activePageSelector}
+      pdfExportReady={rendererResolution.effectiveVersion === 'paged' ? pagedRenderState.ready : true}
+      pdfPreparingLabel={pagedRenderState.error ? 'Falling back to legacy preview...' : 'Preparing paged preview...'}
     >
       <LegalDocumentPdfLayout
         document={document}
         rendererVersion={rendererResolution.effectiveVersion}
+        onPagedRendererStateChange={setPagedRenderState}
       />
     </PdfTemplateViewer>
   );
