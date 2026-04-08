@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { BasePdfLayout } from '../admin/modules/resources/templates/BasePdfLayout';
+import { BasePdfLayout, getPdfDimensions } from '../admin/modules/resources/templates/BasePdfLayout';
 import { PdfTemplateViewer } from '../admin/modules/resources/PdfTemplateViewer';
-import { sanitizeLegalDocumentHtml } from '../../utils/legalHtml';
+import { normalizeLegalDocumentAnchors, sanitizeLegalDocumentHtml } from '../../utils/legalHtml';
 
 export type LegalPdfConfig = {
   pageSize: 'A4' | 'A3';
@@ -42,101 +42,18 @@ const DEFAULT_PDF_CONFIG: LegalPdfConfig = {
 const LEGAL_PDF_CONTENT_CSS = `
   .legal-pdf-body {
     color: #111827;
-    font-size: 9.6px;
-    line-height: 1.62;
+    font-size: 10px;
+    line-height: 1.68;
   }
 
   .legal-pdf-block {
-    margin-bottom: 3.2mm;
-    page-break-inside: avoid;
-    break-inside: avoid;
+    margin: 0;
+    display: flow-root;
   }
 
   .legal-pdf-block.allow-split {
     page-break-inside: auto;
     break-inside: auto;
-  }
-
-  .legal-pdf-frontmatter {
-    margin-bottom: 5mm;
-  }
-
-  .legal-pdf-summary {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 3.5mm;
-    margin-bottom: 4mm;
-  }
-
-  .legal-pdf-summary-card {
-    border: 1px solid #d6d3d1;
-    border-radius: 5px;
-    padding: 3.5mm;
-    background: #fafaf9;
-  }
-
-  .legal-pdf-summary-card .label {
-    display: block;
-    font-size: 8px;
-    line-height: 1.2;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #6b7280;
-    margin-bottom: 1.5mm;
-  }
-
-  .legal-pdf-summary-card .value {
-    display: block;
-    font-size: 10px;
-    line-height: 1.4;
-    font-weight: 600;
-    color: #111827;
-  }
-
-  .legal-pdf-description {
-    border-left: 3px solid #059669;
-    padding-left: 4mm;
-    margin: 0 0 4mm;
-    color: #374151;
-  }
-
-  .legal-pdf-toc {
-    border: 1px solid #d6d3d1;
-    border-radius: 5px;
-    padding: 4mm;
-    background: #ffffff;
-  }
-
-  .legal-pdf-toc h2 {
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #374151;
-    margin: 0 0 2.5mm !important;
-  }
-
-  .legal-pdf-toc ul {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    gap: 1.4mm;
-  }
-
-  .legal-pdf-toc li {
-    display: flex;
-    align-items: baseline;
-    gap: 2mm;
-    font-size: 9.2px;
-    line-height: 1.35;
-    color: #1f2937;
-  }
-
-  .legal-pdf-toc .toc-level-3 {
-    padding-left: 4mm;
-    color: #4b5563;
   }
 
   .legal-pdf-body h1,
@@ -149,55 +66,58 @@ const LEGAL_PDF_CONTENT_CSS = `
   }
 
   .legal-pdf-body h1 {
-    font-size: 16px !important;
+    font-size: 15px !important;
     font-weight: 800 !important;
-    margin: 0 0 3mm !important;
+    margin: 0 0 3.6mm !important;
   }
 
   .legal-pdf-body h2 {
-    font-size: 12px !important;
+    font-size: 13px !important;
     font-weight: 800 !important;
-    margin: 0 0 2.5mm !important;
-    padding-top: 1mm;
+    margin: 7mm 0 2.4mm !important;
+    padding: 0 0 1.2mm !important;
+    border-bottom: 1px solid #e5e7eb;
   }
 
   .legal-pdf-body h3 {
-    font-size: 10.5px !important;
+    font-size: 11px !important;
     font-weight: 700 !important;
-    margin: 0 0 2mm !important;
+    margin: 5.2mm 0 2mm !important;
   }
 
   .legal-pdf-body h4 {
-    font-size: 9.8px !important;
+    font-size: 10.2px !important;
     font-weight: 700 !important;
-    margin: 0 0 2mm !important;
+    margin: 4mm 0 1.6mm !important;
   }
 
   .legal-pdf-body p,
   .legal-pdf-body li,
   .legal-pdf-body blockquote {
-    font-size: 9.6px;
-    line-height: 1.62;
+    font-size: 10px;
+    line-height: 1.68;
+    orphans: 3;
+    widows: 3;
   }
 
   .legal-pdf-body p {
-    margin: 0 0 2.6mm;
+    margin: 0 0 3mm;
   }
 
   .legal-pdf-body ul,
   .legal-pdf-body ol {
-    margin: 0 0 3mm;
-    padding-left: 5mm;
+    margin: 0 0 3.5mm;
+    padding-left: 5.2mm;
   }
 
   .legal-pdf-body li {
-    margin-bottom: 1.4mm;
+    margin-bottom: 1.5mm;
   }
 
   .legal-pdf-body table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 8.7px;
+    font-size: 9px;
     margin: 0;
   }
 
@@ -222,13 +142,16 @@ const LEGAL_PDF_CONTENT_CSS = `
   .legal-pdf-table-wrap {
     overflow: hidden;
     border-radius: 4px;
+    margin: 0 0 3.5mm;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
   .legal-pdf-body blockquote {
-    margin: 0;
+    margin: 0 0 3mm;
     padding: 3mm 4mm;
     background: #fafaf9;
-    border-left: 3px solid #10b981;
+    border-left: 3px solid #2563eb;
     color: #374151;
   }
 
@@ -260,9 +183,31 @@ const LEGAL_PDF_CONTENT_CSS = `
     color: #4b5563;
   }
 
+  .legal-pdf-body a {
+    color: #2563eb;
+    text-decoration: none;
+  }
+
+  .legal-pdf-body strong {
+    color: #111827;
+    font-weight: 700;
+  }
+
+  .legal-pdf-body em {
+    font-style: italic;
+  }
+
+  .legal-pdf-body u {
+    text-decoration: underline;
+  }
+
+  .legal-pdf-body .legal-page-break,
   .legal-pdf-page-break {
-    border-top: 1px dashed #d1d5db;
-    margin-top: 1mm;
+    height: 0;
+    border: 0;
+    margin: 0;
+    page-break-after: always;
+    break-after: page;
   }
 `;
 
@@ -294,53 +239,8 @@ function outerHtml(node: Element): string {
 }
 
 function buildFrontMatterChunks(document: LegalPdfDocumentData): PdfChunk[] {
-  const chunks: PdfChunk[] = [];
-
-  chunks.push({
-    key: 'frontmatter-summary',
-    units: 16,
-    html: `
-      <section class="legal-pdf-frontmatter">
-        ${document.description ? `<p class="legal-pdf-description">${document.description}</p>` : ''}
-        <div class="legal-pdf-summary">
-          <div class="legal-pdf-summary-card">
-            <span class="label">Version</span>
-            <span class="value">v${document.version || '1.0'}</span>
-          </div>
-          <div class="legal-pdf-summary-card">
-            <span class="label">Effective date</span>
-            <span class="value">${formatLongDate(document.effectiveDate)}</span>
-          </div>
-          <div class="legal-pdf-summary-card">
-            <span class="label">Last updated</span>
-            <span class="value">${formatLongDate(document.updatedAt)}</span>
-          </div>
-        </div>
-      </section>
-    `,
-  });
-
-  if (document.toc && document.toc.length > 0) {
-    chunks.push({
-      key: 'frontmatter-toc',
-      units: Math.min(24, 8 + (document.toc.length * 2)),
-      html: `
-        <section class="legal-pdf-toc">
-          <h2>Contents</h2>
-          <ul>
-            ${document.toc.map((item) => `
-              <li class="toc-level-${item.level}">
-                <span>${item.title}</span>
-              </li>
-            `).join('')}
-          </ul>
-        </section>
-      `,
-      forceBreakAfter: (document.toc?.length || 0) > 8,
-    });
-  }
-
-  return chunks;
+  void document;
+  return [];
 }
 
 function tableBodyRows(table: HTMLTableElement): HTMLTableRowElement[] {
@@ -512,7 +412,103 @@ function deriveTocFromHtml(html: string): LegalPdfTocItem[] {
     .filter((item) => item.title);
 }
 
+function mmToPx(value: number): number {
+  return value * (96 / 25.4);
+}
+
+function getBodyHeightCapPx(config: LegalPdfConfig, isFirstPage: boolean): number {
+  const { heightMm } = getPdfDimensions(config.pageSize, config.orientation);
+  const topPaddingMm = isFirstPage ? 5 : 12.5;
+  const footerReserveMm = 23;
+  const firstPageChromeMm = isFirstPage ? 52 : 0;
+  const safetyMm = isFirstPage ? 6 : 5;
+
+  return mmToPx(heightMm - topPaddingMm - footerReserveMm - firstPageChromeMm - safetyMm);
+}
+
+function measureChunkHeights(chunks: PdfChunk[], config: LegalPdfConfig): number[] | null {
+  if (typeof window === 'undefined' || !window.document?.body) {
+    return null;
+  }
+
+  const { widthMm } = getPdfDimensions(config.pageSize, config.orientation);
+  const contentWidthPx = mmToPx(widthMm - 10 - 10);
+  const host = window.document.createElement('div');
+
+  host.setAttribute('aria-hidden', 'true');
+  host.style.position = 'absolute';
+  host.style.left = '-99999px';
+  host.style.top = '0';
+  host.style.width = `${contentWidthPx}px`;
+  host.style.visibility = 'hidden';
+  host.style.pointerEvents = 'none';
+  host.className = 'legal-pdf-measure-host';
+  host.innerHTML = `<style>${LEGAL_PDF_CONTENT_CSS}</style>`;
+
+  const body = window.document.createElement('div');
+  body.className = 'legal-pdf-body';
+  host.appendChild(body);
+  window.document.body.appendChild(host);
+
+  try {
+    return chunks.map((chunk) => {
+      const section = window.document.createElement('section');
+      section.className = `legal-pdf-block ${chunk.html.includes('<table') ? '' : 'allow-split'}`.trim();
+      section.innerHTML = chunk.html;
+      body.appendChild(section);
+      const measured = Math.ceil(section.getBoundingClientRect().height);
+      body.removeChild(section);
+      return measured;
+    });
+  } finally {
+    window.document.body.removeChild(host);
+  }
+}
+
 function paginateChunks(chunks: PdfChunk[], config: LegalPdfConfig): PdfChunk[][] {
+  const measuredHeights = measureChunkHeights(chunks, config);
+
+  if (measuredHeights) {
+    const pages: PdfChunk[][] = [];
+    let currentPage: PdfChunk[] = [];
+    let currentHeight = 0;
+
+    const pushPage = () => {
+      if (currentPage.length === 0) return;
+      pages.push(currentPage);
+      currentPage = [];
+      currentHeight = 0;
+    };
+
+    chunks.forEach((chunk, index) => {
+      const pageCap = getBodyHeightCapPx(config, pages.length === 0);
+      const nextChunk = chunks[index + 1];
+      const measuredHeight = measuredHeights[index] || 0;
+      const combinedHeight = chunk.keepWithNext && nextChunk
+        ? measuredHeight + (measuredHeights[index + 1] || 0)
+        : measuredHeight;
+
+      if (currentPage.length > 0 && currentHeight + combinedHeight > pageCap) {
+        pushPage();
+      }
+
+      currentPage.push(chunk);
+      currentHeight += measuredHeight;
+
+      if (chunk.forceBreakAfter) {
+        pushPage();
+      }
+    });
+
+    pushPage();
+
+    return pages.length > 0 ? pages : [[{
+      key: 'blank-page',
+      html: '<p></p>',
+      units: 1,
+    }]];
+  }
+
   const pages: PdfChunk[][] = [];
   let currentPage: PdfChunk[] = [];
   let currentUnits = 0;
@@ -575,21 +571,28 @@ export function LegalDocumentPdfLayout({ document }: { document: LegalPdfDocumen
     () => sanitizeLegalDocumentHtml(document.html || '<p></p>'),
     [document.html],
   );
-  const toc = useMemo(
-    () => (document.toc && document.toc.length > 0 ? document.toc : deriveTocFromHtml(sanitizedHtml)),
-    [document.toc, sanitizedHtml],
-  );
+  const normalizedDocument = useMemo(() => {
+    const anchored = normalizeLegalDocumentAnchors(
+      sanitizedHtml,
+      document.toc && document.toc.length > 0 ? document.toc : deriveTocFromHtml(sanitizedHtml),
+    );
+
+    return {
+      html: anchored.html,
+      toc: anchored.toc,
+    };
+  }, [document.toc, sanitizedHtml]);
 
   const pages = useMemo(() => {
     const chunks = [
       ...buildFrontMatterChunks({
         ...document,
-        toc,
+        toc: normalizedDocument.toc,
       }),
-      ...buildContentChunks(sanitizedHtml, pdfConfig),
+      ...buildContentChunks(normalizedDocument.html, pdfConfig),
     ];
     return paginateChunks(chunks, pdfConfig).map((pageChunks, pageIndex) => renderPage(pageChunks, pageIndex));
-  }, [document, pdfConfig, sanitizedHtml, toc]);
+  }, [document, normalizedDocument, pdfConfig]);
 
   return (
     <>

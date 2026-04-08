@@ -124,13 +124,21 @@ export const PdfTemplateViewer = ({
         border: none !important;
         box-shadow: none !important;
         width: ${pageDimensions.widthMm}mm !important;
-        min-height: ${pageDimensions.heightMm}mm !important;
+        height: ${pageDimensions.heightMm}mm !important;
         position: relative !important;
         overflow: hidden !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+
+      .pdf-page:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
       }
 
       .pdf-content {
         padding: var(--margin-top) var(--margin-right) var(--margin-bottom-with-footer) var(--margin-left) !important;
+        height: 100% !important;
       }
 
       .pdf-footer {

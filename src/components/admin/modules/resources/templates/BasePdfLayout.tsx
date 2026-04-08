@@ -642,8 +642,8 @@ export const BASE_PDF_CSS = `
     /* Print Overrides */
     @media print {
       html, body {
-        width: 210mm;
-        height: 297mm;
+        width: var(--a4-w);
+        height: var(--a4-h);
       }
       
       /* Hide all toasts and notifications during print */
@@ -664,8 +664,8 @@ export const BASE_PDF_CSS = `
       .pdf-page { 
         box-shadow: none; 
         border: none; 
-        width: 210mm;
-        height: 297mm;
+        width: var(--a4-w);
+        height: var(--a4-h);
         page-break-after: always;
         margin: 0;
         padding: 0;
@@ -679,7 +679,7 @@ export const BASE_PDF_CSS = `
       /* Ensure all content is visible in print */
       .pdf-content {
         padding: var(--margin-top) var(--margin-right) var(--margin-bottom-with-footer) var(--margin-left);
-        height: 297mm;
+        height: 100%;
         position: relative;
       }
       

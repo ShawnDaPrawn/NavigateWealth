@@ -71,6 +71,21 @@ export const LEGAL_DOCUMENT_CONTENT_CLASS = [
   '[&_p:empty]:h-5',
 ].join(' ');
 
+export type LegalDocumentTocItem = {
+  id: string;
+  title: string;
+  level: number;
+};
+
+function slugifyLegalHeading(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    || 'section';
+}
+
 function cleanInlineStyle(styleValue: string): string {
   return styleValue
     .split(';')
@@ -150,4 +165,51 @@ export function normalizeClipboardLegalHtml(rawHtml: string, fallbackHtml = '<p>
   });
 
   return sanitizeLegalDocumentHtml(root.innerHTML.trim() || fallbackHtml);
+}
+
+export function normalizeLegalDocumentAnchors(
+  html: string,
+  preferredToc: LegalDocumentTocItem[] = [],
+): {
+  html: string;
+  toc: LegalDocumentTocItem[];
+} {
+  const fallbackHtml = sanitizeLegalDocumentHtml(html || '<p></p>');
+
+  if (typeof window === 'undefined') {
+    return {
+      html: fallbackHtml,
+      toc: preferredToc,
+    };
+  }
+
+  const parser = new window.DOMParser();
+  const doc = parser.parseFromString(fallbackHtml, 'text/html');
+  const headings = Array.from(doc.body.querySelectorAll('h1, h2, h3'));
+  const seenIds = new Set<string>();
+
+  const toc = headings.map((heading, index) => {
+    const title = heading.textContent?.replace(/\s+/g, ' ').trim() || `Section ${index + 1}`;
+    const preferredId = preferredToc[index]?.id?.trim();
+    const level = Number(heading.tagName.slice(1));
+    let id = preferredId || heading.id || slugifyLegalHeading(title);
+
+    while (seenIds.has(id)) {
+      id = `${id}-${seenIds.size + 1}`;
+    }
+
+    seenIds.add(id);
+    heading.id = id;
+
+    return {
+      id,
+      title: preferredToc[index]?.title?.trim() || title,
+      level: preferredToc[index]?.level || level,
+    };
+  });
+
+  return {
+    html: doc.body.innerHTML.trim() || '<p></p>',
+    toc: toc.length > 0 ? toc : preferredToc,
+  };
 }

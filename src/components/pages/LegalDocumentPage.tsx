@@ -9,7 +9,11 @@ import { Separator } from '../ui/separator';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { LEGAL_DOCUMENTS_BY_SLUG, LEGAL_SECTION_LABELS } from '../../shared/legal-documents-registry';
 import { LegalDocumentPdfDialog } from '../shared/LegalDocumentPdf';
-import { LEGAL_DOCUMENT_CONTENT_CLASS, sanitizeLegalDocumentHtml } from '../../utils/legalHtml';
+import {
+  LEGAL_DOCUMENT_CONTENT_CLASS,
+  normalizeLegalDocumentAnchors,
+  sanitizeLegalDocumentHtml,
+} from '../../utils/legalHtml';
 
 type LegalBlock = {
   id?: string;
@@ -196,56 +200,68 @@ export function LegalDocumentPage() {
     };
   }, [slug]);
 
-  const document = documentResponse?.document || null;
+  const legalDocument = documentResponse?.document || null;
   const registryEntry = slug ? LEGAL_DOCUMENTS_BY_SLUG[slug] : null;
-  const sectionLabel = document?.section && document.section in LEGAL_SECTION_LABELS
-    ? LEGAL_SECTION_LABELS[document.section as keyof typeof LEGAL_SECTION_LABELS]
+  const sectionLabel = legalDocument?.section && legalDocument.section in LEGAL_SECTION_LABELS
+    ? LEGAL_SECTION_LABELS[legalDocument.section as keyof typeof LEGAL_SECTION_LABELS]
     : registryEntry?.section
       ? LEGAL_SECTION_LABELS[registryEntry.section]
       : 'Legal Document';
 
   const articleHtml = useMemo(() => {
-    if (!document) return '<p></p>';
-    return document.contentHtml || blocksToHtml(document.blocks || []);
-  }, [document]);
+    if (!legalDocument) return '<p></p>';
+    return legalDocument.contentHtml || blocksToHtml(legalDocument.blocks || []);
+  }, [legalDocument]);
 
   const sanitizedArticleHtml = useMemo(
     () => sanitizeLegalDocumentHtml(articleHtml),
     [articleHtml],
   );
 
-  const toc = useMemo(() => {
-    if (!document) return [];
-    return document.toc?.length ? document.toc : deriveTocFromBlocks(document.blocks || []);
-  }, [document]);
+  const normalizedDocumentContent = useMemo(() => {
+    if (!legalDocument) {
+      return {
+        html: '<p></p>',
+        toc: [] as Array<{ id: string; title: string; level: number }>,
+      };
+    }
+
+    const preferredToc = legalDocument.toc?.length
+      ? legalDocument.toc
+      : deriveTocFromBlocks(legalDocument.blocks || []);
+
+    return normalizeLegalDocumentAnchors(sanitizedArticleHtml, preferredToc);
+  }, [legalDocument, sanitizedArticleHtml]);
+
+  const toc = normalizedDocumentContent.toc;
 
   const pdfDocument = useMemo(() => {
-    if (!document) return null;
+    if (!legalDocument) return null;
 
     return {
-      title: document.title,
-      description: document.description || null,
-      version: document.version,
-      effectiveDate: document.effectiveDate,
-      updatedAt: document.updatedAt,
+      title: legalDocument.title,
+      description: legalDocument.description || null,
+      version: legalDocument.version,
+      effectiveDate: legalDocument.effectiveDate,
+      updatedAt: legalDocument.updatedAt,
       sectionLabel,
-      html: sanitizedArticleHtml,
+      html: normalizedDocumentContent.html,
       toc,
-      pdfConfig: document.pdfConfig,
+      pdfConfig: legalDocument.pdfConfig,
     };
-  }, [document, sanitizedArticleHtml, sectionLabel, toc]);
+  }, [legalDocument, normalizedDocumentContent.html, sectionLabel, toc]);
 
   const openPdfPreview = useCallback(() => {
-    if (!document) return;
+    if (!legalDocument) return;
     setPdfPreviewOpen(true);
-  }, [document]);
+  }, [legalDocument]);
 
   const handleTocNavigate = useCallback((event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     event.preventDefault();
 
     if (typeof window === 'undefined') return;
 
-    const target = document.getElementById(id);
+    const target = window.document.getElementById(id);
     if (!target) return;
 
     const offset = 180;
@@ -257,8 +273,8 @@ export function LegalDocumentPage() {
     });
   }, []);
 
-  const seoTitle = document ? `${document.title} | Navigate Wealth Legal` : 'Legal Document | Navigate Wealth';
-  const seoDescription = document?.description || `Read the ${registryEntry?.name || 'legal document'} from Navigate Wealth.`;
+  const seoTitle = legalDocument ? `${legalDocument.title} | Navigate Wealth Legal` : 'Legal Document | Navigate Wealth';
+  const seoDescription = legalDocument?.description || `Read the ${registryEntry?.name || 'legal document'} from Navigate Wealth.`;
 
   if (loading) {
     return (
@@ -273,7 +289,7 @@ export function LegalDocumentPage() {
     );
   }
 
-  if (!document || error) {
+  if (!legalDocument || error) {
     return (
       <div className="min-h-screen bg-stone-50">
         <SEO title={seoTitle} description={seoDescription} canonicalUrl={`https://navigatewealth.co/legal/${slug || ''}`} />
@@ -309,7 +325,7 @@ export function LegalDocumentPage() {
       <div className="mx-auto max-w-screen-2xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-wrap items-center gap-3">
           <Button asChild variant="outline" className="border-stone-300 bg-white/90">
-            <Link to={`/legal?section=${document.section || registryEntry?.section || 'legal-notices'}`}>
+            <Link to={`/legal?section=${legalDocument.section || registryEntry?.section || 'legal-notices'}`}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to legal hub
             </Link>
@@ -331,11 +347,11 @@ export function LegalDocumentPage() {
                         Navigate Wealth legal publication
                       </div>
                       <h1 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-                        {document.title}
+                        {legalDocument.title}
                       </h1>
-                      {document.description && (
+                      {legalDocument.description && (
                         <p className="mt-4 max-w-2xl text-base leading-7 text-stone-600">
-                          {document.description}
+                          {legalDocument.description}
                         </p>
                       )}
                     </div>
@@ -350,19 +366,19 @@ export function LegalDocumentPage() {
                   <div className="mt-6 grid gap-3 sm:grid-cols-3">
                     <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
                       <div className="text-xs uppercase tracking-wide text-stone-500">Effective date</div>
-                      <div className="mt-1 text-sm font-medium text-stone-900">{formatLongDate(document.effectiveDate)}</div>
+                      <div className="mt-1 text-sm font-medium text-stone-900">{formatLongDate(legalDocument.effectiveDate)}</div>
                     </div>
                     <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
                       <div className="text-xs uppercase tracking-wide text-stone-500">Last updated</div>
-                      <div className="mt-1 text-sm font-medium text-stone-900">{formatLongDate(document.updatedAt)}</div>
+                      <div className="mt-1 text-sm font-medium text-stone-900">{formatLongDate(legalDocument.updatedAt)}</div>
                     </div>
                     <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
                       <div className="text-xs uppercase tracking-wide text-stone-500">Reader mode</div>
                       <div className="mt-1 text-sm font-medium text-stone-900">
-                        {document.renderMode === 'versioned_document' ? 'Versioned legal document' : 'Legacy legal document'}
+                        {legalDocument.renderMode === 'versioned_document' ? 'Versioned legal document' : 'Legacy legal document'}
                       </div>
                       <div className="mt-1 text-xs font-medium uppercase tracking-wide text-stone-500">
-                        Version {document.version}
+                        Version {legalDocument.version}
                       </div>
                     </div>
                   </div>
@@ -371,7 +387,7 @@ export function LegalDocumentPage() {
                 <div className="px-6 py-8 sm:px-8 lg:px-10">
                   <article
                     className={`${LEGAL_DOCUMENT_CONTENT_CLASS} prose-headings:scroll-mt-28`}
-                    dangerouslySetInnerHTML={{ __html: sanitizedArticleHtml }}
+                    dangerouslySetInnerHTML={{ __html: normalizedDocumentContent.html }}
                   />
                 </div>
               </CardContent>
@@ -417,8 +433,8 @@ export function LegalDocumentPage() {
                 </div>
                 <Separator className="my-3" />
                 <div>Section: <span className="font-medium text-stone-900">{sectionLabel}</span></div>
-                <div className="mt-2">Version: <span className="font-medium text-stone-900">{document.version}</span></div>
-                <div className="mt-2">Effective: <span className="font-medium text-stone-900">{formatLongDate(document.effectiveDate)}</span></div>
+                <div className="mt-2">Version: <span className="font-medium text-stone-900">{legalDocument.version}</span></div>
+                <div className="mt-2">Effective: <span className="font-medium text-stone-900">{formatLongDate(legalDocument.effectiveDate)}</span></div>
               </CardContent>
             </Card>
           </div>
