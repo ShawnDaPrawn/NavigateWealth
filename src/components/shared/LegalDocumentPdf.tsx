@@ -30,7 +30,7 @@ type PdfChunk = {
   key: string;
   html: string;
   units: number;
-  keepWithNext?: boolean;
+  keepWithNextLines?: number;
   forceBreakAfter?: boolean;
 };
 
@@ -38,6 +38,11 @@ const DEFAULT_PDF_CONFIG: LegalPdfConfig = {
   pageSize: 'A4',
   orientation: 'portrait',
 };
+
+const PDF_BODY_FONT_SIZE_PX = 10;
+const PDF_BODY_LINE_HEIGHT = 1.68;
+const PDF_MIN_LINES_ABOVE_FOOTER = 2;
+const PDF_HEADING_FOLLOW_LINES = 2;
 
 const LEGAL_PDF_CONTENT_CSS = `
   .legal-pdf-body {
@@ -356,7 +361,7 @@ function buildContentChunks(html: string, config: LegalPdfConfig): PdfChunk[] {
         key: `heading-${index}`,
         html: outerHtml(node),
         units: tag === 'h1' ? 8 : tag === 'h2' ? 6 : 5,
-        keepWithNext: true,
+        keepWithNextLines: PDF_HEADING_FOLLOW_LINES,
       });
       return;
     }
@@ -420,10 +425,14 @@ function getBodyHeightCapPx(config: LegalPdfConfig, isFirstPage: boolean): numbe
   const { heightMm } = getPdfDimensions(config.pageSize, config.orientation);
   const topPaddingMm = isFirstPage ? 5 : 12.5;
   const footerReserveMm = 23;
-  const firstPageChromeMm = isFirstPage ? 52 : 0;
-  const safetyMm = isFirstPage ? 6 : 5;
+  const firstPageChromeMm = isFirstPage ? 43.5 : 0;
+  const safetyMm = isFirstPage ? 3.5 : 3;
 
   return mmToPx(heightMm - topPaddingMm - footerReserveMm - firstPageChromeMm - safetyMm);
+}
+
+function getHeadingFollowReservePx(lines = PDF_HEADING_FOLLOW_LINES): number {
+  return Math.ceil(PDF_BODY_FONT_SIZE_PX * PDF_BODY_LINE_HEIGHT * lines);
 }
 
 function measureChunkHeights(chunks: PdfChunk[], config: LegalPdfConfig): number[] | null {
@@ -484,8 +493,11 @@ function paginateChunks(chunks: PdfChunk[], config: LegalPdfConfig): PdfChunk[][
       const pageCap = getBodyHeightCapPx(config, pages.length === 0);
       const nextChunk = chunks[index + 1];
       const measuredHeight = measuredHeights[index] || 0;
-      const combinedHeight = chunk.keepWithNext && nextChunk
-        ? measuredHeight + (measuredHeights[index + 1] || 0)
+      const combinedHeight = chunk.keepWithNextLines && nextChunk
+        ? measuredHeight + Math.min(
+          measuredHeights[index + 1] || 0,
+          getHeadingFollowReservePx(chunk.keepWithNextLines),
+        )
         : measuredHeight;
 
       if (currentPage.length > 0 && currentHeight + combinedHeight > pageCap) {
@@ -523,8 +535,9 @@ function paginateChunks(chunks: PdfChunk[], config: LegalPdfConfig): PdfChunk[][
   chunks.forEach((chunk, index) => {
     const capacity = getPageCapacity(config, pages.length === 0);
     const nextChunk = chunks[index + 1];
-    const combinedUnits = chunk.keepWithNext && nextChunk
-      ? chunk.units + nextChunk.units
+    const minimumFollowUnits = Math.max(1, Math.ceil((PDF_MIN_LINES_ABOVE_FOOTER * 3) / 2));
+    const combinedUnits = chunk.keepWithNextLines && nextChunk
+      ? chunk.units + Math.min(nextChunk.units, minimumFollowUnits)
       : chunk.units;
 
     if (
