@@ -309,10 +309,10 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
   // ═══════════════════════════════════════════════════════════════════
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center overflow-x-hidden p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:p-6">
         <div className={cn(SITE_SHELL)}>
           <Card className="max-w-lg mx-auto w-full shadow-lg">
-            <CardContent className="pt-8 pb-6 px-6 text-center space-y-4">
+            <CardContent className="pt-8 pb-6 px-4 sm:px-6 text-center space-y-4">
               <div className="flex justify-center">
                 <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
                   <CheckCircle2 className="h-8 w-8 text-green-600" />
@@ -333,7 +333,10 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
                 </p>
               </div>
               <Separator />
-              <Button onClick={onComplete} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button
+                onClick={onComplete}
+                className="w-full min-h-11 bg-primary hover:bg-primary/90 text-primary-foreground touch-manipulation"
+              >
                 Return to Estate Planning
               </Button>
             </CardContent>
@@ -414,16 +417,30 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
   // ═══════════════════════════════════════════════════════════════════
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* ── Top Bar ──────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className={cn(SITE_SHELL, 'py-3.5 sm:py-4 flex items-center justify-between gap-4')}>
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+        <div
+          className={cn(
+            SITE_SHELL,
+            'pt-[max(0.5rem,env(safe-area-inset-top))] pb-3 sm:pb-4 flex items-center justify-between gap-3 min-h-0',
+          )}
+        >
           <button
+            type="button"
             onClick={currentStep === 1 ? onBack : goBack}
-            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors text-left min-w-0"
+            aria-label={
+              currentStep === 1 ? 'Back to Estate Planning' : 'Go to previous step'
+            }
+            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 active:bg-gray-100 transition-colors text-left min-w-0 min-h-[44px] px-1.5 -ml-1 rounded-md touch-manipulation max-w-[min(100%,calc(100vw-5.5rem))]"
           >
             <ArrowLeft className="h-4 w-4 shrink-0" />
-            {currentStep === 1 ? 'Back to Estate Planning' : 'Previous Step'}
+            <span className="truncate sm:whitespace-normal">
+              <span className="sm:hidden">{currentStep === 1 ? 'Back' : 'Previous'}</span>
+              <span className="hidden sm:inline">
+                {currentStep === 1 ? 'Back to Estate Planning' : 'Previous Step'}
+              </span>
+            </span>
           </button>
           <Badge
             variant="outline"
@@ -434,7 +451,12 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
         </div>
       </div>
 
-      <div className={cn(SITE_SHELL, 'py-8 sm:py-10 space-y-7 sm:space-y-8')}>
+      <div
+        className={cn(
+          SITE_SHELL,
+          'py-6 sm:py-10 space-y-6 sm:space-y-8 pb-[max(1.5rem,env(safe-area-inset-bottom))]',
+        )}
+      >
         {/* ── Progress Stepper ──────────────────────────────────── */}
         <div className="hidden sm:block">
           <div className="flex items-center justify-between">
@@ -480,27 +502,44 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
           </div>
         </div>
 
-        {/* Mobile step indicator */}
-        <div className="sm:hidden flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-900">
-            Step {currentStep} of {STEPS.length}
-          </span>
-          <span className="text-sm text-gray-500">{STEPS[currentStep - 1].label}</span>
+        {/* Mobile: compact progress + bar (desktop uses full stepper above) */}
+        <div className="sm:hidden space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-semibold text-gray-900 leading-tight">
+              Step {currentStep} of {STEPS.length}
+            </p>
+            <p className="text-xs font-medium text-primary text-right leading-snug max-w-[58%]">
+              {STEPS[currentStep - 1].label}
+            </p>
+          </div>
+          <div
+            className="h-2 rounded-full bg-gray-200 overflow-hidden"
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={STEPS.length}
+            aria-valuenow={currentStep}
+            aria-label={`Will draft progress, step ${currentStep} of ${STEPS.length}`}
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+              style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
+            />
+          </div>
         </div>
 
         {/* ── Step Header ──────────────────────────────────────── */}
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-2xl font-semibold text-gray-900 break-words">
             {STEPS[currentStep - 1].label}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">
             {STEPS[currentStep - 1].description}
           </p>
         </div>
 
         {/* ── Step Content ─────────────────────────────────────── */}
-        <Card className="shadow-sm">
-          <CardContent className="p-5 sm:p-6 space-y-5">
+        <Card className="shadow-sm border-gray-200/80 [&_input:not([type='hidden'])]:text-base sm:[&_input:not([type='hidden'])]:text-sm [&_textarea]:text-base sm:[&_textarea]:text-sm">
+          <CardContent className="p-4 sm:p-6 space-y-5">
             {/* ═══ STEP 1: Personal Details ═══ */}
             {currentStep === 1 && (
               <div className="space-y-5">
@@ -1434,13 +1473,13 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
           </CardContent>
         </Card>
 
-        {/* ── Navigation Footer ────────────────────────────────── */}
-        <div className="flex items-center justify-between pb-6">
+        {/* ── Navigation Footer (stacked full-width on small screens for touch) ── */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <Button
             type="button"
             variant="outline"
             onClick={currentStep === 1 ? onBack : goBack}
-            className="gap-1.5"
+            className="gap-1.5 w-full sm:w-auto min-h-11 touch-manipulation justify-center sm:justify-start"
           >
             <ArrowLeft className="h-4 w-4" />
             {currentStep === 1 ? 'Cancel' : 'Back'}
@@ -1451,7 +1490,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
               type="button"
               onClick={goNext}
               disabled={!stepValid}
-              className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="gap-1.5 w-full sm:w-auto min-h-11 bg-primary hover:bg-primary/90 text-primary-foreground touch-manipulation justify-center"
             >
               Next
               <ArrowRight className="h-4 w-4" />
@@ -1461,7 +1500,7 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground min-w-[160px]"
+              className="gap-1.5 w-full sm:w-auto sm:min-w-[160px] min-h-11 bg-primary hover:bg-primary/90 text-primary-foreground touch-manipulation justify-center"
             >
               {isSubmitting ? (
                 <div className="contents">
