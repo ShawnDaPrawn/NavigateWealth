@@ -396,7 +396,7 @@ export function LegalDocumentPage() {
             </Card>
           </div>
 
-          <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <div className="hidden space-y-4 lg:sticky lg:top-24 lg:block lg:self-start">
             <Card className="border-stone-200 bg-white/95 shadow-sm backdrop-blur">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base text-stone-900">
