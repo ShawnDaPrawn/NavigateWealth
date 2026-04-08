@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const DEFAULT_SITE_URL = 'https://navigatewealth.co';
+// Must match src/utils/siteOrigin.ts (SITE_ORIGIN)
+const DEFAULT_SITE_URL = 'https://www.navigatewealth.co';
 const DEFAULT_TIMEZONE = 'Africa/Johannesburg';
 const siteUrl = normalizeSiteUrl(process.env.SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL);
 const buildDate = new Intl.DateTimeFormat('en-CA', {

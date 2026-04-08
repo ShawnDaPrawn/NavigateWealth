@@ -8,8 +8,9 @@
 
 import { getServiceConfig } from '../pages/quote/constants';
 import type { QuoteServiceId } from '../pages/quote/types';
+import { SITE_ORIGIN } from '@/utils/siteOrigin';
 
-const BASE_URL = 'https://navigatewealth.co';
+const BASE_URL = SITE_ORIGIN;
 
 export interface SEOPageData {
   title: string;

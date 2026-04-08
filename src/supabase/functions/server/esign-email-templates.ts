@@ -164,7 +164,7 @@ export function createEnvelopeCompleteEmail(
     '<p style="margin:0;font-size:13px;color:#4b5563;">' +
     '<strong style="color:#7c3aed;">Verify this document</strong><br>' +
     'You can independently verify the integrity of the attached PDF at any time by uploading it to our ' +
-    '<a href="https://navigatewealth.co/verify" style="color:#7c3aed;text-decoration:underline;">Document Verification</a> page.' +
+    '<a href="https://www.navigatewealth.co/verify" style="color:#7c3aed;text-decoration:underline;">Document Verification</a> page.' +
     '</p></div>';
 
   const html = createEmailTemplate(bodyHtml, {
@@ -187,7 +187,7 @@ export function createEnvelopeCompleteEmail(
     'Completed: ' + formatDate(completedAt) + '\n\n' +
     'Signers:\n' + signerLines.join('\n') + '\n\n' +
     'View in portal: ' + downloadLink + '\n\n' +
-    'Verify document integrity: https://navigatewealth.co/verify'
+    'Verify document integrity: https://www.navigatewealth.co/verify'
   );
 
   return { html, text };
@@ -223,13 +223,13 @@ export function createSigningCompleteEmail(
     '<p style="margin:0;font-size:13px;color:#4b5563;">' +
     '<strong style="color:#7c3aed;">Verify this document</strong><br>' +
     'You can independently verify the integrity of the attached PDF at any time by uploading it to our ' +
-    '<a href="https://navigatewealth.co/verify" style="color:#7c3aed;text-decoration:underline;">Document Verification</a> page.' +
+    '<a href="https://www.navigatewealth.co/verify" style="color:#7c3aed;text-decoration:underline;">Document Verification</a> page.' +
     '</p></div>';
 
   const html = createEmailTemplate(bodyHtml, {
     title: 'Document Completed',
     subtitle: envelopeTitle,
-    buttonUrl: 'https://navigatewealth.co/portal',
+    buttonUrl: 'https://www.navigatewealth.co/portal',
     buttonLabel: 'View in Portal',
     footerNote: "This notification was sent via Navigate Wealth's secure e-signature platform. Verify document integrity at navigatewealth.co/verify",
   });
@@ -244,8 +244,8 @@ export function createSigningCompleteEmail(
     'Your signature was recorded on ' + formatDate(signedAt) + '.\n' +
     certLine + '\n' +
     'A copy of the completed document is attached to this email.\n\n' +
-    'View in portal: https://navigatewealth.co/portal\n\n' +
-    'Verify document integrity: https://navigatewealth.co/verify'
+    'View in portal: https://www.navigatewealth.co/portal\n\n' +
+    'Verify document integrity: https://www.navigatewealth.co/verify'
   );
 
   return { html, text };

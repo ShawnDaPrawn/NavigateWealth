@@ -34,4 +34,4 @@ Disallow: /design-system
 Disallow: /sitemap/xml
 Disallow: /preview_page.html
 
-Sitemap: https://navigatewealth.co/sitemap.xml
+Sitemap: https://www.navigatewealth.co/sitemap.xml

@@ -10,7 +10,7 @@
  *   3. In that tab: right-click → Save image as… OR use browser screenshot
  *      (Chrome: Cmd/Ctrl+Shift+P → "Capture screenshot" at device size)
  *   4. Save the file with the name shown (e.g. og-default.jpg)
- *   5. Upload to your domain root (e.g. https://navigatewealth.co/og-default.jpg)
+ *   5. Upload to your domain root (e.g. https://www.navigatewealth.co/og-default.jpg)
  *
  * Adding new variants:
  *   - Add an entry to OG_VARIANTS below
@@ -475,7 +475,7 @@ const OG_VARIANTS: {
     id: 'default',
     label: 'Site Default',
     filename: 'og-default.jpg',
-    uploadPath: 'https://navigatewealth.co/og-default.jpg',
+    uploadPath: 'https://www.navigatewealth.co/og-default.jpg',
     description: 'Used on all pages that don\'t have a specific OG image. This is your brand\'s social media business card.',
     component: OGImageDefault,
   },
@@ -483,7 +483,7 @@ const OG_VARIANTS: {
     id: 'risk-management',
     label: 'Risk Management',
     filename: 'og-risk-management.jpg',
-    uploadPath: 'https://navigatewealth.co/og-risk-management.jpg',
+    uploadPath: 'https://www.navigatewealth.co/og-risk-management.jpg',
     description: 'Used when someone shares the Risk Management service page on LinkedIn, WhatsApp, or social media.',
     component: OGImageRiskManagement,
   },

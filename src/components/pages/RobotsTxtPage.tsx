@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { SITE_ORIGIN } from '@/utils/siteOrigin';
 
 export function RobotsTxtPage() {
   useEffect(() => {
@@ -42,7 +43,7 @@ Disallow: /design-system
 Disallow: /sitemap/xml
 Disallow: /preview_page.html
 
-Sitemap: https://navigatewealth.co/sitemap.xml
+Sitemap: ${SITE_ORIGIN}/sitemap.xml
 `;
 
     // Clear all existing content and styles

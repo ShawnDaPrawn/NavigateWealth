@@ -314,8 +314,8 @@ export function MedicalAidPage() {
         structuredDataServiceType: 'Health Insurance Advisory',
         structuredDataServiceName: 'Medical Aid & Health Insurance',
         breadcrumbs: [
-          { name: 'Home', url: 'https://navigatewealth.co' },
-          { name: 'Services', url: 'https://navigatewealth.co/services' },
+          { name: 'Home', url: 'https://www.navigatewealth.co' },
+          { name: 'Services', url: 'https://www.navigatewealth.co/services' },
           { name: 'Medical Aid' },
         ],
         preloadImages: [],

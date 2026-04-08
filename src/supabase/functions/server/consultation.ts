@@ -281,8 +281,8 @@ app.post('/request', asyncHandler(async (c) => {
 
   // Build deep link to the specific submission in the admin Submissions Manager
   const adminSubmissionUrl = submissionId
-    ? `https://navigatewealth.co/admin?module=submissions&type=consultation&id=${encodeURIComponent(submissionId)}`
-    : 'https://navigatewealth.co/admin?module=submissions&type=consultation';
+    ? `https://www.navigatewealth.co/admin?module=submissions&type=consultation&id=${encodeURIComponent(submissionId)}`
+    : 'https://www.navigatewealth.co/admin?module=submissions&type=consultation';
 
   // Fetch admin-configured footer settings for template consistency
   const footerSettings = await getFooterSettings();
@@ -431,7 +431,7 @@ app.post('/request', asyncHandler(async (c) => {
             type: 'text/html',
             value: createEmailTemplate(clientContent, {
               title: 'Consultation Request Received',
-              buttonUrl: 'https://navigatewealth.co/resources',
+              buttonUrl: 'https://www.navigatewealth.co/resources',
               buttonLabel: 'Browse Resources',
               footerSettings,
             }),

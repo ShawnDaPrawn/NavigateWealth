@@ -269,8 +269,8 @@ export function TaxPlanningPage() {
           { name: 'Tax-Efficient Business Structures', description: 'Design optimal business structures for tax efficiency.' },
         ],
         breadcrumbs: [
-          { name: 'Home', url: 'https://navigatewealth.co' },
-          { name: 'Services', url: 'https://navigatewealth.co/services' },
+          { name: 'Home', url: 'https://www.navigatewealth.co' },
+          { name: 'Services', url: 'https://www.navigatewealth.co/services' },
           { name: 'Tax Planning' },
         ],
         preloadImages: [],

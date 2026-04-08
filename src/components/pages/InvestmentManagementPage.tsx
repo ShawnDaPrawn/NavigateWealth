@@ -311,8 +311,8 @@ export function InvestmentManagementPage() {
           { name: 'Treasury Management', description: 'Strategic management of business cash flows and working capital.' },
         ],
         breadcrumbs: [
-          { name: 'Home', url: 'https://navigatewealth.co' },
-          { name: 'Services', url: 'https://navigatewealth.co/services' },
+          { name: 'Home', url: 'https://www.navigatewealth.co' },
+          { name: 'Services', url: 'https://www.navigatewealth.co/services' },
           { name: 'Investment Management' },
         ],
         preloadImages: [investmentGrowthImage, unitTrustImage, taxFreeSavingsImage, offshoreUnitTrustsImage, endowmentsImage, offshoreEndowmentsImage, corporateImage, cashManagementImage, treasuryImage],

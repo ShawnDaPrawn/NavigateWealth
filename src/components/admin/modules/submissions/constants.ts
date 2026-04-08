@@ -9,7 +9,9 @@
 import type { SubmissionStatus, SubmissionType, SubmissionColumn } from './types';
 
 // ── Site Base URL ─────────────────────────────────────────────────────────────
-export const SITE_BASE_URL = 'https://navigatewealth.co';
+import { SITE_ORIGIN } from '@/utils/siteOrigin';
+
+export const SITE_BASE_URL = SITE_ORIGIN;
 
 // ── Status Config ─────────────────────────────────────────────────────────────
 // §8.3: Blue=Informational (new), Amber=Pending, Green=Completed, Gray=Archived

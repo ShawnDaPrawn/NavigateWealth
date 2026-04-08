@@ -319,8 +319,8 @@ export function RiskManagementPage() {
         structuredDataServiceType: 'Insurance Advisory',
         structuredDataServiceName: 'Risk Management Insurance',
         breadcrumbs: [
-          { name: 'Home',     url: 'https://navigatewealth.co' },
-          { name: 'Services', url: 'https://navigatewealth.co/services' },
+          { name: 'Home',     url: 'https://www.navigatewealth.co' },
+          { name: 'Services', url: 'https://www.navigatewealth.co/services' },
           { name: 'Risk Management' },
         ],
         preloadImages: [],

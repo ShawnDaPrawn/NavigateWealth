@@ -6,7 +6,9 @@ import { trackConsultationFlowStarted } from '../../utils/analytics';
 import { Button } from '../ui/button';
 import { Calendar, Mail, Phone } from 'lucide-react';
 
-const CANONICAL = 'https://navigatewealth.co/schedule-consultation';
+import { SITE_ORIGIN } from '@/utils/siteOrigin';
+
+const CANONICAL = `${SITE_ORIGIN}/schedule-consultation`;
 
 /** Matches `Navigation` inner container — logo through Get Started alignment */
 const SITE_PAGE_WRAP = 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12';

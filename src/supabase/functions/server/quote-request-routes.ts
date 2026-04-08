@@ -983,8 +983,8 @@ app.post('/submit', asyncHandler(async (c) => {
     `;
 
     const adminDeepLink = submissionEntryId
-      ? `https://navigatewealth.co/admin?module=submissions&type=quote&id=${encodeURIComponent(submissionEntryId)}`
-      : 'https://navigatewealth.co/admin?module=submissions&type=quote';
+      ? `https://www.navigatewealth.co/admin?module=submissions&type=quote&id=${encodeURIComponent(submissionEntryId)}`
+      : 'https://www.navigatewealth.co/admin?module=submissions&type=quote';
 
     const adminHtml = createEmailTemplate(adminHtmlContent, {
       title: isFullStage ? 'Full Quote Request' : 'New Quote Enquiry',
@@ -1026,8 +1026,8 @@ app.post('/submit', asyncHandler(async (c) => {
         ? 'We are preparing your personalised quote'
         : 'One of our advisers will be in touch',
       buttonUrl: isFullStage
-        ? 'https://navigatewealth.co/services'
-        : `https://navigatewealth.co/get-quote/${service || ''}/contact`,
+        ? 'https://www.navigatewealth.co/services'
+        : `https://www.navigatewealth.co/get-quote/${service || ''}/contact`,
       buttonLabel: isFullStage ? 'Explore Our Services' : 'Complete Your Quote',
       footerSettings,
     });

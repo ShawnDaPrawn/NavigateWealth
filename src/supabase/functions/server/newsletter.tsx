@@ -102,7 +102,7 @@ app.post("/subscribe", asyncHandler(async (c) => {
   const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
   
   if (sendgridApiKey) {
-    const confirmUrl = `https://navigatewealth.co/newsletter/confirm?token=${confirmToken}&email=${encodeURIComponent(email)}`;
+    const confirmUrl = `https://www.navigatewealth.co/newsletter/confirm?token=${confirmToken}&email=${encodeURIComponent(email)}`;
     
     // Fetch admin-configured footer settings for template consistency
     const footerSettings = await getFooterSettings();
@@ -188,7 +188,7 @@ app.post("/subscribe", asyncHandler(async (c) => {
       // Send admin notification email via shared sendEmail (no custom headers needed)
       const adminHtml = createEmailTemplate(adminContent, {
         title: "New Newsletter Subscription Attempt",
-        buttonUrl: "https://navigatewealth.co/admin",
+        buttonUrl: "https://www.navigatewealth.co/admin",
         buttonLabel: "View Admin Dashboard",
         footerSettings,
       });
@@ -271,7 +271,7 @@ app.get("/confirm", async (c) => {
     
     if (sendgridApiKey) {
       try {
-        const unsubscribeLink = `https://navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(email)}`;
+        const unsubscribeLink = `https://www.navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(email)}`;
         
         // Fetch admin-configured footer settings for template consistency
         const footerSettings = await getFooterSettings();
@@ -325,7 +325,7 @@ app.get("/confirm", async (c) => {
                 value: createEmailTemplate(welcomeContent, {
                   title: "You're in — Welcome to Navigate Wealth!",
                   unsubscribeLink,
-                  buttonUrl: "https://navigatewealth.co/resources",
+                  buttonUrl: "https://www.navigatewealth.co/resources",
                   buttonLabel: "Explore Our Resources",
                   footerNote: `If you have any questions or need personalized advice, our team is here to help. Contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.`,
                   footerSettings,
@@ -361,7 +361,7 @@ app.get("/confirm", async (c) => {
         
         const adminConfirmHtml = createEmailTemplate(adminConfirmContent, {
           title: "Newsletter Subscription Confirmed",
-          buttonUrl: "https://navigatewealth.co/admin",
+          buttonUrl: "https://www.navigatewealth.co/admin",
           buttonLabel: "View Admin Dashboard",
           footerSettings,
         });

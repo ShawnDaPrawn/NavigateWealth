@@ -184,7 +184,7 @@ app.post(
           title: "Daily Calendar",
           subtitle: todayFormatted,
           greeting: "Good morning,",
-          buttonUrl: "https://navigatewealth.co/admin/calendar",
+          buttonUrl: "https://www.navigatewealth.co/admin/calendar",
           buttonLabel: "Open Calendar",
           footerNote: "This is an automated daily digest from Navigate Wealth.",
           footerSettings,
@@ -195,7 +195,7 @@ app.post(
         to: ADMIN_EMAIL,
         subject: `Daily Calendar — ${todayFormatted} (No events)`,
         html,
-        text: `Daily Calendar — ${todayFormatted}\n\nNo events scheduled for today.\n\nOpen calendar: https://navigatewealth.co/admin/calendar`,
+        text: `Daily Calendar — ${todayFormatted}\n\nNo events scheduled for today.\n\nOpen calendar: https://www.navigatewealth.co/admin/calendar`,
       });
 
       return c.json({ success: true, sent, event_count: 0 });
@@ -316,7 +316,7 @@ app.post(
       title: "Daily Calendar",
       subtitle: todayFormatted,
       greeting: "Good morning,",
-      buttonUrl: "https://navigatewealth.co/admin/calendar",
+      buttonUrl: "https://www.navigatewealth.co/admin/calendar",
       buttonLabel: "Open Calendar",
       footerNote: "This is an automated daily digest from Navigate Wealth.",
       footerSettings,
@@ -340,7 +340,7 @@ You have ${events.length} event(s) scheduled for today:
 
 ${eventLines}
 
-Open calendar: https://navigatewealth.co/admin/calendar
+Open calendar: https://www.navigatewealth.co/admin/calendar
 
 —
 This is an automated daily digest from Navigate Wealth.

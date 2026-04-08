@@ -1,12 +1,14 @@
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { SITE_ORIGIN } from '../../../utils/siteOrigin.ts';
 
 const log = createModuleLogger('publications-email-engagement');
 
 const ARTICLE_EMAIL_TRACKING_PREFIX = 'article_email_tracking:';
 const ARTICLE_EMAIL_TOKEN_PREFIX = 'article_email_token:';
 const ARTICLE_EMAIL_PUBLISH_RECIPIENT_PREFIX = 'article_email_publish_recipient:';
-const WEBSITE_BASE_URL = 'https://navigatewealth.co';
+
+const WEBSITE_BASE_URL = SITE_ORIGIN;
 // Each publish recipient currently fans out to three KV entries
 // (article, token, and publish recipient lookup). Large bulk upserts were
 // timing out in production during article publish, so keep batches small.

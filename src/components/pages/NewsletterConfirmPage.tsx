@@ -16,7 +16,7 @@ export function NewsletterConfirmPage() {
   const seoProps = {
     title: 'Newsletter Confirmation | Navigate Wealth',
     description: 'Newsletter subscription confirmation status for Navigate Wealth.',
-    canonicalUrl: 'https://navigatewealth.co/newsletter/confirm',
+    canonicalUrl: 'https://www.navigatewealth.co/newsletter/confirm',
     robotsContent: 'noindex, nofollow',
   };
 

@@ -1224,7 +1224,7 @@ export class CommunicationService {
 
       for (const extEmail of externalEmails) {
         try {
-          const unsubscribeLink = `https://navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(extEmail)}`;
+          const unsubscribeLink = `https://www.navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(extEmail)}`;
           const html = createEmailTemplateFn(campaign.bodyHtml, {
             title: campaign.subject,
             unsubscribeLink,

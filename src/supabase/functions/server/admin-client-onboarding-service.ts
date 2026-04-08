@@ -471,7 +471,7 @@ export class AdminClientOnboardingService {
     try {
       const supabase = createServiceClient();
 
-      const redirectBase = origin?.replace(/\/+$/, '') || 'https://navigatewealth.co';
+      const redirectBase = origin?.replace(/\/+$/, '') || 'https://www.navigatewealth.co';
       const redirectTo = `${redirectBase}/reset-password`;
 
       const { data, error } = await supabase.auth.admin.generateLink({

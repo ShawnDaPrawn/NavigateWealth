@@ -286,8 +286,8 @@ export function EmployeeBenefitsPage() {
           { name: 'Regulatory Compliance', description: 'Ensure benefits meet all South African regulatory requirements.' },
         ],
         breadcrumbs: [
-          { name: 'Home', url: 'https://navigatewealth.co' },
-          { name: 'Services', url: 'https://navigatewealth.co/services' },
+          { name: 'Home', url: 'https://www.navigatewealth.co' },
+          { name: 'Services', url: 'https://www.navigatewealth.co/services' },
           { name: 'Employee Benefits' },
         ],
         preloadImages: [],

@@ -2275,7 +2275,7 @@ publications.post('/articles/:id/send-notifications', async (c) => {
     }
     
     // Build article URL
-    const articleUrl = `https://navigatewealth.co/resources/article/${article.slug}`;
+    const articleUrl = `https://www.navigatewealth.co/resources/article/${article.slug}`;
     
     // Get all users from Supabase Auth
     const { data: { users }, error: usersError } = await getSupabase().auth.admin.listUsers();
@@ -2336,7 +2336,7 @@ publications.post('/articles/:id/send-notifications', async (c) => {
     
     for (const recipient of recipients) {
       try {
-        const unsubscribeUrl = `https://navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(recipient.email)}`;
+        const unsubscribeUrl = `https://www.navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(recipient.email)}`;
         const { html, text } = await createArticleNotificationEmail({
           firstName: recipient.firstName,
           articleTitle: article.title,

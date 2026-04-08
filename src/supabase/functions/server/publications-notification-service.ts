@@ -880,7 +880,7 @@ async function deliverTrackedNotificationRecord(
     try {
       await markArticleEmailDeliveryAttemptStarted(record.token);
       const articleUrl = buildTrackedArticleUrl(article.slug, record.token);
-      const unsubscribeUrl = `https://navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(record.recipientEmail)}`;
+      const unsubscribeUrl = `https://www.navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(record.recipientEmail)}`;
       const { html, text } = await createArticleNotificationEmail({
         firstName: record.recipientFirstName,
         articleTitle: article.title,

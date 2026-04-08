@@ -941,7 +941,7 @@ esignRoutes.post('/envelopes/:envelopeId/invites', async (c) => {
       : sortedSigners.slice(0, 1); // Sequential: first signer only
 
     for (const targetSigner of signersToInvite) {
-      const signingUrl = `https://navigatewealth.co/sign?token=${targetSigner.access_token}`;
+      const signingUrl = `https://www.navigatewealth.co/sign?token=${targetSigner.access_token}`;
 
       const emailContent = createSigningInviteEmail({
         signerName: targetSigner.name,
@@ -1536,7 +1536,7 @@ esignRoutes.post('/envelopes/:envelopeId/sign', async (c) => {
 
         if (nextSigner) {
           try {
-            const signingUrl = `https://navigatewealth.co/sign?token=${nextSigner.access_token}`;
+            const signingUrl = `https://www.navigatewealth.co/sign?token=${nextSigner.access_token}`;
 
             const emailContent = createSigningInviteEmail({
               signerName: nextSigner.name,
@@ -2180,7 +2180,7 @@ esignRoutes.post('/signer/submit', async (c) => {
 
         if (nextSigner) {
           try {
-            const signingUrl = `https://navigatewealth.co/sign?token=${nextSigner.access_token}`;
+            const signingUrl = `https://www.navigatewealth.co/sign?token=${nextSigner.access_token}`;
 
             const emailContent = createSigningInviteEmail({
               signerName: nextSigner.name,
@@ -2780,7 +2780,7 @@ esignRoutes.post('/envelopes/:envelopeId/remind', async (c) => {
 
     for (const signer of pendingSigners) {
       try {
-        const signingUrl = `https://navigatewealth.co/sign?token=${signer.access_token}`;
+        const signingUrl = `https://www.navigatewealth.co/sign?token=${signer.access_token}`;
         
         await sendSigningReminder({
           signerEmail: signer.email,

@@ -460,7 +460,7 @@ export const PersonnelService = {
     // 5. Generate password recovery link
     let recoveryLink: string | null = null;
     try {
-      const redirectBase = siteUrl?.replace(/\/+$/, '') || 'https://navigatewealth.co';
+      const redirectBase = siteUrl?.replace(/\/+$/, '') || 'https://www.navigatewealth.co';
       const redirectTo = `${redirectBase}/reset-password`;
 
       const { data: linkData, error: linkError } = await getSupabase().auth.admin.generateLink({

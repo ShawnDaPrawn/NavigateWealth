@@ -230,7 +230,7 @@ export function ServicesPage() {
         title="Our Services | Navigate Wealth"
         description="Comprehensive wealth management services from Navigate Wealth — risk management, retirement planning, investments, medical aid, estate planning, tax planning, and employee benefits."
         keywords={['financial services', 'wealth management', 'risk management', 'retirement planning', 'investment management', 'medical aid', 'estate planning', 'tax planning', 'employee benefits', 'South Africa']}
-        canonicalUrl="https://navigatewealth.co/services"
+        canonicalUrl="https://www.navigatewealth.co/services"
       />
 
       <div className="min-h-screen">

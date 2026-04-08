@@ -117,7 +117,7 @@ export function LinktreePage() {
   const seoProps = {
     title: 'Navigate Wealth Links',
     description: 'Navigate Wealth social and profile links.',
-    canonicalUrl: 'https://navigatewealth.co/links',
+    canonicalUrl: 'https://www.navigatewealth.co/links',
     robotsContent: 'noindex, nofollow',
   };
 

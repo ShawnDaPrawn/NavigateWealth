@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { SITE_ORIGIN } from '@/utils/siteOrigin';
 
 /**
  * SitemapXmlPage — renders the XML sitemap as a proper React component.
@@ -19,7 +20,7 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
  */
 const SITEMAP_API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/sitemap/xml`;
 
-const BASE_URL = 'https://navigatewealth.co';
+const BASE_URL = SITE_ORIGIN;
 
 type SitemapEntry = {
   loc: string;

@@ -15,7 +15,7 @@ export function NewsletterUnsubscribePage() {
   const seoProps = {
     title: 'Newsletter Unsubscribe | Navigate Wealth',
     description: 'Newsletter unsubscribe page for Navigate Wealth.',
-    canonicalUrl: 'https://navigatewealth.co/newsletter/unsubscribe',
+    canonicalUrl: 'https://www.navigatewealth.co/newsletter/unsubscribe',
     robotsContent: 'noindex, nofollow',
   };
 

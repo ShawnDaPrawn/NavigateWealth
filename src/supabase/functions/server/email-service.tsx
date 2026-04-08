@@ -146,7 +146,7 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     greeting: 'Dear {{ .Name }},',
     bodyHtml: '{{ .CustomMessage }}<p>They are attached to this email in a secure, encrypted ZIP file.</p><p><strong>Password:</strong> Your National ID Number</p><p>Please log in to your portal to view them online.</p>',
     buttonLabel: 'Login to Portal',
-    buttonUrl: 'https://navigatewealth.co/login',
+    buttonUrl: 'https://www.navigatewealth.co/login',
     footerNote: ''
   },
   resend_documents_notification: {
@@ -159,7 +159,7 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     greeting: 'Dear {{ .Name }},',
     bodyHtml: '{{ .CustomMessage }}<p>They are attached to this email in a secure, encrypted ZIP file.</p><p><strong>Password:</strong> Your National ID Number</p><p>Please log in to your portal to view them online.</p>',
     buttonLabel: 'Login to Portal',
-    buttonUrl: 'https://navigatewealth.co/login',
+    buttonUrl: 'https://www.navigatewealth.co/login',
     footerNote: ''
   },
   general_campaign: {
@@ -198,7 +198,7 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     greeting: 'Good morning,',
     bodyHtml: '<p>Please find attached the calendar for today, <strong>{{ .Date }}</strong>.</p><p>You have <strong>{{ .EventCount }}</strong> event(s) scheduled.</p>',
     buttonLabel: 'View Calendar',
-    buttonUrl: 'https://navigatewealth.co/admin/calendar',
+    buttonUrl: 'https://www.navigatewealth.co/admin/calendar',
     footerNote: ''
   },
   request_info_required: {
@@ -237,7 +237,7 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     greeting: '',
     bodyHtml: '<p>A new enquiry has been submitted via the website contact form. Please review the details below and respond within 24 hours.</p>',
     buttonLabel: 'View Admin Dashboard',
-    buttonUrl: 'https://navigatewealth.co/admin',
+    buttonUrl: 'https://www.navigatewealth.co/admin',
     footerNote: ''
   },
   contact_form_acknowledgment: {
@@ -250,7 +250,7 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     greeting: 'Dear {{ .Name }},',
     bodyHtml: '<p>Thank you for contacting Navigate Wealth. We have received your enquiry and one of our team members will be in touch with you shortly.</p><p>If your matter is urgent, please do not hesitate to call us directly.</p>',
     buttonLabel: 'Explore Our Services',
-    buttonUrl: 'https://navigatewealth.co/services',
+    buttonUrl: 'https://www.navigatewealth.co/services',
     footerNote: 'If you have any immediate questions, contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672025" style="color: #6d28d9;">012 667 2025</a>.'
   },
   application_invite: {
@@ -792,7 +792,7 @@ export async function sendCompletionNotification(params: {
     `,
     {
       title: 'Document Completed',
-      buttonUrl: 'https://navigatewealth.co/portal',
+      buttonUrl: 'https://www.navigatewealth.co/portal',
       buttonLabel: 'View Document',
       footerNote: 'This notification was sent via Navigate Wealth\'s e-signature platform.',
       footerSettings
@@ -806,7 +806,7 @@ Great news! The document ${documentName} has been fully executed.
 
 All required signatures have been collected. You can access the completed document from your Navigate Wealth portal.
 
-View portal: https://navigatewealth.co/portal
+View portal: https://www.navigatewealth.co/portal
 
 This notification was sent via Navigate Wealth's e-signature platform.
   `.trim();
@@ -845,7 +845,7 @@ export async function sendAdminApplicationNotification(params: {
     `,
     {
       title: 'New Application Submitted',
-      buttonUrl: 'https://navigatewealth.co/admin',
+      buttonUrl: 'https://www.navigatewealth.co/admin',
       buttonLabel: 'Review Application',
       footerSettings
     }
@@ -862,7 +862,7 @@ Application Details:
 
 Please log in to the admin panel to review this application.
 
-Admin Panel: https://navigatewealth.co/admin
+Admin Panel: https://www.navigatewealth.co/admin
   `.trim();
 
   return await sendEmail({
@@ -895,7 +895,7 @@ export async function sendClientApplicationReceivedEmail(params: {
     `,
     {
       title: 'Application Received',
-      buttonUrl: 'https://navigatewealth.co/login',
+      buttonUrl: 'https://www.navigatewealth.co/login',
       buttonLabel: 'Check Application Status',
       footerNote: 'If you have any questions, contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.',
       footerSettings
@@ -909,7 +909,7 @@ Thank you for submitting your application ${applicationNumber} to Navigate Wealt
 
 We have received your application and it is currently being reviewed by our team. We will get back to you shortly with an update on your application status.
 
-In the meantime, you can check the status of your application by logging in at https://navigatewealth.co/login.
+In the meantime, you can check the status of your application by logging in at https://www.navigatewealth.co/login.
 
 If you have any questions, contact us at info@navigatewealth.co or call (+27) 12-667-2505.
   `.trim();
@@ -943,7 +943,7 @@ export async function sendClientApprovalEmail(params: {
     `,
     {
       title: 'Application Approved!',
-      buttonUrl: 'https://navigatewealth.co/login',
+      buttonUrl: 'https://www.navigatewealth.co/login',
       buttonLabel: 'Access Your Portal',
       footerNote: 'If you have any questions, contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.',
       footerSettings
@@ -957,7 +957,7 @@ Congratulations! Your application ${applicationNumber} has been approved.
 
 You now have full access to your Navigate Wealth client portal. Log in to explore your personalized financial dashboard, track your investments, and access our comprehensive suite of financial planning tools.
 
-Access your portal: https://navigatewealth.co/login
+Access your portal: https://www.navigatewealth.co/login
 
 Our team is here to support you every step of the way on your financial journey.
 
@@ -993,7 +993,7 @@ export async function sendClientDeclineEmail(params: {
     `,
     {
       title: 'Application Status Update',
-      buttonUrl: 'https://navigatewealth.co/contact',
+      buttonUrl: 'https://www.navigatewealth.co/contact',
       buttonLabel: 'Contact Us',
       footerNote: 'Reach us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.',
       footerSettings
@@ -1009,7 +1009,7 @@ Thank you for your interest in Navigate Wealth. After careful review, we are una
 
 If you have any questions or would like to discuss this decision, please don't hesitate to contact us. We're here to help and may be able to provide guidance on alternative options.
 
-Contact us: https://navigatewealth.co/contact
+Contact us: https://www.navigatewealth.co/contact
 Email: info@navigatewealth.co
 Phone: (+27) 12-667-2505
   `.trim();
@@ -1042,7 +1042,7 @@ export async function sendAdminApprovalNotification(params: {
     `,
     {
       title: 'Application Approved',
-      buttonUrl: 'https://navigatewealth.co/admin',
+      buttonUrl: 'https://www.navigatewealth.co/admin',
       buttonLabel: 'View Admin Panel',
       footerSettings
     }
@@ -1057,7 +1057,7 @@ Details:
 - Approved By: ${approvedBy}
 - Timestamp: ${new Date().toLocaleString()}
 
-View Admin Panel: https://navigatewealth.co/admin
+View Admin Panel: https://www.navigatewealth.co/admin
   `.trim();
 
   return await sendEmail({
@@ -1097,7 +1097,7 @@ export async function sendAdminSignupNotification(params: {
     `,
     {
       title: 'New User Signup',
-      buttonUrl: 'https://navigatewealth.co/admin',
+      buttonUrl: 'https://www.navigatewealth.co/admin',
       buttonLabel: 'View Admin Panel',
       footerSettings
     }
@@ -1113,7 +1113,7 @@ User Details:
 
 Please review the user's application in the admin panel.
 
-Admin Panel: https://navigatewealth.co/admin
+Admin Panel: https://www.navigatewealth.co/admin
   `.trim();
 
   return await sendEmail({
@@ -1156,7 +1156,7 @@ export async function sendAdminOnboardedWelcomeEmail(params: {
       subtitle: 'Your account is ready',
       buttonUrl: passwordResetLink,
       buttonLabel: 'Set Your Password',
-      footerNote: 'This link will expire in 24 hours. If it has expired, visit <a href="https://navigatewealth.co/forgot-password" style="color: #6d28d9;">navigatewealth.co/forgot-password</a> to request a new one.<br/><br/>If you did not expect this email, please contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a>.',
+      footerNote: 'This link will expire in 24 hours. If it has expired, visit <a href="https://www.navigatewealth.co/forgot-password" style="color: #6d28d9;">navigatewealth.co/forgot-password</a> to request a new one.<br/><br/>If you did not expect this email, please contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a>.',
       footerSettings,
     }
   );
@@ -1177,7 +1177,7 @@ What you'll find in your portal:
 - Secure document management
 - Direct communication with your adviser
 
-This link will expire in 24 hours. If it has expired, visit https://navigatewealth.co/forgot-password to request a new one.
+This link will expire in 24 hours. If it has expired, visit https://www.navigatewealth.co/forgot-password to request a new one.
 
 If you did not expect this email, please contact us at info@navigatewealth.co.
   `.trim();
@@ -1400,7 +1400,7 @@ ${data.message ? `\nMessage:\n${data.message}` : ''}
 
 Please respond to this enquiry within 24 hours.
 
-Admin Dashboard: https://navigatewealth.co/admin
+Admin Dashboard: https://www.navigatewealth.co/admin
   `.trim();
 
   return await sendEmail({

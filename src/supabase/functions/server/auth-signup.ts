@@ -82,7 +82,7 @@ app.post('/signup', async (c) => {
     // Send verification email explicitly
     // We need to do this because admin.createUser with email_confirm: false doesn't send the email automatically
     try {
-      const origin = c.req.header('origin') || 'https://navigatewealth.co';
+      const origin = c.req.header('origin') || 'https://www.navigatewealth.co';
       const redirectTo = `${origin}/auth/callback`;
       
       log.info('📧 Sending verification email to:', email);

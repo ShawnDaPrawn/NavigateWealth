@@ -383,7 +383,7 @@ export function FinancialPlanningPage() {
         structuredDataServiceType: 'Financial Planning Advisory',
         structuredDataServiceName: 'Comprehensive Financial Planning',
         breadcrumbs: [
-          { name: 'Home', url: 'https://navigatewealth.co' },
+          { name: 'Home', url: 'https://www.navigatewealth.co' },
           { name: 'Financial Planning' },
         ],
         preloadImages: [],

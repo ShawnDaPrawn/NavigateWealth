@@ -7,6 +7,7 @@
  */
 
 import { useEffect } from 'react';
+import { SITE_ORIGIN } from '@/utils/siteOrigin';
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -43,7 +44,7 @@ interface ServiceOffer {
 /* -------------------------------------------------------------------------- */
 
 const SITE_NAME = 'Navigate Wealth';
-const BASE_URL = 'https://navigatewealth.co';
+const BASE_URL = SITE_ORIGIN;
 /** Default OG image used when a page-specific one is not supplied. */
 const DEFAULT_OG_IMAGE = `${BASE_URL}/og-default.jpg`;
 
@@ -268,8 +269,8 @@ export function createContactPageSchema(): Record<string, unknown> {
  *
  * @example
  * createBreadcrumbSchema([
- *   { name: 'Home',     url: 'https://navigatewealth.co' },
- *   { name: 'Services', url: 'https://navigatewealth.co/services' },
+ *   { name: 'Home',     url: 'https://www.navigatewealth.co' },
+ *   { name: 'Services', url: 'https://www.navigatewealth.co/services' },
  *   { name: 'Risk Management' },  // current page — no url
  * ])
  */

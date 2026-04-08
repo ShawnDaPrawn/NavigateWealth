@@ -304,8 +304,8 @@ export function RetirementPlanningPage() {
           { name: 'Group Retirement Annuities', description: 'Employer-facilitated savings with individual ownership.' },
         ],
         breadcrumbs: [
-          { name: 'Home', url: 'https://navigatewealth.co' },
-          { name: 'Services', url: 'https://navigatewealth.co/services' },
+          { name: 'Home', url: 'https://www.navigatewealth.co' },
+          { name: 'Services', url: 'https://www.navigatewealth.co/services' },
           { name: 'Retirement Planning' },
         ],
         preloadImages: [],

@@ -333,7 +333,7 @@ export function PublicationsSettings() {
             </Label>
             <Input
               type="text"
-              defaultValue="https://navigatewealth.co/resources"
+              defaultValue="https://www.navigatewealth.co/resources"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>

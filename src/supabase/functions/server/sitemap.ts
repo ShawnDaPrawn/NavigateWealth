@@ -29,11 +29,12 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
 import * as kv from './kv_store.tsx';
+import { SITE_ORIGIN } from '../../../utils/siteOrigin.ts';
 
 const app = new Hono();
 const log = createModuleLogger('sitemap');
 
-const BASE_URL = 'https://navigatewealth.co';
+const BASE_URL = SITE_ORIGIN;
 const BUCKET_NAME = 'make-91ed8379-sitemap';
 const SITEMAP_FILE = 'sitemap.xml';
 

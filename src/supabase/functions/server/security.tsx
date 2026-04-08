@@ -702,7 +702,7 @@ app.post('/:userId/2fa/verify-code', async (c) => {
                 title: 'Account Security Alert',
                 subtitle: 'Your account has been temporarily suspended',
                 greeting: '',
-                buttonUrl: 'https://navigatewealth.co/contact',
+                buttonUrl: 'https://www.navigatewealth.co/contact',
                 buttonLabel: 'Contact Support',
                 footerNote: 'If you have any concerns, contact us immediately at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672025" style="color: #6d28d9;">012 667 2025</a>.',
                 footerSettings,

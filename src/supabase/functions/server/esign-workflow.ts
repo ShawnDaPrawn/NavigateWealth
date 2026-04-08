@@ -157,7 +157,7 @@ export async function completeEnvelope(envelopeId: string): Promise<{ success: b
                 envelopeTitle: envelope.title,
                 completedAt: new Date().toISOString(),
                 signers: signers.map((s: EsignSigner) => ({ name: s.name, signedAt: s.signed_at || new Date().toISOString() })),
-                downloadLink: 'https://navigatewealth.co/portal' // TODO: Deep link to envelope
+                downloadLink: 'https://www.navigatewealth.co/portal' // TODO: Deep link to envelope
             });
 
             await sendEmail({
