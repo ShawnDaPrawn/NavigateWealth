@@ -30,7 +30,6 @@ type PdfChunk = {
   key: string;
   html: string;
   units: number;
-  keepWithNextLines?: number;
   forceBreakAfter?: boolean;
 };
 
@@ -39,10 +38,7 @@ const DEFAULT_PDF_CONFIG: LegalPdfConfig = {
   orientation: 'portrait',
 };
 
-const PDF_BODY_FONT_SIZE_PX = 10;
-const PDF_BODY_LINE_HEIGHT = 1.68;
 const PDF_MIN_LINES_ABOVE_FOOTER = 2;
-const PDF_HEADING_FOLLOW_LINES = 2;
 
 const LEGAL_PDF_CONTENT_CSS = `
   .legal-pdf-body {
@@ -361,7 +357,18 @@ function buildContentChunks(html: string, config: LegalPdfConfig): PdfChunk[] {
         key: `heading-${index}`,
         html: outerHtml(node),
         units: tag === 'h1' ? 8 : tag === 'h2' ? 6 : 5,
-        keepWithNextLines: PDF_HEADING_FOLLOW_LINES,
+      });
+      return;
+    }
+
+    if (tag === 'p') {
+      const paragraphSegments = splitParagraphNode(node);
+      paragraphSegments.forEach((segmentHtml, segmentIndex) => {
+        chunks.push({
+          key: `paragraph-${index}-${segmentIndex}`,
+          html: segmentHtml,
+          units: estimateTextUnits(textFromHtml(segmentHtml), 240, 2),
+        });
       });
       return;
     }
@@ -417,6 +424,52 @@ function deriveTocFromHtml(html: string): LegalPdfTocItem[] {
     .filter((item) => item.title);
 }
 
+function textFromHtml(html: string): string {
+  if (typeof window === 'undefined') {
+    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  const container = window.document.createElement('div');
+  container.innerHTML = html;
+  return container.textContent?.replace(/\s+/g, ' ').trim() || '';
+}
+
+function splitParagraphNode(node: HTMLElement): string[] {
+  if (typeof window === 'undefined' || !node.querySelector('br')) {
+    return [outerHtml(node)];
+  }
+
+  const segments: string[] = [];
+  const scratch = window.document.createElement('div');
+
+  const flush = () => {
+    const inner = scratch.innerHTML.trim();
+    const text = scratch.textContent?.replace(/\s+/g, ' ').trim() || '';
+    if (!inner || !text) {
+      scratch.innerHTML = '';
+      return;
+    }
+
+    const paragraph = node.cloneNode(false) as HTMLElement;
+    paragraph.innerHTML = inner;
+    segments.push(paragraph.outerHTML);
+    scratch.innerHTML = '';
+  };
+
+  Array.from(node.childNodes).forEach((child) => {
+    if (child.nodeType === window.Node.ELEMENT_NODE && (child as HTMLElement).tagName === 'BR') {
+      flush();
+      return;
+    }
+
+    scratch.appendChild(child.cloneNode(true));
+  });
+
+  flush();
+
+  return segments.length > 0 ? segments : [outerHtml(node)];
+}
+
 function mmToPx(value: number): number {
   return value * (96 / 25.4);
 }
@@ -429,10 +482,6 @@ function getBodyHeightCapPx(config: LegalPdfConfig, isFirstPage: boolean): numbe
   const safetyMm = isFirstPage ? 3.5 : 3;
 
   return mmToPx(heightMm - topPaddingMm - footerReserveMm - firstPageChromeMm - safetyMm);
-}
-
-function getHeadingFollowReservePx(lines = PDF_HEADING_FOLLOW_LINES): number {
-  return Math.ceil(PDF_BODY_FONT_SIZE_PX * PDF_BODY_LINE_HEIGHT * lines);
 }
 
 function measureChunkHeights(chunks: PdfChunk[], config: LegalPdfConfig): number[] | null {
@@ -491,16 +540,9 @@ function paginateChunks(chunks: PdfChunk[], config: LegalPdfConfig): PdfChunk[][
 
     chunks.forEach((chunk, index) => {
       const pageCap = getBodyHeightCapPx(config, pages.length === 0);
-      const nextChunk = chunks[index + 1];
       const measuredHeight = measuredHeights[index] || 0;
-      const combinedHeight = chunk.keepWithNextLines && nextChunk
-        ? measuredHeight + Math.min(
-          measuredHeights[index + 1] || 0,
-          getHeadingFollowReservePx(chunk.keepWithNextLines),
-        )
-        : measuredHeight;
 
-      if (currentPage.length > 0 && currentHeight + combinedHeight > pageCap) {
+      if (currentPage.length > 0 && currentHeight + measuredHeight > pageCap) {
         pushPage();
       }
 
@@ -534,15 +576,11 @@ function paginateChunks(chunks: PdfChunk[], config: LegalPdfConfig): PdfChunk[][
 
   chunks.forEach((chunk, index) => {
     const capacity = getPageCapacity(config, pages.length === 0);
-    const nextChunk = chunks[index + 1];
     const minimumFollowUnits = Math.max(1, Math.ceil((PDF_MIN_LINES_ABOVE_FOOTER * 3) / 2));
-    const combinedUnits = chunk.keepWithNextLines && nextChunk
-      ? chunk.units + Math.min(nextChunk.units, minimumFollowUnits)
-      : chunk.units;
 
     if (
       currentPage.length > 0
-      && currentUnits + combinedUnits > capacity
+      && currentUnits + Math.max(chunk.units, minimumFollowUnits) > capacity
     ) {
       pushPage();
     }
