@@ -19,6 +19,45 @@ const LEGAL_HTML_SANITIZE_CONFIG = {
   FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'meta', 'link'],
 } as const;
 
+export const LEGAL_DOCUMENT_CONTENT_CLASS = [
+  'prose',
+  'prose-stone',
+  'prose-lg',
+  'max-w-none',
+  'text-stone-800',
+  'prose-headings:font-semibold',
+  'prose-headings:tracking-tight',
+  'prose-headings:text-stone-950',
+  'prose-h1:mt-8',
+  'prose-h1:mb-4',
+  'prose-h1:text-3xl',
+  'prose-h2:mt-8',
+  'prose-h2:mb-4',
+  'prose-h2:border-b',
+  'prose-h2:border-stone-200',
+  'prose-h2:pb-2',
+  'prose-h2:text-2xl',
+  'prose-h3:mt-6',
+  'prose-h3:mb-3',
+  'prose-h3:text-xl',
+  'prose-p:my-4',
+  'prose-p:text-[16px]',
+  'prose-p:leading-[1.85]',
+  'prose-strong:font-semibold',
+  'prose-strong:text-stone-950',
+  'prose-ul:my-4',
+  'prose-ol:my-4',
+  'prose-li:my-1',
+  'prose-li:leading-[1.8]',
+  'prose-table:block',
+  'prose-table:w-full',
+  'prose-th:bg-stone-100',
+  'prose-th:text-stone-900',
+  'prose-td:align-top',
+  '[&_p:empty]:block',
+  '[&_p:empty]:h-5',
+].join(' ');
+
 function cleanInlineStyle(styleValue: string): string {
   return styleValue
     .split(';')

@@ -9,7 +9,7 @@ import { Separator } from '../ui/separator';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { LEGAL_DOCUMENTS_BY_SLUG, LEGAL_SECTION_LABELS } from '../../shared/legal-documents-registry';
 import { LegalDocumentPdfDialog } from '../shared/LegalDocumentPdf';
-import { sanitizeLegalDocumentHtml } from '../../utils/legalHtml';
+import { LEGAL_DOCUMENT_CONTENT_CLASS, sanitizeLegalDocumentHtml } from '../../utils/legalHtml';
 
 type LegalBlock = {
   id?: string;
@@ -353,7 +353,7 @@ export function LegalDocumentPage() {
 
                 <div className="px-6 py-8 sm:px-8 lg:px-10">
                   <article
-                    className="prose prose-stone max-w-none prose-headings:scroll-mt-28 prose-headings:font-semibold prose-headings:tracking-tight prose-h1:text-3xl prose-h2:mt-12 prose-h2:border-t prose-h2:border-stone-200 prose-h2:pt-8 prose-h2:text-2xl prose-h3:mt-8 prose-h3:text-xl prose-p:leading-8 prose-li:leading-8 prose-table:block prose-table:w-full prose-th:bg-stone-100 prose-th:text-stone-900 prose-td:align-top"
+                    className={`${LEGAL_DOCUMENT_CONTENT_CLASS} prose-headings:scroll-mt-28`}
                     dangerouslySetInnerHTML={{ __html: sanitizedArticleHtml }}
                   />
                 </div>

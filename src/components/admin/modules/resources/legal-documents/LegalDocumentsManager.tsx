@@ -36,7 +36,7 @@ import { resourcesApi } from '../api';
 import { LEGAL_SECTION_LABELS } from '../legal-constants';
 import { LegalDocumentPdfDialog } from '../../../../shared/LegalDocumentPdf';
 import { LEGAL_MIGRATION_PRIORITY_SLUGS } from '../../../../../shared/legal-documents-registry';
-import { normalizeClipboardLegalHtml, sanitizeLegalDocumentHtml } from '../../../../../utils/legalHtml';
+import { LEGAL_DOCUMENT_CONTENT_CLASS, normalizeClipboardLegalHtml, sanitizeLegalDocumentHtml } from '../../../../../utils/legalHtml';
 import type {
   LegalDocumentDefinitionResponse,
   LegalDocumentDetailResponse,
@@ -872,7 +872,7 @@ function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse }) {
           </DialogHeader>
           <div className="max-h-[75vh] overflow-auto rounded-xl border border-gray-200 bg-white p-8">
             <article
-              className="prose prose-gray max-w-none prose-headings:tracking-tight prose-p:leading-7 prose-li:leading-7"
+              className={LEGAL_DOCUMENT_CONTENT_CLASS}
               dangerouslySetInnerHTML={{ __html: sanitizedPreview }}
             />
           </div>
