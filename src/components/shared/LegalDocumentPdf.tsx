@@ -2,6 +2,11 @@ import React, { useMemo } from 'react';
 import { BasePdfLayout, getPdfDimensions } from '../admin/modules/resources/templates/BasePdfLayout';
 import { PdfTemplateViewer } from '../admin/modules/resources/PdfTemplateViewer';
 import { normalizeLegalDocumentAnchors, sanitizeLegalDocumentHtml } from '../../utils/legalHtml';
+import {
+  resolveLegalPdfRendererVersion,
+  type LegalPdfRendererResolution,
+  type LegalPdfRendererVersion,
+} from './legalPdfRendererConfig';
 
 export type LegalPdfConfig = {
   pageSize: 'A4' | 'A3';
@@ -658,7 +663,7 @@ function renderPage(chunks: PdfChunk[], pageIndex: number) {
   );
 }
 
-export function LegalDocumentPdfLayout({ document }: { document: LegalPdfDocumentData }) {
+export function LegacyLegalDocumentPdfLayout({ document }: { document: LegalPdfDocumentData }) {
   const pdfConfig = document.pdfConfig || DEFAULT_PDF_CONFIG;
   const sanitizedHtml = useMemo(
     () => sanitizeLegalDocumentHtml(document.html || '<p></p>'),
@@ -701,6 +706,40 @@ export function LegalDocumentPdfLayout({ document }: { document: LegalPdfDocumen
   );
 }
 
+function PagedLegalDocumentPdfLayout({ document }: { document: LegalPdfDocumentData }) {
+  return <LegacyLegalDocumentPdfLayout document={document} />;
+}
+
+function resolveActiveLegalPdfRenderer(): LegalPdfRendererResolution {
+  return resolveLegalPdfRendererVersion({
+    pagedAvailable: false,
+  });
+}
+
+export function LegalDocumentPdfLayout({
+  document,
+  rendererVersion,
+}: {
+  document: LegalPdfDocumentData;
+  rendererVersion?: LegalPdfRendererVersion;
+}) {
+  const resolution = rendererVersion
+    ? {
+        defaultVersion: 'legacy' as const,
+        requestedVersion: rendererVersion,
+        effectiveVersion: rendererVersion === 'paged' ? 'legacy' as const : rendererVersion,
+        source: 'default' as const,
+        pagedAvailable: false,
+      }
+    : resolveActiveLegalPdfRenderer();
+
+  if (resolution.effectiveVersion === 'paged') {
+    return <PagedLegalDocumentPdfLayout document={document} />;
+  }
+
+  return <LegacyLegalDocumentPdfLayout document={document} />;
+}
+
 export function LegalDocumentPdfDialog({
   open,
   onOpenChange,
@@ -713,6 +752,7 @@ export function LegalDocumentPdfDialog({
   if (!document) return null;
 
   const pdfConfig = document.pdfConfig || DEFAULT_PDF_CONFIG;
+  const rendererResolution = resolveActiveLegalPdfRenderer();
 
   return (
     <PdfTemplateViewer
@@ -724,7 +764,10 @@ export function LegalDocumentPdfDialog({
       renderPdfFromPreview
       primaryActionLabel="Download PDF"
     >
-      <LegalDocumentPdfLayout document={document} />
+      <LegalDocumentPdfLayout
+        document={document}
+        rendererVersion={rendererResolution.effectiveVersion}
+      />
     </PdfTemplateViewer>
   );
 }
