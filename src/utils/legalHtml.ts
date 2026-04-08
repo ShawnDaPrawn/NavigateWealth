@@ -62,6 +62,13 @@ export const LEGAL_DOCUMENT_CONTENT_CLASS = [
   'prose-ol:my-4',
   'prose-li:my-1',
   'prose-li:leading-[1.8]',
+  '[&_ul]:list-disc',
+  '[&_ul]:pl-6',
+  '[&_ol]:list-decimal',
+  '[&_ol]:pl-6',
+  '[&_li]:pl-1',
+  '[&_li::marker]:text-stone-500',
+  '[&_li>p]:my-1',
   'prose-table:block',
   'prose-table:w-full',
   'prose-th:bg-stone-100',
@@ -102,8 +109,135 @@ function cleanInlineStyle(styleValue: string): string {
     .join('; ');
 }
 
+function getLeadingBulletMatch(value: string): RegExpMatchArray | null {
+  return value.match(/^\s*([•●◦▪■‣◉○])\s+/);
+}
+
+function getElementIndentValue(element: HTMLElement): number {
+  const style = element.getAttribute('style') || '';
+  const match = style.match(/(?:margin-left|padding-left)\s*:\s*([0-9.]+)(px|pt|em|rem)?/i);
+
+  if (!match) {
+    return 0;
+  }
+
+  const amount = Number(match[1]);
+  if (Number.isNaN(amount)) {
+    return 0;
+  }
+
+  const unit = (match[2] || 'px').toLowerCase();
+  if (unit === 'pt') return amount * (96 / 72);
+  if (unit === 'em' || unit === 'rem') return amount * 16;
+  return amount;
+}
+
+function stripLeadingBulletMarker(element: HTMLElement): HTMLElement {
+  const clone = element.cloneNode(true) as HTMLElement;
+  const walker = window.document.createTreeWalker(clone, window.NodeFilter.SHOW_TEXT);
+
+  while (walker.nextNode()) {
+    const textNode = walker.currentNode as Text;
+    const value = textNode.nodeValue || '';
+    const match = getLeadingBulletMatch(value);
+
+    if (!match) {
+      if (value.trim().length > 0) {
+        break;
+      }
+      continue;
+    }
+
+    textNode.nodeValue = value.replace(/^\s*[•●◦▪■‣◉○]\s+/, '');
+    break;
+  }
+
+  return clone;
+}
+
+function normalizeBulletLikeBlocksInContainer(container: HTMLElement): void {
+  const childNodes = Array.from(container.childNodes);
+
+  for (let index = 0; index < childNodes.length; index += 1) {
+    const node = childNodes[index];
+
+    if (!(node instanceof HTMLElement)) {
+      continue;
+    }
+
+    if (node.children.length > 0) {
+      normalizeBulletLikeBlocksInContainer(node);
+    }
+
+    const tag = node.tagName.toLowerCase();
+    if (tag !== 'p' && tag !== 'div') {
+      continue;
+    }
+
+    const match = getLeadingBulletMatch(node.textContent || '');
+    if (!match) {
+      continue;
+    }
+
+    const group: HTMLElement[] = [node];
+    const indent = getElementIndentValue(node);
+    let cursor = index + 1;
+
+    while (cursor < childNodes.length) {
+      const sibling = childNodes[cursor];
+      if (!(sibling instanceof HTMLElement)) break;
+
+      const siblingTag = sibling.tagName.toLowerCase();
+      if (siblingTag !== 'p' && siblingTag !== 'div') break;
+
+      if (!getLeadingBulletMatch(sibling.textContent || '')) break;
+
+      const siblingIndent = getElementIndentValue(sibling);
+      if (Math.abs(siblingIndent - indent) > 8) break;
+
+      group.push(sibling);
+      cursor += 1;
+    }
+
+    if (group.length === 0) {
+      continue;
+    }
+
+    const list = window.document.createElement('ul');
+
+    group.forEach((item) => {
+      const li = window.document.createElement('li');
+      const cleaned = stripLeadingBulletMarker(item);
+      li.innerHTML = cleaned.innerHTML;
+      list.appendChild(li);
+    });
+
+    container.insertBefore(list, group[0]);
+    group.forEach((item) => item.remove());
+    index += group.length - 1;
+  }
+}
+
+export function normalizeLegalListStructure(html: string, fallbackHtml = '<p></p>'): string {
+  if (typeof window === 'undefined') {
+    return html || fallbackHtml;
+  }
+
+  const parser = new window.DOMParser();
+  const doc = parser.parseFromString(`<div id="legal-list-normalize-root">${html || fallbackHtml}</div>`, 'text/html');
+  const root = doc.querySelector('#legal-list-normalize-root');
+
+  if (!root) {
+    return html || fallbackHtml;
+  }
+
+  normalizeBulletLikeBlocksInContainer(root);
+  return root.innerHTML.trim() || fallbackHtml;
+}
+
 export function sanitizeLegalDocumentHtml(html: string): string {
-  return DOMPurify.sanitize(html || '<p></p>', LEGAL_HTML_SANITIZE_CONFIG);
+  const sanitized = DOMPurify.sanitize(html || '<p></p>', LEGAL_HTML_SANITIZE_CONFIG);
+  return normalizeLegalListStructure(sanitized, '<p></p>');
 }
 
 export function normalizeClipboardLegalHtml(rawHtml: string, fallbackHtml = '<p></p>'): string {
@@ -164,7 +298,8 @@ export function normalizeClipboardLegalHtml(rawHtml: string, fallbackHtml = '<p>
     }
   });
 
-  return sanitizeLegalDocumentHtml(root.innerHTML.trim() || fallbackHtml);
+  const normalizedLists = normalizeLegalListStructure(root.innerHTML.trim() || fallbackHtml, fallbackHtml);
+  return sanitizeLegalDocumentHtml(normalizedLists);
 }
 
 export function normalizeLegalDocumentAnchors(
