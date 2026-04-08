@@ -103,7 +103,6 @@ const RequestCompletionPage = React.lazy(() => import('./components/pages/Reques
 const NewsletterConfirmPage = React.lazy(() => import('./components/pages/NewsletterConfirmPage').then(m => ({ default: m.NewsletterConfirmPage })));
 const NewsletterUnsubscribePage = React.lazy(() => import('./components/pages/NewsletterUnsubscribePage').then(m => ({ default: m.NewsletterUnsubscribePage })));
 const RobotsTxtPage = React.lazy(() => import('./components/pages/RobotsTxtPage').then(m => ({ default: m.RobotsTxtPage })));
-const SitemapXmlPage = React.lazy(() => import('./components/pages/SitemapXmlPage').then(m => ({ default: m.SitemapXmlPage })));
 const SignerLandingPage = React.lazy(() => import('./components/esign-signer').then(m => ({ default: m.SignerLandingPage })));
 const VerifyDocumentPage = React.lazy(() => import('./components/pages/VerifyDocumentPage').then(m => ({ default: m.VerifyDocumentPage })));
 const OGImageGeneratorPage = React.lazy(() => import('./components/pages/OGImageGeneratorPage').then(m => ({ default: m.OGImageGeneratorPage })));
@@ -162,7 +161,6 @@ export function AppRoutes() {
         <Route path="/legal/:slug" element={<FlexibleRoute><AppLayout forcePublicLayout><LegalDocumentPage /></AppLayout></FlexibleRoute>} />
         <Route path="/sitemap" element={<FlexibleRoute><AppLayout forcePublicLayout><SitemapPage /></AppLayout></FlexibleRoute>} />
         <Route path="/robots.txt" element={<RobotsTxtPage />} />
-        <Route path="/sitemap/xml" element={<SitemapXmlPage />} />
         
         {/* Get Quote — always public layout (contact route must be registered before :service) */}
         <Route path="/get-quote" element={<FlexibleRoute><AppLayout forcePublicLayout><GetQuotePage /></AppLayout></FlexibleRoute>} />

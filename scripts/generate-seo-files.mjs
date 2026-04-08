@@ -70,7 +70,6 @@ const disallowPaths = [
   '/links',
   '/migration-helper',
   '/design-system',
-  '/sitemap/xml',
   '/preview_page.html',
 ];
 

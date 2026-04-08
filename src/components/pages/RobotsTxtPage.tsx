@@ -40,7 +40,6 @@ Disallow: /og-preview
 Disallow: /links
 Disallow: /migration-helper
 Disallow: /design-system
-Disallow: /sitemap/xml
 Disallow: /preview_page.html
 
 Sitemap: ${SITE_ORIGIN}/sitemap.xml

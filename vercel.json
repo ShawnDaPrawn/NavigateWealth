@@ -1,12 +1,5 @@
 {
   "outputDirectory": "dist",
-  "redirects": [
-    {
-      "source": "/sitemap/xml",
-      "destination": "/sitemap.xml",
-      "permanent": true
-    }
-  ],
   "routes": [
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }

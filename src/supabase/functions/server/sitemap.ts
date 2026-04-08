@@ -52,7 +52,7 @@ const getSupabase = () => createClient(
 /**
  * When adding new public pages, update BOTH:
  * 1. This SITEMAP_URLS array (the backend single source of truth)
- * 2. The FALLBACK_URLS in /components/pages/SitemapXmlPage.tsx (client-side fallback)
+ * 2. scripts/generate-seo-files.mjs (build emits public/sitemap.xml for the SPA host)
  * 3. Then call POST /sitemap/publish to update the public storage file
  *
  * Google ignores <priority> and <changefreq> — only <loc> and <lastmod> matter.
@@ -233,7 +233,7 @@ app.get('/', (c) => {
     service: 'sitemap',
     status: 'active',
     endpoints: {
-      xml: '/sitemap/xml (requires auth — for frontend use)',
+      xml: 'GET /xml (auth via edge gateway — same list as public/sitemap.xml on www)',
       publish: 'POST /sitemap/publish (requires auth — uploads to public storage)',
     },
     publicStorageUrl: publicUrl,

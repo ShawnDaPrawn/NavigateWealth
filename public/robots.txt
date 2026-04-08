@@ -31,7 +31,6 @@ Disallow: /og-preview
 Disallow: /links
 Disallow: /migration-helper
 Disallow: /design-system
-Disallow: /sitemap/xml
 Disallow: /preview_page.html
 
 Sitemap: https://www.navigatewealth.co/sitemap.xml
