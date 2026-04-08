@@ -628,6 +628,8 @@ export function LegalDocumentPdfDialog({
       title={document.title}
       pageSize={pdfConfig.pageSize}
       orientation={pdfConfig.orientation}
+      renderPdfFromPreview
+      primaryActionLabel="Download PDF"
     >
       <LegalDocumentPdfLayout document={document} />
     </PdfTemplateViewer>

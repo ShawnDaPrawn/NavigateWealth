@@ -3,7 +3,11 @@ import { BASE_PDF_CSS, getPdfDimensions, type PdfOrientation, type PdfPageSize }
 import { LETTER_CSS } from './templates/LetterheadPdfLayout';
 import type { LetterMeta } from './templates/LetterheadPdfLayout';
 import type { FormBlock } from './builder/types';
-import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../utils/pdfPrintTitle';
+import {
+  escapeHtmlText,
+  navigateWealthPdfDocumentTitle,
+  navigateWealthPdfSaveFileName,
+} from '../../../../utils/pdfPrintTitle';
 import { ZoomIn, ZoomOut, Maximize, X, Download, FileText, Loader2 } from 'lucide-react';
 
 interface PdfTemplateViewerProps {
@@ -19,6 +23,9 @@ interface PdfTemplateViewerProps {
   letterMeta?: LetterMeta;
   /** Letter body blocks — required for Word export when isLetter is true */
   letterBlocks?: FormBlock[];
+  /** Generate a true PDF from the preview pages instead of opening browser print */
+  renderPdfFromPreview?: boolean;
+  primaryActionLabel?: string;
 }
 
 export const PdfTemplateViewer = ({ 
@@ -31,9 +38,12 @@ export const PdfTemplateViewer = ({
   isLetter = false,
   letterMeta,
   letterBlocks,
+  renderPdfFromPreview = false,
+  primaryActionLabel,
 }: PdfTemplateViewerProps) => {
   const [scale, setScale] = useState(1);
   const [wordExporting, setWordExporting] = useState(false);
+  const [pdfExporting, setPdfExporting] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   if (!open) return null;
@@ -42,7 +52,86 @@ export const PdfTemplateViewer = ({
   const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
   const handleResetZoom = () => setScale(1);
 
-  const handleDownload = () => {
+  const handleDownloadAsPdf = async () => {
+    const previewContainer = contentRef.current?.querySelector('.pdf-preview-container');
+    if (!previewContainer) {
+      console.error('Preview container not found');
+      return;
+    }
+
+    setPdfExporting(true);
+
+    const measureHost = document.createElement('div');
+    measureHost.setAttribute('aria-hidden', 'true');
+    measureHost.style.position = 'fixed';
+    measureHost.style.left = '-100000px';
+    measureHost.style.top = '0';
+    measureHost.style.background = '#ffffff';
+    measureHost.style.padding = '0';
+    measureHost.style.margin = '0';
+    measureHost.style.zIndex = '-1';
+
+    const clone = previewContainer.cloneNode(true) as HTMLElement;
+    clone.style.transform = 'none';
+    clone.style.margin = '0';
+    clone.style.padding = '0';
+    measureHost.appendChild(clone);
+    document.body.appendChild(measureHost);
+
+    try {
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
+      const pageSelector = isLetter ? '.letter-page' : '.pdf-page';
+      const pageNodes = Array.from(clone.querySelectorAll<HTMLElement>(pageSelector));
+      if (pageNodes.length === 0) {
+        throw new Error('No preview pages were found for PDF export');
+      }
+
+      const pageDimensions = getPdfDimensions(pageSize, orientation);
+      const pdf = new jsPDF({
+        orientation,
+        unit: 'mm',
+        format: pageSize.toLowerCase() as 'a4' | 'a3',
+        compress: true,
+      });
+
+      for (let index = 0; index < pageNodes.length; index += 1) {
+        const pageNode = pageNodes[index];
+        const canvas = await html2canvas(pageNode, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          width: pageNode.scrollWidth,
+          height: pageNode.scrollHeight,
+          windowWidth: pageNode.scrollWidth,
+          windowHeight: pageNode.scrollHeight,
+        });
+
+        const imageData = canvas.toDataURL('image/png', 1);
+        if (index > 0) {
+          pdf.addPage(pageSize.toLowerCase() as 'a4' | 'a3', orientation);
+        }
+        pdf.addImage(imageData, 'PNG', 0, 0, pageDimensions.widthMm, pageDimensions.heightMm, undefined, 'FAST');
+      }
+
+      pdf.save(navigateWealthPdfSaveFileName(title));
+    } catch (error) {
+      console.error('[PdfTemplateViewer] PDF export failed:', error);
+    } finally {
+      document.body.removeChild(measureHost);
+      setPdfExporting(false);
+    }
+  };
+
+  const handlePrintDownload = () => {
     // Get the preview container content
     const previewContainer = contentRef.current?.querySelector('.pdf-preview-container');
     if (!previewContainer) {
@@ -303,12 +392,21 @@ export const PdfTemplateViewer = ({
                 </button>
               )}
 
-              <button 
-                onClick={handleDownload}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              <button
+                onClick={() => {
+                  void (renderPdfFromPreview ? handleDownloadAsPdf() : handlePrintDownload());
+                }}
+                disabled={pdfExporting}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Download className="w-4 h-4" />
-                Print / Save as PDF
+                {pdfExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {pdfExporting
+                  ? 'Generating PDF...'
+                  : primaryActionLabel || (renderPdfFromPreview ? 'Download PDF' : 'Print / Save as PDF')}
               </button>
             </div>
             
