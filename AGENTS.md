@@ -25,3 +25,4 @@ All standard commands are in `package.json`:
 - The Vite dev server opens a browser by default (`server.open: true` in `vite.config.ts`).
 - `tsconfig.json` is at `src/tsconfig.json` (not project root).
 - Path alias `@` maps to `./src` (configured in both `vite.config.ts` and `tsconfig.json`).
+- For user-visible UI changes, build-only verification is not enough. Run the browser inspection tool before sign-off: `npm run ui:inspect -- --path /your-route --output tmp/ui-inspect/check.png` (or pass `--url` for an already-running environment). Use `--click` and `--wait-for` when the UI state requires interaction, such as opening a modal or dropdown.
