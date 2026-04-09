@@ -11,7 +11,6 @@ import { LEGAL_DOCUMENTS_BY_SLUG, LEGAL_SECTION_LABELS } from '../../shared/lega
 import { LegalDocumentPdfDialog } from '../shared/LegalDocumentPdf';
 import {
   LEGAL_DOCUMENT_CONTENT_CLASS,
-  LEGAL_DOCUMENT_CONTENT_STYLE,
   normalizeLegalDocumentAnchors,
   sanitizeLegalDocumentHtml,
 } from '../../utils/legalHtml';
@@ -316,7 +315,6 @@ export function LegalDocumentPage() {
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f5f5f4_0%,#fafaf9_18%,#ffffff_100%)]">
-      <style dangerouslySetInnerHTML={{ __html: LEGAL_DOCUMENT_CONTENT_STYLE }} />
       <SEO
         title={seoTitle}
         description={seoDescription}
@@ -396,7 +394,7 @@ export function LegalDocumentPage() {
             </Card>
           </div>
 
-          <div className="hidden space-y-4 lg:sticky lg:top-24 lg:block lg:self-start">
+          <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
             <Card className="border-stone-200 bg-white/95 shadow-sm backdrop-blur">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base text-stone-900">
