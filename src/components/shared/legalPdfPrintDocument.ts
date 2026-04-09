@@ -13,8 +13,11 @@ export const DEFAULT_LEGAL_PDF_CONFIG: LegalPdfConfig = {
 export const LEGAL_PDF_CONTENT_CSS = `
   .legal-pdf-body {
     color: #111827;
-    font-size: 10px;
-    line-height: 1.68;
+    font-size: 9.5px;
+    line-height: 1.5;
+    hyphens: none;
+    word-break: normal;
+    overflow-wrap: break-word;
   }
 
   .legal-pdf-block {
@@ -33,46 +36,52 @@ export const LEGAL_PDF_CONTENT_CSS = `
   .legal-pdf-body h4 {
     color: #111827;
     page-break-after: avoid;
-    break-after: avoid;
+    break-after: avoid-page;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
   .legal-pdf-body h1 {
-    font-size: 15px !important;
+    font-size: 11.5px !important;
     font-weight: 800 !important;
-    margin: 0 0 3.6mm !important;
+    margin: 0 0 2.6mm !important;
+    padding: 0 0 1.2mm !important;
+    border-bottom: 1px solid #e5e7eb;
   }
 
   .legal-pdf-body h2 {
-    font-size: 13px !important;
+    font-size: 11px !important;
     font-weight: 800 !important;
-    margin: 7mm 0 2.4mm !important;
+    margin: 6mm 0 2mm !important;
     padding: 0 0 1.2mm !important;
     border-bottom: 1px solid #e5e7eb;
   }
 
   .legal-pdf-body h3 {
-    font-size: 11px !important;
+    font-size: 10px !important;
     font-weight: 700 !important;
-    margin: 5.2mm 0 2mm !important;
+    margin: 4mm 0 1.5mm !important;
   }
 
   .legal-pdf-body h4 {
-    font-size: 10.2px !important;
+    font-size: 9.5px !important;
     font-weight: 700 !important;
-    margin: 4mm 0 1.6mm !important;
+    margin: 3mm 0 1.2mm !important;
   }
 
   .legal-pdf-body p,
   .legal-pdf-body li,
   .legal-pdf-body blockquote {
-    font-size: 10px;
-    line-height: 1.68;
+    font-size: 9.5px;
+    line-height: 1.5;
     orphans: 3;
     widows: 3;
+    page-break-inside: auto;
+    break-inside: auto;
   }
 
   .legal-pdf-body p {
-    margin: 0 0 3mm;
+    margin: 0 0 2.6mm;
   }
 
   .legal-pdf-body p.legal-pdf-paragraph-fragment {
@@ -85,12 +94,14 @@ export const LEGAL_PDF_CONTENT_CSS = `
 
   .legal-pdf-body ul,
   .legal-pdf-body ol {
-    margin: 0 0 3.5mm;
-    padding-left: 5.2mm;
+    margin: 0 0 3mm;
+    padding-left: 4.8mm;
+    page-break-inside: auto;
+    break-inside: auto;
   }
 
   .legal-pdf-body li {
-    margin-bottom: 1.5mm;
+    margin-bottom: 1.2mm;
   }
 
   .legal-pdf-body table {
@@ -122,8 +133,8 @@ export const LEGAL_PDF_CONTENT_CSS = `
     overflow: hidden;
     border-radius: 4px;
     margin: 0 0 3.5mm;
-    page-break-inside: avoid;
-    break-inside: avoid;
+    page-break-inside: auto;
+    break-inside: auto;
   }
 
   .legal-pdf-body blockquote {
@@ -170,6 +181,10 @@ export const LEGAL_PDF_CONTENT_CSS = `
   .legal-pdf-body strong {
     color: #111827;
     font-weight: 700;
+  }
+
+  .legal-pdf-body > :first-child {
+    margin-top: 0 !important;
   }
 
   .legal-pdf-body em {
@@ -232,7 +247,7 @@ export function getNormalizedLegalPdfDocument(document: LegalPdfDocumentData) {
 export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
   const pdfConfig = document.pdfConfig || DEFAULT_LEGAL_PDF_CONFIG;
   const normalized = getNormalizedLegalPdfDocument(document);
-  const mastheadLabel = (document.sectionLabel || document.title || 'LEGAL DOCUMENT').toUpperCase();
+  const mastheadLabel = (document.title || document.sectionLabel || 'LEGAL DOCUMENT').toUpperCase();
   const issueDate = formatLongDate(document.updatedAt || document.effectiveDate);
   const mastheadMeta = 'Wealthfront (Pty) Ltd t/a Navigate Wealth | FSP 54606 | Email: info@navigatewealth.co';
   const footerText = 'Wealthfront (Pty) Ltd, trading as Navigate Wealth, is an Authorised Financial Services Provider - FSP 54606. Registration Number: 2024/071953/07. Located at Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178. For inquiries, please contact us at Tel: (012) 667 2505.';
@@ -240,40 +255,25 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
   const styles = `
     @page {
       size: ${pdfConfig.pageSize} ${pdfConfig.orientation};
-      margin: 18mm 16mm 23mm 16mm;
-
-      @top-left {
-        content: "${mastheadLabel.replace(/"/g, '\\"')}";
-        font-size: 8px;
-        font-weight: 700;
-        color: #1f2937;
-        vertical-align: bottom;
-      }
-
-      @top-right {
-        content: "${mastheadMeta.replace(/"/g, '\\"')}";
-        font-size: 7px;
-        color: #4b5563;
-        text-align: right;
-        vertical-align: bottom;
-      }
+      margin: 12.5mm 10mm 23mm 10mm;
 
       @bottom-left {
         content: "Page " counter(page) " of " counter(pages);
-        font-size: 7px;
-        font-weight: 600;
+        font-size: 8px;
+        font-weight: 700;
         color: #6b7280;
       }
 
       @bottom-center {
         content: "${footerText.replace(/"/g, '\\"')}";
-        font-size: 6.5px;
+        font-size: 8px;
+        line-height: 1.35;
         color: #6b7280;
       }
     }
 
     @page :first {
-      margin-top: 12mm;
+      margin: 5mm 10mm 23mm 10mm;
     }
 
     html,
@@ -285,10 +285,6 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    body {
-      counter-reset: page 0;
-    }
-
     ${LEGAL_PDF_CONTENT_CSS}
 
     .legal-paged-document {
@@ -296,7 +292,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     }
 
     .legal-paged-cover {
-      margin: 10mm 0 7mm;
+      margin: 0 0 6mm;
       page-break-after: avoid;
       break-after: avoid;
     }
@@ -304,73 +300,86 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     .legal-paged-top-masthead {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
+      height: 15mm;
       border-bottom: 1px solid #d1d5db;
-      padding-bottom: 4mm;
-      margin-bottom: 6mm;
+      margin-bottom: 5mm;
     }
 
     .legal-paged-brand {
       display: flex;
       flex-direction: column;
-      gap: 0.8mm;
+      gap: 2mm;
+      min-width: 65mm;
     }
 
     .legal-paged-brand-logo {
-      font-size: 9mm;
+      font-size: 20px;
       font-weight: 800;
       line-height: 1;
+      letter-spacing: -0.35px;
       color: #111827;
+      white-space: nowrap;
     }
 
     .legal-paged-brand-logo span {
-      color: #7c3aed;
+      color: #6d28d9;
     }
 
     .legal-paged-brand-subline {
-      font-size: 8px;
+      font-size: 10.5px;
       color: #6b7280;
     }
 
     .legal-paged-doc-head {
-      min-width: 64mm;
+      flex: 1;
       text-align: right;
     }
 
     .legal-paged-doc-title {
-      font-size: 16px;
-      line-height: 1.2;
+      font-size: 18px;
+      line-height: 1.15;
       font-weight: 800;
-      margin: 0 0 2.4mm;
+      margin: 0;
+      letter-spacing: -0.2px;
       color: #111827;
     }
 
     .legal-paged-doc-meta {
       display: inline-grid;
       grid-template-columns: auto auto;
-      gap: 1mm 4mm;
-      font-size: 8px;
+      gap: 0.8mm 6mm;
+      justify-content: end;
+      align-items: baseline;
+      margin-top: 2mm;
+      padding-top: 2mm;
+      border-top: 1px solid #e5e7eb;
+      font-size: 9.2px;
       color: #6b7280;
     }
 
     .legal-paged-doc-meta strong {
-      color: #374151;
+      color: #4b5563;
       font-weight: 600;
     }
 
     .legal-paged-divider {
       border: 0;
       border-top: 2px solid #6b7280;
-      margin: 0 0 6mm;
+      margin: 4mm 0 6mm;
     }
 
-    .legal-paged-body {
+  .legal-paged-body {
       width: 100%;
     }
 
     .legal-paged-body .legal-page-break {
       break-after: page;
       page-break-after: always;
+    }
+
+    .legal-paged-body > :last-child {
+      margin-bottom: 0 !important;
     }
 
     .legal-paged-preview-root {
@@ -390,13 +399,35 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
     }
 
+    .legal-paged-preview-root .pagedjs_page_content {
+      overflow: hidden;
+    }
+
+    .legal-paged-preview-root .pagedjs_area {
+      overflow: hidden;
+    }
+
     .legal-paged-preview-root .pagedjs_pagebox {
       box-shadow: none;
     }
 
-    .legal-paged-preview-root .pagedjs_margin-top,
     .legal-paged-preview-root .pagedjs_margin-bottom {
       color: #4b5563;
+    }
+
+    .legal-paged-preview-root .pagedjs_margin-bottom {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 3.5mm;
+    }
+
+    .legal-paged-preview-root .pagedjs_margin-bottom-left-corner-holder,
+    .legal-paged-preview-root .pagedjs_margin-bottom-center-holder,
+    .legal-paged-preview-root .pagedjs_margin-bottom-right-corner-holder,
+    .legal-paged-preview-root .pagedjs_margin-bottom-left,
+    .legal-paged-preview-root .pagedjs_margin-bottom-center,
+    .legal-paged-preview-root .pagedjs_margin-bottom-right {
+      font-size: inherit;
+      line-height: inherit;
     }
   `;
 

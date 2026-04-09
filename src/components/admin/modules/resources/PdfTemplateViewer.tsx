@@ -9,6 +9,7 @@ import {
   navigateWealthPdfSaveFileName,
 } from '../../../../utils/pdfPrintTitle';
 import { ZoomIn, ZoomOut, Maximize, X, Download, FileText, Loader2 } from 'lucide-react';
+import { toast } from 'sonner@2.0.3';
 
 interface PdfTemplateViewerProps {
   open: boolean;
@@ -52,6 +53,24 @@ export const PdfTemplateViewer = ({
   const [pdfExporting, setPdfExporting] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  const resolveExportPages = (container: ParentNode) => {
+    const selectors = [
+      pageSelector,
+      '.pagedjs_page',
+      '.pdf-page',
+      '.letter-page',
+    ].filter((value): value is string => Boolean(value));
+
+    for (const selector of selectors) {
+      const nodes = Array.from(container.querySelectorAll<HTMLElement>(selector));
+      if (nodes.length > 0) {
+        return nodes;
+      }
+    }
+
+    return [] as HTMLElement[];
+  };
+
   if (!open) return null;
 
   const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 2));
@@ -59,9 +78,15 @@ export const PdfTemplateViewer = ({
   const handleResetZoom = () => setScale(1);
 
   const handleDownloadAsPdf = async () => {
+    if (!pdfExportReady) {
+      toast.info(pdfPreparingLabel || 'Preparing PDF preview...');
+      return;
+    }
+
     const previewContainer = contentRef.current?.querySelector('.pdf-preview-container');
     if (!previewContainer) {
       console.error('Preview container not found');
+      toast.error('PDF preview is not ready yet. Please try again in a moment.');
       return;
     }
 
@@ -94,8 +119,7 @@ export const PdfTemplateViewer = ({
         await document.fonts.ready;
       }
 
-      const activePageSelector = pageSelector || (isLetter ? '.letter-page' : '.pdf-page');
-      const pageNodes = Array.from(clone.querySelectorAll<HTMLElement>(activePageSelector));
+      const pageNodes = resolveExportPages(clone);
       if (pageNodes.length === 0) {
         throw new Error('No preview pages were found for PDF export');
       }
@@ -131,6 +155,11 @@ export const PdfTemplateViewer = ({
       pdf.save(navigateWealthPdfSaveFileName(title));
     } catch (error) {
       console.error('[PdfTemplateViewer] PDF export failed:', error);
+      toast.error(
+        error instanceof Error
+          ? `PDF download failed: ${error.message}`
+          : 'PDF download failed. Please try again.',
+      );
     } finally {
       document.body.removeChild(measureHost);
       setPdfExporting(false);
