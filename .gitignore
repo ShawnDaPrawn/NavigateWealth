@@ -5,3 +5,6 @@ tmp
 supabase/.temp
 
 .vercel
+
+# Local / IDE tooling logs (Codex, Vite wrappers, etc.)
+.codex-*.log
