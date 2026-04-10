@@ -13,8 +13,8 @@ export const DEFAULT_LEGAL_PDF_CONFIG: LegalPdfConfig = {
 export const LEGAL_PDF_CONTENT_CSS = `
   .legal-pdf-body {
     color: #111827;
-    font-size: 9.5px;
-    line-height: 1.46;
+    font-size: 9.8px;
+    line-height: 1.5;
     hyphens: none;
     word-break: normal;
     overflow-wrap: break-word;
@@ -42,37 +42,37 @@ export const LEGAL_PDF_CONTENT_CSS = `
   }
 
   .legal-pdf-body h1 {
-    font-size: 11px !important;
+    font-size: 11.2px !important;
     font-weight: 800 !important;
-    margin: 0 0 2.4mm !important;
+    margin: 0 0 2.6mm !important;
     padding: 0 0 1.2mm !important;
     border-bottom: 1px solid #e5e7eb;
   }
 
   .legal-pdf-body h2 {
-    font-size: 10.5px !important;
+    font-size: 10.7px !important;
     font-weight: 800 !important;
-    margin: 5mm 0 1.8mm !important;
+    margin: 5.2mm 0 1.9mm !important;
     padding: 0 0 1.2mm !important;
     border-bottom: 1px solid #e5e7eb;
   }
 
   .legal-pdf-body h3 {
-    font-size: 9.7px !important;
+    font-size: 10px !important;
     font-weight: 700 !important;
-    margin: 3.4mm 0 1.3mm !important;
+    margin: 3.6mm 0 1.4mm !important;
   }
 
   .legal-pdf-body h4 {
-    font-size: 9.3px !important;
+    font-size: 9.5px !important;
     font-weight: 700 !important;
-    margin: 2.5mm 0 1.1mm !important;
+    margin: 2.6mm 0 1.1mm !important;
   }
 
   .legal-pdf-body p,
   .legal-pdf-body li,
   .legal-pdf-body blockquote {
-    font-size: 9.5px;
+    font-size: 9.8px;
     line-height: 1.5;
     orphans: 3;
     widows: 3;
@@ -81,7 +81,7 @@ export const LEGAL_PDF_CONTENT_CSS = `
   }
 
   .legal-pdf-body p {
-    margin: 0 0 2.2mm;
+    margin: 0 0 2.5mm;
   }
 
   .legal-pdf-body p.legal-pdf-paragraph-fragment {
@@ -89,19 +89,19 @@ export const LEGAL_PDF_CONTENT_CSS = `
   }
 
   .legal-pdf-body p.legal-pdf-paragraph-fragment.last-fragment {
-    margin: 0 0 2.4mm;
+    margin: 0 0 2.6mm;
   }
 
   .legal-pdf-body ul,
   .legal-pdf-body ol {
-    margin: 0 0 2.6mm;
-    padding-left: 4.8mm;
+    margin: 0 0 2.8mm;
+    padding-left: 5.2mm;
     page-break-inside: auto;
     break-inside: auto;
   }
 
   .legal-pdf-body li {
-    margin-bottom: 0.9mm;
+    margin-bottom: 1.1mm;
   }
 
   .legal-pdf-body table {
@@ -255,7 +255,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
   const styles = `
     @page {
       size: ${pdfConfig.pageSize} ${pdfConfig.orientation};
-      margin: 12.5mm 10mm 24.5mm 10mm;
+      margin: 12.5mm 10mm 25.5mm 10mm;
 
       @bottom-left {
         content: "Page " counter(page) " of " counter(pages);
@@ -273,7 +273,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     }
 
     @page :first {
-      margin: 5mm 10mm 24.5mm 10mm;
+      margin: 5mm 10mm 25.5mm 10mm;
     }
 
     html,
@@ -403,9 +403,9 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       margin: 4mm 0 6mm;
     }
 
-  .legal-paged-body {
+    .legal-paged-body {
       width: 100%;
-      padding-bottom: 2.4mm;
+      padding-bottom: 3mm;
       box-sizing: border-box;
     }
 
