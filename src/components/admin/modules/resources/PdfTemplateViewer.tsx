@@ -71,6 +71,32 @@ export const PdfTemplateViewer = ({
     return [] as HTMLElement[];
   };
 
+  const resolvePreviewContainer = () => {
+    const root = contentRef.current;
+    if (!root) return null;
+
+    const selectors = [
+      '[data-pdf-export-root="true"]',
+      '.pdf-preview-container',
+      '.legal-paged-preview-root',
+      '[data-legal-pdf-renderer="paged"]',
+      '.pdf-viewport',
+    ];
+
+    for (const selector of selectors) {
+      const match = root.querySelector<HTMLElement>(selector);
+      if (match) {
+        return match;
+      }
+    }
+
+    if (resolveExportPages(root).length > 0) {
+      return root;
+    }
+
+    return null;
+  };
+
   if (!open) return null;
 
   const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 2));
@@ -83,7 +109,7 @@ export const PdfTemplateViewer = ({
       return;
     }
 
-    const previewContainer = contentRef.current?.querySelector('.pdf-preview-container');
+    const previewContainer = resolvePreviewContainer();
     if (!previewContainer) {
       console.error('Preview container not found');
       toast.error('PDF preview is not ready yet. Please try again in a moment.');
@@ -91,23 +117,6 @@ export const PdfTemplateViewer = ({
     }
 
     setPdfExporting(true);
-
-    const measureHost = document.createElement('div');
-    measureHost.setAttribute('aria-hidden', 'true');
-    measureHost.style.position = 'fixed';
-    measureHost.style.left = '-100000px';
-    measureHost.style.top = '0';
-    measureHost.style.background = '#ffffff';
-    measureHost.style.padding = '0';
-    measureHost.style.margin = '0';
-    measureHost.style.zIndex = '-1';
-
-    const clone = previewContainer.cloneNode(true) as HTMLElement;
-    clone.style.transform = 'none';
-    clone.style.margin = '0';
-    clone.style.padding = '0';
-    measureHost.appendChild(clone);
-    document.body.appendChild(measureHost);
 
     try {
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
@@ -119,7 +128,7 @@ export const PdfTemplateViewer = ({
         await document.fonts.ready;
       }
 
-      const pageNodes = resolveExportPages(clone);
+      const pageNodes = resolveExportPages(previewContainer);
       if (pageNodes.length === 0) {
         throw new Error('No preview pages were found for PDF export');
       }
@@ -134,16 +143,46 @@ export const PdfTemplateViewer = ({
 
       for (let index = 0; index < pageNodes.length; index += 1) {
         const pageNode = pageNodes[index];
-        const canvas = await html2canvas(pageNode, {
-          backgroundColor: '#ffffff',
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          width: pageNode.scrollWidth,
-          height: pageNode.scrollHeight,
-          windowWidth: pageNode.scrollWidth,
-          windowHeight: pageNode.scrollHeight,
-        });
+        const pageHost = document.createElement('div');
+        pageHost.setAttribute('aria-hidden', 'true');
+        pageHost.style.position = 'fixed';
+        pageHost.style.left = '-100000px';
+        pageHost.style.top = '0';
+        pageHost.style.background = '#ffffff';
+        pageHost.style.padding = '0';
+        pageHost.style.margin = '0';
+        pageHost.style.zIndex = '-1';
+
+        const pageWrapper = document.createElement('div');
+        pageWrapper.className = (previewContainer as HTMLElement).className || '';
+        pageWrapper.style.transform = 'none';
+        pageWrapper.style.margin = '0';
+        pageWrapper.style.padding = '0';
+
+        const pageClone = pageNode.cloneNode(true) as HTMLElement;
+        pageClone.style.transform = 'none';
+        pageClone.style.margin = '0';
+        pageClone.style.boxShadow = 'none';
+        pageWrapper.appendChild(pageClone);
+        pageHost.appendChild(pageWrapper);
+        document.body.appendChild(pageHost);
+
+        let canvas;
+        try {
+          const rect = pageNode.getBoundingClientRect();
+          canvas = await html2canvas(pageClone, {
+            backgroundColor: '#ffffff',
+            scale: Math.min(window.devicePixelRatio || 1, 1.5),
+            useCORS: true,
+            logging: false,
+            width: Math.ceil(rect.width || pageNode.scrollWidth),
+            height: Math.ceil(rect.height || pageNode.scrollHeight),
+            windowWidth: Math.ceil(rect.width || pageNode.scrollWidth),
+            windowHeight: Math.ceil(rect.height || pageNode.scrollHeight),
+          });
+        } finally {
+          document.body.removeChild(pageHost);
+        }
 
         const imageData = canvas.toDataURL('image/png', 1);
         if (index > 0) {
@@ -152,7 +191,15 @@ export const PdfTemplateViewer = ({
         pdf.addImage(imageData, 'PNG', 0, 0, pageDimensions.widthMm, pageDimensions.heightMm, undefined, 'FAST');
       }
 
-      pdf.save(navigateWealthPdfSaveFileName(title));
+      const blob = pdf.output('blob');
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = navigateWealthPdfSaveFileName(title);
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (error) {
       console.error('[PdfTemplateViewer] PDF export failed:', error);
       toast.error(
@@ -161,14 +208,13 @@ export const PdfTemplateViewer = ({
           : 'PDF download failed. Please try again.',
       );
     } finally {
-      document.body.removeChild(measureHost);
       setPdfExporting(false);
     }
   };
 
   const handlePrintDownload = () => {
     // Get the preview container content
-    const previewContainer = contentRef.current?.querySelector('.pdf-preview-container');
+    const previewContainer = resolvePreviewContainer();
     if (!previewContainer) {
       console.error('Preview container not found');
       return;

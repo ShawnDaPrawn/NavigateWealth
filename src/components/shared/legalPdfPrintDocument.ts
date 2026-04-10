@@ -14,7 +14,7 @@ export const LEGAL_PDF_CONTENT_CSS = `
   .legal-pdf-body {
     color: #111827;
     font-size: 9.5px;
-    line-height: 1.5;
+    line-height: 1.46;
     hyphens: none;
     word-break: normal;
     overflow-wrap: break-word;
@@ -42,31 +42,31 @@ export const LEGAL_PDF_CONTENT_CSS = `
   }
 
   .legal-pdf-body h1 {
-    font-size: 11.5px !important;
+    font-size: 11px !important;
     font-weight: 800 !important;
-    margin: 0 0 2.6mm !important;
+    margin: 0 0 2.4mm !important;
     padding: 0 0 1.2mm !important;
     border-bottom: 1px solid #e5e7eb;
   }
 
   .legal-pdf-body h2 {
-    font-size: 11px !important;
+    font-size: 10.5px !important;
     font-weight: 800 !important;
-    margin: 6mm 0 2mm !important;
+    margin: 5mm 0 1.8mm !important;
     padding: 0 0 1.2mm !important;
     border-bottom: 1px solid #e5e7eb;
   }
 
   .legal-pdf-body h3 {
-    font-size: 10px !important;
+    font-size: 9.7px !important;
     font-weight: 700 !important;
-    margin: 4mm 0 1.5mm !important;
+    margin: 3.4mm 0 1.3mm !important;
   }
 
   .legal-pdf-body h4 {
-    font-size: 9.5px !important;
+    font-size: 9.3px !important;
     font-weight: 700 !important;
-    margin: 3mm 0 1.2mm !important;
+    margin: 2.5mm 0 1.1mm !important;
   }
 
   .legal-pdf-body p,
@@ -81,7 +81,7 @@ export const LEGAL_PDF_CONTENT_CSS = `
   }
 
   .legal-pdf-body p {
-    margin: 0 0 2.6mm;
+    margin: 0 0 2.2mm;
   }
 
   .legal-pdf-body p.legal-pdf-paragraph-fragment {
@@ -89,19 +89,19 @@ export const LEGAL_PDF_CONTENT_CSS = `
   }
 
   .legal-pdf-body p.legal-pdf-paragraph-fragment.last-fragment {
-    margin: 0 0 3mm;
+    margin: 0 0 2.4mm;
   }
 
   .legal-pdf-body ul,
   .legal-pdf-body ol {
-    margin: 0 0 3mm;
+    margin: 0 0 2.6mm;
     padding-left: 4.8mm;
     page-break-inside: auto;
     break-inside: auto;
   }
 
   .legal-pdf-body li {
-    margin-bottom: 1.2mm;
+    margin-bottom: 0.9mm;
   }
 
   .legal-pdf-body table {
@@ -255,7 +255,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
   const styles = `
     @page {
       size: ${pdfConfig.pageSize} ${pdfConfig.orientation};
-      margin: 12.5mm 10mm 23mm 10mm;
+      margin: 12.5mm 10mm 24.5mm 10mm;
 
       @bottom-left {
         content: "Page " counter(page) " of " counter(pages);
@@ -273,7 +273,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     }
 
     @page :first {
-      margin: 5mm 10mm 23mm 10mm;
+      margin: 5mm 10mm 24.5mm 10mm;
     }
 
     html,
@@ -299,11 +299,44 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
 
     .legal-paged-top-masthead {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
+      gap: 10mm;
       height: 15mm;
       border-bottom: 1px solid #d1d5db;
       margin-bottom: 5mm;
+    }
+
+    .legal-paged-masthead-left {
+      font-size: 9.2px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      color: #374151;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+
+    .legal-paged-masthead-right {
+      font-size: 9.2px;
+      color: #6b7280;
+      text-align: right;
+      line-height: 1.25;
+    }
+
+    .legal-paged-masthead-right strong {
+      color: #374151;
+      font-weight: 700;
+    }
+
+    .legal-paged-header {
+      margin-bottom: 6mm;
+    }
+
+    .legal-paged-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10mm;
     }
 
     .legal-paged-brand {
@@ -329,6 +362,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     .legal-paged-brand-subline {
       font-size: 10.5px;
       color: #6b7280;
+      line-height: 1.25;
     }
 
     .legal-paged-doc-head {
@@ -371,6 +405,8 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
 
   .legal-paged-body {
       width: 100%;
+      padding-bottom: 2.4mm;
+      box-sizing: border-box;
     }
 
     .legal-paged-body .legal-page-break {
@@ -383,7 +419,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     }
 
     .legal-paged-preview-root {
-      background: #eef2ff;
+      background: #f3f4f6;
       padding: 24px;
     }
 
@@ -396,6 +432,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
 
     .legal-paged-preview-root .pagedjs_page {
       background: #ffffff;
+      border: 1px solid rgba(229, 231, 235, 0.9);
       box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
     }
 
@@ -413,11 +450,14 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
 
     .legal-paged-preview-root .pagedjs_margin-bottom {
       color: #4b5563;
-    }
-
-    .legal-paged-preview-root .pagedjs_margin-bottom {
       border-top: 1px solid #e5e7eb;
       padding-top: 3.5mm;
+    }
+
+    .legal-paged-preview-root .pagedjs_margin-bottom-left,
+    .legal-paged-preview-root .pagedjs_margin-bottom-center,
+    .legal-paged-preview-root .pagedjs_margin-bottom-right {
+      padding-top: 0.5mm;
     }
 
     .legal-paged-preview-root .pagedjs_margin-bottom-left-corner-holder,
@@ -435,18 +475,27 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     <div class="legal-paged-document">
       <section class="legal-paged-cover">
         <div class="legal-paged-top-masthead">
-          <div class="legal-paged-brand">
-            <div class="legal-paged-brand-logo">Navigate <span>Wealth</span></div>
-            <div class="legal-paged-brand-subline">Independent Financial Advisory Services</div>
-          </div>
-          <div class="legal-paged-doc-head">
-            <h1 class="legal-paged-doc-title">${escapeHtml(document.title)}</h1>
-            <div class="legal-paged-doc-meta">
-              <strong>Issue date</strong>
-              <span>${escapeHtml(issueDate)}</span>
-            </div>
+          <div class="legal-paged-masthead-left">${escapeHtml(mastheadLabel)}</div>
+          <div class="legal-paged-masthead-right">
+            <strong>Wealthfront (Pty) Ltd</strong> t/a Navigate Wealth &nbsp;|&nbsp; <strong>FSP 54606</strong><br>
+            Email: info@navigatewealth.co
           </div>
         </div>
+        <header class="legal-paged-header">
+          <div class="legal-paged-header-row">
+            <div class="legal-paged-brand">
+              <div class="legal-paged-brand-logo">Navigate <span>Wealth</span></div>
+              <div class="legal-paged-brand-subline">Independent Financial Advisory Services</div>
+            </div>
+            <div class="legal-paged-doc-head">
+              <h1 class="legal-paged-doc-title">${escapeHtml(document.title)}</h1>
+              <div class="legal-paged-doc-meta">
+                <strong>Issue date</strong>
+                <span>${escapeHtml(issueDate)}</span>
+              </div>
+            </div>
+          </div>
+        </header>
         <hr class="legal-paged-divider" />
       </section>
 
