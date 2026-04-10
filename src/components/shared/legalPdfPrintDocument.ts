@@ -452,12 +452,37 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       color: #4b5563;
       border-top: 1px solid #e5e7eb;
       padding-top: 3.5mm;
+      display: flex;
+      align-items: flex-start;
+      gap: 5mm;
     }
 
     .legal-paged-preview-root .pagedjs_margin-bottom-left,
     .legal-paged-preview-root .pagedjs_margin-bottom-center,
     .legal-paged-preview-root .pagedjs_margin-bottom-right {
       padding-top: 0.5mm;
+    }
+
+    .legal-paged-preview-root .pagedjs_margin-bottom-left {
+      flex: 0 0 20mm;
+      width: 20mm;
+      min-width: 20mm;
+      text-align: left;
+      font-weight: 700;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+
+    .legal-paged-preview-root .pagedjs_margin-bottom-center {
+      flex: 1 1 auto;
+      text-align: left;
+      color: #6b7280;
+    }
+
+    .legal-paged-preview-root .pagedjs_margin-bottom-right,
+    .legal-paged-preview-root .pagedjs_margin-bottom-right-corner-holder,
+    .legal-paged-preview-root .pagedjs_margin-bottom-left-corner-holder {
+      display: none;
     }
 
     .legal-paged-preview-root .pagedjs_margin-bottom-left-corner-holder,
