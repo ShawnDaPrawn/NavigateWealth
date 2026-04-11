@@ -18,8 +18,7 @@ interface EnvConfig {
   VITE_SUPABASE_URL?: string;
   VITE_SUPABASE_ANON_KEY?: string;
   
-  // Optional/Feature Flags
-  VITE_ENABLE_ANALYTICS?: string;
+  // Optional environment metadata
   VITE_ENVIRONMENT?: string;
   DEV: boolean;
   PROD: boolean;
@@ -69,7 +68,6 @@ export function validateEnv(): EnvConfig {
     cachedEnv = {
       VITE_SUPABASE_URL: getEnvVar('VITE_SUPABASE_URL'),
       VITE_SUPABASE_ANON_KEY: getEnvVar('VITE_SUPABASE_ANON_KEY'),
-      VITE_ENABLE_ANALYTICS: getEnvVar('VITE_ENABLE_ANALYTICS'),
       VITE_ENVIRONMENT: getEnvVar('VITE_ENVIRONMENT') || getEnvVar('MODE'),
       DEV: env.DEV === true,
       PROD: env.PROD === true,
@@ -157,8 +155,6 @@ export function logEnvironmentInfo() {
     } else {
       console.log(`  Supabase URL: Using hardcoded value from /utils/supabase/info.tsx`);
     }
-    
-    console.log(`  Analytics Enabled: ${env.VITE_ENABLE_ANALYTICS || 'false'}`);
   } catch (error) {
     console.error('Failed to log environment info:', error);
   }
