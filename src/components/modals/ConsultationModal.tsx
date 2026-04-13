@@ -494,8 +494,11 @@ export function ConsultationModal({
                             color: rgb(156 163 175);
                           }
                           .nw-consultation-calendar td.nw-cal-past[data-disabled="true"] .rdp-day_button {
-                            text-decoration: line-through;
-                            text-decoration-color: rgb(209 213 219);
+                            text-decoration-line: line-through;
+                            text-decoration-thickness: max(3px, 0.22em);
+                            text-decoration-color: rgb(71 85 105);
+                            text-decoration-skip-ink: none;
+                            -webkit-text-decoration-color: rgb(71 85 105);
                           }
                           .nw-consultation-calendar td.rdp-day.rdp-selected:not([data-disabled="true"]) .rdp-day_button {
                             background-color: rgb(109 40 217);
