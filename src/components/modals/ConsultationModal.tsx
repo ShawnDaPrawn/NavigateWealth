@@ -39,9 +39,10 @@ import {
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
-import { format, startOfDay, addDays } from 'date-fns';
+import { format, startOfDay, addDays, isBefore } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { cn } from '../ui/utils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,17 @@ const getMinBookingDate = (): Date => {
 
   return date;
 };
+
+/** True if the calendar day cannot be booked (weekends or before earliest bookable date). */
+const isBookingDateDisabled = (date: Date): boolean => {
+  const d = startOfDay(date);
+  const minDate = getMinBookingDate();
+  return isBefore(d, minDate) || isWeekend(d);
+};
+
+/** Calendar day is strictly before “today” in SAST (for past styling). */
+const isPastCalendarDay = (date: Date): boolean =>
+  isBefore(startOfDay(date), startOfDay(getCurrentSASTTime()));
 
 /**
  * Generates 30-minute time slots within business hours (08:00 – 16:30 SAST).
@@ -460,49 +472,86 @@ export function ConsultationModal({
                   {/* ── Step 2: Date ── */}
                   {currentStep === 'date' && (
                     <div className="space-y-4 sm:space-y-5">
-                      <div className="text-center space-y-1">
+                      <div className="text-center space-y-1 px-1">
                         <h3 className="text-base sm:text-lg font-semibold text-gray-900">Select a date</h3>
                         <p className="text-sm text-gray-500">Choose your preferred consultation date</p>
                       </div>
 
-                      <div className="flex justify-center">
+                      <div className="w-full max-w-full -mx-2 px-0.5 sm:mx-0 sm:px-0">
+                        <style>{`
+                          .nw-consultation-calendar.rdp-root { width: 100%; max-width: 100%; }
+                          .nw-consultation-calendar .rdp-month { width: 100%; }
+                          .nw-consultation-calendar table.rdp-month_grid { width: 100%; table-layout: fixed; }
+                          .nw-consultation-calendar td.rdp-day[data-disabled="true"] .rdp-day_button {
+                            background-color: rgb(243 244 246);
+                            color: rgb(156 163 175);
+                            cursor: not-allowed;
+                            opacity: 1;
+                            font-weight: 400;
+                          }
+                          .nw-consultation-calendar td.rdp-day[data-disabled="true"] .rdp-day_button:hover {
+                            background-color: rgb(243 244 246);
+                            color: rgb(156 163 175);
+                          }
+                          .nw-consultation-calendar td.nw-cal-past[data-disabled="true"] .rdp-day_button {
+                            text-decoration: line-through;
+                            text-decoration-color: rgb(209 213 219);
+                          }
+                          .nw-consultation-calendar td.rdp-day.rdp-selected:not([data-disabled="true"]) .rdp-day_button {
+                            background-color: rgb(109 40 217);
+                            color: white;
+                          }
+                          .nw-consultation-calendar td.rdp-day.rdp-selected:not([data-disabled="true"]) .rdp-day_button:hover {
+                            background-color: rgb(91 33 182);
+                            color: white;
+                          }
+                        `}</style>
                         <Calendar
                           mode="single"
                           selected={selectedDate}
                           onSelect={(date) => {
                             setSelectedDate(date);
-                            // Reset time when date changes
                             setSelectedTime('');
                           }}
-                          disabled={(date) => {
-                            const minDate = getMinBookingDate();
-                            return date < minDate || isWeekend(date);
-                          }}
-                          className="rounded-xl border shadow-sm"
+                          disabled={isBookingDateDisabled}
+                          modifiers={{ past: isPastCalendarDay }}
+                          modifiersClassNames={{ past: 'nw-cal-past' }}
+                          className={cn(
+                            'nw-consultation-calendar w-full max-w-full rounded-xl border border-gray-200 bg-white p-2 shadow-sm sm:p-3'
+                          )}
                           classNames={{
-                            months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
-                            month: 'space-y-4',
-                            caption: 'flex justify-center pt-1 relative items-center',
-                            caption_label: 'text-sm font-medium',
-                            nav: 'space-x-1 flex items-center',
-                            nav_button: 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100',
-                            nav_button_previous: 'absolute left-1',
-                            nav_button_next: 'absolute right-1',
-                            table: 'w-full border-collapse space-y-1',
-                            head_row: 'flex',
-                            head_cell: 'text-gray-500 rounded-md w-9 text-xs',
-                            row: 'flex w-full mt-2',
-                            cell: 'text-center text-sm p-0 relative [&:has([aria-selected])]:bg-primary/10 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
-                            day: 'h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-gray-100 rounded-md transition-colors',
-                            day_selected: 'bg-primary text-white hover:bg-primary hover:text-white focus:bg-primary focus:text-white',
-                            day_today: 'bg-gray-100 text-gray-900',
-                            day_outside: 'text-gray-400 opacity-50',
-                            day_disabled: 'text-gray-400 opacity-50 line-through',
-                            day_range_middle: 'aria-selected:bg-gray-100 aria-selected:text-gray-900',
-                            day_hidden: 'invisible',
+                            root: 'w-full max-w-full',
+                            months: 'w-full flex flex-col gap-4 sm:flex-row sm:gap-4',
+                            month: 'w-full space-y-3',
+                            month_caption: 'relative mb-1 flex h-10 items-center justify-center px-11',
+                            caption_label: 'text-sm font-semibold text-gray-900',
+                            nav: 'absolute inset-x-0 top-0 flex w-full items-center justify-between px-0.5',
+                            button_previous:
+                              'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50',
+                            button_next:
+                              'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50',
+                            month_grid: 'w-full border-collapse',
+                            weekdays: 'flex w-full',
+                            weekday:
+                              'flex h-9 flex-1 items-center justify-center p-0 text-[0.65rem] font-medium uppercase tracking-wide text-gray-400 sm:text-xs',
+                            weeks: 'w-full',
+                            week: 'mt-1.5 flex w-full gap-0.5 sm:mt-2 sm:gap-1',
+                            day: 'relative flex min-h-[2.75rem] flex-1 items-center justify-center p-0 text-center',
+                            day_button: cn(
+                              'rdp-day_button inline-flex h-11 min-h-[2.75rem] w-full max-w-[3rem] sm:max-w-[3.25rem]',
+                              'items-center justify-center rounded-lg text-sm font-medium text-gray-900',
+                              'hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40'
+                            ),
+                            outside: 'text-gray-400 opacity-60',
+                            today: 'font-semibold [&_.rdp-day_button]:ring-1 [&_.rdp-day_button]:ring-primary/35',
+                            disabled: 'nw-day-disabled',
                           }}
                         />
                       </div>
+
+                      <p className="text-center text-xs text-gray-400 px-1">
+                        Unavailable dates are greyed; days before today also show a strikethrough.
+                      </p>
 
                       {selectedDate && (
                         <div className="bg-primary/5 border border-primary/15 rounded-lg p-3 text-center">
