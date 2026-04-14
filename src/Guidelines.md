@@ -98,6 +98,14 @@ Every module must be split across the three layers:
 **3. Backend Layer (`/supabase/functions/server/`)**
 - `<name>-service.ts`: Data access, KV operations, logging. Uses `@shared` validation.
 
+5.1 Code filenames, storage, and repository organisation
+
+These rules align with the detailed **§4.4** in `src/guidelines/Guidelines.md`. Summary:
+
+- **Names**: React components **PascalCase `.tsx`**; hooks **`use` + camelCase** under `hooks/`; module files **`api.ts`**, **`types.ts`**, **`constants.ts`**, **`utils.ts`**, **`index.tsx`**; admin module folders **kebab-case**. Server files **`{domain}-routes.ts`**, **`{domain}-service.ts`**, **`{domain}-validation.ts`** (see server module convention above).
+- **Storage**: KV for structured data (see KV rules); **Supabase Storage** for files; document bucket/path conventions in the owning module when adding new storage surfaces.
+- **Layout**: **`src/`** for app code, **`src/shared/`** for shared pure code, **`public/`** for static assets, **`scripts/`** for build tooling; root config files remain at repository root. Do not commit ignored local logs or generated clutter listed in **`.gitignore`**.
+
 6. File Responsibility by Layer
 6.1 API Layer (Data and Integration Boundary)
 The API layer is the only layer allowed to interact with:

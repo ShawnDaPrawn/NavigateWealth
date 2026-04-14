@@ -44,6 +44,7 @@ Consistent spacing, typography, and layout patterns
 Accessibility standards (WCAG 2.1 AA minimum)
 KV key naming conventions
 Backend route, service, and validation file conventions
+Filename and repository layout conventions (§4.4)
 Tier 3 — Guidelines (Review and Justification) Violations may be acceptable with documented justification.
 
 Component splitting heuristics
@@ -141,6 +142,38 @@ Each module must have exactly one barrel file (index.tsx for frontend, default e
 Never create both types.ts and types/index.ts in the same module — this causes resolution ambiguity
 If a types file grows large enough to warrant splitting, use a single types/index.ts that re-exports from sub-files
 Named exports are preferred over default exports for discoverability (except route modules which use export default app)
+
+4.4 Code filenames, storage, and repository organisation
+
+These rules complement §4.1–4.3. They do not replace module boundary or KV rules elsewhere.
+
+**Filenames — frontend (`src/`)**
+
+- React components: **PascalCase** and **`.tsx`** (e.g. `ClientList.tsx`, `ModuleFilters.tsx`).
+- Hooks: **`use` + camelCase**, **`.ts`**, colocated under `hooks/` (e.g. `useClientList.ts`).
+- Module scaffolding files: fixed names **`api.ts`**, **`types.ts`**, **`constants.ts`**, **`utils.ts`**, **`index.tsx`** as in §4.1 — **camelCase** filenames for these roles.
+- Admin feature directories under `components/admin/modules/`: **kebab-case** folder names (e.g. `client-management/`, `product-management/`).
+
+**Filenames — server (`supabase/functions/server/`)**
+
+- Keep the established pattern: **`{domain}-routes.ts`**, **`{domain}-service.ts`**, **`{domain}-validation.ts`**, optional **`{domain}-types.ts`** — hyphenated domain slug; suffix denotes responsibility (see §4.2).
+- Mount registration stays in the existing **`mount-*.ts`** files; do not invent parallel entry trees.
+
+**Storage boundaries**
+
+- **KV**: structured JSON values and key patterns per §5.4; never large binaries in KV.
+- **Supabase Storage**: files and blobs (PDFs, images, uploads). Bucket names, path prefixes, and lifecycle rules are owned by the relevant **`-service.ts`** / module **README** — document new buckets or path schemes there in the same change.
+- **Browser**: `localStorage` / `sessionStorage` only for non-sensitive UX state; never secrets, tokens, or durable PII.
+
+**Repository layout**
+
+- **`src/`**: application source; import alias **`@/`** → `src/` (see project `tsconfig` / Vite config).
+- **`src/shared/`**: shared types, Zod schemas, pure utilities; sync to edge per existing bridge process — not duplicated ad hoc under `server/`.
+- **`public/`**: static assets served as-is (brand assets, built **`robots.txt`** / **`sitemap.xml`** from `scripts/generate-seo-files.mjs` where applicable).
+- **`scripts/`**: build and maintenance automation only; not imported by runtime bundles.
+- **Repo root**: **`package.json`**, **`vite.config.ts`**, **`tsconfig.json`**, **`vercel.json`** stay at root unless a tooling migration explicitly moves them.
+- **Ignored local artefacts** (e.g. per **`.gitignore`** such as **`.codex-*.log`**): must not be committed; they are not part of the product surface.
+
 File Responsibility by Layer
 
 5.1 API Layer (Data and Integration Boundary)
@@ -869,6 +902,7 @@ Section	Change
 §3.2	New. Three-tier server architecture
 §4.2	New. Backend module structure (-routes, -service, -validation)
 §4.3	New. Barrel export conventions (single entry point, no dual-file barrels)
+§4.4	New. Code filenames, storage, and repository organisation (naming, KV vs Storage, repo layout, ignored artefacts)
 §5.1	Expanded logging: console-override.ts, createModuleLogger, stderr convention
 §5.3	Added API endpoint paths and status indicator config pattern with example
 §5.4	New. KV store conventions: key naming, multi-entry consistency with examples
