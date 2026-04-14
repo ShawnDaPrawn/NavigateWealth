@@ -164,6 +164,7 @@ interface IntegrationSyncRun {
 
 type PortalJobStatus = 'queued' | 'running' | 'waiting_for_otp' | 'discovering' | 'discovery_ready' | 'extracting' | 'dry_run_ready' | 'staging' | 'staged' | 'failed' | 'cancelled';
 type PortalJobRunMode = 'discover' | 'dry-run' | 'run';
+type PortalAutomationHost = 'github_actions' | 'hosted_worker' | 'manual';
 
 interface PortalCredentialProfile {
   id: string;
@@ -254,9 +255,13 @@ interface PortalSyncJob {
   categoryId: string;
   status: PortalJobStatus;
   runMode?: PortalJobRunMode;
+  automationHost?: PortalAutomationHost;
   flowId: string;
   credentialProfileId: string;
   workerId?: string;
+  actionsRunId?: number;
+  actionsRunUrl?: string;
+  actionsDispatchError?: string;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;
@@ -376,6 +381,66 @@ function requirePortalWorker(c: { json: (body: unknown, status?: number) => Resp
 
 function normaliseRunMode(value: unknown): PortalJobRunMode {
   return value === 'dry-run' || value === 'run' ? value : 'discover';
+}
+
+function getPortalGitHubActionsConfig() {
+  const token = String(Deno.env.get('NW_GITHUB_ACTIONS_TOKEN') || Deno.env.get('GITHUB_ACTIONS_DISPATCH_TOKEN') || '').trim();
+  const repo = String(Deno.env.get('NW_GITHUB_ACTIONS_REPO') || 'ShawnDaPrawn/NavigateWealth').trim();
+  const workflowId = String(Deno.env.get('NW_GITHUB_ACTIONS_WORKFLOW_ID') || 'provider-portal-worker.yml').trim();
+  const ref = String(Deno.env.get('NW_GITHUB_ACTIONS_REF') || 'main').trim();
+  const apiBase = String(Deno.env.get('NW_GITHUB_ACTIONS_API_BASE') || 'https://api.github.com').replace(/\/$/, '');
+  return { token, repo, workflowId, ref, apiBase };
+}
+
+async function dispatchPortalGitHubAction(job: PortalSyncJob): Promise<Partial<PortalSyncJob>> {
+  const { token, repo, workflowId, ref, apiBase } = getPortalGitHubActionsConfig();
+  if (!token || !repo || !workflowId || !ref) {
+    return {
+      automationHost: 'manual',
+      actionsDispatchError: 'GitHub Actions dispatch is not configured. Set NW_GITHUB_ACTIONS_TOKEN on the Supabase Edge Function.',
+      message: 'Portal job queued, but GitHub Actions dispatch is not configured yet.',
+    };
+  }
+
+  const response = await fetch(`${apiBase}/repos/${repo}/actions/workflows/${encodeURIComponent(workflowId)}/dispatches`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'X-GitHub-Api-Version': '2026-03-10',
+    },
+    body: JSON.stringify({
+      ref,
+      return_run_details: true,
+      inputs: {
+        job_id: job.id,
+        run_mode: normaliseRunMode(job.runMode),
+        api_base: 'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/integrations',
+      },
+    }),
+  });
+
+  const data = await response.json().catch(() => ({})) as Record<string, unknown>;
+  if (!response.ok) {
+    const message = typeof data.message === 'string' ? data.message : `GitHub dispatch failed with HTTP ${response.status}`;
+    return {
+      automationHost: 'manual',
+      actionsDispatchError: message.slice(0, 500),
+      message: `Portal job queued, but GitHub Actions did not start: ${message}`.slice(0, 500),
+    };
+  }
+
+  return {
+    automationHost: 'github_actions',
+    workerId: 'github-actions',
+    actionsRunId: typeof data.workflow_run_id === 'number' ? data.workflow_run_id : undefined,
+    actionsRunUrl: typeof data.html_url === 'string'
+      ? data.html_url
+      : `https://github.com/${repo}/actions/workflows/${workflowId}`,
+    actionsDispatchError: undefined,
+    message: 'Portal job queued. GitHub Actions is starting the Playwright worker.',
+  };
 }
 
 function normaliseFlowSteps(value: unknown): PortalFlowStep[] {
@@ -1240,18 +1305,32 @@ app.post("/portal-jobs", requireAuth, async (c) => {
       categoryId,
       status: 'queued',
       runMode,
+      automationHost: 'github_actions',
       flowId: flow.id,
       credentialProfileId,
       createdAt: now,
       updatedAt: now,
       currentStep: 'queued',
-      message: 'Portal sync job queued for the hosted Playwright worker.',
+      message: 'Portal sync job queued. Starting GitHub Actions worker.',
     };
 
     await kv.set(`portal-job:${job.id}`, job);
     await kv.set(`portal-job:latest:${providerId}:${categoryId}`, { jobId: job.id, updatedAt: now });
 
-    return c.json({ success: true, job, flow: sanitisePortalFlow(flow) });
+    const dispatchPatch = await dispatchPortalGitHubAction(job).catch((error) => ({
+      automationHost: 'manual' as PortalAutomationHost,
+      actionsDispatchError: getErrMsg(error).slice(0, 500),
+      message: `Portal job queued, but GitHub Actions did not start: ${getErrMsg(error)}`.slice(0, 500),
+    }));
+    const finalJob: PortalSyncJob = {
+      ...job,
+      ...dispatchPatch,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await kv.set(`portal-job:${job.id}`, finalJob);
+
+    return c.json({ success: true, job: finalJob, flow: sanitisePortalFlow(flow) });
   } catch (e) {
     log.error("Portal job create error:", e);
     return c.json({ error: `Failed to create portal job: ${getErrMsg(e)}` }, 500);

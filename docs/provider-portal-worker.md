@@ -1,10 +1,40 @@
 # Provider Portal Worker
 
-Navigate Wealth stores provider portal flow configuration and credentials in Supabase. The React admin app queues portal jobs; a separate Node Playwright worker claims those jobs and runs the browser automation.
+Navigate Wealth stores provider portal flow configuration and credentials in Supabase. The React admin app queues portal jobs; GitHub Actions starts a one-shot Playwright worker for each job.
 
 ## Why a separate worker exists
 
 Supabase Edge Functions handle the job API and storage. Playwright needs a Node process with browser binaries, so it should run as a hosted worker on Render, Railway, Fly.io, a VPS, or any container host that can keep a long-running process alive.
+
+The lowest-friction live option is GitHub Actions:
+
+1. The admin clicks **Create Portal Job**.
+2. Supabase calls GitHub's workflow dispatch API.
+3. GitHub starts `.github/workflows/provider-portal-worker.yml`.
+4. The workflow runs `scripts/provider-portal-worker.mjs` with the job id and worker secret.
+5. The worker updates Supabase as it logs in, waits for OTP, discovers selectors, performs dry-runs, or stages rows.
+
+## Required Supabase Edge Function secrets
+
+Set these on the Supabase Edge Function:
+
+```bash
+NW_GITHUB_ACTIONS_TOKEN=<fine-grained GitHub token with Actions: write on ShawnDaPrawn/NavigateWealth>
+NW_GITHUB_ACTIONS_REPO=ShawnDaPrawn/NavigateWealth
+NW_GITHUB_ACTIONS_WORKFLOW_ID=provider-portal-worker.yml
+NW_GITHUB_ACTIONS_REF=main
+NW_PORTAL_WORKER_SECRET=<shared random secret also stored in GitHub Actions secrets>
+```
+
+`NW_GITHUB_ACTIONS_TOKEN` is only used by Supabase to dispatch the workflow. It is never sent to the React frontend.
+
+## Required GitHub Actions secret
+
+Set this in the GitHub repository under **Settings -> Secrets and variables -> Actions**:
+
+```bash
+NW_PORTAL_WORKER_SECRET=<same shared random secret configured on Supabase>
+```
 
 ## Required hosted worker environment variables
 

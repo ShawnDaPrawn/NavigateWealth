@@ -166,7 +166,7 @@ export function PortalAutomationTab({
                 Portal Automation
               </CardTitle>
               <CardDescription className="mt-2">
-                Run a Playwright worker for {provider.name}, pause for SMS OTP, then stage extracted rows for policy review.
+                Launch a GitHub Actions Playwright worker for {provider.name}, pause for SMS OTP, then stage extracted rows for policy review.
               </CardDescription>
             </div>
             {job && (
@@ -188,7 +188,7 @@ export function PortalAutomationTab({
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Live worker mode</AlertTitle>
                 <AlertDescription>
-                  Provider credentials are saved server-side in Supabase and never returned to the browser. A hosted Playwright worker can claim queued jobs and continue after an admin enters the SMS OTP here.
+                  Provider credentials are saved server-side in Supabase and never returned to the browser. GitHub Actions starts the Playwright worker when you create a job and continues after an admin enters the SMS OTP here.
                 </AlertDescription>
               </Alert>
 
@@ -364,7 +364,7 @@ export function PortalAutomationTab({
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Current Job</CardTitle>
-            <CardDescription>The hosted Playwright worker polls for queued jobs and updates this status automatically.</CardDescription>
+            <CardDescription>GitHub Actions runs the Playwright worker and updates this status automatically.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -384,7 +384,16 @@ export function PortalAutomationTab({
 
             <div className="rounded-lg border bg-gray-50 p-4 text-sm text-gray-700">
               <p><span className="font-medium text-gray-900">Run mode:</span> {(job.runMode || 'discover').replace('-', ' ')}</p>
-              <p><span className="font-medium text-gray-900">Worker:</span> {job.workerId || 'Waiting for hosted worker'}</p>
+              <p><span className="font-medium text-gray-900">Worker:</span> {job.workerId || 'Waiting for GitHub Actions'}</p>
+              {job.actionsRunUrl && (
+                <p>
+                  <span className="font-medium text-gray-900">GitHub run:</span>{' '}
+                  <a className="text-purple-700 hover:underline" href={job.actionsRunUrl} target="_blank" rel="noreferrer">
+                    Open workflow
+                  </a>
+                </p>
+              )}
+              {job.actionsDispatchError && <p className="text-red-700">{job.actionsDispatchError}</p>}
             </div>
 
             <p className="text-sm text-gray-600">{job.message || 'Waiting for worker status.'}</p>

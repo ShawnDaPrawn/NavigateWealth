@@ -233,6 +233,7 @@ export interface IntegrationSyncRun {
 
 export type PortalJobStatus = 'queued' | 'running' | 'waiting_for_otp' | 'discovering' | 'discovery_ready' | 'extracting' | 'dry_run_ready' | 'staging' | 'staged' | 'failed' | 'cancelled';
 export type PortalJobRunMode = 'discover' | 'dry-run' | 'run';
+export type PortalAutomationHost = 'github_actions' | 'hosted_worker' | 'manual';
 
 export interface PortalCredentialProfile {
   id: string;
@@ -314,9 +315,13 @@ export interface PortalSyncJob {
   categoryId: string;
   status: PortalJobStatus;
   runMode?: PortalJobRunMode;
+  automationHost?: PortalAutomationHost;
   flowId: string;
   credentialProfileId: string;
   workerId?: string;
+  actionsRunId?: number;
+  actionsRunUrl?: string;
+  actionsDispatchError?: string;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;

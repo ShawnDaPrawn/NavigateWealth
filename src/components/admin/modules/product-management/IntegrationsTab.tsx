@@ -252,7 +252,11 @@ export function IntegrationsTab() {
     },
     onSuccess: ({ job }) => {
         setPortalJob(job);
-        toast.success("Portal job queued for the hosted Playwright worker.");
+        if (job.actionsDispatchError) {
+            toast.warning(job.actionsDispatchError);
+        } else {
+            toast.success("Portal job queued. GitHub Actions is starting the Playwright worker.");
+        }
         queryClient.invalidateQueries({ queryKey: integrationsKeys.portalJob(job.id) });
         queryClient.invalidateQueries({ queryKey: integrationsKeys.latestPortalJob(selectedProviderId, selectedCategoryId) });
     },

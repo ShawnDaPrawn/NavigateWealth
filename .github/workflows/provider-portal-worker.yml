@@ -1,0 +1,72 @@
+name: Provider Portal Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: Navigate Wealth portal job id
+        required: true
+        type: string
+      run_mode:
+        description: Worker mode
+        required: true
+        default: discover
+        type: choice
+        options:
+          - discover
+          - dry-run
+          - run
+      api_base:
+        description: Navigate Wealth integrations API base
+        required: true
+        default: https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/integrations
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: provider-portal-${{ inputs.job_id }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: Run Playwright portal job
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.59.1-noble
+    env:
+      NW_API_BASE: ${{ inputs.api_base }}
+      NW_PORTAL_WORKER_SECRET: ${{ secrets.NW_PORTAL_WORKER_SECRET }}
+      NW_PORTAL_JOB_ID: ${{ inputs.job_id }}
+      NW_PORTAL_MODE: ${{ inputs.run_mode }}
+      NW_PORTAL_WORKER_ID: github-actions-${{ github.run_id }}
+      NW_PLAYWRIGHT_HEADED: "0"
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --prefer-offline
+
+      - name: Check worker secret
+        run: |
+          if [ -z "$NW_PORTAL_WORKER_SECRET" ]; then
+            echo "::error::NW_PORTAL_WORKER_SECRET is not configured in GitHub Actions secrets."
+            exit 1
+          fi
+
+      - name: Check worker syntax
+        run: node --check scripts/provider-portal-worker.mjs
+
+      - name: Run provider portal worker
+        run: npm run provider:sync -- --job-id "$NW_PORTAL_JOB_ID" --mode "$NW_PORTAL_MODE"
