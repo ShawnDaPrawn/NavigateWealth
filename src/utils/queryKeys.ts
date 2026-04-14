@@ -190,6 +190,14 @@ export const integrationsKeys = {
     [...integrationsKeys.all, 'history', providerId, categoryId] as const,
   config: (providerId: string | null, categoryId: string | null) =>
     [...integrationsKeys.all, 'config', providerId, categoryId] as const,
+  portalFlow: (providerId: string | null) =>
+    [...integrationsKeys.all, 'portal-flow', providerId] as const,
+  portalJob: (jobId: string | null) =>
+    [...integrationsKeys.all, 'portal-job', jobId] as const,
+  latestPortalJob: (providerId: string | null, categoryId: string | null) =>
+    [...integrationsKeys.all, 'portal-job-latest', providerId, categoryId] as const,
+  portalDiscoveryReport: (jobId: string | null) =>
+    [...integrationsKeys.all, 'portal-discovery-report', jobId] as const,
 } as const;
 
 // ============================================================================

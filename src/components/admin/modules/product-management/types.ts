@@ -158,16 +158,186 @@ export interface IntegrationStats {
 }
 
 export interface IntegrationConfig {
+  providerId?: string;
+  categoryId?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  fieldMapping: Record<string, string>;
+  settings: IntegrationMappingConfig;
+}
+
+export interface IntegrationMappingConfig {
+  autoMap: boolean;
+  ignoreUnmatched: boolean;
+  strictMode: boolean;
+  autoPublish?: boolean;
+}
+
+export interface PreviewData {
+  headers: string[];
+  rows: Record<string, unknown>[];
+  validationErrors?: string[];
+}
+
+export interface IntegrationSyncDiff {
+  fieldId: string;
+  fieldName: string;
+  oldValue: unknown;
+  newValue: unknown;
+}
+
+export interface IntegrationSyncRow {
+  id: string;
+  rowNumber: number;
+  rawData: Record<string, unknown>;
+  mappedData: Record<string, unknown>;
+  policyNumber: string;
+  normalizedPolicyNumber: string;
+  matchStatus: 'matched' | 'unmatched' | 'duplicate' | 'invalid';
+  publishStatus: 'pending' | 'auto_eligible' | 'held' | 'published' | 'skipped' | 'failed';
+  autoPublishEligible: boolean;
+  validationErrors: string[];
+  warnings: string[];
+  diffs: IntegrationSyncDiff[];
+  clientId?: string;
+  policyId?: string;
+  providerName?: string;
+}
+
+export interface IntegrationSyncRun {
+  id: string;
+  providerId: string;
+  providerName: string;
+  categoryId: string;
+  fileName: string;
+  source: 'spreadsheet' | 'portal';
+  status: 'staged' | 'published' | 'partially_published' | 'failed';
+  createdAt: string;
+  updatedAt: string;
+  mappingVersion: string;
+  autoPublish: boolean;
+  summary: {
+    totalRows: number;
+    matchedRows: number;
+    unmatchedRows: number;
+    duplicateRows: number;
+    invalidRows: number;
+    changedRows: number;
+    noChangeRows: number;
+    autoEligibleRows: number;
+    publishedRows: number;
+    heldRows: number;
+  };
+  rows: IntegrationSyncRow[];
+}
+
+export type PortalJobStatus = 'queued' | 'running' | 'waiting_for_otp' | 'discovering' | 'discovery_ready' | 'extracting' | 'dry_run_ready' | 'staging' | 'staged' | 'failed' | 'cancelled';
+
+export interface PortalCredentialProfile {
+  id: string;
+  label: string;
+  source: 'environment' | 'supabase_vault';
+  usernameEnvVar?: string;
+  passwordEnvVar?: string;
+  usernameSecretName?: string;
+  passwordSecretName?: string;
+}
+
+export interface PortalFlowField {
+  sourceHeader: string;
+  selector: string;
+  attribute?: 'text' | 'value' | 'href' | string;
+  required?: boolean;
+  transform?: 'trim' | 'number' | 'date' | string;
+}
+
+export interface PortalProviderFlow {
+  id: string;
+  providerId: string;
+  name: string;
+  loginUrl: string;
+  credentialProfiles: PortalCredentialProfile[];
+  login: {
+    usernameSelector: string;
+    passwordSelector: string;
+    submitSelector: string;
+  };
+  otp: {
+    mode: 'manual_sms';
+    detectionSelectors: string[];
+    inputSelector: string;
+    submitSelector: string;
+    timeoutMs: number;
+    instructions: string;
+  };
+  navigation: {
+    postLoginUrl?: string;
+    clientListSelector?: string;
+    clientRowSelector?: string;
+    nextPageSelector?: string;
+  };
+  extraction: {
+    policyRowSelector?: string;
+    fields: PortalFlowField[];
+  };
+  notes: string[];
+  needsDiscovery?: boolean;
+  updatedAt: string;
+}
+
+export interface PortalSyncJob {
+  id: string;
+  providerId: string;
+  providerName: string;
+  categoryId: string;
+  status: PortalJobStatus;
+  flowId: string;
+  credentialProfileId: string;
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  currentStep?: string;
+  message?: string;
+  extractedRows?: number;
+  stagedRunId?: string;
+  discoveryReportId?: string;
+  error?: string;
+}
+
+export interface PortalDiscoveryReport {
+  id: string;
+  jobId: string;
   providerId: string;
   categoryId: string;
-  updatedAt: string;
-  updatedBy: string;
-  fieldMapping: Record<string, string>;
-  settings: {
-    autoMap: boolean;
-    ignoreUnmatched: boolean;
-    strictMode: boolean;
+  createdAt: string;
+  mode: 'discover' | 'dry-run';
+  urlHost: string;
+  title?: string;
+  summary: {
+    inputCount: number;
+    buttonCount: number;
+    linkCount: number;
+    tableCount: number;
+    candidatePolicyTables: number;
+    extractedRowCount?: number;
   };
+  selectorCandidates: Array<{
+    purpose: 'input' | 'button' | 'link' | 'table' | 'policy_row' | 'field';
+    selector: string;
+    tag?: string;
+    type?: string;
+    role?: string;
+    label?: string;
+    confidence: 'low' | 'medium' | 'high';
+    notes?: string;
+  }>;
+  tableSummaries: Array<{
+    selector: string;
+    headerTexts: string[];
+    rowCount: number;
+  }>;
+  warnings: string[];
 }
 
 export interface UploadPreviewResponse {
@@ -181,7 +351,11 @@ export interface UploadPreviewResponse {
   };
   result?: {
     insertedRows: number;
+    stagedRows?: number;
     historyId: string;
+    runId?: string;
+    autoPublished?: boolean;
+    stagedRun?: IntegrationSyncRun;
   };
   error?: string;
 }

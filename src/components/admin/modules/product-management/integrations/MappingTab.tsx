@@ -8,7 +8,7 @@ import { Input } from '../../../../ui/input';
 import { Separator } from '../../../../ui/separator';
 import { Badge } from '../../../../ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
-import { Info, ArrowRight, Save, AlertCircle, Loader2 } from 'lucide-react';
+import { Info, ArrowRight, Save, AlertCircle, Loader2, Download } from 'lucide-react';
 import { IntegrationProvider, PRODUCT_CATEGORIES, IntegrationMappingConfig, ProductCategoryId } from '../types';
 import { useProductSchema } from '../hooks/useProductSchema';
 
@@ -20,6 +20,8 @@ interface MappingTabProps {
   onUpdateMapping: (targetId: string, sourceValue: string) => void;
   onUpdateSetting: (key: keyof IntegrationMappingConfig, value: boolean) => void;
   onSave: () => void;
+  onDownloadTemplate: () => void;
+  isDownloadingTemplate: boolean;
 }
 
 export function MappingTab({
@@ -29,7 +31,9 @@ export function MappingTab({
   configSettings,
   onUpdateMapping,
   onUpdateSetting,
-  onSave
+  onSave,
+  onDownloadTemplate,
+  isDownloadingTemplate
 }: MappingTabProps) {
 
   const { currentFields: categoryFields, isLoading } = useProductSchema(selectedCategoryId as ProductCategoryId);
@@ -64,18 +68,26 @@ export function MappingTab({
     <div className="max-w-4xl mx-auto">
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
             <div>
               <CardTitle>Mapping Configuration</CardTitle>
               <CardDescription className="mt-2">
                 Map your spreadsheet columns to the required system fields for <strong>{categoryName}</strong>.
               </CardDescription>
             </div>
+            <Button variant="outline" onClick={onDownloadTemplate} disabled={isDownloadingTemplate}>
+              {isDownloadingTemplate ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              Download Template
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Global Settings */}
-          <div className="grid grid-cols-3 gap-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
+          <div className="grid grid-cols-1 gap-6 p-4 bg-gray-50 rounded-lg border border-gray-100 sm:grid-cols-2 xl:grid-cols-4">
             <div className="flex flex-col space-y-2">
               <div className="flex items-center gap-2">
                 <Label className="font-medium text-gray-700 cursor-pointer" htmlFor="auto-map">Auto-Map Future Uploads</Label>
@@ -145,6 +157,30 @@ export function MappingTab({
                   onCheckedChange={(c) => onUpdateSetting('strictMode', c)}
                 />
                 <span className="text-xs text-gray-500">{configSettings.strictMode ? 'Enabled' : 'Disabled'}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col space-y-2">
+              <div className="flex items-center gap-2">
+                <Label className="font-medium text-gray-700 cursor-pointer" htmlFor="auto-publish">Auto-Publish Safe Rows</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Automatically publish exact policy-number matches that have valid values, no warnings, and no locked-field changes.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="auto-publish"
+                  checked={!!configSettings.autoPublish}
+                  onCheckedChange={(c) => onUpdateSetting('autoPublish', c)}
+                />
+                <span className="text-xs text-gray-500">{configSettings.autoPublish ? 'Enabled' : 'Disabled'}</span>
               </div>
             </div>
           </div>

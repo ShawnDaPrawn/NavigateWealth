@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '../../../../ui/button';
 import { TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
-import { History, UploadCloud, Settings2 } from 'lucide-react';
+import { Bot, History, UploadCloud, Settings2 } from 'lucide-react';
 import { IntegrationProvider, PRODUCT_CATEGORIES } from '../types';
 
 interface IntegrationHeaderProps {
@@ -55,6 +55,13 @@ export function IntegrationHeader({ provider, selectedCategoryId, onCategoryChan
         >
           <Settings2 className="w-3.5 h-3.5" />
           Mapping Configuration
+        </TabsTrigger>
+        <TabsTrigger
+          value="portal"
+          className="rounded-md px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm text-gray-500 font-medium transition-all flex items-center gap-2"
+        >
+          <Bot className="w-3.5 h-3.5" />
+          Portal Automation
         </TabsTrigger>
       </TabsList>
     </div>

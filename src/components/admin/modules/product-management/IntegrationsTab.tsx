@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { IntegrationProvider, IntegrationConfig, PreviewData } from './types';
+import { IntegrationProvider, IntegrationConfig, PreviewData, IntegrationSyncRun, PortalFlowField, PortalSyncJob } from './types';
 import { productManagementApi } from './api';
 import { ProviderList } from './integrations/ProviderList';
 import { IntegrationHeader } from './integrations/IntegrationHeader';
 import { UploadTab } from './integrations/UploadTab';
 import { MappingTab } from './integrations/MappingTab';
+import { PortalAutomationTab } from './integrations/PortalAutomationTab';
 import { toast } from 'sonner@2.0.3';
 import { Inbox, LayoutList } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,10 +25,12 @@ export function IntegrationsTab() {
   const [rawFile, setRawFile] = useState<File | null>(null);
   const [showUploadPreview, setShowUploadPreview] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  const [stagedRun, setStagedRun] = useState<IntegrationSyncRun | null>(null);
+  const [portalJob, setPortalJob] = useState<PortalSyncJob | null>(null);
   
   // Mapping Configuration State (Local Mutable)
   const [configMapping, setConfigMapping] = useState<{source: string, target: string}[]>([]);
-  const [configSettings, setConfigSettings] = useState({ autoMap: true, ignoreUnmatched: false, strictMode: false });
+  const [configSettings, setConfigSettings] = useState({ autoMap: true, ignoreUnmatched: false, strictMode: false, autoPublish: false });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,6 +61,8 @@ export function IntegrationsTab() {
         setRawFile(null);
         setShowUploadPreview(false);
         setPreviewData(null);
+        setStagedRun(null);
+        setPortalJob(null);
         setActiveTab('upload');
     }
   }, [selectedProviderId, providers, selectedProvider]);
@@ -77,6 +82,30 @@ export function IntegrationsTab() {
     queryFn: () => productManagementApi.fetchIntegrationConfig(selectedProviderId!, selectedCategoryId)
   });
 
+  const { data: portalFlow, isLoading: isLoadingPortalFlow } = useQuery({
+    queryKey: integrationsKeys.portalFlow(selectedProviderId),
+    enabled: !!selectedProviderId,
+    queryFn: () => productManagementApi.fetchPortalFlow(selectedProviderId!)
+  });
+
+  const { data: latestPortalJob } = useQuery({
+    queryKey: integrationsKeys.latestPortalJob(selectedProviderId, selectedCategoryId),
+    enabled: !!selectedProviderId && !!selectedCategoryId,
+    queryFn: () => productManagementApi.fetchLatestPortalJob(selectedProviderId!, selectedCategoryId)
+  });
+
+  const { data: portalDiscoveryReport, isLoading: isLoadingPortalDiscoveryReport } = useQuery({
+    queryKey: integrationsKeys.portalDiscoveryReport(portalJob?.id || null),
+    enabled: !!portalJob?.id,
+    queryFn: () => productManagementApi.fetchPortalDiscoveryReport(portalJob!.id)
+  });
+
+  useEffect(() => {
+    if (!portalJob && latestPortalJob) {
+        setPortalJob(latestPortalJob);
+    }
+  }, [latestPortalJob, portalJob]);
+
   // Sync server config to local state
   useEffect(() => {
     if (serverConfig) {
@@ -91,7 +120,12 @@ export function IntegrationsTab() {
         }
         
         if (serverConfig.settings) {
-            setConfigSettings(serverConfig.settings);
+            setConfigSettings({
+                autoMap: !!serverConfig.settings.autoMap,
+                ignoreUnmatched: !!serverConfig.settings.ignoreUnmatched,
+                strictMode: !!serverConfig.settings.strictMode,
+                autoPublish: !!serverConfig.settings.autoPublish
+            });
         }
     }
   }, [serverConfig]);
@@ -130,11 +164,18 @@ export function IntegrationsTab() {
         } else {
             // Commit success
             if (data.success && data.result) {
-                toast.success(`Successfully imported ${data.result.insertedRows} rows.`);
-                setUploadedFile(null);
-                setRawFile(null);
-                setShowUploadPreview(false);
-                setPreviewData(null);
+                if (data.result.stagedRun) {
+                    setStagedRun(data.result.stagedRun);
+                    setShowUploadPreview(false);
+                    setPreviewData(null);
+                    toast.success(`Staged ${data.result.stagedRows || data.result.stagedRun.summary.totalRows} rows for review.`);
+                } else {
+                    toast.success(`Successfully imported ${data.result.insertedRows} rows.`);
+                    setUploadedFile(null);
+                    setRawFile(null);
+                    setShowUploadPreview(false);
+                    setPreviewData(null);
+                }
                 
                 // Refresh stats
                 queryClient.invalidateQueries({ queryKey: integrationsKeys.history(selectedProviderId, selectedCategoryId) });
@@ -143,6 +184,115 @@ export function IntegrationsTab() {
     },
     onError: (err: Error) => {
         toast.error(err.message || 'Operation failed');
+    }
+  });
+
+  const publishRunMutation = useMutation({
+    mutationFn: async () => {
+        if (!stagedRun) throw new Error("No staged run selected");
+        const rowIds = stagedRun.rows
+            .filter(row =>
+                row.matchStatus === 'matched' &&
+                row.diffs.length > 0 &&
+                row.publishStatus !== 'published' &&
+                row.publishStatus !== 'failed' &&
+                row.publishStatus !== 'skipped'
+            )
+            .map(row => row.id);
+        return productManagementApi.publishIntegrationSyncRun(stagedRun.id, rowIds);
+    },
+    onSuccess: (run) => {
+        const newlyPublishedRows = Math.max(0, run.summary.publishedRows - (stagedRun?.summary.publishedRows || 0));
+        setStagedRun(run);
+        toast.success(`Published ${newlyPublishedRows} policy row${newlyPublishedRows === 1 ? '' : 's'}.`);
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.history(selectedProviderId, selectedCategoryId) });
+    },
+    onError: (err: Error) => {
+        toast.error(err.message || "Failed to publish staged rows");
+    }
+  });
+
+  const downloadTemplateMutation = useMutation({
+    mutationFn: async () => {
+        if (!selectedProviderId || !selectedCategoryId) throw new Error("Missing selection");
+        return productManagementApi.downloadIntegrationTemplate(selectedProviderId, selectedCategoryId);
+    },
+    onSuccess: () => {
+        toast.success("Mapping template downloaded");
+    },
+    onError: (err: Error) => {
+        toast.error(err.message || "Failed to download template");
+    }
+  });
+
+  const createPortalJobMutation = useMutation({
+    mutationFn: async (credentialProfileId: string) => {
+        if (!selectedProviderId || !selectedCategoryId) throw new Error("Missing provider or category");
+        return productManagementApi.createPortalJob(selectedProviderId, selectedCategoryId, credentialProfileId);
+    },
+    onSuccess: ({ job }) => {
+        setPortalJob(job);
+        toast.success("Portal job created. Start the Playwright worker when you are ready.");
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalJob(job.id) });
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.latestPortalJob(selectedProviderId, selectedCategoryId) });
+    },
+    onError: (err: Error) => {
+        toast.error(err.message || "Failed to create portal job");
+    }
+  });
+
+  const refreshPortalJobMutation = useMutation({
+    mutationFn: async () => {
+        if (!portalJob) throw new Error("No portal job selected");
+        return productManagementApi.fetchPortalJob(portalJob.id);
+    },
+    onSuccess: (job) => {
+        setPortalJob(job);
+        if (job.stagedRunId) {
+            toast.success("Portal extraction staged. Open Upload & Sync to review the sync run.");
+        }
+        if (job.discoveryReportId) {
+            queryClient.invalidateQueries({ queryKey: integrationsKeys.portalDiscoveryReport(job.id) });
+        }
+    },
+    onError: (err: Error) => {
+        toast.error(err.message || "Failed to refresh portal job");
+    }
+  });
+
+  const submitPortalOtpMutation = useMutation({
+    mutationFn: async (otp: string) => {
+        if (!portalJob) throw new Error("No portal job selected");
+        return productManagementApi.submitPortalOtp(portalJob.id, otp);
+    },
+    onSuccess: (job) => {
+        setPortalJob(job);
+        toast.success("OTP submitted. The worker will continue shortly.");
+    },
+    onError: (err: Error) => {
+        toast.error(err.message || "Failed to submit OTP");
+    }
+  });
+
+  const applyPortalFlowMutation = useMutation({
+    mutationFn: async (patch: { policyRowSelector?: string; fields: PortalFlowField[] }) => {
+        if (!selectedProviderId || !portalFlow) throw new Error("Portal flow is not loaded");
+        return productManagementApi.savePortalFlow(selectedProviderId, {
+            ...portalFlow,
+            extraction: {
+                ...portalFlow.extraction,
+                policyRowSelector: patch.policyRowSelector || portalFlow.extraction.policyRowSelector,
+                fields: patch.fields,
+            },
+            needsDiscovery: false,
+        });
+    },
+    onSuccess: () => {
+        toast.success("Portal flow selectors updated. Run dry-run before staging.");
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId) });
+    },
+    onError: (err: Error) => {
+        toast.error(err.message || "Failed to update portal flow");
     }
   });
 
@@ -199,6 +349,7 @@ export function IntegrationsTab() {
     });
     setShowUploadPreview(false);
     setPreviewData(null);
+    setStagedRun(null);
   };
 
   const handleProcessFile = () => {
@@ -209,8 +360,8 @@ export function IntegrationsTab() {
      toast.promise(
         processFileMutation.mutateAsync({ mode: 'commit' }),
         {
-            loading: 'Importing data...',
-            success: 'Import complete',
+            loading: 'Staging policy sync...',
+            success: 'Sync run staged',
             error: 'Import failed'
         }
      );
@@ -281,10 +432,13 @@ export function IntegrationsTab() {
                 onDrop={handleFileDrop}
                 onManualUpload={() => fileInputRef.current?.click()}
                 onProcess={handleProcessFile}
-                onClear={() => { setUploadedFile(null); setRawFile(null); setShowUploadPreview(false); setPreviewData(null); }}
+                onClear={() => { setUploadedFile(null); setRawFile(null); setShowUploadPreview(false); setPreviewData(null); setStagedRun(null); }}
                 onConfirm={handleConfirmImport}
+                onPublishRun={() => publishRunMutation.mutate()}
+                isPublishingRun={publishRunMutation.isPending}
                 isColumnMapped={isColumnMapped}
                 previewData={previewData}
+                stagedRun={stagedRun}
                 stats={integrationStats}
                 matchedColumnsCount={matchedColumnsCount}
               />
@@ -300,6 +454,29 @@ export function IntegrationsTab() {
                 onUpdateMapping={handleUpdateMapping}
                 onUpdateSetting={handleSettingChange}
                 onSave={handleSaveConfiguration}
+                onDownloadTemplate={() => downloadTemplateMutation.mutate()}
+                isDownloadingTemplate={downloadTemplateMutation.isPending}
+              />
+            </TabsContent>
+
+            {/* Tab: Portal Automation */}
+            <TabsContent value="portal" className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+              <PortalAutomationTab
+                provider={selectedProvider}
+                selectedCategoryId={selectedCategoryId}
+                flow={portalFlow}
+                job={portalJob}
+                discoveryReport={portalDiscoveryReport}
+                isLoadingFlow={isLoadingPortalFlow}
+                isLoadingDiscoveryReport={isLoadingPortalDiscoveryReport}
+                isCreatingJob={createPortalJobMutation.isPending}
+                isSubmittingOtp={submitPortalOtpMutation.isPending}
+                isRefreshingJob={refreshPortalJobMutation.isPending}
+                onCreateJob={(credentialProfileId) => createPortalJobMutation.mutate(credentialProfileId)}
+                onSubmitOtp={(otp) => submitPortalOtpMutation.mutate(otp)}
+                onRefreshJob={() => refreshPortalJobMutation.mutate()}
+                onApplyFlow={(patch) => applyPortalFlowMutation.mutate(patch)}
+                isApplyingFlow={applyPortalFlowMutation.isPending}
               />
             </TabsContent>
           </Tabs>

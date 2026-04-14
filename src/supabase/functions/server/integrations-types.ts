@@ -58,6 +58,15 @@ export interface KvPolicy {
   lastFieldMappingsSnapshot?: FieldMappingSnapshot[];
   /** Schema field IDs that are locked from AI extraction overwrite */
   lockedFields?: string[];
+  /** Audit history for spreadsheet/provider sync publications */
+  integrationSyncHistory?: Array<{
+    runId: string;
+    providerId: string;
+    categoryId: string;
+    publishedAt: string;
+    source: 'spreadsheet' | 'portal';
+    fieldsApplied: string[];
+  }>;
 }
 
 // ---------------------------------------------------------------------------

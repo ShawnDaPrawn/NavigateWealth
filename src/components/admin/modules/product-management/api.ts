@@ -13,6 +13,10 @@ import {
   IntegrationStats,
   IntegrationConfig,
   UploadPreviewResponse,
+  IntegrationSyncRun,
+  PortalProviderFlow,
+  PortalDiscoveryReport,
+  PortalSyncJob,
   ProductField
 } from './types';
 
@@ -30,6 +34,18 @@ interface IntegrationHistoryItem {
   status: string;
   uploadedAt: string;
   [key: string]: unknown;
+}
+
+async function getSupabaseAuthToken(): Promise<string> {
+  let token = publicAnonKey;
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    token = session?.access_token || publicAnonKey;
+  } catch (error) {
+    logger.warn('Failed to retrieve session, using anon key');
+  }
+  return token;
 }
 
 export const productManagementApi = {
@@ -233,14 +249,7 @@ export const productManagementApi = {
     formData.append('categoryId', categoryId);
     formData.append('mode', mode);
 
-    let token = publicAnonKey;
-    try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      token = session?.access_token || publicAnonKey;
-    } catch (error) {
-      logger.warn('Failed to retrieve session, using anon key');
-    }
+    const token = await getSupabaseAuthToken();
 
     const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/upload`, {
       method: 'POST',
@@ -253,5 +262,86 @@ export const productManagementApi = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to process file');
     return data;
+  },
+
+  publishIntegrationSyncRun: async (runId: string, rowIds?: string[]): Promise<IntegrationSyncRun> => {
+    const token = await getSupabaseAuthToken();
+    const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/sync-runs/${runId}/publish`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ rowIds }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to publish sync run');
+    return data.run as IntegrationSyncRun;
+  },
+
+  downloadIntegrationTemplate: async (providerId: string, categoryId: string): Promise<void> => {
+    const token = await getSupabaseAuthToken();
+    const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/template?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to download mapping template');
+    }
+
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const fileName = match?.[1] || `mapping-template-${providerId}-${categoryId}.xlsx`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  },
+
+  fetchPortalFlow: async (providerId: string): Promise<PortalProviderFlow> => {
+    const response = await api.get<{ success: boolean; flow: PortalProviderFlow }>(`integrations/portal-flows/${providerId}`);
+    return response.flow;
+  },
+
+  savePortalFlow: async (providerId: string, flow: PortalProviderFlow): Promise<PortalProviderFlow> => {
+    const response = await api.put<{ success: boolean; flow: PortalProviderFlow }>(`integrations/portal-flows/${providerId}`, flow);
+    return response.flow;
+  },
+
+  createPortalJob: async (providerId: string, categoryId: string, credentialProfileId: string): Promise<{ job: PortalSyncJob; flow: PortalProviderFlow }> => {
+    return api.post<{ success: boolean; job: PortalSyncJob; flow: PortalProviderFlow }>('integrations/portal-jobs', {
+      providerId,
+      categoryId,
+      credentialProfileId,
+    });
+  },
+
+  fetchPortalJob: async (jobId: string): Promise<PortalSyncJob> => {
+    const response = await api.get<{ success: boolean; job: PortalSyncJob }>(`integrations/portal-jobs/${jobId}`);
+    return response.job;
+  },
+
+  fetchLatestPortalJob: async (providerId: string, categoryId: string): Promise<PortalSyncJob | null> => {
+    const response = await api.get<{ success: boolean; job: PortalSyncJob | null }>(`integrations/portal-jobs/latest?providerId=${providerId}&categoryId=${categoryId}`);
+    return response.job;
+  },
+
+  fetchPortalDiscoveryReport: async (jobId: string): Promise<PortalDiscoveryReport | null> => {
+    const response = await api.get<{ success: boolean; report: PortalDiscoveryReport | null }>(`integrations/portal-jobs/${jobId}/discovery-report`);
+    return response.report;
+  },
+
+  submitPortalOtp: async (jobId: string, otp: string): Promise<PortalSyncJob> => {
+    const response = await api.post<{ success: boolean; job: PortalSyncJob }>(`integrations/portal-jobs/${jobId}/otp`, { otp });
+    return response.job;
   }
 };
