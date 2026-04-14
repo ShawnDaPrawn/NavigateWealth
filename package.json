@@ -107,6 +107,7 @@
     "optimize:images": "node ./scripts/optimize-images.mjs",
     "ui:inspect": "node ./scripts/ui-inspect.mjs",
     "provider:sync": "node ./scripts/provider-portal-worker.mjs",
+    "provider:worker": "node ./scripts/provider-portal-worker.mjs --poll",
     "test": "vitest run",
     "test:watch": "vitest"
   }

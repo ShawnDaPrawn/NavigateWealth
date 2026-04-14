@@ -14,8 +14,10 @@ import {
   IntegrationConfig,
   UploadPreviewResponse,
   IntegrationSyncRun,
+  PortalCredentialStatus,
   PortalProviderFlow,
   PortalDiscoveryReport,
+  PortalJobRunMode,
   PortalSyncJob,
   ProductField
 } from './types';
@@ -317,11 +319,22 @@ export const productManagementApi = {
     return response.flow;
   },
 
-  createPortalJob: async (providerId: string, categoryId: string, credentialProfileId: string): Promise<{ job: PortalSyncJob; flow: PortalProviderFlow }> => {
+  fetchPortalCredentialStatus: async (providerId: string, profileId: string): Promise<PortalCredentialStatus> => {
+    const response = await api.get<{ success: boolean; status: PortalCredentialStatus }>(`integrations/portal-flows/${providerId}/credentials/${profileId}`);
+    return response.status;
+  },
+
+  savePortalCredentials: async (providerId: string, profileId: string, credentials: { username: string; password?: string }): Promise<PortalCredentialStatus> => {
+    const response = await api.put<{ success: boolean; status: PortalCredentialStatus }>(`integrations/portal-flows/${providerId}/credentials/${profileId}`, credentials);
+    return response.status;
+  },
+
+  createPortalJob: async (providerId: string, categoryId: string, credentialProfileId: string, runMode: PortalJobRunMode): Promise<{ job: PortalSyncJob; flow: PortalProviderFlow }> => {
     return api.post<{ success: boolean; job: PortalSyncJob; flow: PortalProviderFlow }>('integrations/portal-jobs', {
       providerId,
       categoryId,
       credentialProfileId,
+      runMode,
     });
   },
 

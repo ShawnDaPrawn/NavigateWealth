@@ -232,15 +232,25 @@ export interface IntegrationSyncRun {
 }
 
 export type PortalJobStatus = 'queued' | 'running' | 'waiting_for_otp' | 'discovering' | 'discovery_ready' | 'extracting' | 'dry_run_ready' | 'staging' | 'staged' | 'failed' | 'cancelled';
+export type PortalJobRunMode = 'discover' | 'dry-run' | 'run';
 
 export interface PortalCredentialProfile {
   id: string;
   label: string;
-  source: 'environment' | 'supabase_vault';
+  source: 'environment' | 'supabase_kv' | 'supabase_vault';
   usernameEnvVar?: string;
   passwordEnvVar?: string;
   usernameSecretName?: string;
   passwordSecretName?: string;
+}
+
+export interface PortalCredentialStatus {
+  providerId: string;
+  profileId: string;
+  hasUsername: boolean;
+  hasPassword: boolean;
+  updatedAt?: string;
+  updatedBy?: string;
 }
 
 export interface PortalFlowField {
@@ -249,6 +259,17 @@ export interface PortalFlowField {
   attribute?: 'text' | 'value' | 'href' | string;
   required?: boolean;
   transform?: 'trim' | 'number' | 'date' | string;
+}
+
+export interface PortalFlowStep {
+  id: string;
+  action: 'goto' | 'click' | 'fill' | 'wait_for_selector' | 'wait_for_url' | 'press';
+  selector?: string;
+  url?: string;
+  value?: string;
+  key?: string;
+  timeoutMs?: number;
+  description?: string;
 }
 
 export interface PortalProviderFlow {
@@ -272,6 +293,7 @@ export interface PortalProviderFlow {
   };
   navigation: {
     postLoginUrl?: string;
+    policyListSteps?: PortalFlowStep[];
     clientListSelector?: string;
     clientRowSelector?: string;
     nextPageSelector?: string;
@@ -291,8 +313,10 @@ export interface PortalSyncJob {
   providerName: string;
   categoryId: string;
   status: PortalJobStatus;
+  runMode?: PortalJobRunMode;
   flowId: string;
   credentialProfileId: string;
+  workerId?: string;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;

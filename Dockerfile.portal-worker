@@ -1,0 +1,11 @@
+FROM mcr.microsoft.com/playwright:v1.59.1-noble
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY scripts/provider-portal-worker.mjs ./scripts/provider-portal-worker.mjs
+
+ENV NW_PORTAL_POLL=1
+CMD ["npm", "run", "provider:sync", "--", "--poll"]

@@ -7,8 +7,9 @@ import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
 import { Separator } from '../../../../ui/separator';
-import { AlertCircle, Bot, CheckCircle2, Clock, KeyRound, Loader2, Play, RefreshCw, Search } from 'lucide-react';
-import { IntegrationProvider, PortalDiscoveryReport, PortalFlowField, PortalProviderFlow, PortalSyncJob } from '../types';
+import { Textarea } from '../../../../ui/textarea';
+import { AlertCircle, Bot, CheckCircle2, Clock, KeyRound, Loader2, Play, RefreshCw } from 'lucide-react';
+import { IntegrationProvider, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from '../types';
 import { cn } from '../../../../ui/utils';
 
 interface PortalAutomationTabProps {
@@ -20,9 +21,16 @@ interface PortalAutomationTabProps {
   isLoadingFlow: boolean;
   isLoadingDiscoveryReport: boolean;
   isCreatingJob: boolean;
+  credentialStatus?: PortalCredentialStatus;
+  selectedCredentialProfileId: string;
+  onCredentialProfileChange: (profileId: string) => void;
+  isSavingCredentials: boolean;
+  isSavingFlow: boolean;
   isSubmittingOtp: boolean;
   isRefreshingJob: boolean;
-  onCreateJob: (credentialProfileId: string) => void;
+  onCreateJob: (credentialProfileId: string, runMode: PortalJobRunMode) => void;
+  onSaveCredentials: (profileId: string, credentials: { username: string; password?: string }) => void;
+  onSaveFlow: (flow: PortalProviderFlow) => void;
   onSubmitOtp: (otp: string) => void;
   onRefreshJob: () => void;
   onApplyFlow: (patch: { policyRowSelector?: string; fields: PortalFlowField[] }) => void;
@@ -52,48 +60,99 @@ export function PortalAutomationTab({
   isLoadingFlow,
   isLoadingDiscoveryReport,
   isCreatingJob,
+  credentialStatus,
+  selectedCredentialProfileId,
+  onCredentialProfileChange,
+  isSavingCredentials,
+  isSavingFlow,
   isSubmittingOtp,
   isRefreshingJob,
   onCreateJob,
+  onSaveCredentials,
+  onSaveFlow,
   onSubmitOtp,
   onRefreshJob,
   onApplyFlow,
   isApplyingFlow,
 }: PortalAutomationTabProps) {
-  const [credentialProfileId, setCredentialProfileId] = useState('');
+  const [runMode, setRunMode] = useState<PortalJobRunMode>('discover');
+  const [credentialUsername, setCredentialUsername] = useState('');
+  const [credentialPassword, setCredentialPassword] = useState('');
+  const [loginUrl, setLoginUrl] = useState('');
+  const [usernameSelector, setUsernameSelector] = useState('');
+  const [passwordSelector, setPasswordSelector] = useState('');
+  const [submitSelector, setSubmitSelector] = useState('');
+  const [postLoginUrl, setPostLoginUrl] = useState('');
+  const [nextPageSelector, setNextPageSelector] = useState('');
+  const [policyListStepsJson, setPolicyListStepsJson] = useState('[]');
+  const [policyListStepsError, setPolicyListStepsError] = useState('');
   const [otp, setOtp] = useState('');
   const [policyRowSelector, setPolicyRowSelector] = useState('');
   const [fieldSelectors, setFieldSelectors] = useState<PortalFlowField[]>([]);
 
   useEffect(() => {
-    if (flow?.credentialProfiles?.length && !credentialProfileId) {
-      setCredentialProfileId(flow.credentialProfiles[0].id);
+    if (flow?.credentialProfiles?.length && !selectedCredentialProfileId) {
+      onCredentialProfileChange(flow.credentialProfiles[0].id);
     }
-  }, [credentialProfileId, flow]);
+  }, [flow, onCredentialProfileChange, selectedCredentialProfileId]);
 
   useEffect(() => {
     if (flow) {
+      setLoginUrl(flow.loginUrl || '');
+      setUsernameSelector(flow.login.usernameSelector || '');
+      setPasswordSelector(flow.login.passwordSelector || '');
+      setSubmitSelector(flow.login.submitSelector || '');
+      setPostLoginUrl(flow.navigation.postLoginUrl || '');
+      setNextPageSelector(flow.navigation.nextPageSelector || '');
+      setPolicyListStepsJson(JSON.stringify(flow.navigation.policyListSteps || [], null, 2));
       setPolicyRowSelector(flow.extraction.policyRowSelector || '');
       setFieldSelectors(flow.extraction.fields || []);
     }
   }, [flow]);
 
-  const selectedProfile = flow?.credentialProfiles.find((profile) => profile.id === credentialProfileId);
-  const workerCommand = job
-    ? `npm run provider:sync -- --job-id ${job.id} --auth-token <admin-session-token>`
-    : 'Create a job first, then run the worker command shown here.';
-  const discoveryCommand = job
-    ? `npm run provider:sync -- --mode discover --job-id ${job.id} --auth-token <admin-session-token>`
-    : 'Create a job first, then run discovery.';
-  const dryRunCommand = job
-    ? `npm run provider:sync -- --mode dry-run --job-id ${job.id} --auth-token <admin-session-token>`
-    : 'Create a job first, then run a dry run.';
+  const selectedProfile = flow?.credentialProfiles.find((profile) => profile.id === selectedCredentialProfileId);
   const policyRowCandidates = discoveryReport?.selectorCandidates.filter(candidate => candidate.purpose === 'policy_row') || [];
 
   const updateFieldSelector = (index: number, selector: string) => {
     setFieldSelectors(prev => prev.map((field, currentIndex) => (
       currentIndex === index ? { ...field, selector } : field
     )));
+  };
+
+  const saveFlowConfiguration = () => {
+    if (!flow) return;
+    let policyListSteps = flow.navigation.policyListSteps || [];
+    try {
+      const parsed = JSON.parse(policyListStepsJson || '[]');
+      policyListSteps = Array.isArray(parsed) ? parsed : [];
+      setPolicyListStepsError('');
+    } catch {
+      setPolicyListStepsError('Policy list steps must be valid JSON.');
+      return;
+    }
+
+    onSaveFlow({
+      ...flow,
+      loginUrl: loginUrl.trim(),
+      login: {
+        ...flow.login,
+        usernameSelector: usernameSelector.trim(),
+        passwordSelector: passwordSelector.trim(),
+        submitSelector: submitSelector.trim(),
+      },
+      navigation: {
+        ...flow.navigation,
+        postLoginUrl: postLoginUrl.trim() || undefined,
+        nextPageSelector: nextPageSelector.trim() || undefined,
+        policyListSteps,
+      },
+      extraction: {
+        ...flow.extraction,
+        policyRowSelector: policyRowSelector.trim(),
+        fields: fieldSelectors,
+      },
+      needsDiscovery: false,
+    });
   };
 
   return (
@@ -127,22 +186,25 @@ export function PortalAutomationTab({
             <>
               <Alert className="bg-amber-50 border-amber-200 text-amber-900">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Credentials stay outside Navigate Wealth</AlertTitle>
+                <AlertTitle>Live worker mode</AlertTitle>
                 <AlertDescription>
-                  The worker reads username and password from environment variables. SMS OTP is entered manually here and is cleared after the worker consumes it.
+                  Provider credentials are saved server-side in Supabase and never returned to the browser. A hosted Playwright worker can claim queued jobs and continue after an admin enters the SMS OTP here.
                 </AlertDescription>
               </Alert>
 
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_260px]">
                 <div className="space-y-2">
-                  <Label>Login URL</Label>
-                  <div className="rounded-md border bg-gray-50 px-3 py-2 text-sm text-gray-700 break-all">
-                    {flow.loginUrl || 'Not configured'}
-                  </div>
+                  <Label htmlFor="portal-login-url">Login URL</Label>
+                  <Input
+                    id="portal-login-url"
+                    value={loginUrl}
+                    onChange={(event) => setLoginUrl(event.target.value)}
+                    placeholder="https://provider.example/login"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Credential Profile</Label>
-                  <Select value={credentialProfileId} onValueChange={setCredentialProfileId}>
+                  <Select value={selectedCredentialProfileId} onValueChange={onCredentialProfileChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select credentials" />
                     </SelectTrigger>
@@ -158,15 +220,103 @@ export function PortalAutomationTab({
               </div>
 
               {selectedProfile && (
-                <div className="rounded-lg border bg-gray-50 p-4 text-sm text-gray-700 space-y-2">
+                <div className="rounded-lg border bg-gray-50 p-4 text-sm text-gray-700 space-y-4">
                   <div className="flex items-center gap-2 font-medium text-gray-900">
                     <KeyRound className="h-4 w-4" />
                     Worker secret inputs
                   </div>
-                  <p>Username env var: <span className="font-mono">{selectedProfile.usernameEnvVar || 'Not configured'}</span></p>
-                  <p>Password env var: <span className="font-mono">{selectedProfile.passwordEnvVar || 'Not configured'}</span></p>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="portal-username">Username</Label>
+                      <Input
+                        id="portal-username"
+                        value={credentialUsername}
+                        onChange={(event) => setCredentialUsername(event.target.value)}
+                        placeholder={credentialStatus?.hasUsername ? 'Saved. Enter to replace.' : 'Provider username'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="portal-password">Password</Label>
+                      <Input
+                        id="portal-password"
+                        type="password"
+                        value={credentialPassword}
+                        onChange={(event) => setCredentialPassword(event.target.value)}
+                        placeholder={credentialStatus?.hasPassword ? 'Saved. Enter to replace.' : 'Provider password'}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-gray-500">
+                      {credentialStatus?.hasUsername && credentialStatus?.hasPassword
+                        ? `Saved in Supabase${credentialStatus.updatedAt ? ` on ${new Date(credentialStatus.updatedAt).toLocaleString()}` : ''}.`
+                        : 'Credentials are not saved yet for this provider.'}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        onSaveCredentials(selectedProfile.id, {
+                          username: credentialUsername,
+                          password: credentialPassword || undefined,
+                        });
+                        setCredentialPassword('');
+                      }}
+                      disabled={isSavingCredentials || (!credentialUsername.trim() && !credentialStatus?.hasUsername) || (!credentialPassword && !credentialStatus?.hasPassword)}
+                    >
+                      {isSavingCredentials ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <KeyRound className="h-4 w-4 mr-2" />}
+                      Save Credentials
+                    </Button>
+                  </div>
                 </div>
               )}
+
+              <div className="rounded-lg border bg-white p-4 space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-900">Playwright Flow Logic</h4>
+                  <p className="text-sm text-gray-500">Define how the worker signs in and reaches the policy table. Discovery can help you tighten selectors before a dry run.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Username Selector</Label>
+                    <Input value={usernameSelector} onChange={(event) => setUsernameSelector(event.target.value)} placeholder="input[name='username']" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Password Selector</Label>
+                    <Input value={passwordSelector} onChange={(event) => setPasswordSelector(event.target.value)} placeholder="input[type='password']" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Submit Selector</Label>
+                    <Input value={submitSelector} onChange={(event) => setSubmitSelector(event.target.value)} placeholder="button[type='submit']" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Post-login URL</Label>
+                    <Input value={postLoginUrl} onChange={(event) => setPostLoginUrl(event.target.value)} placeholder="Optional policy list URL" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Next Page Selector</Label>
+                    <Input value={nextPageSelector} onChange={(event) => setNextPageSelector(event.target.value)} placeholder="button:has-text('Next')" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Policy List Steps JSON</Label>
+                  <Textarea
+                    value={policyListStepsJson}
+                    onChange={(event) => setPolicyListStepsJson(event.target.value)}
+                    className="min-h-32 font-mono text-xs"
+                    placeholder='[{"id":"open-policies","action":"click","selector":"a:has-text(\"Policies\")"}]'
+                  />
+                  {policyListStepsError && <p className="text-sm text-red-700">{policyListStepsError}</p>}
+                </div>
+                <div className="flex justify-end">
+                  <Button type="button" variant="outline" onClick={saveFlowConfiguration} disabled={isSavingFlow}>
+                    {isSavingFlow ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                    Save Flow Logic
+                  </Button>
+                </div>
+              </div>
 
               {flow.notes.length > 0 && (
                 <div className="space-y-2">
@@ -181,13 +331,23 @@ export function PortalAutomationTab({
 
               <div className="flex flex-wrap gap-3">
                 <Button
-                  onClick={() => onCreateJob(credentialProfileId)}
-                  disabled={!credentialProfileId || isCreatingJob}
+                  onClick={() => onCreateJob(selectedCredentialProfileId, runMode)}
+                  disabled={!selectedCredentialProfileId || !credentialStatus?.hasUsername || !credentialStatus?.hasPassword || isCreatingJob}
                   className="bg-purple-600 hover:bg-purple-700"
                 >
                   {isCreatingJob ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
                   Create Portal Job
                 </Button>
+                <Select value={runMode} onValueChange={(value) => setRunMode(value as PortalJobRunMode)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="discover">Discover selectors</SelectItem>
+                    <SelectItem value="dry-run">Dry run</SelectItem>
+                    <SelectItem value="run">Stage rows</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button variant="outline" onClick={onRefreshJob} disabled={!job || isRefreshingJob}>
                   {isRefreshingJob ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                   Refresh Job
@@ -204,7 +364,7 @@ export function PortalAutomationTab({
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Current Job</CardTitle>
-            <CardDescription>Use the worker command on a machine that can run Playwright and access the provider portal.</CardDescription>
+            <CardDescription>The hosted Playwright worker polls for queued jobs and updates this status automatically.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -222,23 +382,9 @@ export function PortalAutomationTab({
               </div>
             </div>
 
-            <div className="rounded-lg border bg-gray-50 p-4">
-              <p className="text-xs font-medium uppercase text-gray-500 mb-2">Stage rows command</p>
-              <code className="block whitespace-pre-wrap break-all text-xs text-gray-800">{workerCommand}</code>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <div className="rounded-lg border bg-purple-50 p-4">
-                <div className="flex items-center gap-2 text-purple-800 mb-2">
-                  <Search className="h-4 w-4" />
-                  <p className="text-xs font-medium uppercase">Discovery command</p>
-                </div>
-                <code className="block whitespace-pre-wrap break-all text-xs text-purple-950">{discoveryCommand}</code>
-              </div>
-              <div className="rounded-lg border bg-blue-50 p-4">
-                <p className="text-xs font-medium uppercase text-blue-800 mb-2">Dry run command</p>
-                <code className="block whitespace-pre-wrap break-all text-xs text-blue-950">{dryRunCommand}</code>
-              </div>
+            <div className="rounded-lg border bg-gray-50 p-4 text-sm text-gray-700">
+              <p><span className="font-medium text-gray-900">Run mode:</span> {(job.runMode || 'discover').replace('-', ' ')}</p>
+              <p><span className="font-medium text-gray-900">Worker:</span> {job.workerId || 'Waiting for hosted worker'}</p>
             </div>
 
             <p className="text-sm text-gray-600">{job.message || 'Waiting for worker status.'}</p>

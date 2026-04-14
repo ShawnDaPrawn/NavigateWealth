@@ -24,11 +24,14 @@ if (args.help) {
   npm run provider:sync -- --job-id <portal-job-id> --auth-token <admin-session-token>
   npm run provider:sync -- --mode discover --job-id <portal-job-id> --auth-token <admin-session-token>
   npm run provider:sync -- --mode dry-run --job-id <portal-job-id> --auth-token <admin-session-token>
+  npm run provider:sync -- --poll
 
 Environment:
   NW_API_AUTH_TOKEN                    Admin session token for Navigate Wealth API access
+  NW_PORTAL_WORKER_SECRET              Hosted worker secret for live polling mode
   NW_PORTAL_JOB_ID                     Portal job id, if not passed as --job-id
   NW_PORTAL_MODE                       run, discover, or dry-run
+  NW_PORTAL_POLL=1                     Poll Supabase for queued jobs continuously
   NW_PORTAL_FORCE_STAGE=1              Allow staging without a prior dry-run-ready job
   NW_PROVIDER_ALLAN_GRAY_USERNAME      Allan Gray username
   NW_PROVIDER_ALLAN_GRAY_PASSWORD      Allan Gray password
@@ -39,29 +42,33 @@ Environment:
 
 const apiBase = String(args['api-base'] || process.env.NW_API_BASE || DEFAULT_API_BASE).replace(/\/$/, '');
 const authToken = String(args['auth-token'] || process.env.NW_API_AUTH_TOKEN || '');
-const jobId = String(args['job-id'] || process.env.NW_PORTAL_JOB_ID || '');
+const workerSecret = String(args['worker-secret'] || process.env.NW_PORTAL_WORKER_SECRET || process.env.PORTAL_WORKER_SECRET || '');
+let activeJobId = String(args['job-id'] || process.env.NW_PORTAL_JOB_ID || '');
 const headed = Boolean(args.headed || process.env.NW_PLAYWRIGHT_HEADED === '1');
 const maxPages = Number(args['max-pages'] || process.env.NW_PLAYWRIGHT_MAX_PAGES || 20);
 const mode = String(args.mode || process.env.NW_PORTAL_MODE || 'run');
 const forceStage = Boolean(args['force-stage'] || process.env.NW_PORTAL_FORCE_STAGE === '1');
+const poll = Boolean(args.poll || process.env.NW_PORTAL_POLL === '1');
+const workerId = String(args['worker-id'] || process.env.NW_PORTAL_WORKER_ID || `worker-${process.pid}`);
 
 if (!['run', 'discover', 'dry-run'].includes(mode)) {
   throw new Error('--mode must be run, discover, or dry-run.');
 }
 
-if (!jobId) {
+if (!activeJobId && !poll) {
   throw new Error('Missing --job-id or NW_PORTAL_JOB_ID.');
 }
 
-if (!authToken) {
-  throw new Error('Missing --auth-token or NW_API_AUTH_TOKEN. Use an admin session token; do not paste provider passwords here.');
+if (!authToken && !workerSecret) {
+  throw new Error('Missing --auth-token/NW_API_AUTH_TOKEN or --worker-secret/NW_PORTAL_WORKER_SECRET.');
 }
 
 async function apiFetch(path, options = {}) {
   const response = await fetch(`${apiBase}${path}`, {
     ...options,
     headers: {
-      Authorization: `Bearer ${authToken}`,
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...(workerSecret ? { 'X-Portal-Worker-Secret': workerSecret } : {}),
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     },
@@ -73,8 +80,15 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 
+function jobPath(suffix = '') {
+  if (!activeJobId) throw new Error('No active portal job id.');
+  return workerSecret && !authToken
+    ? `/portal-worker/jobs/${activeJobId}${suffix}`
+    : `/portal-jobs/${activeJobId}${suffix}`;
+}
+
 async function updateJob(status, patch = {}) {
-  return apiFetch(`/portal-jobs/${jobId}/status`, {
+  return apiFetch(jobPath('/status'), {
     method: 'POST',
     body: JSON.stringify({ status, ...patch }),
   });
@@ -107,7 +121,7 @@ async function firstVisibleSelector(page, selectors, timeoutMs) {
 async function waitForManualOtp(timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const data = await apiFetch(`/portal-jobs/${jobId}/otp`);
+    const data = await apiFetch(jobPath('/otp'));
     if (data.otp) return data.otp;
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
@@ -115,7 +129,7 @@ async function waitForManualOtp(timeoutMs) {
 }
 
 async function postDiscoveryReport(report) {
-  return apiFetch(`/portal-jobs/${jobId}/discovery-report`, {
+  return apiFetch(jobPath('/discovery-report'), {
     method: 'POST',
     body: JSON.stringify(report),
   });
@@ -288,22 +302,52 @@ async function extractRows(page, flow) {
   return rows;
 }
 
-async function main() {
+async function runPolicyListSteps(page, steps = []) {
+  for (const step of steps) {
+    const timeout = Number(step.timeoutMs || 30000);
+    if (step.action === 'goto') {
+      if (!step.url) throw new Error(`Policy list step ${step.id || ''} is missing a URL.`);
+      await page.goto(step.url, { waitUntil: 'domcontentloaded', timeout });
+    } else if (step.action === 'click') {
+      await (await visibleLocator(page, step.selector, timeout)).click();
+      await page.waitForLoadState('domcontentloaded', { timeout }).catch(() => undefined);
+    } else if (step.action === 'fill') {
+      await (await visibleLocator(page, step.selector, timeout)).fill(step.value || '');
+    } else if (step.action === 'press') {
+      await (await visibleLocator(page, step.selector, timeout)).press(step.key || 'Enter');
+    } else if (step.action === 'wait_for_url') {
+      if (!step.url) throw new Error(`Policy list step ${step.id || ''} is missing a URL pattern.`);
+      await page.waitForURL(step.url, { timeout });
+    } else {
+      await visibleLocator(page, step.selector, timeout);
+    }
+  }
+}
+
+async function loadRuntime(jobId) {
+  if (workerSecret && !authToken) {
+    return apiFetch(`/portal-worker/jobs/${jobId}/runtime`);
+  }
+
+  const { job } = await apiFetch(`/portal-jobs/${jobId}`);
+  const { flow } = await apiFetch(`/portal-flows/${job.providerId}`);
+  return { job, flow, credentials: null };
+}
+
+async function runJob(jobId, requestedMode = mode) {
+  activeJobId = jobId;
   let browser;
   try {
-    const { job } = await apiFetch(`/portal-jobs/${jobId}`);
-    const { flow } = await apiFetch(`/portal-flows/${job.providerId}`);
-    if (mode === 'run' && job.status !== 'dry_run_ready' && !forceStage) {
+    const { job, flow, credentials } = await loadRuntime(jobId);
+    const jobMode = job.runMode || requestedMode;
+    if (jobMode === 'run' && job.status !== 'dry_run_ready' && !forceStage && authToken) {
       throw new Error('Refusing to stage portal data before a successful dry run. Run with --mode dry-run first, or pass --force-stage after manual review.');
     }
     const credentialProfile = flow.credentialProfiles.find((profile) => profile.id === job.credentialProfileId);
     if (!credentialProfile) throw new Error('Credential profile no longer exists on the portal flow.');
-    if (credentialProfile.source !== 'environment') {
-      throw new Error('This worker currently supports environment credential profiles only.');
-    }
 
-    const username = process.env[credentialProfile.usernameEnvVar || ''];
-    const password = process.env[credentialProfile.passwordEnvVar || ''];
+    const username = credentials?.username || process.env[credentialProfile.usernameEnvVar || ''];
+    const password = credentials?.password || process.env[credentialProfile.passwordEnvVar || ''];
     if (!username || !password) {
       throw new Error(`Missing provider credential env vars: ${credentialProfile.usernameEnvVar}, ${credentialProfile.passwordEnvVar}`);
     }
@@ -333,18 +377,22 @@ async function main() {
     if (flow.navigation?.postLoginUrl) {
       await page.goto(flow.navigation.postLoginUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
     }
+    if (Array.isArray(flow.navigation?.policyListSteps) && flow.navigation.policyListSteps.length > 0) {
+      await updateJob('running', { currentStep: 'following_policy_list_steps', message: 'Following configured provider policy navigation steps.' });
+      await runPolicyListSteps(page, flow.navigation.policyListSteps);
+    }
 
-    if (mode === 'discover') {
+    if (jobMode === 'discover') {
       await updateJob('discovering', { currentStep: 'capturing_discovery_report', message: 'Capturing selector discovery report. No policy data will be staged.' });
       const report = await captureDiscoveryReport(page, flow, { mode: 'discover' });
       await postDiscoveryReport(report);
       return;
     }
 
-    await updateJob('extracting', { currentStep: mode === 'dry-run' ? 'dry_run_extracting_policy_rows' : 'extracting_policy_rows', message: 'Extracting provider policy rows.' });
+    await updateJob('extracting', { currentStep: jobMode === 'dry-run' ? 'dry_run_extracting_policy_rows' : 'extracting_policy_rows', message: 'Extracting provider policy rows.' });
     const rows = await extractRows(page, flow);
 
-    if (mode === 'dry-run') {
+    if (jobMode === 'dry-run') {
       const report = await captureDiscoveryReport(page, flow, { mode: 'dry-run', extractedRowCount: rows.length });
       await postDiscoveryReport(report);
       return;
@@ -355,7 +403,7 @@ async function main() {
       message: `Extracted ${rows.length} rows. Staging policy sync run.`,
       extractedRows: rows.length,
     });
-    await apiFetch(`/portal-jobs/${jobId}/stage`, {
+    await apiFetch(jobPath('/stage'), {
       method: 'POST',
       body: JSON.stringify({ rows }),
     });
@@ -371,7 +419,25 @@ async function main() {
   }
 }
 
-main().catch((error) => {
+async function pollForJobs() {
+  console.log(`Portal worker ${workerId} polling ${apiBase}`);
+  for (;;) {
+    const { job } = await apiFetch('/portal-worker/jobs/claim', {
+      method: 'POST',
+      body: JSON.stringify({ workerId }),
+    });
+    if (!job) {
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+      continue;
+    }
+    console.log(`Claimed portal job ${job.id} (${job.runMode || 'discover'})`);
+    await runJob(job.id, job.runMode || mode).catch((error) => {
+      console.error(`Job ${job.id} failed: ${error.message}`);
+    });
+  }
+}
+
+(poll ? pollForJobs() : runJob(activeJobId)).catch((error) => {
   console.error(error.message);
   process.exitCode = 1;
 });

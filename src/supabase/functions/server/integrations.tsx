@@ -163,15 +163,34 @@ interface IntegrationSyncRun {
 }
 
 type PortalJobStatus = 'queued' | 'running' | 'waiting_for_otp' | 'discovering' | 'discovery_ready' | 'extracting' | 'dry_run_ready' | 'staging' | 'staged' | 'failed' | 'cancelled';
+type PortalJobRunMode = 'discover' | 'dry-run' | 'run';
 
 interface PortalCredentialProfile {
   id: string;
   label: string;
-  source: 'environment' | 'supabase_vault';
+  source: 'environment' | 'supabase_kv' | 'supabase_vault';
   usernameEnvVar?: string;
   passwordEnvVar?: string;
   usernameSecretName?: string;
   passwordSecretName?: string;
+}
+
+interface PortalCredentialRecord {
+  providerId: string;
+  profileId: string;
+  username: string;
+  password: string;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+interface PortalCredentialStatus {
+  providerId: string;
+  profileId: string;
+  hasUsername: boolean;
+  hasPassword: boolean;
+  updatedAt?: string;
+  updatedBy?: string;
 }
 
 interface PortalFlowField {
@@ -180,6 +199,17 @@ interface PortalFlowField {
   attribute?: 'text' | 'value' | 'href' | string;
   required?: boolean;
   transform?: 'trim' | 'number' | 'date' | string;
+}
+
+interface PortalFlowStep {
+  id: string;
+  action: 'goto' | 'click' | 'fill' | 'wait_for_selector' | 'wait_for_url' | 'press';
+  selector?: string;
+  url?: string;
+  value?: string;
+  key?: string;
+  timeoutMs?: number;
+  description?: string;
 }
 
 interface PortalProviderFlow {
@@ -203,6 +233,7 @@ interface PortalProviderFlow {
   };
   navigation: {
     postLoginUrl?: string;
+    policyListSteps?: PortalFlowStep[];
     clientListSelector?: string;
     clientRowSelector?: string;
     nextPageSelector?: string;
@@ -222,8 +253,10 @@ interface PortalSyncJob {
   providerName: string;
   categoryId: string;
   status: PortalJobStatus;
+  runMode?: PortalJobRunMode;
   flowId: string;
   credentialProfileId: string;
+  workerId?: string;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;
@@ -303,6 +336,68 @@ function valuesDiffer(oldValue: unknown, newValue: unknown): boolean {
   return String(oldValue ?? '').trim() !== String(newValue ?? '').trim();
 }
 
+function portalCredentialKey(providerId: string, profileId: string): string {
+  return `portal-credential:${providerId}:${profileId}`;
+}
+
+function portalCredentialStatus(record: PortalCredentialRecord | null, providerId: string, profileId: string): PortalCredentialStatus {
+  return {
+    providerId,
+    profileId,
+    hasUsername: !!record?.username,
+    hasPassword: !!record?.password,
+    updatedAt: record?.updatedAt,
+    updatedBy: record?.updatedBy,
+  };
+}
+
+function getWorkerSecret(): string {
+  return String(Deno.env.get('NW_PORTAL_WORKER_SECRET') || Deno.env.get('PORTAL_WORKER_SECRET') || '').trim();
+}
+
+function isPortalWorkerRequest(c: { req: { header: (name: string) => string | undefined } }): boolean {
+  const expected = getWorkerSecret();
+  if (!expected) return false;
+  const headerSecret = String(c.req.header('X-Portal-Worker-Secret') || '').trim();
+  const authHeader = String(c.req.header('Authorization') || '');
+  const bearerSecret = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : '';
+  return headerSecret === expected || bearerSecret === expected;
+}
+
+function requirePortalWorker(c: { json: (body: unknown, status?: number) => Response; req: { header: (name: string) => string | undefined } }): Response | null {
+  if (!getWorkerSecret()) {
+    return c.json({ error: 'Portal worker secret is not configured on Supabase' }, 503);
+  }
+  if (!isPortalWorkerRequest(c)) {
+    return c.json({ error: 'Unauthorized portal worker' }, 401);
+  }
+  return null;
+}
+
+function normaliseRunMode(value: unknown): PortalJobRunMode {
+  return value === 'dry-run' || value === 'run' ? value : 'discover';
+}
+
+function normaliseFlowSteps(value: unknown): PortalFlowStep[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 40).map((step, index) => {
+    const entry = step as Record<string, unknown>;
+    const action = ['goto', 'click', 'fill', 'wait_for_selector', 'wait_for_url', 'press'].includes(String(entry.action))
+      ? entry.action as PortalFlowStep['action']
+      : 'wait_for_selector';
+    return {
+      id: String(entry.id || `step-${index + 1}`).slice(0, 80),
+      action,
+      selector: typeof entry.selector === 'string' ? entry.selector.slice(0, 500) : undefined,
+      url: typeof entry.url === 'string' ? entry.url.slice(0, 1000) : undefined,
+      value: typeof entry.value === 'string' ? entry.value.slice(0, 500) : undefined,
+      key: typeof entry.key === 'string' ? entry.key.slice(0, 80) : undefined,
+      timeoutMs: typeof entry.timeoutMs === 'number' ? Math.max(1000, Math.min(entry.timeoutMs, 120000)) : undefined,
+      description: typeof entry.description === 'string' ? entry.description.slice(0, 300) : undefined,
+    };
+  });
+}
+
 function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalProviderFlow {
   const providerName = String(provider.name || providerId);
   const providerKey = providerName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -318,8 +413,8 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
       credentialProfiles: [
         {
           id: 'allan-gray-env',
-          label: 'Allan Gray environment credentials',
-          source: 'environment',
+          label: 'Allan Gray Supabase credentials',
+          source: 'supabase_kv',
           usernameEnvVar: 'NW_PROVIDER_ALLAN_GRAY_USERNAME',
           passwordEnvVar: 'NW_PROVIDER_ALLAN_GRAY_PASSWORD',
         },
@@ -344,6 +439,7 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
         instructions: 'The Allan Gray SMS OTP must be entered by an admin in Navigate Wealth. The worker will pause and poll for it; never store the OTP in a spreadsheet or flow config.',
       },
       navigation: {
+        policyListSteps: [],
         clientListSelector: '[data-testid*="client" i], a:has-text("Clients"), a:has-text("Investors")',
         clientRowSelector: '[data-testid*="client-row" i], table tbody tr',
         nextPageSelector: 'a[rel="next"], button:has-text("Next")',
@@ -359,7 +455,8 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
       },
       notes: [
         'Starter selectors are intentionally conservative because provider portals change and require authenticated discovery.',
-        'Credentials are read by the Playwright worker from environment variables, not stored in Navigate Wealth.',
+        'Credentials are stored server-side in Supabase and are never returned to the browser.',
+        'Use policy list steps to describe how the worker reaches the policy table after login.',
         'SMS OTP is a manual pause-and-resume checkpoint and is cleared after the worker consumes it.',
       ],
       needsDiscovery: true,
@@ -375,8 +472,8 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
     credentialProfiles: [
       {
         id: `${providerKey}-env`,
-        label: `${providerName} environment credentials`,
-        source: 'environment',
+        label: `${providerName} Supabase credentials`,
+        source: 'supabase_kv',
         usernameEnvVar: `NW_PROVIDER_${providerKey.toUpperCase()}_USERNAME`,
         passwordEnvVar: `NW_PROVIDER_${providerKey.toUpperCase()}_PASSWORD`,
       },
@@ -394,7 +491,7 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
       timeoutMs: 600000,
       instructions: 'Enter the SMS OTP in Navigate Wealth when the worker pauses.',
     },
-    navigation: {},
+    navigation: { policyListSteps: [] },
     extraction: { fields: [] },
     notes: ['Configure login, navigation, and extraction selectors before running this provider in production.'],
     needsDiscovery: true,
@@ -727,6 +824,75 @@ async function publishSyncRun(run: IntegrationSyncRun, options?: { autoOnly?: bo
   return run;
 }
 
+async function stagePortalRows(jobId: string, rawRows: Record<string, unknown>[]): Promise<{ job: PortalSyncJob; stagedRun: IntegrationSyncRun }> {
+  const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+  if (!job) {
+    throw new Error("Portal job not found");
+  }
+  if (rawRows.length === 0) {
+    throw new Error("No extracted rows supplied");
+  }
+
+  const provider = (await kv.get(`provider:${job.providerId}`)) as KvProvider | null;
+  if (!provider) {
+    throw new Error("Invalid provider ID");
+  }
+
+  const config = (await kv.get(`config:mapping:${job.providerId}:${job.categoryId}`)) as IntegrationConfig | null;
+  if (!config) {
+    throw new Error("No mapping configuration found. Please configure mappings first.");
+  }
+
+  const settings = normaliseSettings(config.settings);
+  const syncRun = await buildSyncRun({
+    provider,
+    providerId: job.providerId,
+    categoryId: job.categoryId,
+    fileName: `${job.providerName} portal extraction ${new Date().toISOString()}`,
+    source: 'portal',
+    rawRows,
+    fieldMapping: config.fieldMapping || {},
+    settings,
+  });
+
+  const finalRun = settings.autoPublish
+    ? await publishSyncRun(syncRun, { autoOnly: true })
+    : syncRun;
+
+  await kv.set(`sync-run:${finalRun.id}`, finalRun);
+
+  const now = new Date().toISOString();
+  const updatedJob: PortalSyncJob = {
+    ...job,
+    status: 'staged',
+    updatedAt: now,
+    completedAt: now,
+    currentStep: 'staged_for_review',
+    message: `Staged ${finalRun.summary.totalRows} portal-extracted rows for review.`,
+    extractedRows: rawRows.length,
+    stagedRunId: finalRun.id,
+  };
+  await kv.set(`portal-job:${job.id}`, updatedJob);
+  await kv.set(`portal-job:latest:${job.providerId}:${job.categoryId}`, { jobId: job.id, updatedAt: now });
+
+  const historyEntry: UploadHistory = {
+    id: crypto.randomUUID(),
+    providerId: job.providerId,
+    categoryId: job.categoryId,
+    fileName: 'Provider portal extraction',
+    status: 'success',
+    rowCount: finalRun.summary.totalRows,
+    errorCount: finalRun.summary.invalidRows + finalRun.summary.duplicateRows + finalRun.summary.unmatchedRows,
+    uploadedAt: now,
+    errors: [],
+    runId: finalRun.id,
+    publishedRows: finalRun.summary.publishedRows,
+  };
+  await kv.set(`history:${job.providerId}:${job.categoryId}:${Date.now()}`, historyEntry);
+
+  return { job: updatedJob, stagedRun: finalRun };
+}
+
 // --- Endpoints ---
 
 // GET /providers - Legacy/Fallback support
@@ -939,6 +1105,11 @@ app.put("/portal-flows/:providerId", requireAuth, async (c) => {
       providerId,
       id: body?.id || `${providerId}:default`,
       credentialProfiles: Array.isArray(body?.credentialProfiles) ? body.credentialProfiles : getDefaultPortalFlow(provider, providerId).credentialProfiles,
+      navigation: {
+        ...(getDefaultPortalFlow(provider, providerId).navigation || {}),
+        ...(body?.navigation || {}),
+        policyListSteps: normaliseFlowSteps(body?.navigation?.policyListSteps),
+      },
       updatedAt: new Date().toISOString(),
     };
 
@@ -947,6 +1118,86 @@ app.put("/portal-flows/:providerId", requireAuth, async (c) => {
   } catch (e) {
     log.error("Portal flow save error:", e);
     return c.json({ error: `Failed to save portal flow: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// GET /portal-flows/:providerId/credentials/:profileId
+app.get("/portal-flows/:providerId/credentials/:profileId", requireAuth, async (c) => {
+  try {
+    const providerId = c.req.param("providerId");
+    const profileId = c.req.param("profileId");
+    const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
+    if (!provider) {
+      return c.json({ error: "Invalid provider ID" }, 400);
+    }
+
+    const flow = await getPortalFlow(provider, providerId);
+    if (!flow.credentialProfiles.some((profile) => profile.id === profileId)) {
+      return c.json({ error: "Invalid credential profile" }, 400);
+    }
+
+    const record = (await kv.get(portalCredentialKey(providerId, profileId))) as PortalCredentialRecord | null;
+    return c.json({ success: true, status: portalCredentialStatus(record, providerId, profileId) });
+  } catch (e) {
+    log.error("Portal credential status error:", e);
+    return c.json({ error: "Failed to fetch portal credential status" }, 500);
+  }
+});
+
+// PUT /portal-flows/:providerId/credentials/:profileId
+app.put("/portal-flows/:providerId/credentials/:profileId", requireAuth, async (c) => {
+  try {
+    const providerId = c.req.param("providerId");
+    const profileId = c.req.param("profileId");
+    const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
+    if (!provider) {
+      return c.json({ error: "Invalid provider ID" }, 400);
+    }
+
+    const flow = await getPortalFlow(provider, providerId);
+    if (!flow.credentialProfiles.some((profile) => profile.id === profileId)) {
+      return c.json({ error: "Invalid credential profile" }, 400);
+    }
+
+    const body = await c.req.json();
+    const current = (await kv.get(portalCredentialKey(providerId, profileId))) as PortalCredentialRecord | null;
+    const username = typeof body?.username === 'string' && body.username.trim()
+      ? body.username.trim()
+      : current?.username || '';
+    const password = typeof body?.password === 'string' && body.password
+      ? body.password
+      : current?.password || '';
+
+    if (!username || !password) {
+      return c.json({ error: "Username and password are required the first time credentials are saved" }, 400);
+    }
+
+    const record: PortalCredentialRecord = {
+      providerId,
+      profileId,
+      username,
+      password,
+      updatedAt: new Date().toISOString(),
+      updatedBy: String(c.get('userId') || 'admin'),
+    };
+    await kv.set(portalCredentialKey(providerId, profileId), record);
+
+    const profile = flow.credentialProfiles.find((item) => item.id === profileId);
+    if (profile && profile.source !== 'supabase_kv') {
+      const updatedFlow: PortalProviderFlow = {
+        ...flow,
+        credentialProfiles: flow.credentialProfiles.map((item) =>
+          item.id === profileId ? { ...item, source: 'supabase_kv' } : item
+        ),
+        updatedAt: new Date().toISOString(),
+      };
+      await kv.set(`portal-flow:${providerId}`, updatedFlow);
+    }
+
+    return c.json({ success: true, status: portalCredentialStatus(record, providerId, profileId) });
+  } catch (e) {
+    log.error("Portal credential save error:", e);
+    return c.json({ error: `Failed to save portal credentials: ${getErrMsg(e)}` }, 500);
   }
 });
 
@@ -971,6 +1222,15 @@ app.post("/portal-jobs", requireAuth, async (c) => {
     if (!credentialProfileId || !flow.credentialProfiles.some((profile) => profile.id === credentialProfileId)) {
       return c.json({ error: "Invalid credential profile" }, 400);
     }
+    const credentialProfile = flow.credentialProfiles.find((profile) => profile.id === credentialProfileId);
+    if (credentialProfile?.source === 'supabase_kv') {
+      const credentialRecord = (await kv.get(portalCredentialKey(providerId, credentialProfileId))) as PortalCredentialRecord | null;
+      if (!credentialRecord?.username || !credentialRecord?.password) {
+        return c.json({ error: "Save the provider portal username and password before creating a portal job" }, 400);
+      }
+    }
+
+    const runMode = normaliseRunMode(body?.runMode);
 
     const now = new Date().toISOString();
     const job: PortalSyncJob = {
@@ -979,12 +1239,13 @@ app.post("/portal-jobs", requireAuth, async (c) => {
       providerName: provider.name || 'Unknown Provider',
       categoryId,
       status: 'queued',
+      runMode,
       flowId: flow.id,
       credentialProfileId,
       createdAt: now,
       updatedAt: now,
       currentStep: 'queued',
-      message: 'Portal sync job queued. Start the Playwright worker to begin extraction.',
+      message: 'Portal sync job queued for the hosted Playwright worker.',
     };
 
     await kv.set(`portal-job:${job.id}`, job);
@@ -1243,66 +1504,241 @@ app.post("/portal-jobs/:jobId/stage", requireAuth, async (c) => {
       return c.json({ error: "No extracted rows supplied" }, 400);
     }
 
+    const { job: updatedJob, stagedRun } = await stagePortalRows(jobId, rawRows);
+    return c.json({ success: true, job: updatedJob, stagedRun });
+  } catch (e) {
+    log.error("Portal job staging error:", e);
+    return c.json({ error: `Failed to stage portal rows: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// POST /portal-worker/jobs/claim
+app.post("/portal-worker/jobs/claim", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const requestedMode = typeof body?.runMode === 'string' ? body.runMode : undefined;
+    const workerId = String(body?.workerId || 'portal-worker').slice(0, 120);
+    const jobs = (await kv.listByPrefix('portal-job:', { limit: 500 }))
+      .map((entry) => entry.value as Partial<PortalSyncJob>)
+      .filter((job): job is PortalSyncJob => !!job?.id && job.status === 'queued')
+      .filter((job) => !requestedMode || normaliseRunMode(job.runMode) === normaliseRunMode(requestedMode))
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    const job = jobs[0];
+    if (!job) {
+      return c.json({ success: true, job: null });
+    }
+
+    const now = new Date().toISOString();
+    const claimed: PortalSyncJob = {
+      ...job,
+      status: 'running',
+      workerId,
+      startedAt: job.startedAt || now,
+      updatedAt: now,
+      currentStep: 'worker_claimed',
+      message: `Hosted Playwright worker claimed ${normaliseRunMode(job.runMode)} job.`,
+    };
+    await kv.set(`portal-job:${job.id}`, claimed);
+    return c.json({ success: true, job: claimed });
+  } catch (e) {
+    log.error("Portal worker claim error:", e);
+    return c.json({ error: `Failed to claim portal job: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// GET /portal-worker/jobs/:jobId/runtime
+app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: "Portal job not found" }, 404);
+    }
     const provider = (await kv.get(`provider:${job.providerId}`)) as KvProvider | null;
     if (!provider) {
       return c.json({ error: "Invalid provider ID" }, 400);
     }
+    const flow = await getPortalFlow(provider, job.providerId);
+    const credentialRecord = (await kv.get(portalCredentialKey(job.providerId, job.credentialProfileId))) as PortalCredentialRecord | null;
+    if (!credentialRecord?.username || !credentialRecord?.password) {
+      return c.json({ error: "Provider credentials are not saved for this job" }, 400);
+    }
+    return c.json({
+      success: true,
+      job,
+      flow,
+      credentials: {
+        username: credentialRecord.username,
+        password: credentialRecord.password,
+      },
+    });
+  } catch (e) {
+    log.error("Portal worker runtime error:", e);
+    return c.json({ error: `Failed to load worker runtime: ${getErrMsg(e)}` }, 500);
+  }
+});
 
-    const config = (await kv.get(`config:mapping:${job.providerId}:${job.categoryId}`)) as IntegrationConfig | null;
-    if (!config) {
-      return c.json({ error: "No mapping configuration found. Please configure mappings first." }, 400);
+// POST /portal-worker/jobs/:jobId/status
+app.post("/portal-worker/jobs/:jobId/status", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: "Portal job not found" }, 404);
     }
 
-    const settings = normaliseSettings(config.settings);
-    const syncRun = await buildSyncRun({
-      provider,
+    const body = await c.req.json().catch(() => ({}));
+    const allowedStatuses: PortalJobStatus[] = ['queued', 'running', 'waiting_for_otp', 'discovering', 'discovery_ready', 'extracting', 'dry_run_ready', 'staging', 'staged', 'failed', 'cancelled'];
+    const status = allowedStatuses.includes(body?.status) ? body.status as PortalJobStatus : job.status;
+    const updated: PortalSyncJob = {
+      ...job,
+      status,
+      updatedAt: new Date().toISOString(),
+      startedAt: job.startedAt || (status !== 'queued' ? new Date().toISOString() : undefined),
+      completedAt: ['discovery_ready', 'dry_run_ready', 'staged', 'failed', 'cancelled'].includes(status) ? new Date().toISOString() : undefined,
+      currentStep: typeof body?.currentStep === 'string' ? body.currentStep : job.currentStep,
+      message: typeof body?.message === 'string' ? body.message.slice(0, 500) : job.message,
+      extractedRows: typeof body?.extractedRows === 'number' ? body.extractedRows : job.extractedRows,
+      error: typeof body?.error === 'string' ? body.error.slice(0, 1000) : job.error,
+    };
+
+    await kv.set(`portal-job:${jobId}`, updated);
+    return c.json({ success: true, job: updated });
+  } catch (e) {
+    log.error("Portal worker status error:", e);
+    return c.json({ error: `Failed to update portal job: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// GET /portal-worker/jobs/:jobId/otp
+app.get("/portal-worker/jobs/:jobId/otp", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const otpEntry = (await kv.get(`portal-job-otp:${jobId}`)) as { otp: string; expiresAt: string } | null;
+    if (!otpEntry) {
+      return c.json({ success: true, otp: null });
+    }
+    if (new Date(otpEntry.expiresAt).getTime() < Date.now()) {
+      await kv.del(`portal-job-otp:${jobId}`);
+      return c.json({ success: true, otp: null, expired: true });
+    }
+    await kv.del(`portal-job-otp:${jobId}`);
+    return c.json({ success: true, otp: otpEntry.otp });
+  } catch (e) {
+    log.error("Portal worker OTP fetch error:", e);
+    return c.json({ error: `Failed to fetch OTP: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// POST /portal-worker/jobs/:jobId/discovery-report
+app.post("/portal-worker/jobs/:jobId/discovery-report", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const body = await c.req.json();
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: "Portal job not found" }, 404);
+    }
+    const mode = body?.mode === 'dry-run' ? 'dry-run' : 'discover';
+    const now = new Date().toISOString();
+    const report: PortalDiscoveryReport = {
+      id: crypto.randomUUID(),
+      jobId,
       providerId: job.providerId,
       categoryId: job.categoryId,
-      fileName: `${job.providerName} portal extraction ${new Date().toISOString()}`,
-      source: 'portal',
-      rawRows,
-      fieldMapping: config.fieldMapping || {},
-      settings,
-    });
+      createdAt: now,
+      mode,
+      urlHost: String(body?.urlHost || '').slice(0, 200),
+      title: typeof body?.title === 'string' ? body.title.slice(0, 200) : undefined,
+      summary: {
+        inputCount: Number(body?.summary?.inputCount || 0),
+        buttonCount: Number(body?.summary?.buttonCount || 0),
+        linkCount: Number(body?.summary?.linkCount || 0),
+        tableCount: Number(body?.summary?.tableCount || 0),
+        candidatePolicyTables: Number(body?.summary?.candidatePolicyTables || 0),
+        extractedRowCount: typeof body?.summary?.extractedRowCount === 'number' ? body.summary.extractedRowCount : undefined,
+      },
+      selectorCandidates: Array.isArray(body?.selectorCandidates)
+        ? body.selectorCandidates.slice(0, 200).map((candidate: Record<string, unknown>) => ({
+            purpose: ['input', 'button', 'link', 'table', 'policy_row', 'field'].includes(String(candidate.purpose))
+              ? candidate.purpose as PortalDiscoveryReport['selectorCandidates'][number]['purpose']
+              : 'field',
+            selector: String(candidate.selector || '').slice(0, 500),
+            tag: typeof candidate.tag === 'string' ? candidate.tag.slice(0, 40) : undefined,
+            type: typeof candidate.type === 'string' ? candidate.type.slice(0, 80) : undefined,
+            role: typeof candidate.role === 'string' ? candidate.role.slice(0, 80) : undefined,
+            label: typeof candidate.label === 'string' ? candidate.label.slice(0, 120) : undefined,
+            confidence: ['low', 'medium', 'high'].includes(String(candidate.confidence))
+              ? candidate.confidence as 'low' | 'medium' | 'high'
+              : 'low',
+            notes: typeof candidate.notes === 'string' ? candidate.notes.slice(0, 300) : undefined,
+          }))
+        : [],
+      tableSummaries: Array.isArray(body?.tableSummaries)
+        ? body.tableSummaries.slice(0, 50).map((table: Record<string, unknown>) => ({
+            selector: String(table.selector || '').slice(0, 500),
+            headerTexts: Array.isArray(table.headerTexts)
+              ? table.headerTexts.slice(0, 30).map((header) => String(header).slice(0, 120))
+              : [],
+            rowCount: Number(table.rowCount || 0),
+          }))
+        : [],
+      warnings: Array.isArray(body?.warnings) ? body.warnings.slice(0, 50).map((warning) => String(warning).slice(0, 300)) : [],
+    };
 
-    const finalRun = settings.autoPublish
-      ? await publishSyncRun(syncRun, { autoOnly: true })
-      : syncRun;
+    await kv.set(`portal-discovery-report:${report.id}`, report);
+    await kv.set(`portal-discovery-report:latest:${jobId}`, { reportId: report.id, updatedAt: now });
 
-    await kv.set(`sync-run:${finalRun.id}`, finalRun);
-
-    const now = new Date().toISOString();
     const updatedJob: PortalSyncJob = {
       ...job,
-      status: 'staged',
+      status: mode === 'dry-run' ? 'dry_run_ready' : 'discovery_ready',
       updatedAt: now,
       completedAt: now,
-      currentStep: 'staged_for_review',
-      message: `Staged ${finalRun.summary.totalRows} portal-extracted rows for review.`,
-      extractedRows: rawRows.length,
-      stagedRunId: finalRun.id,
+      currentStep: mode === 'dry-run' ? 'dry_run_ready' : 'discovery_ready',
+      message: mode === 'dry-run'
+        ? `Dry run completed. ${report.summary.extractedRowCount || 0} rows would be extracted; no policies were updated.`
+        : 'Discovery report captured. Review selector candidates before staging provider data.',
+      extractedRows: report.summary.extractedRowCount ?? job.extractedRows,
+      discoveryReportId: report.id,
     };
-    await kv.set(`portal-job:${job.id}`, updatedJob);
-    await kv.set(`portal-job:latest:${job.providerId}:${job.categoryId}`, { jobId: job.id, updatedAt: now });
+    await kv.set(`portal-job:${jobId}`, updatedJob);
 
-    const historyEntry: UploadHistory = {
-      id: crypto.randomUUID(),
-      providerId: job.providerId,
-      categoryId: job.categoryId,
-      fileName: 'Provider portal extraction',
-      status: 'success',
-      rowCount: finalRun.summary.totalRows,
-      errorCount: finalRun.summary.invalidRows + finalRun.summary.duplicateRows + finalRun.summary.unmatchedRows,
-      uploadedAt: now,
-      errors: [],
-      runId: finalRun.id,
-      publishedRows: finalRun.summary.publishedRows,
-    };
-    await kv.set(`history:${job.providerId}:${job.categoryId}:${Date.now()}`, historyEntry);
-
-    return c.json({ success: true, job: updatedJob, stagedRun: finalRun });
+    return c.json({ success: true, job: updatedJob, report });
   } catch (e) {
-    log.error("Portal job staging error:", e);
+    log.error("Portal worker discovery report error:", e);
+    return c.json({ error: `Failed to save discovery report: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// POST /portal-worker/jobs/:jobId/stage
+app.post("/portal-worker/jobs/:jobId/stage", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const body = await c.req.json();
+    const rawRows = Array.isArray(body?.rows) ? body.rows as Record<string, unknown>[] : [];
+    const { job, stagedRun } = await stagePortalRows(jobId, rawRows);
+    return c.json({ success: true, job, stagedRun });
+  } catch (e) {
+    log.error("Portal worker staging error:", e);
     return c.json({ error: `Failed to stage portal rows: ${getErrMsg(e)}` }, 500);
   }
 });

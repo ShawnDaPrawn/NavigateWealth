@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { IntegrationProvider, IntegrationConfig, PreviewData, IntegrationSyncRun, PortalFlowField, PortalSyncJob } from './types';
+import { IntegrationProvider, IntegrationConfig, PreviewData, IntegrationSyncRun, PortalFlowField, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from './types';
 import { productManagementApi } from './api';
 import { ProviderList } from './integrations/ProviderList';
 import { IntegrationHeader } from './integrations/IntegrationHeader';
@@ -27,6 +27,7 @@ export function IntegrationsTab() {
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [stagedRun, setStagedRun] = useState<IntegrationSyncRun | null>(null);
   const [portalJob, setPortalJob] = useState<PortalSyncJob | null>(null);
+  const [selectedPortalCredentialProfileId, setSelectedPortalCredentialProfileId] = useState('');
   
   // Mapping Configuration State (Local Mutable)
   const [configMapping, setConfigMapping] = useState<{source: string, target: string}[]>([]);
@@ -88,10 +89,29 @@ export function IntegrationsTab() {
     queryFn: () => productManagementApi.fetchPortalFlow(selectedProviderId!)
   });
 
+  useEffect(() => {
+    if (portalFlow?.credentialProfiles?.length) {
+        setSelectedPortalCredentialProfileId((current) =>
+            portalFlow.credentialProfiles.some((profile) => profile.id === current)
+                ? current
+                : portalFlow.credentialProfiles[0].id
+        );
+    } else {
+        setSelectedPortalCredentialProfileId('');
+    }
+  }, [portalFlow]);
+
+  const { data: portalCredentialStatus } = useQuery({
+    queryKey: integrationsKeys.portalCredentialStatus(selectedProviderId, selectedPortalCredentialProfileId),
+    enabled: !!selectedProviderId && !!selectedPortalCredentialProfileId,
+    queryFn: () => productManagementApi.fetchPortalCredentialStatus(selectedProviderId!, selectedPortalCredentialProfileId)
+  });
+
   const { data: latestPortalJob } = useQuery({
     queryKey: integrationsKeys.latestPortalJob(selectedProviderId, selectedCategoryId),
     enabled: !!selectedProviderId && !!selectedCategoryId,
-    queryFn: () => productManagementApi.fetchLatestPortalJob(selectedProviderId!, selectedCategoryId)
+    queryFn: () => productManagementApi.fetchLatestPortalJob(selectedProviderId!, selectedCategoryId),
+    refetchInterval: portalJob && !['staged', 'failed', 'cancelled', 'discovery_ready', 'dry_run_ready'].includes(portalJob.status) ? 5000 : false,
   });
 
   const { data: portalDiscoveryReport, isLoading: isLoadingPortalDiscoveryReport } = useQuery({
@@ -226,13 +246,13 @@ export function IntegrationsTab() {
   });
 
   const createPortalJobMutation = useMutation({
-    mutationFn: async (credentialProfileId: string) => {
+    mutationFn: async (params: { credentialProfileId: string; runMode: PortalJobRunMode }) => {
         if (!selectedProviderId || !selectedCategoryId) throw new Error("Missing provider or category");
-        return productManagementApi.createPortalJob(selectedProviderId, selectedCategoryId, credentialProfileId);
+        return productManagementApi.createPortalJob(selectedProviderId, selectedCategoryId, params.credentialProfileId, params.runMode);
     },
     onSuccess: ({ job }) => {
         setPortalJob(job);
-        toast.success("Portal job created. Start the Playwright worker when you are ready.");
+        toast.success("Portal job queued for the hosted Playwright worker.");
         queryClient.invalidateQueries({ queryKey: integrationsKeys.portalJob(job.id) });
         queryClient.invalidateQueries({ queryKey: integrationsKeys.latestPortalJob(selectedProviderId, selectedCategoryId) });
     },
@@ -293,6 +313,38 @@ export function IntegrationsTab() {
     },
     onError: (err: Error) => {
         toast.error(err.message || "Failed to update portal flow");
+    }
+  });
+
+  const savePortalFlowMutation = useMutation({
+    mutationFn: async (flow: PortalProviderFlow) => {
+        if (!selectedProviderId) throw new Error("No provider selected");
+        return productManagementApi.savePortalFlow(selectedProviderId, flow);
+    },
+    onSuccess: () => {
+        toast.success("Portal automation flow saved.");
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId) });
+    },
+    onError: (err: Error) => {
+        toast.error(err.message || "Failed to save portal flow");
+    }
+  });
+
+  const savePortalCredentialsMutation = useMutation({
+    mutationFn: async (params: { profileId: string; username: string; password?: string }) => {
+        if (!selectedProviderId) throw new Error("No provider selected");
+        return productManagementApi.savePortalCredentials(selectedProviderId, params.profileId, {
+            username: params.username,
+            password: params.password,
+        });
+    },
+    onSuccess: (_, variables) => {
+        toast.success("Provider portal credentials saved in Supabase.");
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalCredentialStatus(selectedProviderId, variables.profileId) });
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId) });
+    },
+    onError: (err: Error) => {
+        toast.error(err.message || "Failed to save portal credentials");
     }
   });
 
@@ -470,9 +522,16 @@ export function IntegrationsTab() {
                 isLoadingFlow={isLoadingPortalFlow}
                 isLoadingDiscoveryReport={isLoadingPortalDiscoveryReport}
                 isCreatingJob={createPortalJobMutation.isPending}
+                credentialStatus={portalCredentialStatus}
+                selectedCredentialProfileId={selectedPortalCredentialProfileId}
+                onCredentialProfileChange={setSelectedPortalCredentialProfileId}
+                isSavingCredentials={savePortalCredentialsMutation.isPending}
+                isSavingFlow={savePortalFlowMutation.isPending}
                 isSubmittingOtp={submitPortalOtpMutation.isPending}
                 isRefreshingJob={refreshPortalJobMutation.isPending}
-                onCreateJob={(credentialProfileId) => createPortalJobMutation.mutate(credentialProfileId)}
+                onCreateJob={(credentialProfileId, runMode) => createPortalJobMutation.mutate({ credentialProfileId, runMode })}
+                onSaveCredentials={(profileId, credentials) => savePortalCredentialsMutation.mutate({ profileId, ...credentials })}
+                onSaveFlow={(flow) => savePortalFlowMutation.mutate(flow)}
                 onSubmitOtp={(otp) => submitPortalOtpMutation.mutate(otp)}
                 onRefreshJob={() => refreshPortalJobMutation.mutate()}
                 onApplyFlow={(patch) => applyPortalFlowMutation.mutate(patch)}
