@@ -78,6 +78,8 @@ export function PortalAutomationTab({
   const [runMode, setRunMode] = useState<PortalJobRunMode>('discover');
   const [credentialUsername, setCredentialUsername] = useState('');
   const [credentialPassword, setCredentialPassword] = useState('');
+  const [isAwaitingCredentialSave, setIsAwaitingCredentialSave] = useState(false);
+  const [lastSavedCredentialProfileId, setLastSavedCredentialProfileId] = useState<string | null>(null);
   const [loginUrl, setLoginUrl] = useState('');
   const [usernameSelector, setUsernameSelector] = useState('');
   const [passwordSelector, setPasswordSelector] = useState('');
@@ -112,12 +114,37 @@ export function PortalAutomationTab({
 
   const selectedProfile = flow?.credentialProfiles.find((profile) => profile.id === selectedCredentialProfileId);
   const policyRowCandidates = discoveryReport?.selectorCandidates.filter(candidate => candidate.purpose === 'policy_row') || [];
+  const credentialsSaved = Boolean(credentialStatus?.hasUsername && credentialStatus?.hasPassword);
+  const hasCredentialDraft = Boolean(credentialUsername.trim() || credentialPassword);
+  const canSaveCredentials = Boolean(
+    selectedProfile &&
+    !isSavingCredentials &&
+    ((credentialUsername.trim() && credentialPassword) ||
+      (credentialsSaved && (credentialUsername.trim() || credentialPassword)))
+  );
+  const showCredentialSaveSuccess = credentialsSaved && lastSavedCredentialProfileId === selectedCredentialProfileId;
 
   const updateFieldSelector = (index: number, selector: string) => {
     setFieldSelectors(prev => prev.map((field, currentIndex) => (
       currentIndex === index ? { ...field, selector } : field
     )));
   };
+
+  useEffect(() => {
+    if (!selectedCredentialProfileId) {
+      setIsAwaitingCredentialSave(false);
+      setLastSavedCredentialProfileId(null);
+      return;
+    }
+    if (credentialsSaved && isAwaitingCredentialSave && !hasCredentialDraft) {
+      setLastSavedCredentialProfileId(selectedCredentialProfileId);
+      setIsAwaitingCredentialSave(false);
+      return;
+    }
+    if (!isSavingCredentials && isAwaitingCredentialSave && !hasCredentialDraft) {
+      setIsAwaitingCredentialSave(false);
+    }
+  }, [credentialsSaved, hasCredentialDraft, isAwaitingCredentialSave, isSavingCredentials, selectedCredentialProfileId]);
 
   const saveFlowConfiguration = () => {
     if (!flow) return;
@@ -223,7 +250,23 @@ export function PortalAutomationTab({
                 <div className="rounded-lg border bg-gray-50 p-4 text-sm text-gray-700 space-y-4">
                   <div className="flex items-center gap-2 font-medium text-gray-900">
                     <KeyRound className="h-4 w-4" />
-                    Worker secret inputs
+                    Provider credentials
+                  </div>
+                  <div className={cn(
+                    'rounded-md border px-3 py-2 text-sm',
+                    credentialsSaved
+                      ? 'border-green-200 bg-green-50 text-green-800'
+                      : 'border-amber-200 bg-amber-50 text-amber-900',
+                  )}>
+                    <div className="flex items-center gap-2 font-medium">
+                      {credentialsSaved ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                      {credentialsSaved ? 'Credentials saved' : 'Credentials not saved yet'}
+                    </div>
+                    <p className="mt-1 text-xs">
+                      {credentialsSaved
+                        ? `Stored in Supabase${credentialStatus?.updatedAt ? ` on ${new Date(credentialStatus.updatedAt).toLocaleString()}` : ''}. For security, the saved password is never shown again in the browser.`
+                        : 'Enter both the username and password once, then click Save Credentials before creating a portal job.'}
+                    </p>
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
@@ -242,30 +285,33 @@ export function PortalAutomationTab({
                         type="password"
                         value={credentialPassword}
                         onChange={(event) => setCredentialPassword(event.target.value)}
-                        placeholder={credentialStatus?.hasPassword ? 'Saved. Enter to replace.' : 'Provider password'}
+                        placeholder={credentialStatus?.hasPassword ? 'Saved already. Enter a new password only if replacing it.' : 'Provider password'}
                       />
                     </div>
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs text-gray-500">
-                      {credentialStatus?.hasUsername && credentialStatus?.hasPassword
-                        ? `Saved in Supabase${credentialStatus.updatedAt ? ` on ${new Date(credentialStatus.updatedAt).toLocaleString()}` : ''}.`
-                        : 'Credentials are not saved yet for this provider.'}
+                      {showCredentialSaveSuccess
+                        ? 'Credentials were saved successfully. You can create a portal job now.'
+                        : credentialsSaved
+                          ? 'You only need to re-enter a field if you want to replace the saved value.'
+                          : 'The first save requires both fields.'}
                     </p>
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => {
+                        setIsAwaitingCredentialSave(true);
                         onSaveCredentials(selectedProfile.id, {
                           username: credentialUsername,
                           password: credentialPassword || undefined,
                         });
                         setCredentialPassword('');
                       }}
-                      disabled={isSavingCredentials || (!credentialUsername.trim() && !credentialStatus?.hasUsername) || (!credentialPassword && !credentialStatus?.hasPassword)}
+                      disabled={!canSaveCredentials}
                     >
                       {isSavingCredentials ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <KeyRound className="h-4 w-4 mr-2" />}
-                      Save Credentials
+                      {credentialsSaved ? 'Update Credentials' : 'Save Credentials'}
                     </Button>
                   </div>
                 </div>
