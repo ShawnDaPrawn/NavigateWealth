@@ -1,3 +1,5 @@
+import { readFile, unlink } from 'node:fs/promises';
+
 const DEFAULT_API_BASE = 'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/integrations';
 
 function parseArgs(argv) {
@@ -69,6 +71,7 @@ async function apiFetch(path, options = {}) {
     headers: {
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...(workerSecret ? { 'X-Portal-Worker-Secret': workerSecret } : {}),
+      'X-Portal-Worker-Id': workerId,
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     },
@@ -80,11 +83,33 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 
+async function apiUpload(path, formData) {
+  const response = await fetch(`${apiBase}${path}`, {
+    method: 'POST',
+    headers: {
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...(workerSecret ? { 'X-Portal-Worker-Secret': workerSecret } : {}),
+      'X-Portal-Worker-Id': workerId,
+    },
+    body: formData,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `Upload failed: ${response.status}`);
+  }
+  return data;
+}
+
 function jobPath(suffix = '') {
   if (!activeJobId) throw new Error('No active portal job id.');
   return workerSecret && !authToken
     ? `/portal-worker/jobs/${activeJobId}${suffix}`
     : `/portal-jobs/${activeJobId}${suffix}`;
+}
+
+function workerJobPath(suffix = '') {
+  if (!activeJobId) throw new Error('No active portal job id.');
+  return `/portal-worker/jobs/${activeJobId}${suffix}`;
 }
 
 async function updateJob(status, patch = {}) {
@@ -164,6 +189,78 @@ async function stageCompletedPolicyItems() {
     method: 'POST',
     body: JSON.stringify({}),
   });
+}
+
+async function findClickableByIntent(page, selector, labels = []) {
+  if (selector) {
+    const locator = page.locator(selector).first();
+    if (await locator.isVisible({ timeout: 1500 }).catch(() => false)) return locator;
+  }
+
+  for (const label of labels) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const labelRegex = new RegExp(escaped, 'i');
+    const candidates = [
+      page.getByRole('link', { name: labelRegex }).first(),
+      page.getByRole('button', { name: labelRegex }).first(),
+      page.locator('a, button, [role="link"], [role="button"]').filter({ hasText: labelRegex }).first(),
+    ];
+
+    for (const locator of candidates) {
+      if (await locator.isVisible({ timeout: 800 }).catch(() => false)) return locator;
+    }
+  }
+
+  throw new Error('Could not confidently find the policy schedule download action.');
+}
+
+function safeDownloadedPdfName(item, suggestedFilename) {
+  const baseName = String(suggestedFilename || `${item.policyNumber || item.id}-policy-schedule.pdf`)
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return baseName.toLowerCase().endsWith('.pdf') ? baseName : `${baseName || 'policy_schedule'}.pdf`;
+}
+
+async function downloadPolicySchedule(page, flow, item) {
+  const policySchedule = flow.policySchedule || {};
+  const labels = splitLabels(policySchedule.downloadLabels || ['Policy schedule', 'Download', 'PDF', 'Statement']);
+  const timeout = Number(policySchedule.waitForDownloadMs || 30000);
+  const action = await findClickableByIntent(page, policySchedule.downloadSelector, labels);
+
+  const downloadPromise = page.waitForEvent('download', { timeout });
+  await action.click();
+  const download = await downloadPromise;
+  const failure = await download.failure();
+  if (failure) throw new Error(`Provider PDF download failed: ${failure}`);
+
+  const filePath = await download.path();
+  if (!filePath) {
+    throw new Error('Provider created a PDF download, but Playwright could not access the file path.');
+  }
+
+  return {
+    filePath,
+    fileName: safeDownloadedPdfName(item, download.suggestedFilename()),
+  };
+}
+
+async function uploadPolicyScheduleDocument(item, downloaded, documentType = 'policy_schedule') {
+  if (!workerSecret) {
+    throw new Error('Policy schedule attachment requires NW_PORTAL_WORKER_SECRET live worker mode.');
+  }
+
+  const buffer = await readFile(downloaded.filePath);
+  const signature = buffer.subarray(0, 5).toString('utf8');
+  if (!signature.startsWith('%PDF-')) {
+    throw new Error('Downloaded policy schedule is not a valid PDF.');
+  }
+
+  const formData = new FormData();
+  formData.append('file', new Blob([buffer], { type: 'application/pdf' }), downloaded.fileName);
+  formData.append('fileName', downloaded.fileName);
+  formData.append('documentType', documentType);
+
+  return apiUpload(workerJobPath(`/items/${item.id}/policy-document`), formData);
 }
 
 async function findInputByIntent(page, selector, labels = []) {
@@ -579,12 +676,51 @@ async function processPolicyQueue(page, flow, config, jobMode) {
       });
 
       const { rawData, extractedData } = await extractPolicyRecord(page, flow, config, item);
+      let documentResult = null;
+      let documentWarning = '';
+
+      if (flow.policySchedule?.enabled) {
+        try {
+          await updatePolicyItem(item.id, 'in_progress', {
+            currentStep: jobMode === 'dry-run' ? 'checking_policy_schedule_pdf' : 'attaching_policy_schedule_pdf',
+            message: jobMode === 'dry-run'
+              ? `Checking policy schedule PDF for ${item.clientName} / ${item.policyNumber}.`
+              : `Downloading and replacing policy schedule PDF for ${item.clientName} / ${item.policyNumber}.`,
+          });
+
+          const downloaded = await downloadPolicySchedule(page, flow, item);
+          try {
+            if (jobMode === 'dry-run') {
+              documentWarning = `Policy schedule PDF found (${downloaded.fileName}); not attached during dry run.`;
+            } else {
+              const upload = await uploadPolicyScheduleDocument(item, downloaded, flow.policySchedule.documentType || 'policy_schedule');
+              documentResult = upload.document || null;
+            }
+          } finally {
+            await unlink(downloaded.filePath).catch(() => undefined);
+          }
+        } catch (error) {
+          if (flow.policySchedule.required === false) {
+            documentWarning = `Policy schedule PDF was not attached: ${error instanceof Error ? error.message : String(error)}`;
+          } else {
+            throw error;
+          }
+        }
+      }
+
       await updatePolicyItem(item.id, 'completed', {
         currentStep: 'completed',
-        message: `Extracted ${Object.values(rawData).filter((value) => String(value || '').trim()).length} mapped value(s).`,
+        message: [
+          `Extracted ${Object.values(rawData).filter((value) => String(value || '').trim()).length} mapped value(s).`,
+          documentResult ? `Policy schedule PDF replaced (${documentResult.fileName}).` : '',
+          documentWarning,
+        ].filter(Boolean).join(' '),
         rawData,
         extractedData,
         matchConfidence: 'high',
+        documentAttached: Boolean(documentResult),
+        documentFileName: documentResult?.fileName,
+        documentUpdatedAt: documentResult?.uploadDate,
       });
       completed += 1;
     } catch (error) {

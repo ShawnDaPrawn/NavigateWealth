@@ -215,6 +215,15 @@ interface PortalFlowStep {
   description?: string;
 }
 
+interface PortalPolicyScheduleConfig {
+  enabled?: boolean;
+  downloadSelector?: string;
+  downloadLabels?: string[];
+  documentType?: 'policy_schedule' | 'amendment' | 'statement' | 'benefit_summary' | 'other';
+  required?: boolean;
+  waitForDownloadMs?: number;
+}
+
 interface PortalProviderFlow {
   id: string;
   providerId: string;
@@ -257,6 +266,7 @@ interface PortalProviderFlow {
     policyRowSelector?: string;
     fields: PortalFlowField[];
   };
+  policySchedule?: PortalPolicyScheduleConfig;
   notes: string[];
   needsDiscovery?: boolean;
   updatedAt: string;
@@ -320,6 +330,9 @@ interface PortalJobPolicyItem {
   rawData?: Record<string, unknown>;
   extractedData?: Record<string, unknown>;
   matchConfidence?: 'high' | 'medium' | 'low';
+  documentAttached?: boolean;
+  documentFileName?: string;
+  documentUpdatedAt?: string;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;
@@ -668,6 +681,23 @@ function normaliseExtractionFields(value: unknown, fallback: PortalFlowField[] =
   });
 }
 
+function normalisePolicyScheduleConfig(value: unknown, fallback?: PortalPolicyScheduleConfig): PortalPolicyScheduleConfig {
+  const entry = (value || {}) as Record<string, unknown>;
+  const documentType = ['policy_schedule', 'amendment', 'statement', 'benefit_summary', 'other'].includes(String(entry.documentType))
+    ? entry.documentType as PortalPolicyScheduleConfig['documentType']
+    : fallback?.documentType || 'policy_schedule';
+  const waitForDownloadMs = Number(entry.waitForDownloadMs || fallback?.waitForDownloadMs || 30000);
+
+  return {
+    enabled: entry.enabled === true || fallback?.enabled === true,
+    downloadSelector: typeof entry.downloadSelector === 'string' ? entry.downloadSelector.trim().slice(0, 500) : fallback?.downloadSelector,
+    downloadLabels: normaliseStringList(entry.downloadLabels, fallback?.downloadLabels || ['Policy schedule', 'Download', 'PDF', 'Statement'], 20),
+    documentType,
+    required: typeof entry.required === 'boolean' ? entry.required : fallback?.required ?? true,
+    waitForDownloadMs: Number.isFinite(waitForDownloadMs) ? Math.min(Math.max(waitForDownloadMs, 5000), 120000) : 30000,
+  };
+}
+
 function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalProviderFlow {
   const providerName = String(provider.name || providerId);
   const providerKey = providerName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -733,6 +763,13 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
           { sourceHeader: 'Fund Value', selector: '[data-field="fundValue"], [data-testid*="value" i], td:nth-child(4)', labels: ['Fund value', 'Market value', 'Current value'], attribute: 'text', transform: 'trim' },
         ],
       },
+      policySchedule: {
+        enabled: false,
+        downloadLabels: ['Policy schedule', 'Download policy schedule', 'Download PDF', 'Statement'],
+        documentType: 'policy_schedule',
+        required: true,
+        waitForDownloadMs: 45000,
+      },
       notes: [
         'The worker starts from Navigate Wealth policy numbers and searches Allan Gray one policy at a time.',
         'Credentials are stored server-side in Supabase and are never returned to the browser.',
@@ -783,6 +820,13 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
       instructions: 'Search by policy number and only open results that contain the exact policy number.',
     },
     extraction: { fields: [] },
+    policySchedule: {
+      enabled: false,
+      downloadLabels: ['Policy schedule', 'Download', 'PDF', 'Statement'],
+      documentType: 'policy_schedule',
+      required: true,
+      waitForDownloadMs: 30000,
+    },
     notes: ['Configure login, policy search, and field labels before running this provider in production.'],
     needsDiscovery: true,
     updatedAt: now,
@@ -1434,6 +1478,7 @@ app.put("/portal-flows/:providerId", requireAuth, async (c) => {
         ...(body?.extraction || {}),
         fields: normaliseExtractionFields(body?.extraction?.fields, defaultFlow.extraction?.fields || []),
       },
+      policySchedule: normalisePolicyScheduleConfig(body?.policySchedule, defaultFlow.policySchedule),
       updatedAt: new Date().toISOString(),
     };
 
@@ -2084,6 +2129,9 @@ app.post("/portal-worker/jobs/:jobId/items/:itemId/status", async (c) => {
       rawData: body?.rawData && typeof body.rawData === 'object' ? body.rawData as Record<string, unknown> : items[itemIndex].rawData,
       extractedData: body?.extractedData && typeof body.extractedData === 'object' ? body.extractedData as Record<string, unknown> : items[itemIndex].extractedData,
       matchConfidence: ['high', 'medium', 'low'].includes(String(body?.matchConfidence)) ? body.matchConfidence : items[itemIndex].matchConfidence,
+      documentAttached: typeof body?.documentAttached === 'boolean' ? body.documentAttached : items[itemIndex].documentAttached,
+      documentFileName: typeof body?.documentFileName === 'string' ? body.documentFileName.slice(0, 240) : items[itemIndex].documentFileName,
+      documentUpdatedAt: typeof body?.documentUpdatedAt === 'string' ? body.documentUpdatedAt : items[itemIndex].documentUpdatedAt,
       completedAt: ['completed', 'failed', 'skipped'].includes(status) ? now : items[itemIndex].completedAt,
       updatedAt: now,
     };
@@ -2105,6 +2153,84 @@ app.post("/portal-worker/jobs/:jobId/items/:itemId/status", async (c) => {
   } catch (e) {
     log.error("Portal worker item status error:", e);
     return c.json({ error: `Failed to update policy item: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// POST /portal-worker/jobs/:jobId/items/:itemId/policy-document
+app.post("/portal-worker/jobs/:jobId/items/:itemId/policy-document", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const itemId = c.req.param("itemId");
+    const workerId = c.req.header("X-Portal-Worker-Id") || "portal-worker";
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: "Portal job not found" }, 404);
+    }
+
+    const items = await loadPortalJobItems(jobId);
+    const itemIndex = items.findIndex((item) => item.id === itemId);
+    if (itemIndex === -1) {
+      return c.json({ error: "Portal job policy item not found" }, 404);
+    }
+
+    const item = items[itemIndex];
+    if (item.jobId !== jobId || item.providerId !== job.providerId) {
+      return c.json({ error: "Policy item does not belong to this job" }, 400);
+    }
+
+    let formData: Record<string, string | File>;
+    try {
+      formData = await c.req.parseBody();
+    } catch (parseErr) {
+      log.error("Failed to parse portal policy document form data:", parseErr);
+      return c.json({ error: "Invalid form data. Expected multipart/form-data with a PDF file." }, 400);
+    }
+
+    const file = formData.file;
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: "No PDF file provided" }, 400);
+    }
+
+    const requestedType = String(formData.documentType || "policy_schedule");
+    const documentType = ['policy_schedule', 'amendment', 'statement', 'benefit_summary', 'other'].includes(requestedType)
+      ? requestedType as PolicyDocument['documentType']
+      : 'policy_schedule';
+
+    const document = await replacePolicyDocumentForPolicy({
+      clientId: item.clientId,
+      policyId: item.policyId,
+      file,
+      documentType,
+      uploadedBy: `portal-worker:${workerId.slice(0, 80)}`,
+      stableStorageKey: true,
+      fileName: typeof formData.fileName === 'string' ? formData.fileName.slice(0, 240) : file.name,
+    });
+
+    const now = new Date().toISOString();
+    items[itemIndex] = {
+      ...item,
+      documentAttached: true,
+      documentFileName: document.fileName,
+      documentUpdatedAt: document.uploadDate,
+      message: "Policy schedule PDF replaced.",
+      updatedAt: now,
+    };
+    const updatedJob = await persistPortalJobItems(job, items, {
+      status: 'extracting',
+      currentStep: 'policy_document_attached',
+      currentItemId: item.id,
+      currentClientName: item.clientName,
+      currentPolicyNumber: item.policyNumber,
+      message: `Policy schedule PDF attached for ${item.clientName} / ${item.policyNumber}.`,
+    });
+
+    return c.json({ success: true, document, item: items[itemIndex], job: updatedJob });
+  } catch (e) {
+    log.error("Portal worker policy document upload error:", e);
+    return c.json({ error: `Failed to attach policy document: ${getErrMsg(e)}` }, 500);
   }
 });
 
@@ -3194,6 +3320,117 @@ async function ensurePolicyDocBucket(): Promise<void> {
   }
 }
 
+const POLICY_CATEGORY_LABELS: Record<string, string> = {
+  risk_planning: 'Risk Planning',
+  medical_aid: 'Medical Aid',
+  retirement_planning: 'Retirement Planning',
+  retirement_pre: 'Pre-Retirement',
+  retirement_post: 'Post-Retirement',
+  investments: 'Investments',
+  investments_voluntary: 'Voluntary Investments',
+  investments_guaranteed: 'Guaranteed Investments',
+  employee_benefits: 'Employee Benefits',
+  employee_benefits_risk: 'Employee Benefits (Risk)',
+  employee_benefits_retirement: 'Employee Benefits (Retirement)',
+  tax_planning: 'Tax Planning',
+  estate_planning: 'Estate Planning',
+};
+
+function safeStorageFileName(fileName: string, fallback = 'policy_schedule.pdf'): string {
+  const cleaned = fileName.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/^_+|_+$/g, '');
+  return cleaned || fallback;
+}
+
+async function replacePolicyDocumentForPolicy(params: {
+  clientId: string;
+  policyId: string;
+  file: File;
+  documentType: PolicyDocument['documentType'];
+  uploadedBy: string;
+  stableStorageKey?: boolean;
+  fileName?: string;
+}): Promise<PolicyDocument> {
+  await ensurePolicyDocBucket();
+
+  const { clientId, policyId, file, documentType, uploadedBy } = params;
+  if (file.type && file.type !== 'application/pdf') {
+    throw new Error('Only PDF files are accepted');
+  }
+  if (file.size > 20971520) {
+    throw new Error('File exceeds maximum size of 20MB');
+  }
+
+  const fileBuffer = await file.arrayBuffer();
+  const signature = new TextDecoder().decode(fileBuffer.slice(0, 5));
+  if (!signature.startsWith('%PDF-')) {
+    throw new Error('Downloaded file is not a valid PDF');
+  }
+
+  const policiesKey = `policies:client:${clientId}`;
+  const policies = ((await kv.get(policiesKey)) || []) as KvPolicy[];
+  const policyIndex = policies.findIndex((p: KvPolicy) => p.id === policyId);
+
+  if (policyIndex === -1) {
+    throw new Error('Policy not found');
+  }
+
+  const policy = policies[policyIndex];
+  const previousStorageKey = policy.document?.storageKey;
+  const fileName = params.fileName || file.name || 'policy_schedule.pdf';
+  const storageFileName = params.stableStorageKey
+    ? `${documentType}.pdf`
+    : `${Date.now()}_${safeStorageFileName(fileName)}`;
+  const storageKey = `${clientId}/${policyId}/${storageFileName}`;
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
+
+  const { error: uploadError } = await supabase.storage
+    .from(POLICY_DOC_BUCKET)
+    .upload(storageKey, fileBuffer, {
+      contentType: 'application/pdf',
+      upsert: params.stableStorageKey === true || previousStorageKey === storageKey,
+    });
+
+  if (uploadError) {
+    throw new Error(`Upload failed: ${uploadError.message}`);
+  }
+
+  if (previousStorageKey && previousStorageKey !== storageKey) {
+    const { error: deleteError } = await supabase.storage
+      .from(POLICY_DOC_BUCKET)
+      .remove([previousStorageKey]);
+
+    if (deleteError) {
+      await supabase.storage.from(POLICY_DOC_BUCKET).remove([storageKey]).catch(() => undefined);
+      throw new Error(`New PDF uploaded but previous policy document could not be deleted: ${deleteError.message}`);
+    }
+  }
+
+  const docMeta: PolicyDocument = {
+    storageKey,
+    fileName,
+    fileSize: file.size,
+    mimeType: 'application/pdf',
+    provider: policy.providerName || '',
+    productType: POLICY_CATEGORY_LABELS[policy.categoryId] || policy.categoryId,
+    documentType,
+    uploadDate: new Date().toISOString(),
+    uploadedBy,
+  };
+
+  policies[policyIndex] = {
+    ...policy,
+    document: docMeta,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await kv.set(policiesKey, policies);
+  return docMeta;
+}
+
 /**
  * POST /policy-documents/upload
  * Upload (or replace) a policy document for a specific policy line item.
@@ -3232,105 +3469,16 @@ app.post('/policy-documents/upload', requireAuth, async (c) => {
 
     const { policyId, clientId, documentType, uploadedBy } = metadata.data;
 
-    // Validate file type
-    if (file.type !== 'application/pdf') {
-      return c.json({ error: 'Only PDF files are accepted' }, 400);
-    }
-
-    // Validate file size (20MB)
-    if (file.size > 20971520) {
-      return c.json({ error: 'File exceeds maximum size of 20MB' }, 400);
-    }
-
-    // Load the policy to confirm it exists
-    const policiesKey = `policies:client:${clientId}`;
-    const policies = (await kv.get(policiesKey)) || [];
-    const policyIndex = (policies as KvPolicy[]).findIndex((p: KvPolicy) => p.id === policyId);
-
-    if (policyIndex === -1) {
-      return c.json({ error: 'Policy not found' }, 404);
-    }
-
-    const policy = (policies as KvPolicy[])[policyIndex];
-
-    // If there's an existing document, delete it from storage first (one-active-doc rule)
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
-
-    if (policy.document?.storageKey) {
-      log.info('Replacing existing policy document', {
-        policyId,
-        oldStorageKey: policy.document.storageKey,
-      });
-
-      const { error: deleteError } = await supabase.storage
-        .from(POLICY_DOC_BUCKET)
-        .remove([policy.document.storageKey]);
-
-      if (deleteError) {
-        // Non-fatal — log and continue (the old file becomes orphaned but the new one still uploads)
-        log.error('Failed to delete previous policy document (non-fatal):', deleteError);
-      }
-    }
-
-    // Upload the new document
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const storageKey = `${clientId}/${policyId}/${Date.now()}_${sanitizedFileName}`;
-
-    const fileBuffer = await file.arrayBuffer();
-    const { error: uploadError } = await supabase.storage
-      .from(POLICY_DOC_BUCKET)
-      .upload(storageKey, fileBuffer, {
-        contentType: 'application/pdf',
-        upsert: false,
-      });
-
-    if (uploadError) {
-      log.error('Policy document upload error:', uploadError);
-      return c.json({ error: `Upload failed: ${uploadError.message}` }, 500);
-    }
-
-    // Build document metadata
-    const categoryLabels: Record<string, string> = {
-      risk_planning: 'Risk Planning',
-      medical_aid: 'Medical Aid',
-      retirement_planning: 'Retirement Planning',
-      retirement_pre: 'Pre-Retirement',
-      retirement_post: 'Post-Retirement',
-      investments: 'Investments',
-      investments_voluntary: 'Voluntary Investments',
-      investments_guaranteed: 'Guaranteed Investments',
-      employee_benefits: 'Employee Benefits',
-      employee_benefits_risk: 'Employee Benefits (Risk)',
-      employee_benefits_retirement: 'Employee Benefits (Retirement)',
-      tax_planning: 'Tax Planning',
-      estate_planning: 'Estate Planning',
-    };
-
-    const docMeta: PolicyDocument = {
-      storageKey,
-      fileName: file.name,
-      fileSize: file.size,
-      mimeType: 'application/pdf',
-      provider: policy.providerName || '',
-      productType: categoryLabels[policy.categoryId] || policy.categoryId,
+    const docMeta = await replacePolicyDocumentForPolicy({
+      clientId,
+      policyId,
+      file,
       documentType,
-      uploadDate: new Date().toISOString(),
       uploadedBy,
-    };
+      fileName: file.name,
+    });
 
-    // Update the policy record with document metadata
-    (policies as KvPolicy[])[policyIndex] = {
-      ...policy,
-      document: docMeta,
-      updatedAt: new Date().toISOString(),
-    };
-
-    await kv.set(policiesKey, policies);
-
-    log.info('Policy document uploaded successfully', { policyId, storageKey });
+    log.info('Policy document uploaded successfully', { policyId, storageKey: docMeta.storageKey });
 
     return c.json({ success: true, document: docMeta });
   } catch (e) {

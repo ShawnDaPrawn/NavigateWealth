@@ -275,6 +275,15 @@ export interface PortalFlowStep {
   description?: string;
 }
 
+export interface PortalPolicyScheduleConfig {
+  enabled?: boolean;
+  downloadSelector?: string;
+  downloadLabels?: string[];
+  documentType?: 'policy_schedule' | 'amendment' | 'statement' | 'benefit_summary' | 'other';
+  required?: boolean;
+  waitForDownloadMs?: number;
+}
+
 export interface PortalProviderFlow {
   id: string;
   providerId: string;
@@ -317,6 +326,7 @@ export interface PortalProviderFlow {
     policyRowSelector?: string;
     fields: PortalFlowField[];
   };
+  policySchedule?: PortalPolicyScheduleConfig;
   notes: string[];
   needsDiscovery?: boolean;
   updatedAt: string;
@@ -380,6 +390,9 @@ export interface PortalJobPolicyItem {
   rawData?: Record<string, unknown>;
   extractedData?: Record<string, unknown>;
   matchConfidence?: 'high' | 'medium' | 'low';
+  documentAttached?: boolean;
+  documentFileName?: string;
+  documentUpdatedAt?: string;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;

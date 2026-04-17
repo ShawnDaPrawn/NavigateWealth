@@ -7,8 +7,9 @@ import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
 import { Separator } from '../../../../ui/separator';
+import { Switch } from '../../../../ui/switch';
 import { Textarea } from '../../../../ui/textarea';
-import { AlertCircle, Bot, CheckCircle2, Clock, KeyRound, ListChecks, Loader2, Play, RefreshCw, RotateCcw, Search, Settings2 } from 'lucide-react';
+import { AlertCircle, Bot, CheckCircle2, Clock, FileText, KeyRound, ListChecks, Loader2, Play, RefreshCw, RotateCcw, Search, Settings2 } from 'lucide-react';
 import { IntegrationProvider, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from '../types';
 import { cn } from '../../../../ui/utils';
 
@@ -107,6 +108,9 @@ export function PortalAutomationTab({
   const [searchSubmitSelector, setSearchSubmitSelector] = useState('');
   const [resultContainerSelector, setResultContainerSelector] = useState('');
   const [resultLinkSelector, setResultLinkSelector] = useState('');
+  const [policyScheduleEnabled, setPolicyScheduleEnabled] = useState(false);
+  const [policyScheduleLabelsText, setPolicyScheduleLabelsText] = useState('');
+  const [policyScheduleSelector, setPolicyScheduleSelector] = useState('');
   const [nextPageSelector, setNextPageSelector] = useState('');
   const [policyListStepsJson, setPolicyListStepsJson] = useState('[]');
   const [policyListStepsError, setPolicyListStepsError] = useState('');
@@ -133,6 +137,9 @@ export function PortalAutomationTab({
       setSearchSubmitSelector(flow.search?.submitSelector || '');
       setResultContainerSelector(flow.search?.resultContainerSelector || '');
       setResultLinkSelector(flow.search?.resultLinkSelector || '');
+      setPolicyScheduleEnabled(flow.policySchedule?.enabled === true);
+      setPolicyScheduleLabelsText((flow.policySchedule?.downloadLabels || ['Policy schedule', 'Download policy schedule', 'Download PDF', 'Statement']).join('\n'));
+      setPolicyScheduleSelector(flow.policySchedule?.downloadSelector || '');
       setNextPageSelector(flow.navigation.nextPageSelector || '');
       setPolicyListStepsJson(JSON.stringify(flow.navigation.policyListSteps || [], null, 2));
       setPolicyRowSelector(flow.extraction.policyRowSelector || '');
@@ -260,6 +267,18 @@ export function PortalAutomationTab({
         ...flow.extraction,
         policyRowSelector: policyRowSelector.trim(),
         fields: fieldSelectors,
+      },
+      policySchedule: {
+        ...(flow.policySchedule || {}),
+        enabled: policyScheduleEnabled,
+        downloadLabels: policyScheduleLabelsText
+          .split(/\r?\n|,/)
+          .map((label) => label.trim())
+          .filter(Boolean),
+        downloadSelector: policyScheduleSelector.trim() || undefined,
+        documentType: flow.policySchedule?.documentType || 'policy_schedule',
+        required: true,
+        waitForDownloadMs: flow.policySchedule?.waitForDownloadMs || 45000,
       },
       needsDiscovery: false,
     });
@@ -457,6 +476,60 @@ export function PortalAutomationTab({
                           />
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-md border bg-gray-50 p-4 space-y-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-md bg-white p-2 text-purple-700">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h5 className="font-medium text-gray-900">Policy Schedule PDF</h5>
+                        <p className="text-sm text-gray-500">
+                          When enabled, the worker downloads the provider PDF and replaces the PDF already attached to the matched policy.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="policy-schedule-enabled" className="text-sm text-gray-700">
+                        Attach PDF
+                      </Label>
+                      <Switch
+                        id="policy-schedule-enabled"
+                        checked={policyScheduleEnabled}
+                        onCheckedChange={setPolicyScheduleEnabled}
+                      />
+                    </div>
+                  </div>
+
+                  {policyScheduleEnabled && (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Download button words</Label>
+                        <Textarea
+                          value={policyScheduleLabelsText}
+                          onChange={(event) => setPolicyScheduleLabelsText(event.target.value)}
+                          className="min-h-20 bg-white"
+                          placeholder="Policy schedule, Download PDF, Statement"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Put each phrase on a new line. The worker tries these before advanced selectors.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Download selector</Label>
+                        <Input
+                          value={policyScheduleSelector}
+                          onChange={(event) => setPolicyScheduleSelector(event.target.value)}
+                          placeholder="Optional CSS selector"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Leave blank unless the provider page has several similar download buttons.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -726,6 +799,7 @@ export function PortalAutomationTab({
                         <th className="px-3 py-2 font-medium text-gray-600">Status</th>
                         <th className="px-3 py-2 font-medium text-gray-600">Client</th>
                         <th className="px-3 py-2 font-medium text-gray-600">Policy Number</th>
+                        <th className="px-3 py-2 font-medium text-gray-600">PDF</th>
                         <th className="px-3 py-2 font-medium text-gray-600">Step</th>
                         <th className="px-3 py-2 font-medium text-gray-600">Action</th>
                       </tr>
@@ -740,6 +814,20 @@ export function PortalAutomationTab({
                           </td>
                           <td className="px-3 py-2 font-medium text-gray-900">{item.clientName}</td>
                           <td className="px-3 py-2 font-mono text-xs">{item.policyNumber}</td>
+                          <td className="px-3 py-2">
+                            {item.documentAttached ? (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                Attached
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                            {item.documentFileName && (
+                              <div className="mt-1 max-w-[160px] truncate text-xs text-gray-500" title={item.documentFileName}>
+                                {item.documentFileName}
+                              </div>
+                            )}
+                          </td>
                           <td className="px-3 py-2 text-gray-600">
                             <div>{item.currentStep || '-'}</div>
                             {item.error && <div className="mt-1 max-w-md text-xs text-red-700">{item.error}</div>}
