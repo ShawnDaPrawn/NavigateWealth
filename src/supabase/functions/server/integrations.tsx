@@ -954,6 +954,7 @@ function buildPortalBrainPrompt(options: {
     '- Never invent a candidate id.',
     '- Only choose a candidate when it is the best available option for finding or opening the exact policy number.',
     '- Prefer remembered selectors when they still fit the current page.',
+    '- For search_input, candidates may be direct fields or safe search triggers that reveal a field.',
     '- Avoid OTP, password, username, and unrelated filter fields.',
     '- If confidence is low, return stop_uncertain.',
     'Return JSON only, with this exact shape:',

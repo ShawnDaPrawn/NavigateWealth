@@ -396,6 +396,7 @@ async function requestBrainDecision(stage, page, flow, item, snapshot) {
 async function captureInputCandidates(page) {
   return page.evaluate(() => {
     const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+    const searchRegex = /(search|find|lookup|policy|client|investor|investment|account|portfolio|contract|member|record)/i;
     const isVisible = (el) => {
       if (!(el instanceof HTMLElement)) return false;
       const style = window.getComputedStyle(el);
@@ -436,15 +437,10 @@ async function captureInputCandidates(page) {
       const parentText = normalise(el.parentElement?.textContent || '').replace(normalise(el.value || ''), '');
       return parentText.slice(0, 160);
     };
-    const elements = Array.from(document.querySelectorAll('input, textarea, [role="textbox"], [role="searchbox"], [role="combobox"]'))
+    const directElements = Array.from(document.querySelectorAll('input, textarea, select, [role="textbox"], [role="searchbox"], [role="combobox"], [contenteditable="true"]'))
       .filter((el) => isVisible(el) && normalise(el.getAttribute('type')).toLowerCase() !== 'hidden' && normalise(el.getAttribute('type')).toLowerCase() !== 'password')
-      .slice(0, 16);
-    const pageTextSample = normalise(document.body?.innerText || '').slice(0, 1200);
-    return {
-      currentUrl: window.location.href,
-      title: document.title,
-      pageTextSample,
-      candidates: elements.map((el, index) => ({
+      .slice(0, 16)
+      .map((el, index) => ({
         candidateId: `input-${index + 1}`,
         selector: selectorFor(el),
         tag: el.tagName.toLowerCase(),
@@ -457,7 +453,42 @@ async function captureInputCandidates(page) {
         title: el.getAttribute('title') || '',
         text: normalise(el.textContent || '').slice(0, 160),
         nearbyText: nearbyTextFor(el),
-      })),
+        interaction: 'fill',
+      }));
+    const triggerElements = Array.from(document.querySelectorAll('button, a, [role="button"], [role="link"], [data-testid*="search" i], [class*="search" i], [aria-label*="search" i], [title*="search" i]'))
+      .filter((el) => {
+        if (!isVisible(el)) return false;
+        const text = [
+          normalise(el.textContent),
+          normalise(el.getAttribute('aria-label')),
+          normalise(el.getAttribute('title')),
+          normalise(el.getAttribute('data-testid')),
+          normalise(el.getAttribute('class')),
+        ].join(' ');
+        return searchRegex.test(text);
+      })
+      .slice(0, 12)
+      .map((el, index) => ({
+        candidateId: `trigger-${index + 1}`,
+        selector: selectorFor(el),
+        tag: el.tagName.toLowerCase(),
+        type: el.getAttribute('type') || '',
+        role: el.getAttribute('role') || '',
+        placeholder: el.getAttribute('placeholder') || '',
+        name: el.getAttribute('name') || '',
+        id: el.getAttribute('id') || '',
+        ariaLabel: el.getAttribute('aria-label') || '',
+        title: el.getAttribute('title') || '',
+        text: normalise(el.textContent || '').slice(0, 160),
+        nearbyText: nearbyTextFor(el),
+        interaction: 'click_then_fill',
+      }));
+    const pageTextSample = normalise(document.body?.innerText || '').slice(0, 1200);
+    return {
+      currentUrl: window.location.href,
+      title: document.title,
+      pageTextSample,
+      candidates: [...directElements, ...triggerElements],
     };
   });
 }
@@ -526,7 +557,10 @@ async function captureSearchResultCandidates(page, flow) {
 async function chooseInputWithBrain(page, flow, item) {
   const snapshot = await captureInputCandidates(page);
   if (!Array.isArray(snapshot?.candidates) || snapshot.candidates.length === 0) {
-    throw new Error('No visible search input candidates were available for smart assist.');
+    const pageHint = String(snapshot?.pageTextSample || '').slice(0, 240);
+    throw new Error(pageHint
+      ? `No visible search inputs or search triggers were available for smart assist. Page sample: ${pageHint}`
+      : 'No visible search inputs or search triggers were available for smart assist.');
   }
   const response = await requestBrainDecision('search_input', page, flow, item, snapshot);
   const decision = response?.decision || null;
@@ -651,7 +685,7 @@ async function findInputByIntent(page, selector, labels = [], rememberedSelector
       page.getByRole('textbox', { name: regex }).first(),
       page.getByRole('searchbox', { name: regex }).first(),
       page.getByRole('combobox', { name: regex }).first(),
-      page.locator(`input[placeholder*="${label}" i], input[name*="${label}" i], input[id*="${label}" i], input[aria-label*="${label}" i], input[title*="${label}" i], textarea[placeholder*="${label}" i], [role="searchbox"][aria-label*="${label}" i], [role="combobox"][aria-label*="${label}" i]`).first(),
+      page.locator(`input[placeholder*="${label}" i], input[name*="${label}" i], input[id*="${label}" i], input[aria-label*="${label}" i], input[title*="${label}" i], textarea[placeholder*="${label}" i], textarea[aria-label*="${label}" i], select[name*="${label}" i], [role="textbox"][aria-label*="${label}" i], [role="searchbox"][aria-label*="${label}" i], [role="combobox"][aria-label*="${label}" i], [contenteditable="true"][aria-label*="${label}" i], [contenteditable="true"][title*="${label}" i]`).first(),
     ];
     for (const locator of candidates) {
       if (await locator.isVisible({ timeout: 800 }).catch(() => false)) return locator;
@@ -665,8 +699,13 @@ async function findInputByIntent(page, selector, labels = [], rememberedSelector
     'input[id*="search" i]',
     'input[aria-label*="search" i]',
     'input[title*="search" i]',
+    'textarea[placeholder*="search" i]',
+    'textarea[aria-label*="search" i]',
+    'select[name*="search" i]',
+    '[role="textbox"]',
     '[role="searchbox"]',
     '[role="combobox"]',
+    '[contenteditable="true"]',
     'input:not([type])',
     'input[type="text"]',
     'input[type="tel"]',
@@ -679,7 +718,7 @@ async function findInputByIntent(page, selector, labels = [], rememberedSelector
     if (await candidate.isVisible({ timeout: 500 }).catch(() => false)) return candidate;
   }
 
-  const visibleInputs = page.locator('input, textarea, [role="textbox"], [role="searchbox"], [role="combobox"]');
+  const visibleInputs = page.locator('input, textarea, select, [role="textbox"], [role="searchbox"], [role="combobox"], [contenteditable="true"]');
   const visibleCount = Math.min(await visibleInputs.count().catch(() => 0), 20);
   let firstVisible = null;
   let firstVisibleCount = 0;
@@ -853,11 +892,41 @@ async function searchPolicyByNumber(page, flow, item, brain) {
     if (!(smartAssist.enabled && brain?.available)) {
       throw error;
     }
-    const brainChoice = await chooseInputWithBrain(page, flow, item);
-    usedBrainDecision = brainChoice.decision;
-    usedBrainCandidate = brainChoice.candidate;
-    searchInput = page.locator(brainChoice.candidate.selector).first();
-    addItemWarning(item.id, `Smart assist chose a search field. ${describeBrainDecision(brainChoice.decision)}`);
+    let remainingDecisions = smartAssist.maxDecisionsPerItem;
+    let lastBrainError = error;
+    while (remainingDecisions > 0 && !searchInput) {
+      const brainChoice = await chooseInputWithBrain(page, flow, item);
+      usedBrainDecision = brainChoice.decision;
+      usedBrainCandidate = brainChoice.candidate;
+      const candidateLocator = page.locator(brainChoice.candidate.selector).first();
+      const interaction = brainChoice.candidate.interaction || 'fill';
+
+      addItemWarning(item.id, `Smart assist chose a ${interaction === 'click_then_fill' ? 'search trigger' : 'search field'}. ${describeBrainDecision(brainChoice.decision)}`);
+
+      if (interaction === 'click_then_fill') {
+        await candidateLocator.click();
+        await page.waitForTimeout(1200);
+        if (smartAssist.rememberSelectors) {
+          await rememberBrainSelector('search_input', item, brainChoice.candidate, 'brain');
+        }
+        try {
+          searchInput = await findInputByIntent(page, search.searchInputSelector, splitLabels(search.searchInputLabels));
+          break;
+        } catch (followUpError) {
+          lastBrainError = followUpError;
+          remainingDecisions -= 1;
+          continue;
+        }
+      }
+
+      searchInput = candidateLocator;
+      break;
+    }
+    if (!searchInput) {
+      throw lastBrainError instanceof Error
+        ? lastBrainError
+        : new Error(String(lastBrainError || 'Smart assist did not find a usable search field.'));
+    }
   }
 
   await searchInput.fill('');
