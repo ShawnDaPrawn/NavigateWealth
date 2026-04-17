@@ -296,6 +296,8 @@ interface PortalSyncJob {
   stagedRunId?: string;
   discoveryReportId?: string;
   error?: string;
+  warning?: string;
+  warnings?: string[];
   currentItemId?: string;
   currentClientName?: string;
   currentPolicyNumber?: string;
@@ -326,6 +328,8 @@ interface PortalJobPolicyItem {
   currentStep?: string;
   message?: string;
   error?: string;
+  warning?: string;
+  warnings?: string[];
   workerId?: string;
   rawData?: Record<string, unknown>;
   extractedData?: Record<string, unknown>;
@@ -528,14 +532,37 @@ async function loadPortalJobItems(jobId: string): Promise<PortalJobPolicyItem[]>
   return Array.isArray(items) ? items : [];
 }
 
+function sanitisePortalWarnings(value: unknown, fallback: string[] = []): string[] {
+  const base = Array.isArray(fallback) ? fallback : [];
+  const incoming = Array.isArray(value)
+    ? value
+    : typeof value === 'string' && value.trim()
+      ? [value]
+      : [];
+  const combined = [...base, ...incoming]
+    .map((warning) => String(warning || '').trim().slice(0, 500))
+    .filter(Boolean);
+  return Array.from(new Set(combined)).slice(-20);
+}
+
+function latestPortalWarning(warnings?: string[]): string | undefined {
+  return Array.isArray(warnings) && warnings.length > 0 ? warnings[warnings.length - 1] : undefined;
+}
+
 async function persistPortalJobItems(job: PortalSyncJob, items: PortalJobPolicyItem[], patch: Partial<PortalSyncJob> = {}): Promise<PortalSyncJob> {
   const now = new Date().toISOString();
   const summary = summarisePortalJobItems(items);
   await kv.set(`portal-job-items:${job.id}`, items);
 
+  const warnings = patch.warnings === undefined && patch.warning === undefined
+    ? sanitisePortalWarnings(job.warnings)
+    : sanitisePortalWarnings(patch.warnings ?? patch.warning, job.warnings);
+
   const updatedJob: PortalSyncJob = {
     ...job,
     ...patch,
+    warnings,
+    warning: latestPortalWarning(warnings),
     queueSummary: summary,
     extractedRows: summary.completed,
     updatedAt: now,
@@ -1731,6 +1758,8 @@ app.post("/portal-jobs/:jobId/items/:itemId/retry", requireAuth, async (c) => {
       currentStep: 'queued',
       message: 'Queued for retry.',
       error: undefined,
+      warning: undefined,
+      warnings: [],
       workerId: undefined,
       startedAt: undefined,
       completedAt: undefined,
@@ -1762,6 +1791,7 @@ app.post("/portal-jobs/:jobId/status", requireAuth, async (c) => {
     const body = await c.req.json().catch(() => ({}));
     const allowedStatuses: PortalJobStatus[] = ['queued', 'running', 'waiting_for_otp', 'discovering', 'discovery_ready', 'extracting', 'dry_run_ready', 'staging', 'staged', 'failed', 'cancelled'];
     const status = allowedStatuses.includes(body?.status) ? body.status as PortalJobStatus : job.status;
+    const warnings = sanitisePortalWarnings(body?.warnings ?? body?.warning, job.warnings);
     const updated: PortalSyncJob = {
       ...job,
       status,
@@ -1772,6 +1802,8 @@ app.post("/portal-jobs/:jobId/status", requireAuth, async (c) => {
       message: typeof body?.message === 'string' ? body.message.slice(0, 500) : job.message,
       extractedRows: typeof body?.extractedRows === 'number' ? body.extractedRows : job.extractedRows,
       error: typeof body?.error === 'string' ? body.error.slice(0, 1000) : job.error,
+      warnings,
+      warning: latestPortalWarning(warnings),
     };
 
     await kv.set(`portal-job:${jobId}`, updated);
@@ -2120,12 +2152,15 @@ app.post("/portal-worker/jobs/:jobId/items/:itemId/status", async (c) => {
     const allowedStatuses: PortalJobItemStatus[] = ['queued', 'in_progress', 'completed', 'failed', 'skipped'];
     const status = allowedStatuses.includes(body?.status) ? body.status as PortalJobItemStatus : items[itemIndex].status;
     const now = new Date().toISOString();
+    const warnings = sanitisePortalWarnings(body?.warnings ?? body?.warning, items[itemIndex].warnings);
     items[itemIndex] = {
       ...items[itemIndex],
       status,
       currentStep: typeof body?.currentStep === 'string' ? body.currentStep.slice(0, 120) : items[itemIndex].currentStep,
       message: typeof body?.message === 'string' ? body.message.slice(0, 500) : items[itemIndex].message,
       error: typeof body?.error === 'string' ? body.error.slice(0, 1000) : (status === 'failed' ? items[itemIndex].error : undefined),
+      warnings,
+      warning: latestPortalWarning(warnings),
       rawData: body?.rawData && typeof body.rawData === 'object' ? body.rawData as Record<string, unknown> : items[itemIndex].rawData,
       extractedData: body?.extractedData && typeof body.extractedData === 'object' ? body.extractedData as Record<string, unknown> : items[itemIndex].extractedData,
       matchConfidence: ['high', 'medium', 'low'].includes(String(body?.matchConfidence)) ? body.matchConfidence : items[itemIndex].matchConfidence,
@@ -2249,6 +2284,7 @@ app.post("/portal-worker/jobs/:jobId/status", async (c) => {
     const body = await c.req.json().catch(() => ({}));
     const allowedStatuses: PortalJobStatus[] = ['queued', 'running', 'waiting_for_otp', 'discovering', 'discovery_ready', 'extracting', 'dry_run_ready', 'staging', 'staged', 'failed', 'cancelled'];
     const status = allowedStatuses.includes(body?.status) ? body.status as PortalJobStatus : job.status;
+    const warnings = sanitisePortalWarnings(body?.warnings ?? body?.warning, job.warnings);
     const updated: PortalSyncJob = {
       ...job,
       status,
@@ -2259,6 +2295,8 @@ app.post("/portal-worker/jobs/:jobId/status", async (c) => {
       message: typeof body?.message === 'string' ? body.message.slice(0, 500) : job.message,
       extractedRows: typeof body?.extractedRows === 'number' ? body.extractedRows : job.extractedRows,
       error: typeof body?.error === 'string' ? body.error.slice(0, 1000) : job.error,
+      warnings,
+      warning: latestPortalWarning(warnings),
     };
 
     await kv.set(`portal-job:${jobId}`, updated);

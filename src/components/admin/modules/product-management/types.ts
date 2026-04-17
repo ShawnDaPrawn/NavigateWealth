@@ -356,6 +356,8 @@ export interface PortalSyncJob {
   stagedRunId?: string;
   discoveryReportId?: string;
   error?: string;
+  warning?: string;
+  warnings?: string[];
   currentItemId?: string;
   currentClientName?: string;
   currentPolicyNumber?: string;
@@ -386,6 +388,8 @@ export interface PortalJobPolicyItem {
   currentStep?: string;
   message?: string;
   error?: string;
+  warning?: string;
+  warnings?: string[];
   workerId?: string;
   rawData?: Record<string, unknown>;
   extractedData?: Record<string, unknown>;

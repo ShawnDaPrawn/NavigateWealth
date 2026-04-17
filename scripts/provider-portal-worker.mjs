@@ -112,10 +112,63 @@ function workerJobPath(suffix = '') {
   return `/portal-worker/jobs/${activeJobId}${suffix}`;
 }
 
+const jobWarnings = [];
+const itemWarnings = new Map();
+
+function sanitiseWarning(value) {
+  return String(value || '').trim().slice(0, 500);
+}
+
+function uniqueWarnings(values = []) {
+  return Array.from(new Set(values.map(sanitiseWarning).filter(Boolean))).slice(-20);
+}
+
+function latestWarning(values = []) {
+  return values.length ? values[values.length - 1] : undefined;
+}
+
+function rememberJobWarnings(patch = {}) {
+  const additions = Array.isArray(patch.warnings)
+    ? patch.warnings
+    : patch.warning
+      ? [patch.warning]
+      : [];
+  const merged = uniqueWarnings([...jobWarnings, ...additions]);
+  jobWarnings.splice(0, jobWarnings.length, ...merged);
+}
+
+function rememberItemWarnings(itemId, patch = {}) {
+  if (!itemId) return;
+  const existing = itemWarnings.get(itemId) || [];
+  const additions = Array.isArray(patch.warnings)
+    ? patch.warnings
+    : patch.warning
+      ? [patch.warning]
+      : [];
+  itemWarnings.set(itemId, uniqueWarnings([...existing, ...additions]));
+}
+
+function addJobWarning(warning) {
+  if (!warning) return;
+  rememberJobWarnings({ warning });
+}
+
+function addItemWarning(itemId, warning) {
+  if (!warning) return;
+  rememberItemWarnings(itemId, { warning });
+}
+
 async function updateJob(status, patch = {}) {
+  rememberJobWarnings(patch);
+  const warnings = uniqueWarnings(Array.isArray(patch.warnings) ? patch.warnings : jobWarnings);
   return apiFetch(jobPath('/status'), {
     method: 'POST',
-    body: JSON.stringify({ status, ...patch }),
+    body: JSON.stringify({
+      status,
+      ...patch,
+      warnings,
+      warning: patch.warning ? sanitiseWarning(patch.warning) : latestWarning(warnings),
+    }),
   });
 }
 
@@ -153,6 +206,93 @@ async function waitForManualOtp(timeoutMs) {
   throw new Error('Timed out waiting for manual OTP.');
 }
 
+function describeNavigationFailure(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/net::ERR_ABORTED/i.test(message)) return 'the provider aborted the page load';
+  if (/Timeout/i.test(message)) return 'the page did not load before the timeout';
+  return message;
+}
+
+function buildNavigationWarning(prefix, attemptedUrl, reason, fallbackMessage) {
+  return `${prefix} Attempted URL: ${attemptedUrl}. Reason: ${reason}. ${fallbackMessage}`.slice(0, 500);
+}
+
+async function detectNavigationLandingIssue(page, loginUrl, attemptedUrl) {
+  const currentUrl = page.url();
+  const loginOrigin = (() => {
+    try {
+      return new URL(loginUrl).origin;
+    } catch {
+      return '';
+    }
+  })();
+
+  if (!currentUrl || currentUrl === 'about:blank') {
+    return 'the browser stayed on a blank page';
+  }
+
+  if (loginOrigin && currentUrl.startsWith(loginOrigin) && currentUrl !== attemptedUrl) {
+    const bodyText = (await page.locator('body').innerText({ timeout: 2000 }).catch(() => '') || '').trim();
+    if (/log\s*in|sign\s*in|one[-\s]*time\s*pin|verify|access denied|not authorised|unauthori[sz]ed|forbidden|session expired/i.test(bodyText)) {
+      return 'the provider redirected back to a login or access-check page';
+    }
+  }
+
+  const bodyText = (await page.locator('body').innerText({ timeout: 3000 }).catch(() => '') || '').trim();
+  if (/access denied|not authorised|unauthori[sz]ed|forbidden|permission denied/i.test(bodyText)) {
+    return 'the provider page shows access denied';
+  }
+
+  const textLength = bodyText.replace(/\s+/g, '').length;
+  const visibleSignals = await page.locator('input, button, a, table, [role="button"], [role="link"], [role="row"]').count().catch(() => 0);
+  if (textLength === 0 && visibleSignals === 0) {
+    return 'the provider page loaded without usable content';
+  }
+
+  return '';
+}
+
+async function attemptConfiguredNavigation(page, options) {
+  const {
+    attemptedUrl,
+    loginUrl,
+    warningPrefix,
+    fallbackMessage,
+  } = options;
+
+  if (!attemptedUrl) return { attempted: false, warning: '' };
+
+  try {
+    await page.goto(attemptedUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(1200);
+  } catch (error) {
+    return {
+      attempted: true,
+      warning: buildNavigationWarning(
+        warningPrefix,
+        attemptedUrl,
+        describeNavigationFailure(error),
+        fallbackMessage,
+      ),
+    };
+  }
+
+  const landingIssue = await detectNavigationLandingIssue(page, loginUrl, attemptedUrl);
+  if (landingIssue) {
+    return {
+      attempted: true,
+      warning: buildNavigationWarning(
+        warningPrefix,
+        attemptedUrl,
+        landingIssue,
+        fallbackMessage,
+      ),
+    };
+  }
+
+  return { attempted: true, warning: '' };
+}
+
 function normalisePolicyNumber(value) {
   return String(value ?? '')
     .trim()
@@ -178,9 +318,16 @@ async function claimNextPolicyItem() {
 }
 
 async function updatePolicyItem(itemId, status, patch = {}) {
+  rememberItemWarnings(itemId, patch);
+  const warnings = uniqueWarnings(Array.isArray(patch.warnings) ? patch.warnings : (itemWarnings.get(itemId) || []));
   return apiFetch(jobPath(`/items/${itemId}/status`), {
     method: 'POST',
-    body: JSON.stringify({ status, ...patch }),
+    body: JSON.stringify({
+      status,
+      ...patch,
+      warnings,
+      warning: patch.warning ? sanitiseWarning(patch.warning) : latestWarning(warnings),
+    }),
   });
 }
 
@@ -345,7 +492,15 @@ async function openPolicySearchResult(page, flow, item) {
 async function searchPolicyByNumber(page, flow, item) {
   const search = flow.search || {};
   if (search.searchPageUrl) {
-    await page.goto(search.searchPageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const searchNavigation = await attemptConfiguredNavigation(page, {
+      attemptedUrl: search.searchPageUrl,
+      loginUrl: flow.loginUrl,
+      warningPrefix: 'Configured search page URL failed; continuing with in-page search flow.',
+      fallbackMessage: 'Fallback used: the worker will keep searching from the current page using the configured search box labels or selector.',
+    });
+    if (searchNavigation.warning) {
+      addItemWarning(item.id, searchNavigation.warning);
+    }
   }
 
   const searchInput = await findInputByIntent(page, search.searchInputSelector, splitLabels(search.searchInputLabels));
@@ -661,6 +816,7 @@ async function processPolicyQueue(page, flow, config, jobMode) {
   for (;;) {
     const item = await claimNextPolicyItem();
     if (!item) break;
+    itemWarnings.delete(item.id);
 
     try {
       await updatePolicyItem(item.id, 'in_progress', {
@@ -785,6 +941,8 @@ async function loadRuntime(jobId) {
 
 async function runJob(jobId, requestedMode = mode) {
   activeJobId = jobId;
+  jobWarnings.splice(0, jobWarnings.length);
+  itemWarnings.clear();
   let browser;
   try {
     const { job, flow, config, items, credentials } = await loadRuntime(jobId);
@@ -824,7 +982,17 @@ async function runJob(jobId, requestedMode = mode) {
     }
 
     if (flow.navigation?.postLoginUrl) {
-      await page.goto(flow.navigation.postLoginUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      const postLoginNavigation = await attemptConfiguredNavigation(page, {
+        attemptedUrl: flow.navigation.postLoginUrl,
+        loginUrl: flow.loginUrl,
+        warningPrefix: 'Configured post-login URL failed; falling back to click steps.',
+        fallbackMessage: Array.isArray(flow.navigation?.policyListSteps) && flow.navigation.policyListSteps.length > 0
+          ? 'Fallback used: the worker will continue with the configured click steps.'
+          : 'Fallback used: the worker will continue from the current page and try the next configured navigation step.',
+      });
+      if (postLoginNavigation.warning) {
+        addJobWarning(postLoginNavigation.warning);
+      }
     }
     if (Array.isArray(flow.navigation?.policyListSteps) && flow.navigation.policyListSteps.length > 0) {
       await updateJob('running', { currentStep: 'following_policy_list_steps', message: 'Following configured provider policy navigation steps.' });

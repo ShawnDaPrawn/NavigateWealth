@@ -64,6 +64,16 @@ const itemStatusClassNames: Record<PortalJobPolicyItem['status'], string> = {
   skipped: 'bg-gray-50 text-gray-600 border-gray-200',
 };
 
+const splitPortalLines = (value: string) => value
+  .split(/\r?\n|,/)
+  .map((item) => item.trim())
+  .filter(Boolean);
+
+const latestPortalWarning = (value?: string, warnings?: string[]) => {
+  if (Array.isArray(warnings) && warnings.length > 0) return warnings[warnings.length - 1];
+  return value || '';
+};
+
 export function PortalAutomationTab({
   provider,
   selectedCategoryId,
@@ -189,6 +199,26 @@ export function PortalAutomationTab({
       (credentialsSaved && (credentialUsername.trim() || credentialPassword)))
   );
   const showCredentialSaveSuccess = credentialsSaved && lastSavedCredentialProfileId === selectedCredentialProfileId;
+  const configuredPolicyListSteps = (() => {
+    try {
+      const parsed = JSON.parse(policyListStepsJson || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  })();
+  const searchLabels = splitPortalLines(searchInputLabelsText);
+  const hasSearchFallback = Boolean(searchInputSelector.trim() || searchLabels.length > 0);
+  const hasPostLoginFallback = configuredPolicyListSteps.length > 0 || hasSearchFallback;
+  const setupWarnings = [
+    postLoginUrl.trim() && !hasPostLoginFallback
+      ? 'A post-login page URL is set, but there is no click-step or search fallback if that page cannot be opened.'
+      : '',
+    searchPageUrl.trim() && !hasSearchFallback
+      ? 'A search page URL is set, but there is no search selector or search-box wording configured if that page cannot be opened.'
+      : '',
+  ].filter(Boolean);
+  const currentJobWarning = latestPortalWarning(job?.warning, job?.warnings);
 
   const updateFieldSelector = (index: number, selector: string) => {
     setFieldSelectors(prev => prev.map((field, currentIndex) => (
@@ -197,10 +227,7 @@ export function PortalAutomationTab({
   };
 
   const updateFieldLabels = (index: number, labelsText: string) => {
-    const labels = labelsText
-      .split(/\r?\n|,/)
-      .map((label) => label.trim())
-      .filter(Boolean);
+    const labels = splitPortalLines(labelsText);
     setFieldSelectors(prev => prev.map((field, currentIndex) => (
       currentIndex === index ? { ...field, labels } : field
     )));
@@ -252,10 +279,7 @@ export function PortalAutomationTab({
       search: {
         mode: 'policy_number',
         searchPageUrl: searchPageUrl.trim() || undefined,
-        searchInputLabels: searchInputLabelsText
-          .split(/\r?\n|,/)
-          .map((label) => label.trim())
-          .filter(Boolean),
+        searchInputLabels: splitPortalLines(searchInputLabelsText),
         searchInputSelector: searchInputSelector.trim() || undefined,
         submitSelector: searchSubmitSelector.trim() || undefined,
         resultContainerSelector: resultContainerSelector.trim() || undefined,
@@ -271,10 +295,7 @@ export function PortalAutomationTab({
       policySchedule: {
         ...(flow.policySchedule || {}),
         enabled: policyScheduleEnabled,
-        downloadLabels: policyScheduleLabelsText
-          .split(/\r?\n|,/)
-          .map((label) => label.trim())
-          .filter(Boolean),
+        downloadLabels: splitPortalLines(policyScheduleLabelsText),
         downloadSelector: policyScheduleSelector.trim() || undefined,
         documentType: flow.policySchedule?.documentType || 'policy_schedule',
         required: true,
@@ -435,7 +456,10 @@ export function PortalAutomationTab({
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Search page URL</Label>
-                    <Input value={searchPageUrl} onChange={(event) => setSearchPageUrl(event.target.value)} placeholder="Optional. The page with provider search." />
+                    <Input value={searchPageUrl} onChange={(event) => setSearchPageUrl(event.target.value)} placeholder="Optional; if unreachable the worker will search using the configured path." />
+                    <p className="text-xs text-gray-500">
+                      Optional. Use this when the provider has a dedicated policy search page.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Search box words</Label>
@@ -573,7 +597,10 @@ export function PortalAutomationTab({
                       </div>
                       <div className="space-y-2">
                         <Label>Post-login URL</Label>
-                        <Input value={postLoginUrl} onChange={(event) => setPostLoginUrl(event.target.value)} placeholder="Optional page after login" />
+                        <Input value={postLoginUrl} onChange={(event) => setPostLoginUrl(event.target.value)} placeholder="Optional; if unreachable the worker will use click steps." />
+                        <p className="text-xs text-gray-500">
+                          Optional shortcut after login. Leave blank if the provider lands on the correct page already.
+                        </p>
                       </div>
                       <div className="space-y-2">
                         <Label>Next page selector</Label>
@@ -625,6 +652,16 @@ export function PortalAutomationTab({
                     ))}
                   </ul>
                 </div>
+              )}
+
+              {setupWarnings.length > 0 && (
+                <Alert className="bg-amber-50 border-amber-200 text-amber-900">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Fallback path still needed</AlertTitle>
+                  <AlertDescription>
+                    {setupWarnings.join(' ')}
+                  </AlertDescription>
+                </Alert>
               )}
 
               <div className="flex flex-wrap gap-3">
@@ -738,6 +775,13 @@ export function PortalAutomationTab({
             </div>
 
             <p className="text-sm text-gray-600">{job.message || 'Waiting for worker status.'}</p>
+            {currentJobWarning && (
+              <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Worker warning</AlertTitle>
+                <AlertDescription>{currentJobWarning}</AlertDescription>
+              </Alert>
+            )}
             {job.error && <p className="text-sm text-red-700">{job.error}</p>}
 
             {job.status === 'waiting_for_otp' && (
@@ -806,7 +850,7 @@ export function PortalAutomationTab({
                     </thead>
                     <tbody>
                       {jobItems.map((item) => (
-                        <tr key={item.id} className="border-t">
+                        <tr key={item.id} className="border-t align-top">
                           <td className="px-3 py-2">
                             <Badge variant="outline" className={cn('capitalize', itemStatusClassNames[item.status])}>
                               {item.status.replace(/_/g, ' ')}
@@ -830,6 +874,9 @@ export function PortalAutomationTab({
                           </td>
                           <td className="px-3 py-2 text-gray-600">
                             <div>{item.currentStep || '-'}</div>
+                            {latestPortalWarning(item.warning, item.warnings) && (
+                              <div className="mt-1 max-w-md text-xs text-amber-700">{latestPortalWarning(item.warning, item.warnings)}</div>
+                            )}
                             {item.error && <div className="mt-1 max-w-md text-xs text-red-700">{item.error}</div>}
                           </td>
                           <td className="px-3 py-2">
