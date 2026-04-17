@@ -416,20 +416,80 @@ async function findInputByIntent(page, selector, labels = []) {
     if (await locator.isVisible({ timeout: 1500 }).catch(() => false)) return locator;
   }
 
+  await page.waitForTimeout(1500);
+
   for (const label of labels) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, 'i');
     const candidates = [
       page.getByLabel(label).first(),
       page.getByPlaceholder(label).first(),
-      page.getByRole('textbox', { name: new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }).first(),
+      page.getByRole('textbox', { name: regex }).first(),
+      page.getByRole('searchbox', { name: regex }).first(),
+      page.getByRole('combobox', { name: regex }).first(),
+      page.locator(`input[placeholder*="${label}" i], input[name*="${label}" i], input[id*="${label}" i], input[aria-label*="${label}" i], input[title*="${label}" i], textarea[placeholder*="${label}" i], [role="searchbox"][aria-label*="${label}" i], [role="combobox"][aria-label*="${label}" i]`).first(),
     ];
     for (const locator of candidates) {
       if (await locator.isVisible({ timeout: 800 }).catch(() => false)) return locator;
     }
   }
 
-  const fallback = page.locator('input[type="search"], input:not([type]), input[type="text"], input[type="tel"]').first();
-  if (await fallback.isVisible({ timeout: 1500 }).catch(() => false)) return fallback;
-  throw new Error('Could not confidently find the provider search box.');
+  const genericCandidates = page.locator([
+    'input[type="search"]',
+    'input[placeholder*="search" i]',
+    'input[name*="search" i]',
+    'input[id*="search" i]',
+    'input[aria-label*="search" i]',
+    'input[title*="search" i]',
+    '[role="searchbox"]',
+    '[role="combobox"]',
+    'input:not([type])',
+    'input[type="text"]',
+    'input[type="tel"]',
+    'input[type="number"]',
+  ].join(', '));
+
+  const genericCount = Math.min(await genericCandidates.count().catch(() => 0), 20);
+  for (let index = 0; index < genericCount; index += 1) {
+    const candidate = genericCandidates.nth(index);
+    if (await candidate.isVisible({ timeout: 500 }).catch(() => false)) return candidate;
+  }
+
+  const visibleInputs = page.locator('input, textarea, [role="textbox"], [role="searchbox"], [role="combobox"]');
+  const visibleCount = Math.min(await visibleInputs.count().catch(() => 0), 20);
+  let firstVisible = null;
+  let firstVisibleCount = 0;
+  for (let index = 0; index < visibleCount; index += 1) {
+    const candidate = visibleInputs.nth(index);
+    if (!(await candidate.isVisible({ timeout: 500 }).catch(() => false))) continue;
+    firstVisibleCount += 1;
+    if (!firstVisible) firstVisible = candidate;
+    if (firstVisibleCount > 1) break;
+  }
+  if (firstVisible && firstVisibleCount === 1) return firstVisible;
+
+  const visibleSummary = [];
+  for (let index = 0; index < visibleCount; index += 1) {
+    const candidate = visibleInputs.nth(index);
+    if (!(await candidate.isVisible({ timeout: 300 }).catch(() => false))) continue;
+    const tagName = await candidate.evaluate((el) => el.tagName.toLowerCase()).catch(() => 'unknown');
+    const details = await candidate.evaluate((el) => ({
+      type: el.getAttribute('type') || '',
+      placeholder: el.getAttribute('placeholder') || '',
+      name: el.getAttribute('name') || '',
+      id: el.getAttribute('id') || '',
+      ariaLabel: el.getAttribute('aria-label') || '',
+      title: el.getAttribute('title') || '',
+      role: el.getAttribute('role') || '',
+    })).catch(() => ({}));
+    visibleSummary.push(`${tagName}:${JSON.stringify(details)}`.slice(0, 220));
+    if (visibleSummary.length >= 5) break;
+  }
+
+  const message = visibleSummary.length > 0
+    ? `Could not confidently find the provider search box. Visible inputs: ${visibleSummary.join(' | ')}`
+    : 'Could not confidently find the provider search box.';
+  throw new Error(message);
 }
 
 async function submitPolicySearch(page, search) {
