@@ -423,7 +423,10 @@ async function dispatchPortalGitHubAction(job: PortalSyncJob): Promise<Partial<P
 
   const data = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) {
-    const message = typeof data.message === 'string' ? data.message : `GitHub dispatch failed with HTTP ${response.status}`;
+    const rawMessage = typeof data.message === 'string' ? data.message : `GitHub dispatch failed with HTTP ${response.status}`;
+    const message = rawMessage === 'Bad credentials'
+      ? 'GitHub rejected NW_GITHUB_ACTIONS_TOKEN. Replace the Supabase Edge Function secret with a valid fine-grained GitHub token for ShawnDaPrawn/NavigateWealth with Actions: Read and write.'
+      : rawMessage;
     return {
       automationHost: 'manual',
       actionsDispatchError: message.slice(0, 500),
