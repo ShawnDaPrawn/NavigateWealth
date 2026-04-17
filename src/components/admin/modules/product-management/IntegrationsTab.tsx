@@ -12,6 +12,17 @@ import { Inbox, LayoutList } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { integrationsKeys } from '../../../../utils/queryKeys';
 
+const terminalPortalJobStatuses: PortalSyncJob['status'][] = [
+  'staged',
+  'failed',
+  'cancelled',
+  'discovery_ready',
+  'dry_run_ready',
+];
+
+const isActivePortalJob = (job: PortalSyncJob | null) =>
+  Boolean(job && !terminalPortalJobStatuses.includes(job.status));
+
 export function IntegrationsTab() {
   const queryClient = useQueryClient();
   
@@ -111,7 +122,8 @@ export function IntegrationsTab() {
     queryKey: integrationsKeys.latestPortalJob(selectedProviderId, selectedCategoryId),
     enabled: !!selectedProviderId && !!selectedCategoryId,
     queryFn: () => productManagementApi.fetchLatestPortalJob(selectedProviderId!, selectedCategoryId),
-    refetchInterval: portalJob && !['staged', 'failed', 'cancelled', 'discovery_ready', 'dry_run_ready'].includes(portalJob.status) ? 5000 : false,
+    refetchInterval: isActivePortalJob(portalJob) ? 3000 : false,
+    refetchIntervalInBackground: true,
   });
 
   const { data: portalDiscoveryReport, isLoading: isLoadingPortalDiscoveryReport } = useQuery({
@@ -121,10 +133,23 @@ export function IntegrationsTab() {
   });
 
   useEffect(() => {
-    if (!portalJob && latestPortalJob) {
-        setPortalJob(latestPortalJob);
-    }
-  }, [latestPortalJob, portalJob]);
+    if (!latestPortalJob) return;
+
+    setPortalJob((currentJob) => {
+      if (!currentJob) return latestPortalJob;
+      if (currentJob.id === latestPortalJob.id) {
+        return currentJob.updatedAt === latestPortalJob.updatedAt ? currentJob : latestPortalJob;
+      }
+
+      const currentCreatedAt = Date.parse(currentJob.createdAt || '');
+      const latestCreatedAt = Date.parse(latestPortalJob.createdAt || '');
+      if (Number.isNaN(currentCreatedAt) || latestCreatedAt >= currentCreatedAt) {
+        return latestPortalJob;
+      }
+
+      return currentJob;
+    });
+  }, [latestPortalJob]);
 
   // Sync server config to local state
   useEffect(() => {
@@ -291,6 +316,7 @@ export function IntegrationsTab() {
     },
     onSuccess: (job) => {
         setPortalJob(job);
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.latestPortalJob(selectedProviderId, selectedCategoryId) });
         toast.success("OTP submitted. The worker will continue shortly.");
     },
     onError: (err: Error) => {

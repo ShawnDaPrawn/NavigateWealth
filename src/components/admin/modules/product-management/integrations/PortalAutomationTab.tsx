@@ -460,6 +460,7 @@ export function PortalAutomationTab({
                       placeholder="Enter OTP"
                       inputMode="numeric"
                       autoComplete="one-time-code"
+                      autoFocus
                     />
                     <Button
                       onClick={() => {
