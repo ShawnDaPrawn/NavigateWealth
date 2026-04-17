@@ -17,6 +17,8 @@ import {
   PortalCredentialStatus,
   PortalProviderFlow,
   PortalDiscoveryReport,
+  PortalJobPolicyItem,
+  PortalJobQueueSummary,
   PortalJobRunMode,
   PortalSyncJob,
   ProductField
@@ -341,6 +343,16 @@ export const productManagementApi = {
   fetchPortalJob: async (jobId: string): Promise<PortalSyncJob> => {
     const response = await api.get<{ success: boolean; job: PortalSyncJob }>(`integrations/portal-jobs/${jobId}`);
     return response.job;
+  },
+
+  fetchPortalJobItems: async (jobId: string): Promise<{ items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }> => {
+    const response = await api.get<{ success: boolean; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }>(`integrations/portal-jobs/${jobId}/items`);
+    return { items: response.items || [], summary: response.summary };
+  },
+
+  retryPortalJobItem: async (jobId: string, itemId: string): Promise<{ job: PortalSyncJob; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }> => {
+    const response = await api.post<{ success: boolean; job: PortalSyncJob; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }>(`integrations/portal-jobs/${jobId}/items/${itemId}/retry`, {});
+    return { job: response.job, items: response.items || [], summary: response.summary };
   },
 
   fetchLatestPortalJob: async (providerId: string, categoryId: string): Promise<PortalSyncJob | null> => {

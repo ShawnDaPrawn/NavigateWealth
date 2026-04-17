@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { IntegrationProvider, IntegrationConfig, PreviewData, IntegrationSyncRun, PortalFlowField, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from './types';
+import { IntegrationProvider, IntegrationConfig, PreviewData, IntegrationSyncRun, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from './types';
 import { productManagementApi } from './api';
 import { ProviderList } from './integrations/ProviderList';
 import { IntegrationHeader } from './integrations/IntegrationHeader';
@@ -130,6 +130,14 @@ export function IntegrationsTab() {
     queryKey: integrationsKeys.portalDiscoveryReport(portalJob?.id || null),
     enabled: !!portalJob?.id,
     queryFn: () => productManagementApi.fetchPortalDiscoveryReport(portalJob!.id)
+  });
+
+  const { data: portalJobItemsData, isLoading: isLoadingPortalJobItems } = useQuery({
+    queryKey: integrationsKeys.portalJobItems(portalJob?.id || null),
+    enabled: !!portalJob?.id,
+    queryFn: () => productManagementApi.fetchPortalJobItems(portalJob!.id),
+    refetchInterval: isActivePortalJob(portalJob) ? 3000 : false,
+    refetchIntervalInBackground: true,
   });
 
   useEffect(() => {
@@ -303,6 +311,7 @@ export function IntegrationsTab() {
         if (job.discoveryReportId) {
             queryClient.invalidateQueries({ queryKey: integrationsKeys.portalDiscoveryReport(job.id) });
         }
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalJobItems(job.id) });
     },
     onError: (err: Error) => {
         toast.error(err.message || "Failed to refresh portal job");
@@ -321,6 +330,22 @@ export function IntegrationsTab() {
     },
     onError: (err: Error) => {
         toast.error(err.message || "Failed to submit OTP");
+    }
+  });
+
+  const retryPortalJobItemMutation = useMutation({
+    mutationFn: async (item: PortalJobPolicyItem) => {
+        if (!portalJob) throw new Error("No portal job selected");
+        return productManagementApi.retryPortalJobItem(portalJob.id, item.id);
+    },
+    onSuccess: ({ job }) => {
+        setPortalJob(job);
+        toast.success("Policy queued for retry.");
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalJobItems(job.id) });
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.latestPortalJob(selectedProviderId, selectedCategoryId) });
+    },
+    onError: (err: Error) => {
+        toast.error(err.message || "Failed to retry policy");
     }
   });
 
@@ -548,11 +573,14 @@ export function IntegrationsTab() {
                 selectedCategoryId={selectedCategoryId}
                 flow={portalFlow}
                 job={portalJob}
+                jobItems={portalJobItemsData?.items || []}
                 discoveryReport={portalDiscoveryReport}
                 isLoadingFlow={isLoadingPortalFlow}
                 isLoadingDiscoveryReport={isLoadingPortalDiscoveryReport}
+                isLoadingJobItems={isLoadingPortalJobItems}
                 isCreatingJob={createPortalJobMutation.isPending}
                 credentialStatus={portalCredentialStatus}
+                mappingSourceHeaders={Object.keys(serverConfig?.fieldMapping || {})}
                 selectedCredentialProfileId={selectedPortalCredentialProfileId}
                 onCredentialProfileChange={setSelectedPortalCredentialProfileId}
                 isSavingCredentials={savePortalCredentialsMutation.isPending}
@@ -564,6 +592,7 @@ export function IntegrationsTab() {
                 onSaveFlow={(flow) => savePortalFlowMutation.mutate(flow)}
                 onSubmitOtp={(otp) => submitPortalOtpMutation.mutate(otp)}
                 onRefreshJob={() => refreshPortalJobMutation.mutate()}
+                onRetryItem={(item) => retryPortalJobItemMutation.mutate(item)}
                 onApplyFlow={(patch) => applyPortalFlowMutation.mutate(patch)}
                 isApplyingFlow={applyPortalFlowMutation.isPending}
               />

@@ -165,6 +165,7 @@ interface IntegrationSyncRun {
 type PortalJobStatus = 'queued' | 'running' | 'waiting_for_otp' | 'discovering' | 'discovery_ready' | 'extracting' | 'dry_run_ready' | 'staging' | 'staged' | 'failed' | 'cancelled';
 type PortalJobRunMode = 'discover' | 'dry-run' | 'run';
 type PortalAutomationHost = 'github_actions' | 'hosted_worker' | 'manual';
+type PortalJobItemStatus = 'queued' | 'in_progress' | 'completed' | 'failed' | 'skipped';
 
 interface PortalCredentialProfile {
   id: string;
@@ -197,6 +198,7 @@ interface PortalCredentialStatus {
 interface PortalFlowField {
   sourceHeader: string;
   selector: string;
+  labels?: string[];
   attribute?: 'text' | 'value' | 'href' | string;
   required?: boolean;
   transform?: 'trim' | 'number' | 'date' | string;
@@ -239,6 +241,18 @@ interface PortalProviderFlow {
     clientRowSelector?: string;
     nextPageSelector?: string;
   };
+  search?: {
+    mode: 'policy_number';
+    searchPageUrl?: string;
+    searchInputSelector?: string;
+    searchInputLabels?: string[];
+    submitSelector?: string;
+    resultContainerSelector?: string;
+    resultLinkSelector?: string;
+    resultPolicyNumberSelector?: string;
+    noResultsText?: string[];
+    instructions?: string;
+  };
   extraction: {
     policyRowSelector?: string;
     fields: PortalFlowField[];
@@ -272,6 +286,44 @@ interface PortalSyncJob {
   stagedRunId?: string;
   discoveryReportId?: string;
   error?: string;
+  currentItemId?: string;
+  currentClientName?: string;
+  currentPolicyNumber?: string;
+  queueSummary?: PortalJobQueueSummary;
+}
+
+interface PortalJobQueueSummary {
+  total: number;
+  queued: number;
+  inProgress: number;
+  completed: number;
+  failed: number;
+  skipped: number;
+}
+
+interface PortalJobPolicyItem {
+  id: string;
+  jobId: string;
+  providerId: string;
+  providerName: string;
+  categoryId: string;
+  clientId: string;
+  clientName: string;
+  policyId: string;
+  policyNumber: string;
+  normalizedPolicyNumber: string;
+  status: PortalJobItemStatus;
+  currentStep?: string;
+  message?: string;
+  error?: string;
+  workerId?: string;
+  rawData?: Record<string, unknown>;
+  extractedData?: Record<string, unknown>;
+  matchConfidence?: 'high' | 'medium' | 'low';
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
 }
 
 interface PortalDiscoveryReport {
@@ -379,6 +431,108 @@ function requirePortalWorker(c: { json: (body: unknown, status?: number) => Resp
   return null;
 }
 
+function categoryMatches(requestedCategoryId: string, policyCategoryId: string): boolean {
+  if (requestedCategoryId === policyCategoryId) return true;
+
+  const groupedCategories: Record<string, string[]> = {
+    retirement_planning: ['retirement_planning', 'retirement_pre', 'retirement_post'],
+    investments: ['investments', 'investments_voluntary', 'investments_guaranteed'],
+    employee_benefits: ['employee_benefits', 'employee_benefits_risk', 'employee_benefits_retirement'],
+  };
+
+  return (groupedCategories[requestedCategoryId] || [requestedCategoryId]).includes(policyCategoryId);
+}
+
+function summarisePortalJobItems(items: PortalJobPolicyItem[]): PortalJobQueueSummary {
+  return {
+    total: items.length,
+    queued: items.filter((item) => item.status === 'queued').length,
+    inProgress: items.filter((item) => item.status === 'in_progress').length,
+    completed: items.filter((item) => item.status === 'completed').length,
+    failed: items.filter((item) => item.status === 'failed').length,
+    skipped: items.filter((item) => item.status === 'skipped').length,
+  };
+}
+
+async function getClientDisplayName(clientId: string): Promise<string> {
+  const profile = (await kv.get(`user_profile:${clientId}:personal_info`)) as Record<string, unknown> | null;
+  const personal = (profile?.personalInformation || profile?.personal_info || {}) as Record<string, unknown>;
+  const firstName = String(profile?.firstName || personal.firstName || personal.first_name || '').trim();
+  const lastName = String(profile?.lastName || profile?.surname || personal.lastName || personal.surname || personal.last_name || '').trim();
+  const fullName = String(profile?.fullName || personal.fullName || personal.full_name || '').trim();
+  const combined = [firstName, lastName].filter(Boolean).join(' ').trim();
+  return fullName || combined || `Client ${clientId.slice(0, 8)}`;
+}
+
+async function buildPortalPolicyQueue(job: PortalSyncJob, fields: SchemaField[]): Promise<PortalJobPolicyItem[]> {
+  const policyNumberField = findPolicyNumberField(fields);
+  if (!policyNumberField) {
+    throw new Error('No policy number field exists in this product structure. Add or map a Policy Number field before running portal automation.');
+  }
+
+  const allClientPolicies = await kv.getByPrefix('policies:client:');
+  const now = new Date().toISOString();
+  const items: PortalJobPolicyItem[] = [];
+  const schemaCache = new Map<string, KvSchema>();
+
+  for (const clientPolicies of allClientPolicies || []) {
+    if (!Array.isArray(clientPolicies)) continue;
+
+    for (const policy of clientPolicies as KvPolicy[]) {
+      if (policy.archived || policy.providerId !== job.providerId || !categoryMatches(job.categoryId, policy.categoryId)) continue;
+
+      const policyNumber = await getPolicyNumberForPolicy(policy, fields, schemaCache);
+      const normalizedPolicyNumber = normalisePolicyNumber(policyNumber);
+      if (!normalizedPolicyNumber) continue;
+
+      items.push({
+        id: crypto.randomUUID(),
+        jobId: job.id,
+        providerId: job.providerId,
+        providerName: job.providerName,
+        categoryId: policy.categoryId,
+        clientId: policy.clientId,
+        clientName: await getClientDisplayName(policy.clientId),
+        policyId: policy.id,
+        policyNumber,
+        normalizedPolicyNumber,
+        status: 'queued',
+        currentStep: 'queued',
+        message: 'Waiting for the worker to search this policy.',
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  }
+
+  return items.sort((a, b) =>
+    a.clientName.localeCompare(b.clientName) || a.policyNumber.localeCompare(b.policyNumber)
+  );
+}
+
+async function loadPortalJobItems(jobId: string): Promise<PortalJobPolicyItem[]> {
+  const items = (await kv.get(`portal-job-items:${jobId}`)) as PortalJobPolicyItem[] | null;
+  return Array.isArray(items) ? items : [];
+}
+
+async function persistPortalJobItems(job: PortalSyncJob, items: PortalJobPolicyItem[], patch: Partial<PortalSyncJob> = {}): Promise<PortalSyncJob> {
+  const now = new Date().toISOString();
+  const summary = summarisePortalJobItems(items);
+  await kv.set(`portal-job-items:${job.id}`, items);
+
+  const updatedJob: PortalSyncJob = {
+    ...job,
+    ...patch,
+    queueSummary: summary,
+    extractedRows: summary.completed,
+    updatedAt: now,
+  };
+
+  await kv.set(`portal-job:${job.id}`, updatedJob);
+  await kv.set(`portal-job:latest:${job.providerId}:${job.categoryId}`, { jobId: job.id, updatedAt: now });
+  return updatedJob;
+}
+
 function normaliseRunMode(value: unknown): PortalJobRunMode {
   return value === 'dry-run' || value === 'run' ? value : 'discover';
 }
@@ -466,6 +620,54 @@ function normaliseFlowSteps(value: unknown): PortalFlowStep[] {
   });
 }
 
+function normaliseStringList(value: unknown, fallback: string[] = [], limit = 20): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item || '').trim())
+      .filter(Boolean)
+      .slice(0, limit);
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, limit);
+  }
+  return fallback;
+}
+
+function normaliseSearchConfig(value: unknown, fallback?: PortalProviderFlow['search']): PortalProviderFlow['search'] {
+  const entry = (value || {}) as Record<string, unknown>;
+  return {
+    mode: 'policy_number',
+    searchPageUrl: typeof entry.searchPageUrl === 'string' ? entry.searchPageUrl.trim().slice(0, 1000) : fallback?.searchPageUrl,
+    searchInputSelector: typeof entry.searchInputSelector === 'string' ? entry.searchInputSelector.trim().slice(0, 500) : fallback?.searchInputSelector,
+    searchInputLabels: normaliseStringList(entry.searchInputLabels, fallback?.searchInputLabels || ['Policy number', 'Search']),
+    submitSelector: typeof entry.submitSelector === 'string' ? entry.submitSelector.trim().slice(0, 500) : fallback?.submitSelector,
+    resultContainerSelector: typeof entry.resultContainerSelector === 'string' ? entry.resultContainerSelector.trim().slice(0, 500) : fallback?.resultContainerSelector,
+    resultLinkSelector: typeof entry.resultLinkSelector === 'string' ? entry.resultLinkSelector.trim().slice(0, 500) : fallback?.resultLinkSelector,
+    resultPolicyNumberSelector: typeof entry.resultPolicyNumberSelector === 'string' ? entry.resultPolicyNumberSelector.trim().slice(0, 500) : fallback?.resultPolicyNumberSelector,
+    noResultsText: normaliseStringList(entry.noResultsText, fallback?.noResultsText || ['No results']),
+    instructions: typeof entry.instructions === 'string' ? entry.instructions.trim().slice(0, 500) : fallback?.instructions,
+  };
+}
+
+function normaliseExtractionFields(value: unknown, fallback: PortalFlowField[] = []): PortalFlowField[] {
+  if (!Array.isArray(value)) return fallback;
+  return value.slice(0, 80).map((field, index) => {
+    const entry = field as Record<string, unknown>;
+    return {
+      sourceHeader: String(entry.sourceHeader || `Field ${index + 1}`).trim().slice(0, 120),
+      selector: typeof entry.selector === 'string' ? entry.selector.trim().slice(0, 500) : '',
+      labels: normaliseStringList(entry.labels, [], 12),
+      attribute: typeof entry.attribute === 'string' ? entry.attribute.slice(0, 40) : 'text',
+      required: entry.required === true,
+      transform: typeof entry.transform === 'string' ? entry.transform.slice(0, 40) : 'trim',
+    };
+  });
+}
+
 function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalProviderFlow {
   const providerName = String(provider.name || providerId);
   const providerKey = providerName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -512,19 +714,29 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
         clientRowSelector: '[data-testid*="client-row" i], table tbody tr',
         nextPageSelector: 'a[rel="next"], button:has-text("Next")',
       },
+      search: {
+        mode: 'policy_number',
+        searchInputLabels: ['Policy number', 'Account number', 'Search', 'Client search', 'Investor search'],
+        searchInputSelector: 'input[type="search"], input[placeholder*="Search" i], input[name*="search" i], input[id*="search" i]',
+        submitSelector: 'button:has-text("Search"), button[type="submit"], input[type="submit"]',
+        resultContainerSelector: 'table tbody tr, [data-testid*="result" i], [data-testid*="policy" i], a',
+        resultLinkSelector: 'a, button, [role="link"], [role="button"]',
+        noResultsText: ['No results', 'No clients found', 'No investments found', 'No policies found'],
+        instructions: 'Search Allan Gray by the Navigate Wealth policy number. The worker only opens a result when the policy number is found on the page.',
+      },
       extraction: {
         policyRowSelector: '[data-testid*="policy" i], table tbody tr',
         fields: [
-          { sourceHeader: 'Policy Number', selector: '[data-field="policyNumber"], [data-testid*="policy-number" i], td:nth-child(1)', attribute: 'text', required: true, transform: 'trim' },
-          { sourceHeader: 'Product Type', selector: '[data-field="productType"], [data-testid*="product" i], td:nth-child(2)', attribute: 'text', transform: 'trim' },
-          { sourceHeader: 'Date of Inception', selector: '[data-field="inceptionDate"], [data-testid*="inception" i], td:nth-child(3)', attribute: 'text', transform: 'trim' },
-          { sourceHeader: 'Fund Value', selector: '[data-field="fundValue"], [data-testid*="value" i], td:nth-child(4)', attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Policy Number', selector: '[data-field="policyNumber"], [data-testid*="policy-number" i], td:nth-child(1)', labels: ['Policy number', 'Account number', 'Investment number'], attribute: 'text', required: true, transform: 'trim' },
+          { sourceHeader: 'Product Type', selector: '[data-field="productType"], [data-testid*="product" i], td:nth-child(2)', labels: ['Product type', 'Product name', 'Investment type'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Date of Inception', selector: '[data-field="inceptionDate"], [data-testid*="inception" i], td:nth-child(3)', labels: ['Date of inception', 'Start date', 'Investment start date'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Fund Value', selector: '[data-field="fundValue"], [data-testid*="value" i], td:nth-child(4)', labels: ['Fund value', 'Market value', 'Current value'], attribute: 'text', transform: 'trim' },
         ],
       },
       notes: [
-        'Starter selectors are intentionally conservative because provider portals change and require authenticated discovery.',
+        'The worker starts from Navigate Wealth policy numbers and searches Allan Gray one policy at a time.',
         'Credentials are stored server-side in Supabase and are never returned to the browser.',
-        'Use policy list steps to describe how the worker reaches the policy table after login.',
+        'Use label phrases first. Advanced selectors are only needed when the provider page is ambiguous.',
         'SMS OTP is a manual pause-and-resume checkpoint and is cleared after the worker consumes it.',
       ],
       needsDiscovery: true,
@@ -560,8 +772,18 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
       instructions: 'Enter the SMS OTP in Navigate Wealth when the worker pauses.',
     },
     navigation: { policyListSteps: [] },
+    search: {
+      mode: 'policy_number',
+      searchInputLabels: ['Policy number', 'Account number', 'Search'],
+      searchInputSelector: 'input[type="search"], input[placeholder*="Search" i], input[name*="search" i], input[id*="search" i]',
+      submitSelector: 'button:has-text("Search"), button[type="submit"], input[type="submit"]',
+      resultContainerSelector: 'table tbody tr, [data-testid*="result" i], a',
+      resultLinkSelector: 'a, button, [role="link"], [role="button"]',
+      noResultsText: ['No results', 'No policies found'],
+      instructions: 'Search by policy number and only open results that contain the exact policy number.',
+    },
     extraction: { fields: [] },
-    notes: ['Configure login, navigation, and extraction selectors before running this provider in production.'],
+    notes: ['Configure login, policy search, and field labels before running this provider in production.'],
     needsDiscovery: true,
     updatedAt: now,
   };
@@ -596,6 +818,32 @@ async function getSchemaForCategory(categoryId: string): Promise<KvSchema> {
   const configured = (await kv.get(`config:schema:${categoryId}`)) as KvSchema | null;
   const fallback = DEFAULT_SCHEMAS[categoryId] as KvSchema | undefined;
   return configured || fallback || { categoryId, fields: [] };
+}
+
+async function getPolicyNumberForPolicy(
+  policy: KvPolicy,
+  fallbackFields: SchemaField[],
+  schemaCache = new Map<string, KvSchema>(),
+): Promise<string> {
+  const candidateFieldIds = new Set<string>();
+  const fallbackPolicyNumberField = findPolicyNumberField(fallbackFields);
+  if (fallbackPolicyNumberField?.id) candidateFieldIds.add(fallbackPolicyNumberField.id);
+
+  if (!schemaCache.has(policy.categoryId)) {
+    schemaCache.set(policy.categoryId, await getSchemaForCategory(policy.categoryId));
+  }
+  const policySchema = schemaCache.get(policy.categoryId);
+  const policyCategoryNumberField = findPolicyNumberField(policySchema?.fields || []);
+  if (policyCategoryNumberField?.id) candidateFieldIds.add(policyCategoryNumberField.id);
+
+  ['policyNumber', 'policy_number', 'policyNo', 'policy_no', 'reference'].forEach((fieldId) => candidateFieldIds.add(fieldId));
+
+  for (const fieldId of candidateFieldIds) {
+    const value = String(policy.data?.[fieldId] ?? '').trim();
+    if (value) return value;
+  }
+
+  return '';
 }
 
 function coerceFieldValue(field: SchemaField, value: unknown): { value: unknown; error?: string } {
@@ -652,6 +900,7 @@ async function buildPolicyMatchIndex(
 ): Promise<Map<string, KvPolicy[]>> {
   const policyNumberField = findPolicyNumberField(fields);
   const index = new Map<string, KvPolicy[]>();
+  const schemaCache = new Map<string, KvSchema>();
 
   if (!policyNumberField) return index;
 
@@ -660,9 +909,9 @@ async function buildPolicyMatchIndex(
     if (!Array.isArray(clientPolicies)) continue;
 
     for (const policy of clientPolicies as KvPolicy[]) {
-      if (policy.archived || policy.providerId !== providerId || policy.categoryId !== categoryId) continue;
+      if (policy.archived || policy.providerId !== providerId || !categoryMatches(categoryId, policy.categoryId)) continue;
 
-      const normalised = normalisePolicyNumber(policy.data?.[policyNumberField.id]);
+      const normalised = normalisePolicyNumber(await getPolicyNumberForPolicy(policy, fields, schemaCache));
       if (!normalised) continue;
 
       const current = index.get(normalised) || [];
@@ -1167,16 +1416,23 @@ app.put("/portal-flows/:providerId", requireAuth, async (c) => {
     }
 
     const body = await c.req.json();
+    const defaultFlow = getDefaultPortalFlow(provider, providerId);
     const flow: PortalProviderFlow = {
-      ...getDefaultPortalFlow(provider, providerId),
+      ...defaultFlow,
       ...body,
       providerId,
       id: body?.id || `${providerId}:default`,
-      credentialProfiles: Array.isArray(body?.credentialProfiles) ? body.credentialProfiles : getDefaultPortalFlow(provider, providerId).credentialProfiles,
+      credentialProfiles: Array.isArray(body?.credentialProfiles) ? body.credentialProfiles : defaultFlow.credentialProfiles,
       navigation: {
-        ...(getDefaultPortalFlow(provider, providerId).navigation || {}),
+        ...(defaultFlow.navigation || {}),
         ...(body?.navigation || {}),
         policyListSteps: normaliseFlowSteps(body?.navigation?.policyListSteps),
+      },
+      search: normaliseSearchConfig(body?.search, defaultFlow.search),
+      extraction: {
+        ...(defaultFlow.extraction || {}),
+        ...(body?.extraction || {}),
+        fields: normaliseExtractionFields(body?.extraction?.fields, defaultFlow.extraction?.fields || []),
       },
       updatedAt: new Date().toISOString(),
     };
@@ -1317,7 +1573,19 @@ app.post("/portal-jobs", requireAuth, async (c) => {
       message: 'Portal sync job queued. Starting GitHub Actions worker.',
     };
 
+    const schema = await getSchemaForCategory(categoryId);
+    const items = await buildPortalPolicyQueue(job, schema.fields || []);
+    if (items.length === 0) {
+      return c.json({
+        error: `No active ${provider.name || 'provider'} policies with policy numbers were found for this category. Add the policies in client profiles before starting portal automation.`,
+      }, 400);
+    }
+
+    job.queueSummary = summarisePortalJobItems(items);
+    job.message = `Found ${items.length} active policy${items.length === 1 ? '' : 'ies'} to update. Starting GitHub Actions worker.`;
+
     await kv.set(`portal-job:${job.id}`, job);
+    await kv.set(`portal-job-items:${job.id}`, items);
     await kv.set(`portal-job:latest:${providerId}:${categoryId}`, { jobId: job.id, updatedAt: now });
 
     const dispatchPatch = await dispatchPortalGitHubAction(job).catch((error) => ({
@@ -1375,6 +1643,65 @@ app.get("/portal-jobs/:jobId", requireAuth, async (c) => {
   } catch (e) {
     log.error("Portal job fetch error:", e);
     return c.json({ error: "Failed to fetch portal job" }, 500);
+  }
+});
+
+// GET /portal-jobs/:jobId/items
+app.get("/portal-jobs/:jobId/items", requireAuth, async (c) => {
+  try {
+    const jobId = c.req.param("jobId");
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: "Portal job not found" }, 404);
+    }
+
+    const items = await loadPortalJobItems(jobId);
+    return c.json({ success: true, items, summary: summarisePortalJobItems(items) });
+  } catch (e) {
+    log.error("Portal job items fetch error:", e);
+    return c.json({ error: "Failed to fetch portal job policy queue" }, 500);
+  }
+});
+
+// POST /portal-jobs/:jobId/items/:itemId/retry
+app.post("/portal-jobs/:jobId/items/:itemId/retry", requireAuth, async (c) => {
+  try {
+    const jobId = c.req.param("jobId");
+    const itemId = c.req.param("itemId");
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: "Portal job not found" }, 404);
+    }
+
+    const items = await loadPortalJobItems(jobId);
+    const itemIndex = items.findIndex((item) => item.id === itemId);
+    if (itemIndex === -1) {
+      return c.json({ error: "Portal job policy item not found" }, 404);
+    }
+
+    const now = new Date().toISOString();
+    items[itemIndex] = {
+      ...items[itemIndex],
+      status: 'queued',
+      currentStep: 'queued',
+      message: 'Queued for retry.',
+      error: undefined,
+      workerId: undefined,
+      startedAt: undefined,
+      completedAt: undefined,
+      updatedAt: now,
+    };
+
+    const updatedJob = await persistPortalJobItems(job, items, {
+      status: ['staged', 'failed', 'cancelled'].includes(job.status) ? 'queued' : job.status,
+      currentStep: 'retry_queued',
+      message: `Queued ${items[itemIndex].clientName} / ${items[itemIndex].policyNumber} for retry.`,
+    });
+
+    return c.json({ success: true, item: items[itemIndex], job: updatedJob, items, summary: updatedJob.queueSummary });
+  } catch (e) {
+    log.error("Portal job item retry error:", e);
+    return c.json({ error: `Failed to retry policy item: ${getErrMsg(e)}` }, 500);
   }
 });
 
@@ -1648,6 +1975,8 @@ app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
       return c.json({ error: "Invalid provider ID" }, 400);
     }
     const flow = await getPortalFlow(provider, job.providerId);
+    const config = (await kv.get(`config:mapping:${job.providerId}:${job.categoryId}`)) as IntegrationConfig | null;
+    const items = await loadPortalJobItems(jobId);
     const credentialRecord = (await kv.get(portalCredentialKey(job.providerId, job.credentialProfileId))) as PortalCredentialRecord | null;
     if (!credentialRecord?.username || !credentialRecord?.password) {
       return c.json({ error: "Provider credentials are not saved for this job" }, 400);
@@ -1656,6 +1985,8 @@ app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
       success: true,
       job,
       flow,
+      config: config ? { ...config, settings: normaliseSettings(config.settings) } : null,
+      items,
       credentials: {
         username: credentialRecord.username,
         password: credentialRecord.password,
@@ -1664,6 +1995,116 @@ app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
   } catch (e) {
     log.error("Portal worker runtime error:", e);
     return c.json({ error: `Failed to load worker runtime: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// POST /portal-worker/jobs/:jobId/items/claim
+app.post("/portal-worker/jobs/:jobId/items/claim", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const body = await c.req.json().catch(() => ({}));
+    const workerId = String(body?.workerId || 'portal-worker').slice(0, 120);
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: "Portal job not found" }, 404);
+    }
+
+    const items = await loadPortalJobItems(jobId);
+    const staleBefore = Date.now() - 10 * 60 * 1000;
+    const itemIndex = items.findIndex((item) =>
+      item.status === 'queued' ||
+      (item.status === 'in_progress' && new Date(item.updatedAt).getTime() < staleBefore)
+    );
+
+    if (itemIndex === -1) {
+      return c.json({ success: true, item: null, summary: summarisePortalJobItems(items) });
+    }
+
+    const now = new Date().toISOString();
+    items[itemIndex] = {
+      ...items[itemIndex],
+      status: 'in_progress',
+      workerId,
+      currentStep: 'searching_policy',
+      message: `Searching provider portal for policy ${items[itemIndex].policyNumber}.`,
+      startedAt: items[itemIndex].startedAt || now,
+      updatedAt: now,
+    };
+
+    const updatedJob = await persistPortalJobItems(job, items, {
+      status: 'extracting',
+      workerId,
+      startedAt: job.startedAt || now,
+      currentStep: 'searching_policy',
+      currentItemId: items[itemIndex].id,
+      currentClientName: items[itemIndex].clientName,
+      currentPolicyNumber: items[itemIndex].policyNumber,
+      message: `Working on ${items[itemIndex].clientName} / ${items[itemIndex].policyNumber}.`,
+    });
+
+    return c.json({ success: true, item: items[itemIndex], job: updatedJob, summary: updatedJob.queueSummary });
+  } catch (e) {
+    log.error("Portal worker item claim error:", e);
+    return c.json({ error: `Failed to claim policy item: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// POST /portal-worker/jobs/:jobId/items/:itemId/status
+app.post("/portal-worker/jobs/:jobId/items/:itemId/status", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const itemId = c.req.param("itemId");
+    const body = await c.req.json().catch(() => ({}));
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: "Portal job not found" }, 404);
+    }
+
+    const items = await loadPortalJobItems(jobId);
+    const itemIndex = items.findIndex((item) => item.id === itemId);
+    if (itemIndex === -1) {
+      return c.json({ error: "Portal job policy item not found" }, 404);
+    }
+
+    const allowedStatuses: PortalJobItemStatus[] = ['queued', 'in_progress', 'completed', 'failed', 'skipped'];
+    const status = allowedStatuses.includes(body?.status) ? body.status as PortalJobItemStatus : items[itemIndex].status;
+    const now = new Date().toISOString();
+    items[itemIndex] = {
+      ...items[itemIndex],
+      status,
+      currentStep: typeof body?.currentStep === 'string' ? body.currentStep.slice(0, 120) : items[itemIndex].currentStep,
+      message: typeof body?.message === 'string' ? body.message.slice(0, 500) : items[itemIndex].message,
+      error: typeof body?.error === 'string' ? body.error.slice(0, 1000) : (status === 'failed' ? items[itemIndex].error : undefined),
+      rawData: body?.rawData && typeof body.rawData === 'object' ? body.rawData as Record<string, unknown> : items[itemIndex].rawData,
+      extractedData: body?.extractedData && typeof body.extractedData === 'object' ? body.extractedData as Record<string, unknown> : items[itemIndex].extractedData,
+      matchConfidence: ['high', 'medium', 'low'].includes(String(body?.matchConfidence)) ? body.matchConfidence : items[itemIndex].matchConfidence,
+      completedAt: ['completed', 'failed', 'skipped'].includes(status) ? now : items[itemIndex].completedAt,
+      updatedAt: now,
+    };
+
+    const summary = summarisePortalJobItems(items);
+    const allFinished = summary.total > 0 && summary.queued === 0 && summary.inProgress === 0;
+    const updatedJob = await persistPortalJobItems(job, items, {
+      status: allFinished ? 'staging' : 'extracting',
+      currentStep: allFinished ? 'ready_to_stage' : items[itemIndex].currentStep,
+      currentItemId: allFinished ? undefined : items[itemIndex].id,
+      currentClientName: allFinished ? undefined : items[itemIndex].clientName,
+      currentPolicyNumber: allFinished ? undefined : items[itemIndex].policyNumber,
+      message: allFinished
+        ? `Policy queue finished. ${summary.completed} completed, ${summary.failed} failed.`
+        : items[itemIndex].message,
+    });
+
+    return c.json({ success: true, item: items[itemIndex], job: updatedJob, summary: updatedJob.queueSummary });
+  } catch (e) {
+    log.error("Portal worker item status error:", e);
+    return c.json({ error: `Failed to update policy item: ${getErrMsg(e)}` }, 500);
   }
 });
 
@@ -1805,6 +2246,41 @@ app.post("/portal-worker/jobs/:jobId/discovery-report", async (c) => {
   } catch (e) {
     log.error("Portal worker discovery report error:", e);
     return c.json({ error: `Failed to save discovery report: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// POST /portal-worker/jobs/:jobId/stage-items
+app.post("/portal-worker/jobs/:jobId/stage-items", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const items = await loadPortalJobItems(jobId);
+    const rawRows = items
+      .filter((item) => item.status === 'completed' && item.rawData && Object.keys(item.rawData).length > 0)
+      .map((item) => item.rawData as Record<string, unknown>);
+
+    if (rawRows.length === 0) {
+      return c.json({ error: "No completed policy items have extracted data to stage" }, 400);
+    }
+
+    const { job, stagedRun } = await stagePortalRows(jobId, rawRows);
+    const summary = summarisePortalJobItems(items);
+    const message = summary.failed > 0
+      ? `Staged ${rawRows.length} completed policy updates. ${summary.failed} policy${summary.failed === 1 ? '' : 'ies'} need review or retry.`
+      : `Staged ${rawRows.length} completed policy updates for review.`;
+    const updatedJob: PortalSyncJob = {
+      ...job,
+      queueSummary: summary,
+      message,
+    };
+    await kv.set(`portal-job:${jobId}`, updatedJob);
+
+    return c.json({ success: true, job: updatedJob, stagedRun, summary });
+  } catch (e) {
+    log.error("Portal worker item staging error:", e);
+    return c.json({ error: `Failed to stage completed policy items: ${getErrMsg(e)}` }, 500);
   }
 });
 

@@ -8,8 +8,8 @@ import { Label } from '../../../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
 import { Separator } from '../../../../ui/separator';
 import { Textarea } from '../../../../ui/textarea';
-import { AlertCircle, Bot, CheckCircle2, Clock, KeyRound, Loader2, Play, RefreshCw } from 'lucide-react';
-import { IntegrationProvider, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from '../types';
+import { AlertCircle, Bot, CheckCircle2, Clock, KeyRound, ListChecks, Loader2, Play, RefreshCw, RotateCcw, Search, Settings2 } from 'lucide-react';
+import { IntegrationProvider, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from '../types';
 import { cn } from '../../../../ui/utils';
 
 interface PortalAutomationTabProps {
@@ -17,11 +17,14 @@ interface PortalAutomationTabProps {
   selectedCategoryId: string;
   flow?: PortalProviderFlow;
   job?: PortalSyncJob | null;
+  jobItems: PortalJobPolicyItem[];
   discoveryReport?: PortalDiscoveryReport | null;
   isLoadingFlow: boolean;
   isLoadingDiscoveryReport: boolean;
+  isLoadingJobItems: boolean;
   isCreatingJob: boolean;
   credentialStatus?: PortalCredentialStatus;
+  mappingSourceHeaders: string[];
   selectedCredentialProfileId: string;
   onCredentialProfileChange: (profileId: string) => void;
   isSavingCredentials: boolean;
@@ -33,6 +36,7 @@ interface PortalAutomationTabProps {
   onSaveFlow: (flow: PortalProviderFlow) => void;
   onSubmitOtp: (otp: string) => void;
   onRefreshJob: () => void;
+  onRetryItem: (item: PortalJobPolicyItem) => void;
   onApplyFlow: (patch: { policyRowSelector?: string; fields: PortalFlowField[] }) => void;
   isApplyingFlow: boolean;
 }
@@ -51,16 +55,27 @@ const statusClassNames: Record<PortalSyncJob['status'], string> = {
   cancelled: 'bg-gray-50 text-gray-600 border-gray-200',
 };
 
+const itemStatusClassNames: Record<PortalJobPolicyItem['status'], string> = {
+  queued: 'bg-gray-50 text-gray-700 border-gray-200',
+  in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
+  completed: 'bg-green-50 text-green-700 border-green-200',
+  failed: 'bg-red-50 text-red-700 border-red-200',
+  skipped: 'bg-gray-50 text-gray-600 border-gray-200',
+};
+
 export function PortalAutomationTab({
   provider,
   selectedCategoryId,
   flow,
   job,
+  jobItems,
   discoveryReport,
   isLoadingFlow,
   isLoadingDiscoveryReport,
+  isLoadingJobItems,
   isCreatingJob,
   credentialStatus,
+  mappingSourceHeaders,
   selectedCredentialProfileId,
   onCredentialProfileChange,
   isSavingCredentials,
@@ -72,10 +87,11 @@ export function PortalAutomationTab({
   onSaveFlow,
   onSubmitOtp,
   onRefreshJob,
+  onRetryItem,
   onApplyFlow,
   isApplyingFlow,
 }: PortalAutomationTabProps) {
-  const [runMode, setRunMode] = useState<PortalJobRunMode>('discover');
+  const [runMode, setRunMode] = useState<PortalJobRunMode>('run');
   const [credentialUsername, setCredentialUsername] = useState('');
   const [credentialPassword, setCredentialPassword] = useState('');
   const [isAwaitingCredentialSave, setIsAwaitingCredentialSave] = useState(false);
@@ -85,6 +101,12 @@ export function PortalAutomationTab({
   const [passwordSelector, setPasswordSelector] = useState('');
   const [submitSelector, setSubmitSelector] = useState('');
   const [postLoginUrl, setPostLoginUrl] = useState('');
+  const [searchPageUrl, setSearchPageUrl] = useState('');
+  const [searchInputLabelsText, setSearchInputLabelsText] = useState('');
+  const [searchInputSelector, setSearchInputSelector] = useState('');
+  const [searchSubmitSelector, setSearchSubmitSelector] = useState('');
+  const [resultContainerSelector, setResultContainerSelector] = useState('');
+  const [resultLinkSelector, setResultLinkSelector] = useState('');
   const [nextPageSelector, setNextPageSelector] = useState('');
   const [policyListStepsJson, setPolicyListStepsJson] = useState('[]');
   const [policyListStepsError, setPolicyListStepsError] = useState('');
@@ -105,6 +127,12 @@ export function PortalAutomationTab({
       setPasswordSelector(flow.login.passwordSelector || '');
       setSubmitSelector(flow.login.submitSelector || '');
       setPostLoginUrl(flow.navigation.postLoginUrl || '');
+      setSearchPageUrl(flow.search?.searchPageUrl || '');
+      setSearchInputLabelsText((flow.search?.searchInputLabels || ['Policy number', 'Search']).join('\n'));
+      setSearchInputSelector(flow.search?.searchInputSelector || '');
+      setSearchSubmitSelector(flow.search?.submitSelector || '');
+      setResultContainerSelector(flow.search?.resultContainerSelector || '');
+      setResultLinkSelector(flow.search?.resultLinkSelector || '');
       setNextPageSelector(flow.navigation.nextPageSelector || '');
       setPolicyListStepsJson(JSON.stringify(flow.navigation.policyListSteps || [], null, 2));
       setPolicyRowSelector(flow.extraction.policyRowSelector || '');
@@ -112,9 +140,40 @@ export function PortalAutomationTab({
     }
   }, [flow]);
 
+  useEffect(() => {
+    if (mappingSourceHeaders.length === 0) return;
+    setFieldSelectors((currentFields) => {
+      const byHeader = new Map(currentFields.map((field) => [field.sourceHeader, field]));
+      const merged = mappingSourceHeaders.map((sourceHeader) => (
+        byHeader.get(sourceHeader) || {
+          sourceHeader,
+          selector: '',
+          labels: [sourceHeader],
+          attribute: 'text',
+          transform: 'trim',
+          required: /policy\s*(number|no)|reference/i.test(sourceHeader),
+        }
+      ));
+      const unchanged = merged.length === currentFields.length &&
+        merged.every((field, index) => field === currentFields[index]);
+      return unchanged ? currentFields : merged;
+    });
+  }, [mappingSourceHeaders]);
+
   const selectedProfile = flow?.credentialProfiles.find((profile) => profile.id === selectedCredentialProfileId);
   const policyRowCandidates = discoveryReport?.selectorCandidates.filter(candidate => candidate.purpose === 'policy_row') || [];
   const credentialsSaved = Boolean(credentialStatus?.hasUsername && credentialStatus?.hasPassword);
+  const queueSummary = job?.queueSummary || {
+    total: jobItems.length,
+    queued: jobItems.filter((item) => item.status === 'queued').length,
+    inProgress: jobItems.filter((item) => item.status === 'in_progress').length,
+    completed: jobItems.filter((item) => item.status === 'completed').length,
+    failed: jobItems.filter((item) => item.status === 'failed').length,
+    skipped: jobItems.filter((item) => item.status === 'skipped').length,
+  };
+  const progressPercent = queueSummary.total > 0
+    ? Math.round(((queueSummary.completed + queueSummary.failed + queueSummary.skipped) / queueSummary.total) * 100)
+    : 0;
   const hasCredentialDraft = Boolean(credentialUsername.trim() || credentialPassword);
   const canSaveCredentials = Boolean(
     selectedProfile &&
@@ -127,6 +186,16 @@ export function PortalAutomationTab({
   const updateFieldSelector = (index: number, selector: string) => {
     setFieldSelectors(prev => prev.map((field, currentIndex) => (
       currentIndex === index ? { ...field, selector } : field
+    )));
+  };
+
+  const updateFieldLabels = (index: number, labelsText: string) => {
+    const labels = labelsText
+      .split(/\r?\n|,/)
+      .map((label) => label.trim())
+      .filter(Boolean);
+    setFieldSelectors(prev => prev.map((field, currentIndex) => (
+      currentIndex === index ? { ...field, labels } : field
     )));
   };
 
@@ -172,6 +241,20 @@ export function PortalAutomationTab({
         postLoginUrl: postLoginUrl.trim() || undefined,
         nextPageSelector: nextPageSelector.trim() || undefined,
         policyListSteps,
+      },
+      search: {
+        mode: 'policy_number',
+        searchPageUrl: searchPageUrl.trim() || undefined,
+        searchInputLabels: searchInputLabelsText
+          .split(/\r?\n|,/)
+          .map((label) => label.trim())
+          .filter(Boolean),
+        searchInputSelector: searchInputSelector.trim() || undefined,
+        submitSelector: searchSubmitSelector.trim() || undefined,
+        resultContainerSelector: resultContainerSelector.trim() || undefined,
+        resultLinkSelector: resultLinkSelector.trim() || undefined,
+        noResultsText: flow.search?.noResultsText || ['No results', 'No policies found'],
+        instructions: 'Search by Navigate Wealth policy number and only open exact policy-number matches.',
       },
       extraction: {
         ...flow.extraction,
@@ -317,49 +400,145 @@ export function PortalAutomationTab({
                 </div>
               )}
 
-              <div className="rounded-lg border bg-white p-4 space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-900">Playwright Flow Logic</h4>
-                  <p className="text-sm text-gray-500">Define how the worker signs in and reaches the policy table. Discovery can help you tighten selectors before a dry run.</p>
-                </div>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label>Username Selector</Label>
-                    <Input value={usernameSelector} onChange={(event) => setUsernameSelector(event.target.value)} placeholder="input[name='username']" />
+              <div className="rounded-lg border bg-white p-4 space-y-5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 rounded-md bg-purple-50 p-2 text-purple-700">
+                    <Search className="h-4 w-4" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Password Selector</Label>
-                    <Input value={passwordSelector} onChange={(event) => setPasswordSelector(event.target.value)} placeholder="input[type='password']" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Submit Selector</Label>
-                    <Input value={submitSelector} onChange={(event) => setSubmitSelector(event.target.value)} placeholder="button[type='submit']" />
+                  <div>
+                    <h4 className="font-medium text-gray-900">Policy Search Setup</h4>
+                    <p className="text-sm text-gray-500">
+                      The worker starts from Navigate Wealth policies, searches {provider.name} by policy number, opens exact matches, then extracts the mapped values.
+                    </p>
                   </div>
                 </div>
+
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Post-login URL</Label>
-                    <Input value={postLoginUrl} onChange={(event) => setPostLoginUrl(event.target.value)} placeholder="Optional policy list URL" />
+                    <Label>Search page URL</Label>
+                    <Input value={searchPageUrl} onChange={(event) => setSearchPageUrl(event.target.value)} placeholder="Optional. The page with provider search." />
                   </div>
                   <div className="space-y-2">
-                    <Label>Next Page Selector</Label>
-                    <Input value={nextPageSelector} onChange={(event) => setNextPageSelector(event.target.value)} placeholder="button:has-text('Next')" />
+                    <Label>Search box words</Label>
+                    <Input
+                      value={searchInputLabelsText.replace(/\n/g, ', ')}
+                      onChange={(event) => setSearchInputLabelsText(event.target.value)}
+                      placeholder="Policy number, Account number, Search"
+                    />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Policy List Steps JSON</Label>
-                  <Textarea
-                    value={policyListStepsJson}
-                    onChange={(event) => setPolicyListStepsJson(event.target.value)}
-                    className="min-h-32 font-mono text-xs"
-                    placeholder='[{"id":"open-policies","action":"click","selector":"a:has-text(\"Policies\")"}]'
-                  />
-                  {policyListStepsError && <p className="text-sm text-red-700">{policyListStepsError}</p>}
+
+                <div className="space-y-3">
+                  <div>
+                    <h5 className="font-medium text-gray-900">Values To Extract</h5>
+                    <p className="text-sm text-gray-500">These come from your mapping configuration. Add the words Allan Gray uses beside each value.</p>
+                  </div>
+                  {mappingSourceHeaders.length === 0 ? (
+                    <Alert className="bg-amber-50 border-amber-200 text-amber-900">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Mapping needed first</AlertTitle>
+                      <AlertDescription>
+                        Save your column mappings first. The portal worker uses those mapped source headers to know which provider values to extract.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <div className="space-y-3">
+                      {fieldSelectors.map((field, index) => (
+                        <div key={`${field.sourceHeader}-${index}`} className="grid grid-cols-1 gap-2 rounded-md border bg-gray-50 p-3 md:grid-cols-[180px_1fr] md:items-start">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{field.sourceHeader}</p>
+                            {field.required && <p className="text-xs text-red-600">Required</p>}
+                          </div>
+                          <Textarea
+                            value={(field.labels || []).join(', ')}
+                            onChange={(event) => updateFieldLabels(index, event.target.value)}
+                            className="min-h-10 bg-white"
+                            placeholder={`Provider labels for ${field.sourceHeader}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+
+                <details className="rounded-md border bg-gray-50 p-3">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-gray-900">
+                    <Settings2 className="h-4 w-4" />
+                    Advanced Playwright settings
+                  </summary>
+                  <div className="mt-4 space-y-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label>Username selector</Label>
+                        <Input value={usernameSelector} onChange={(event) => setUsernameSelector(event.target.value)} placeholder="input[name='username']" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Password selector</Label>
+                        <Input value={passwordSelector} onChange={(event) => setPasswordSelector(event.target.value)} placeholder="input[type='password']" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Login button selector</Label>
+                        <Input value={submitSelector} onChange={(event) => setSubmitSelector(event.target.value)} placeholder="button[type='submit']" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Search input selector</Label>
+                        <Input value={searchInputSelector} onChange={(event) => setSearchInputSelector(event.target.value)} placeholder="Optional CSS selector" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Search button selector</Label>
+                        <Input value={searchSubmitSelector} onChange={(event) => setSearchSubmitSelector(event.target.value)} placeholder="button:has-text('Search')" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Result row selector</Label>
+                        <Input value={resultContainerSelector} onChange={(event) => setResultContainerSelector(event.target.value)} placeholder="table tbody tr" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Open result selector</Label>
+                        <Input value={resultLinkSelector} onChange={(event) => setResultLinkSelector(event.target.value)} placeholder="a, button" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Post-login URL</Label>
+                        <Input value={postLoginUrl} onChange={(event) => setPostLoginUrl(event.target.value)} placeholder="Optional page after login" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Next page selector</Label>
+                        <Input value={nextPageSelector} onChange={(event) => setNextPageSelector(event.target.value)} placeholder="button:has-text('Next')" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Extra navigation steps JSON</Label>
+                      <Textarea
+                        value={policyListStepsJson}
+                        onChange={(event) => setPolicyListStepsJson(event.target.value)}
+                        className="min-h-24 font-mono text-xs bg-white"
+                        placeholder='[{"id":"open-policies","action":"click","selector":"a:has-text(\"Policies\")"}]'
+                      />
+                      {policyListStepsError && <p className="text-sm text-red-700">{policyListStepsError}</p>}
+                    </div>
+                    {fieldSelectors.length > 0 && (
+                      <div className="space-y-3">
+                        <Label>Advanced field selectors</Label>
+                        {fieldSelectors.map((field, index) => (
+                          <div key={`${field.sourceHeader}-selector-${index}`} className="grid grid-cols-1 gap-2 md:grid-cols-[180px_1fr] md:items-center">
+                            <span className="text-sm font-medium text-gray-700">{field.sourceHeader}</span>
+                            <Input
+                              value={field.selector}
+                              onChange={(event) => updateFieldSelector(index, event.target.value)}
+                              placeholder="Optional CSS selector fallback"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </details>
+
                 <div className="flex justify-end">
                   <Button type="button" variant="outline" onClick={saveFlowConfiguration} disabled={isSavingFlow}>
                     {isSavingFlow ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                    Save Flow Logic
+                    Save Search Setup
                   </Button>
                 </div>
               </div>
@@ -382,16 +561,16 @@ export function PortalAutomationTab({
                   className="bg-purple-600 hover:bg-purple-700"
                 >
                   {isCreatingJob ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-                  Create Portal Job
+                  Start Policy Update
                 </Button>
                 <Select value={runMode} onValueChange={(value) => setRunMode(value as PortalJobRunMode)}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="discover">Discover selectors</SelectItem>
-                    <SelectItem value="dry-run">Dry run</SelectItem>
-                    <SelectItem value="run">Stage rows</SelectItem>
+                    <SelectItem value="run">Update policies</SelectItem>
+                    <SelectItem value="dry-run">Dry run only</SelectItem>
+                    <SelectItem value="discover">Discover page hints</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline" onClick={onRefreshJob} disabled={!job || isRefreshingJob}>
@@ -419,14 +598,57 @@ export function PortalAutomationTab({
                 <p className="text-sm font-semibold text-gray-900">{job.currentStep || '-'}</p>
               </div>
               <div className="rounded-lg border bg-gray-50 p-3">
-                <p className="text-[10px] uppercase text-gray-500 font-medium">Rows</p>
-                <p className="text-sm font-semibold text-gray-900">{job.extractedRows ?? '-'}</p>
+                <p className="text-[10px] uppercase text-gray-500 font-medium">Current policy</p>
+                <p className="text-sm font-semibold text-gray-900">{job.currentPolicyNumber || '-'}</p>
               </div>
               <div className="rounded-lg border bg-gray-50 p-3">
                 <p className="text-[10px] uppercase text-gray-500 font-medium">Updated</p>
                 <p className="text-sm font-semibold text-gray-900">{new Date(job.updatedAt).toLocaleTimeString()}</p>
               </div>
             </div>
+
+            {queueSummary.total > 0 && (
+              <div className="rounded-lg border bg-white p-4 space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <ListChecks className="h-4 w-4 text-purple-700" />
+                    <h4 className="font-medium text-gray-900">Policy Queue</h4>
+                  </div>
+                  <span className="text-sm text-gray-500">{progressPercent}% processed</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+                  <div className="h-full bg-purple-600 transition-all" style={{ width: `${progressPercent}%` }} />
+                </div>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-500">Total</p>
+                    <p className="font-semibold">{queueSummary.total}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-500">Waiting</p>
+                    <p className="font-semibold">{queueSummary.queued}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-500">Working</p>
+                    <p className="font-semibold">{queueSummary.inProgress}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-500">Complete</p>
+                    <p className="font-semibold">{queueSummary.completed}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-500">Needs attention</p>
+                    <p className="font-semibold">{queueSummary.failed}</p>
+                  </div>
+                </div>
+                {job.currentClientName && (
+                  <p className="text-sm text-gray-600">
+                    Working on <span className="font-medium text-gray-900">{job.currentClientName}</span>
+                    {job.currentPolicyNumber ? ` / ${job.currentPolicyNumber}` : ''}.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="rounded-lg border bg-gray-50 p-4 text-sm text-gray-700">
               <p><span className="font-medium text-gray-900">Run mode:</span> {(job.runMode || 'discover').replace('-', ' ')}</p>
@@ -476,6 +698,69 @@ export function PortalAutomationTab({
                 </div>
               </>
             )}
+
+            <Separator />
+            <div className="space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h4 className="font-medium text-gray-900">Policy Worklist</h4>
+                  <p className="text-sm text-gray-500">Each policy is searched, extracted, and saved independently so a stopped job can resume without starting over.</p>
+                </div>
+                {isLoadingJobItems && (
+                  <span className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Updating
+                  </span>
+                )}
+              </div>
+
+              {jobItems.length === 0 ? (
+                <div className="rounded-lg border bg-gray-50 p-4 text-sm text-gray-600">
+                  The policy queue will appear after a policy update job is created.
+                </div>
+              ) : (
+                <div className="rounded-lg border bg-white overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 text-left">
+                      <tr>
+                        <th className="px-3 py-2 font-medium text-gray-600">Status</th>
+                        <th className="px-3 py-2 font-medium text-gray-600">Client</th>
+                        <th className="px-3 py-2 font-medium text-gray-600">Policy Number</th>
+                        <th className="px-3 py-2 font-medium text-gray-600">Step</th>
+                        <th className="px-3 py-2 font-medium text-gray-600">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {jobItems.map((item) => (
+                        <tr key={item.id} className="border-t">
+                          <td className="px-3 py-2">
+                            <Badge variant="outline" className={cn('capitalize', itemStatusClassNames[item.status])}>
+                              {item.status.replace(/_/g, ' ')}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-2 font-medium text-gray-900">{item.clientName}</td>
+                          <td className="px-3 py-2 font-mono text-xs">{item.policyNumber}</td>
+                          <td className="px-3 py-2 text-gray-600">
+                            <div>{item.currentStep || '-'}</div>
+                            {item.error && <div className="mt-1 max-w-md text-xs text-red-700">{item.error}</div>}
+                          </td>
+                          <td className="px-3 py-2">
+                            {item.status === 'failed' ? (
+                              <Button type="button" variant="outline" size="sm" onClick={() => onRetryItem(item)}>
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Retry
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
             {isLoadingDiscoveryReport && (
               <div className="flex items-center gap-2 text-sm text-gray-500">

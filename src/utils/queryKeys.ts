@@ -196,6 +196,8 @@ export const integrationsKeys = {
     [...integrationsKeys.all, 'portal-credential-status', providerId, profileId] as const,
   portalJob: (jobId: string | null) =>
     [...integrationsKeys.all, 'portal-job', jobId] as const,
+  portalJobItems: (jobId: string | null) =>
+    [...integrationsKeys.all, 'portal-job-items', jobId] as const,
   latestPortalJob: (providerId: string | null, categoryId: string | null) =>
     [...integrationsKeys.all, 'portal-job-latest', providerId, categoryId] as const,
   portalDiscoveryReport: (jobId: string | null) =>

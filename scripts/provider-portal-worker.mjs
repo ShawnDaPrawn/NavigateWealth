@@ -128,6 +128,261 @@ async function waitForManualOtp(timeoutMs) {
   throw new Error('Timed out waiting for manual OTP.');
 }
 
+function normalisePolicyNumber(value) {
+  return String(value ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\s\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[-_/]/g, '');
+}
+
+function splitLabels(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean);
+  return String(value || '')
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+async function claimNextPolicyItem() {
+  const data = await apiFetch(jobPath('/items/claim'), {
+    method: 'POST',
+    body: JSON.stringify({ workerId }),
+  });
+  return data.item || null;
+}
+
+async function updatePolicyItem(itemId, status, patch = {}) {
+  return apiFetch(jobPath(`/items/${itemId}/status`), {
+    method: 'POST',
+    body: JSON.stringify({ status, ...patch }),
+  });
+}
+
+async function stageCompletedPolicyItems() {
+  return apiFetch(jobPath('/stage-items'), {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+async function findInputByIntent(page, selector, labels = []) {
+  if (selector) {
+    const locator = page.locator(selector).first();
+    if (await locator.isVisible({ timeout: 1500 }).catch(() => false)) return locator;
+  }
+
+  for (const label of labels) {
+    const candidates = [
+      page.getByLabel(label).first(),
+      page.getByPlaceholder(label).first(),
+      page.getByRole('textbox', { name: new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }).first(),
+    ];
+    for (const locator of candidates) {
+      if (await locator.isVisible({ timeout: 800 }).catch(() => false)) return locator;
+    }
+  }
+
+  const fallback = page.locator('input[type="search"], input:not([type]), input[type="text"], input[type="tel"]').first();
+  if (await fallback.isVisible({ timeout: 1500 }).catch(() => false)) return fallback;
+  throw new Error('Could not confidently find the provider search box.');
+}
+
+async function submitPolicySearch(page, search) {
+  if (search?.submitSelector) {
+    const button = page.locator(search.submitSelector).first();
+    if (await button.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await Promise.all([
+        button.click(),
+        page.waitForLoadState('domcontentloaded').catch(() => undefined),
+      ]);
+      return;
+    }
+  }
+  await page.keyboard.press('Enter');
+  await page.waitForLoadState('domcontentloaded').catch(() => undefined);
+}
+
+async function openPolicySearchResult(page, flow, item) {
+  const search = flow.search || {};
+  const normalizedPolicyNumber = normalisePolicyNumber(item.policyNumber);
+  const noResultsText = splitLabels(search.noResultsText);
+
+  for (const text of noResultsText) {
+    if (await page.getByText(new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')).first().isVisible({ timeout: 500 }).catch(() => false)) {
+      throw new Error(`Provider search returned "${text}" for policy ${item.policyNumber}.`);
+    }
+  }
+
+  const resultSelector = search.resultContainerSelector || 'table tbody tr, [data-testid*="result" i], a, [role="row"]';
+  const containers = page.locator(resultSelector);
+  const count = Math.min(await containers.count().catch(() => 0), 80);
+
+  for (let index = 0; index < count; index += 1) {
+    const container = containers.nth(index);
+    const text = (await container.textContent().catch(() => '') || '').trim();
+    if (!normalisePolicyNumber(text).includes(normalizedPolicyNumber)) continue;
+
+    const linkSelector = search.resultLinkSelector || 'a, button, [role="link"], [role="button"]';
+    const link = container.locator(linkSelector).first();
+    if (await link.isVisible({ timeout: 800 }).catch(() => false)) {
+      await Promise.all([
+        link.click(),
+        page.waitForLoadState('domcontentloaded').catch(() => undefined),
+      ]);
+    } else {
+      await Promise.all([
+        container.click(),
+        page.waitForLoadState('domcontentloaded').catch(() => undefined),
+      ]);
+    }
+    return;
+  }
+
+  const pageText = normalisePolicyNumber(await page.locator('body').innerText({ timeout: 5000 }).catch(() => ''));
+  if (pageText.includes(normalizedPolicyNumber)) return;
+
+  throw new Error(`Could not find an exact policy-number result for ${item.policyNumber}.`);
+}
+
+async function searchPolicyByNumber(page, flow, item) {
+  const search = flow.search || {};
+  if (search.searchPageUrl) {
+    await page.goto(search.searchPageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  }
+
+  const searchInput = await findInputByIntent(page, search.searchInputSelector, splitLabels(search.searchInputLabels));
+  await searchInput.fill('');
+  await searchInput.fill(item.policyNumber);
+  await submitPolicySearch(page, search);
+  await page.waitForTimeout(1500);
+  await openPolicySearchResult(page, flow, item);
+
+  const bodyText = normalisePolicyNumber(await page.locator('body').innerText({ timeout: 10000 }).catch(() => ''));
+  if (!bodyText.includes(normalisePolicyNumber(item.policyNumber))) {
+    throw new Error(`Opened page did not confirm policy number ${item.policyNumber}.`);
+  }
+}
+
+async function extractByLabels(page, fields) {
+  return page.evaluate((fieldDefs) => {
+    const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+    const isUseful = (value) => {
+      const text = normalise(value);
+      return text && text.length <= 220;
+    };
+    const readControl = (el) => {
+      if (!el) return '';
+      if ('value' in el && typeof el.value === 'string') return el.value;
+      return el.textContent || '';
+    };
+    const cleanValue = (value, label) => normalise(value)
+      .replace(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '')
+      .replace(/^[:\-\s]+/, '')
+      .trim();
+    const elements = Array.from(document.querySelectorAll('body *'))
+      .filter((el) => {
+        const style = window.getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        const text = normalise(el.textContent);
+        return text && text.length <= 240;
+      });
+
+    const result = {};
+    for (const field of fieldDefs) {
+      const labels = Array.isArray(field.labels) ? field.labels.filter(Boolean) : [];
+      let value = '';
+      let sourceLabel = '';
+
+      for (const label of labels) {
+        const labelLower = label.toLowerCase();
+        const labelElement = elements.find((el) => normalise(el.textContent).toLowerCase().includes(labelLower));
+        if (!labelElement) continue;
+
+        const row = labelElement.closest('tr');
+        if (row) {
+          const cells = Array.from(row.querySelectorAll('th,td'));
+          const labelCellIndex = cells.findIndex((cell) => normalise(cell.textContent).toLowerCase().includes(labelLower));
+          if (labelCellIndex >= 0) {
+            const nextCell = cells[labelCellIndex + 1];
+            if (isUseful(nextCell?.textContent)) {
+              value = cleanValue(nextCell.textContent, label);
+              sourceLabel = label;
+              break;
+            }
+          }
+        }
+
+        const next = labelElement.nextElementSibling;
+        if (isUseful(readControl(next))) {
+          value = cleanValue(readControl(next), label);
+          sourceLabel = label;
+          break;
+        }
+
+        const parent = labelElement.parentElement;
+        if (parent) {
+          const children = Array.from(parent.children);
+          const childIndex = children.indexOf(labelElement);
+          for (const sibling of children.slice(childIndex + 1, childIndex + 4)) {
+            if (isUseful(readControl(sibling))) {
+              value = cleanValue(readControl(sibling), label);
+              sourceLabel = label;
+              break;
+            }
+          }
+          if (value) break;
+
+          const parentText = cleanValue(parent.textContent, label);
+          if (isUseful(parentText) && parentText.toLowerCase() !== labelLower) {
+            value = parentText;
+            sourceLabel = label;
+            break;
+          }
+        }
+      }
+
+      result[field.sourceHeader] = { value, sourceLabel };
+    }
+    return result;
+  }, fields);
+}
+
+async function extractPolicyRecord(page, flow, config, item) {
+  const mappingHeaders = Object.keys(config?.fieldMapping || {});
+  const configuredFields = Array.isArray(flow.extraction?.fields) ? flow.extraction.fields : [];
+  const fieldByHeader = new Map(configuredFields.map((field) => [field.sourceHeader, field]));
+  const fields = (mappingHeaders.length ? mappingHeaders : configuredFields.map((field) => field.sourceHeader))
+    .map((sourceHeader) => fieldByHeader.get(sourceHeader) || { sourceHeader, labels: [sourceHeader], selector: '' });
+
+  const extracted = await extractByLabels(page, fields);
+  const rawData = {};
+
+  for (const field of fields) {
+    const sourceHeader = field.sourceHeader;
+    const labelValue = extracted[sourceHeader]?.value || '';
+    rawData[sourceHeader] = labelValue;
+
+    if (!rawData[sourceHeader] && field.selector) {
+      const selectorValue = await readField(page, field).catch(() => '');
+      rawData[sourceHeader] = selectorValue;
+    }
+
+    if (/policy\s*(number|no)|reference/i.test(sourceHeader)) {
+      rawData[sourceHeader] = item.policyNumber;
+    }
+  }
+
+  if (!Object.keys(rawData).some((key) => /policy\s*(number|no)|reference/i.test(key))) {
+    rawData['Policy Number'] = item.policyNumber;
+  }
+
+  return {
+    rawData,
+    extractedData: Object.fromEntries(Object.entries(extracted).map(([key, data]) => [key, data.value])),
+  };
+}
+
 async function postDiscoveryReport(report) {
   return apiFetch(jobPath('/discovery-report'), {
     method: 'POST',
@@ -302,6 +557,64 @@ async function extractRows(page, flow) {
   return rows;
 }
 
+async function processPolicyQueue(page, flow, config, jobMode) {
+  let completed = 0;
+  let failed = 0;
+
+  for (;;) {
+    const item = await claimNextPolicyItem();
+    if (!item) break;
+
+    try {
+      await updatePolicyItem(item.id, 'in_progress', {
+        currentStep: 'searching_policy',
+        message: `Searching provider portal for ${item.clientName} / ${item.policyNumber}.`,
+      });
+
+      await searchPolicyByNumber(page, flow, item);
+
+      await updatePolicyItem(item.id, 'in_progress', {
+        currentStep: 'extracting_policy',
+        message: `Extracting values for ${item.clientName} / ${item.policyNumber}.`,
+      });
+
+      const { rawData, extractedData } = await extractPolicyRecord(page, flow, config, item);
+      await updatePolicyItem(item.id, 'completed', {
+        currentStep: 'completed',
+        message: `Extracted ${Object.values(rawData).filter((value) => String(value || '').trim()).length} mapped value(s).`,
+        rawData,
+        extractedData,
+        matchConfidence: 'high',
+      });
+      completed += 1;
+    } catch (error) {
+      failed += 1;
+      await updatePolicyItem(item.id, 'failed', {
+        currentStep: 'failed',
+        message: `Could not complete ${item.clientName} / ${item.policyNumber}.`,
+        error: error instanceof Error ? error.message : String(error),
+        matchConfidence: 'low',
+      }).catch(() => undefined);
+    }
+  }
+
+  if (jobMode === 'dry-run') {
+    await updateJob('dry_run_ready', {
+      currentStep: 'dry_run_ready',
+      message: `Dry run finished. ${completed} policy${completed === 1 ? '' : 'ies'} extracted, ${failed} failed. No client policies were updated.`,
+      extractedRows: completed,
+    });
+    return;
+  }
+
+  await updateJob('staging', {
+    currentStep: 'staging_completed_policy_items',
+    message: `Staging ${completed} completed policy update${completed === 1 ? '' : 's'} for review.`,
+    extractedRows: completed,
+  });
+  await stageCompletedPolicyItems();
+}
+
 async function runPolicyListSteps(page, steps = []) {
   for (const step of steps) {
     const timeout = Number(step.timeoutMs || 30000);
@@ -338,7 +651,7 @@ async function runJob(jobId, requestedMode = mode) {
   activeJobId = jobId;
   let browser;
   try {
-    const { job, flow, credentials } = await loadRuntime(jobId);
+    const { job, flow, config, items, credentials } = await loadRuntime(jobId);
     const jobMode = job.runMode || requestedMode;
     if (jobMode === 'run' && job.status !== 'dry_run_ready' && !forceStage && authToken) {
       throw new Error('Refusing to stage portal data before a successful dry run. Run with --mode dry-run first, or pass --force-stage after manual review.');
@@ -386,6 +699,15 @@ async function runJob(jobId, requestedMode = mode) {
       await updateJob('discovering', { currentStep: 'capturing_discovery_report', message: 'Capturing selector discovery report. No policy data will be staged.' });
       const report = await captureDiscoveryReport(page, flow, { mode: 'discover' });
       await postDiscoveryReport(report);
+      return;
+    }
+
+    if (Array.isArray(items) && items.length > 0) {
+      await updateJob('extracting', {
+        currentStep: 'processing_policy_queue',
+        message: `Processing ${items.length} Navigate Wealth polic${items.length === 1 ? 'y' : 'ies'} one by one.`,
+      });
+      await processPolicyQueue(page, flow, config, jobMode);
       return;
     }
 

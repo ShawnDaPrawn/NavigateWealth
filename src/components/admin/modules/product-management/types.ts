@@ -234,6 +234,7 @@ export interface IntegrationSyncRun {
 export type PortalJobStatus = 'queued' | 'running' | 'waiting_for_otp' | 'discovering' | 'discovery_ready' | 'extracting' | 'dry_run_ready' | 'staging' | 'staged' | 'failed' | 'cancelled';
 export type PortalJobRunMode = 'discover' | 'dry-run' | 'run';
 export type PortalAutomationHost = 'github_actions' | 'hosted_worker' | 'manual';
+export type PortalJobItemStatus = 'queued' | 'in_progress' | 'completed' | 'failed' | 'skipped';
 
 export interface PortalCredentialProfile {
   id: string;
@@ -257,6 +258,7 @@ export interface PortalCredentialStatus {
 export interface PortalFlowField {
   sourceHeader: string;
   selector: string;
+  labels?: string[];
   attribute?: 'text' | 'value' | 'href' | string;
   required?: boolean;
   transform?: 'trim' | 'number' | 'date' | string;
@@ -299,6 +301,18 @@ export interface PortalProviderFlow {
     clientRowSelector?: string;
     nextPageSelector?: string;
   };
+  search?: {
+    mode: 'policy_number';
+    searchPageUrl?: string;
+    searchInputSelector?: string;
+    searchInputLabels?: string[];
+    submitSelector?: string;
+    resultContainerSelector?: string;
+    resultLinkSelector?: string;
+    resultPolicyNumberSelector?: string;
+    noResultsText?: string[];
+    instructions?: string;
+  };
   extraction: {
     policyRowSelector?: string;
     fields: PortalFlowField[];
@@ -332,6 +346,44 @@ export interface PortalSyncJob {
   stagedRunId?: string;
   discoveryReportId?: string;
   error?: string;
+  currentItemId?: string;
+  currentClientName?: string;
+  currentPolicyNumber?: string;
+  queueSummary?: PortalJobQueueSummary;
+}
+
+export interface PortalJobQueueSummary {
+  total: number;
+  queued: number;
+  inProgress: number;
+  completed: number;
+  failed: number;
+  skipped: number;
+}
+
+export interface PortalJobPolicyItem {
+  id: string;
+  jobId: string;
+  providerId: string;
+  providerName: string;
+  categoryId: string;
+  clientId: string;
+  clientName: string;
+  policyId: string;
+  policyNumber: string;
+  normalizedPolicyNumber: string;
+  status: PortalJobItemStatus;
+  currentStep?: string;
+  message?: string;
+  error?: string;
+  workerId?: string;
+  rawData?: Record<string, unknown>;
+  extractedData?: Record<string, unknown>;
+  matchConfidence?: 'high' | 'medium' | 'low';
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
 }
 
 export interface PortalDiscoveryReport {
