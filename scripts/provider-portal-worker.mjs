@@ -812,6 +812,7 @@ async function extractRows(page, flow) {
 async function processPolicyQueue(page, flow, config, jobMode) {
   let completed = 0;
   let failed = 0;
+  const failureSummaries = [];
 
   for (;;) {
     const item = await claimNextPolicyItem();
@@ -881,10 +882,14 @@ async function processPolicyQueue(page, flow, config, jobMode) {
       completed += 1;
     } catch (error) {
       failed += 1;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const failureSummary = `${item.clientName} / ${item.policyNumber}: ${errorMessage}`;
+      failureSummaries.push(failureSummary);
+      console.error(`Portal policy item failed: ${failureSummary}`);
       await updatePolicyItem(item.id, 'failed', {
         currentStep: 'failed',
         message: `Could not complete ${item.clientName} / ${item.policyNumber}.`,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
         matchConfidence: 'low',
       }).catch(() => undefined);
     }
@@ -897,6 +902,17 @@ async function processPolicyQueue(page, flow, config, jobMode) {
       extractedRows: completed,
     });
     return;
+  }
+
+  if (completed === 0) {
+    const firstFailure = failureSummaries[0] || 'The provider workflow did not complete any policy items.';
+    await updateJob('failed', {
+      currentStep: 'failed',
+      message: `Portal run finished with 0 completed policies and ${failed} failed.`,
+      error: `No policy updates were staged. First failure: ${firstFailure}`.slice(0, 1000),
+      extractedRows: 0,
+    });
+    throw new Error(`All ${failed} policy item(s) failed before staging. First failure: ${firstFailure}`);
   }
 
   await updateJob('staging', {
