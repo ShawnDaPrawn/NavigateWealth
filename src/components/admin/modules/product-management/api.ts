@@ -16,6 +16,7 @@ import {
   IntegrationSyncRun,
   PortalCredentialStatus,
   PortalProviderFlow,
+  PortalBrainMemorySummary,
   PortalDiscoveryReport,
   PortalJobPolicyItem,
   PortalJobQueueSummary,
@@ -314,6 +315,11 @@ export const productManagementApi = {
   fetchPortalFlow: async (providerId: string): Promise<PortalProviderFlow> => {
     const response = await api.get<{ success: boolean; flow: PortalProviderFlow }>(`integrations/portal-flows/${providerId}`);
     return response.flow;
+  },
+
+  fetchPortalBrainMemory: async (providerId: string, categoryId: string): Promise<PortalBrainMemorySummary> => {
+    const response = await api.get<{ success: boolean; summary: PortalBrainMemorySummary }>(`integrations/portal-flows/${providerId}/brain-memory?categoryId=${categoryId}`);
+    return response.summary;
   },
 
   savePortalFlow: async (providerId: string, flow: PortalProviderFlow): Promise<PortalProviderFlow> => {

@@ -338,6 +338,225 @@ async function stageCompletedPolicyItems() {
   });
 }
 
+function brainAssistConfig(flow) {
+  const brain = flow?.search?.brain || {};
+  return {
+    enabled: brain.enabled === true,
+    maxDecisionsPerItem: Math.max(1, Math.min(Number(brain.maxDecisionsPerItem || 2), 5)),
+    rememberSelectors: brain.rememberSelectors !== false,
+  };
+}
+
+function rememberedSelectorsForStage(brain, stage) {
+  const memory = brain?.memory || {};
+  const list = stage === 'search_result' ? memory.searchResultHints : memory.searchInputHints;
+  return Array.isArray(list)
+    ? list.map((entry) => String(entry?.selector || '').trim()).filter(Boolean)
+    : [];
+}
+
+function describeBrainDecision(decision) {
+  if (!decision) return 'no decision';
+  return `${decision.action || 'stop_uncertain'} (${decision.confidence || 'low'}): ${decision.reason || 'No reason supplied.'}`;
+}
+
+async function rememberBrainSelector(stage, item, candidate, source = 'brain') {
+  if (!candidate?.selector) return;
+  await apiFetch(workerJobPath('/brain/memory'), {
+    method: 'POST',
+    body: JSON.stringify({
+      stage,
+      selector: candidate.selector,
+      label: candidate.placeholder || candidate.ariaLabel || candidate.nearbyText || candidate.text || candidate.name || '',
+      notes: `${stage.replace('_', ' ')} selector confirmed (${source})`.slice(0, 200),
+      source,
+    }),
+  }).catch(() => undefined);
+}
+
+async function requestBrainDecision(stage, page, flow, item, snapshot) {
+  return apiFetch(workerJobPath('/brain/decide'), {
+    method: 'POST',
+    body: JSON.stringify({
+      stage,
+      itemId: item.id,
+      policyNumber: item.policyNumber,
+      snapshot: {
+        ...snapshot,
+        title: String(snapshot?.title || '').slice(0, 200),
+        currentUrl: String(snapshot?.currentUrl || '').slice(0, 1000),
+        pageTextSample: String(snapshot?.pageTextSample || '').slice(0, 1600),
+        instructions: flow?.search?.instructions || '',
+        searchInputLabels: splitLabels(flow?.search?.searchInputLabels),
+      },
+    }),
+  });
+}
+
+async function captureInputCandidates(page) {
+  return page.evaluate(() => {
+    const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+    const isVisible = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    };
+    const escapeValue = (value) => CSS.escape(String(value));
+    const segmentFor = (el) => {
+      const tag = el.tagName.toLowerCase();
+      const testId = el.getAttribute('data-testid');
+      const id = el.getAttribute('id');
+      const name = el.getAttribute('name');
+      const aria = el.getAttribute('aria-label');
+      const placeholder = el.getAttribute('placeholder');
+      if (testId) return `${tag}[data-testid="${escapeValue(testId)}"]`;
+      if (id) return `#${escapeValue(id)}`;
+      if (name) return `${tag}[name="${escapeValue(name)}"]`;
+      if (aria) return `${tag}[aria-label="${escapeValue(aria)}"]`;
+      if (placeholder) return `${tag}[placeholder="${escapeValue(placeholder)}"]`;
+      const siblings = Array.from((el.parentElement || document.body).children).filter((child) => child.tagName === el.tagName);
+      const index = Math.max(1, siblings.indexOf(el) + 1);
+      return `${tag}:nth-of-type(${index})`;
+    };
+    const selectorFor = (el) => {
+      const parts = [];
+      let current = el;
+      while (current && current !== document.body && parts.length < 5) {
+        parts.unshift(segmentFor(current));
+        if (current.id || current.getAttribute('data-testid')) break;
+        current = current.parentElement;
+      }
+      return parts.join(' > ');
+    };
+    const nearbyTextFor = (el) => {
+      const labels = 'labels' in el && Array.isArray(el.labels) ? el.labels : Array.from(el.labels || []);
+      const labelText = labels.map((label) => normalise(label.textContent)).filter(Boolean).join(' | ');
+      if (labelText) return labelText.slice(0, 160);
+      const parentText = normalise(el.parentElement?.textContent || '').replace(normalise(el.value || ''), '');
+      return parentText.slice(0, 160);
+    };
+    const elements = Array.from(document.querySelectorAll('input, textarea, [role="textbox"], [role="searchbox"], [role="combobox"]'))
+      .filter((el) => isVisible(el) && normalise(el.getAttribute('type')).toLowerCase() !== 'hidden' && normalise(el.getAttribute('type')).toLowerCase() !== 'password')
+      .slice(0, 16);
+    const pageTextSample = normalise(document.body?.innerText || '').slice(0, 1200);
+    return {
+      currentUrl: window.location.href,
+      title: document.title,
+      pageTextSample,
+      candidates: elements.map((el, index) => ({
+        candidateId: `input-${index + 1}`,
+        selector: selectorFor(el),
+        tag: el.tagName.toLowerCase(),
+        type: el.getAttribute('type') || '',
+        role: el.getAttribute('role') || '',
+        placeholder: el.getAttribute('placeholder') || '',
+        name: el.getAttribute('name') || '',
+        id: el.getAttribute('id') || '',
+        ariaLabel: el.getAttribute('aria-label') || '',
+        title: el.getAttribute('title') || '',
+        text: normalise(el.textContent || '').slice(0, 160),
+        nearbyText: nearbyTextFor(el),
+      })),
+    };
+  });
+}
+
+async function captureSearchResultCandidates(page, flow) {
+  const resultSelector = flow?.search?.resultContainerSelector || 'table tbody tr, [data-testid*="result" i], [data-testid*="policy" i], a, [role="row"]';
+  return page.evaluate((selector) => {
+    const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+    const isVisible = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    };
+    const escapeValue = (value) => CSS.escape(String(value));
+    const segmentFor = (el) => {
+      const tag = el.tagName.toLowerCase();
+      const testId = el.getAttribute('data-testid');
+      const id = el.getAttribute('id');
+      const name = el.getAttribute('name');
+      const aria = el.getAttribute('aria-label');
+      if (testId) return `${tag}[data-testid="${escapeValue(testId)}"]`;
+      if (id) return `#${escapeValue(id)}`;
+      if (name) return `${tag}[name="${escapeValue(name)}"]`;
+      if (aria) return `${tag}[aria-label="${escapeValue(aria)}"]`;
+      const siblings = Array.from((el.parentElement || document.body).children).filter((child) => child.tagName === el.tagName);
+      const index = Math.max(1, siblings.indexOf(el) + 1);
+      return `${tag}:nth-of-type(${index})`;
+    };
+    const selectorFor = (el) => {
+      const parts = [];
+      let current = el;
+      while (current && current !== document.body && parts.length < 5) {
+        parts.unshift(segmentFor(current));
+        if (current.id || current.getAttribute('data-testid')) break;
+        current = current.parentElement;
+      }
+      return parts.join(' > ');
+    };
+    const elements = Array.from(document.querySelectorAll(selector))
+      .filter((el) => isVisible(el) && normalise(el.textContent || ''))
+      .slice(0, 20);
+    const pageTextSample = normalise(document.body?.innerText || '').slice(0, 1200);
+    return {
+      currentUrl: window.location.href,
+      title: document.title,
+      pageTextSample,
+      candidates: elements.map((el, index) => ({
+        candidateId: `result-${index + 1}`,
+        selector: selectorFor(el),
+        tag: el.tagName.toLowerCase(),
+        type: el.getAttribute('type') || '',
+        role: el.getAttribute('role') || '',
+        placeholder: el.getAttribute('placeholder') || '',
+        name: el.getAttribute('name') || '',
+        id: el.getAttribute('id') || '',
+        ariaLabel: el.getAttribute('aria-label') || '',
+        title: el.getAttribute('title') || '',
+        text: normalise(el.textContent || '').slice(0, 240),
+        nearbyText: normalise(el.parentElement?.textContent || '').slice(0, 240),
+      })),
+    };
+  }, resultSelector);
+}
+
+async function chooseInputWithBrain(page, flow, item) {
+  const snapshot = await captureInputCandidates(page);
+  if (!Array.isArray(snapshot?.candidates) || snapshot.candidates.length === 0) {
+    throw new Error('No visible search input candidates were available for smart assist.');
+  }
+  const response = await requestBrainDecision('search_input', page, flow, item, snapshot);
+  const decision = response?.decision || null;
+  if (!decision || decision.action !== 'use_candidate' || !decision.candidateId) {
+    throw new Error(`Smart assist stopped without a safe search-field choice: ${describeBrainDecision(decision)}`);
+  }
+  const candidate = snapshot.candidates.find((entry) => entry.candidateId === decision.candidateId);
+  if (!candidate?.selector) {
+    throw new Error('Smart assist chose a search field candidate that is no longer available.');
+  }
+  return { candidate, decision };
+}
+
+async function chooseSearchResultWithBrain(page, flow, item) {
+  const snapshot = await captureSearchResultCandidates(page, flow);
+  if (!Array.isArray(snapshot?.candidates) || snapshot.candidates.length === 0) {
+    throw new Error('No visible search results were available for smart assist.');
+  }
+  const response = await requestBrainDecision('search_result', page, flow, item, snapshot);
+  const decision = response?.decision || null;
+  if (!decision || decision.action !== 'use_candidate' || !decision.candidateId) {
+    throw new Error(`Smart assist stopped without a safe result choice: ${describeBrainDecision(decision)}`);
+  }
+  const candidate = snapshot.candidates.find((entry) => entry.candidateId === decision.candidateId);
+  if (!candidate?.selector) {
+    throw new Error('Smart assist chose a result candidate that is no longer available.');
+  }
+  return { candidate, decision };
+}
+
 async function findClickableByIntent(page, selector, labels = []) {
   if (selector) {
     const locator = page.locator(selector).first();
@@ -410,10 +629,15 @@ async function uploadPolicyScheduleDocument(item, downloaded, documentType = 'po
   return apiUpload(workerJobPath(`/items/${item.id}/policy-document`), formData);
 }
 
-async function findInputByIntent(page, selector, labels = []) {
+async function findInputByIntent(page, selector, labels = [], rememberedSelectors = []) {
   if (selector) {
     const locator = page.locator(selector).first();
     if (await locator.isVisible({ timeout: 1500 }).catch(() => false)) return locator;
+  }
+
+  for (const rememberedSelector of rememberedSelectors) {
+    const locator = page.locator(rememberedSelector).first();
+    if (await locator.isVisible({ timeout: 1200 }).catch(() => false)) return locator;
   }
 
   await page.waitForTimeout(1500);
@@ -507,7 +731,7 @@ async function submitPolicySearch(page, search) {
   await page.waitForLoadState('domcontentloaded').catch(() => undefined);
 }
 
-async function openPolicySearchResult(page, flow, item) {
+async function openPolicySearchResult(page, flow, item, brain) {
   const search = flow.search || {};
   const normalizedPolicyNumber = normalisePolicyNumber(item.policyNumber);
   const noResultsText = splitLabels(search.noResultsText);
@@ -546,10 +770,55 @@ async function openPolicySearchResult(page, flow, item) {
   const pageText = normalisePolicyNumber(await page.locator('body').innerText({ timeout: 5000 }).catch(() => ''));
   if (pageText.includes(normalizedPolicyNumber)) return;
 
+  const smartAssist = brainAssistConfig(flow);
+  const rememberedResultSelectors = rememberedSelectorsForStage(brain, 'search_result');
+  if (rememberedResultSelectors.length > 0) {
+    for (const selector of rememberedResultSelectors) {
+      const candidate = page.locator(selector).first();
+      const text = normalisePolicyNumber(await candidate.textContent().catch(() => ''));
+      if (!text || !text.includes(normalizedPolicyNumber)) continue;
+      await Promise.all([
+        candidate.click().catch(async () => {
+          const nestedAction = candidate.locator('a, button, [role="link"], [role="button"]').first();
+          if (await nestedAction.isVisible({ timeout: 500 }).catch(() => false)) {
+            await nestedAction.click();
+          } else {
+            throw new Error('Remembered result selector was not clickable.');
+          }
+        }),
+        page.waitForLoadState('domcontentloaded').catch(() => undefined),
+      ]);
+      await rememberBrainSelector('search_result', item, { selector }, 'deterministic');
+      return;
+    }
+  }
+
+  if (smartAssist.enabled && brain?.available) {
+    const { candidate, decision } = await chooseSearchResultWithBrain(page, flow, item);
+    const locator = page.locator(candidate.selector).first();
+    const nestedAction = locator.locator(search.resultLinkSelector || 'a, button, [role="link"], [role="button"]').first();
+    if (await nestedAction.isVisible({ timeout: 800 }).catch(() => false)) {
+      await Promise.all([
+        nestedAction.click(),
+        page.waitForLoadState('domcontentloaded').catch(() => undefined),
+      ]);
+    } else {
+      await Promise.all([
+        locator.click(),
+        page.waitForLoadState('domcontentloaded').catch(() => undefined),
+      ]);
+    }
+    addItemWarning(item.id, `Smart assist chose a search result. ${describeBrainDecision(decision)}`);
+    if (smartAssist.rememberSelectors) {
+      await rememberBrainSelector('search_result', item, candidate, 'brain');
+    }
+    return;
+  }
+
   throw new Error(`Could not find an exact policy-number result for ${item.policyNumber}.`);
 }
 
-async function searchPolicyByNumber(page, flow, item) {
+async function searchPolicyByNumber(page, flow, item, brain) {
   const search = flow.search || {};
   if (search.searchPageUrl) {
     const searchNavigation = await attemptConfiguredNavigation(page, {
@@ -563,12 +832,44 @@ async function searchPolicyByNumber(page, flow, item) {
     }
   }
 
-  const searchInput = await findInputByIntent(page, search.searchInputSelector, splitLabels(search.searchInputLabels));
+  const smartAssist = brainAssistConfig(flow);
+  const rememberedInputSelectors = rememberedSelectorsForStage(brain, 'search_input');
+  let searchInput = null;
+  let searchInputMemoryCandidate = null;
+  let usedBrainDecision = null;
+  let usedBrainCandidate = null;
+  try {
+    searchInput = await findInputByIntent(page, search.searchInputSelector, splitLabels(search.searchInputLabels), rememberedInputSelectors);
+    if (!search.searchInputSelector && rememberedInputSelectors.length > 0) {
+      for (const selector of rememberedInputSelectors) {
+        const locator = page.locator(selector).first();
+        if (await locator.isVisible({ timeout: 500 }).catch(() => false)) {
+          searchInputMemoryCandidate = { selector };
+          break;
+        }
+      }
+    }
+  } catch (error) {
+    if (!(smartAssist.enabled && brain?.available)) {
+      throw error;
+    }
+    const brainChoice = await chooseInputWithBrain(page, flow, item);
+    usedBrainDecision = brainChoice.decision;
+    usedBrainCandidate = brainChoice.candidate;
+    searchInput = page.locator(brainChoice.candidate.selector).first();
+    addItemWarning(item.id, `Smart assist chose a search field. ${describeBrainDecision(brainChoice.decision)}`);
+  }
+
   await searchInput.fill('');
   await searchInput.fill(item.policyNumber);
   await submitPolicySearch(page, search);
   await page.waitForTimeout(1500);
-  await openPolicySearchResult(page, flow, item);
+  if (usedBrainCandidate && smartAssist.rememberSelectors) {
+    await rememberBrainSelector('search_input', item, usedBrainCandidate, 'brain');
+  } else if (searchInputMemoryCandidate) {
+    await rememberBrainSelector('search_input', item, searchInputMemoryCandidate, 'deterministic');
+  }
+  await openPolicySearchResult(page, flow, item, brain);
 
   const bodyText = normalisePolicyNumber(await page.locator('body').innerText({ timeout: 10000 }).catch(() => ''));
   if (!bodyText.includes(normalisePolicyNumber(item.policyNumber))) {
@@ -869,7 +1170,7 @@ async function extractRows(page, flow) {
   return rows;
 }
 
-async function processPolicyQueue(page, flow, config, jobMode) {
+async function processPolicyQueue(page, flow, config, jobMode, brain) {
   let completed = 0;
   let failed = 0;
   const failureSummaries = [];
@@ -885,7 +1186,7 @@ async function processPolicyQueue(page, flow, config, jobMode) {
         message: `Searching provider portal for ${item.clientName} / ${item.policyNumber}.`,
       });
 
-      await searchPolicyByNumber(page, flow, item);
+      await searchPolicyByNumber(page, flow, item, brain);
 
       await updatePolicyItem(item.id, 'in_progress', {
         currentStep: 'extracting_policy',
@@ -1012,7 +1313,7 @@ async function loadRuntime(jobId) {
 
   const { job } = await apiFetch(`/portal-jobs/${jobId}`);
   const { flow } = await apiFetch(`/portal-flows/${job.providerId}`);
-  return { job, flow, credentials: null };
+  return { job, flow, credentials: null, brain: { available: false, configured: false, model: '', memory: null } };
 }
 
 async function runJob(jobId, requestedMode = mode) {
@@ -1021,7 +1322,7 @@ async function runJob(jobId, requestedMode = mode) {
   itemWarnings.clear();
   let browser;
   try {
-    const { job, flow, config, items, credentials } = await loadRuntime(jobId);
+    const { job, flow, config, items, credentials, brain } = await loadRuntime(jobId);
     const jobMode = job.runMode || requestedMode;
     if (jobMode === 'run' && job.status !== 'dry_run_ready' && !forceStage && authToken) {
       throw new Error('Refusing to stage portal data before a successful dry run. Run with --mode dry-run first, or pass --force-stage after manual review.');
@@ -1087,7 +1388,7 @@ async function runJob(jobId, requestedMode = mode) {
         currentStep: 'processing_policy_queue',
         message: `Processing ${items.length} Navigate Wealth polic${items.length === 1 ? 'y' : 'ies'} one by one.`,
       });
-      await processPolicyQueue(page, flow, config, jobMode);
+      await processPolicyQueue(page, flow, config, jobMode, brain);
       return;
     }
 

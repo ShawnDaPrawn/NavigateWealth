@@ -204,6 +204,13 @@ interface PortalFlowField {
   transform?: 'trim' | 'number' | 'date' | string;
 }
 
+interface PortalSearchBrainConfig {
+  enabled?: boolean;
+  goal?: string;
+  maxDecisionsPerItem?: number;
+  rememberSelectors?: boolean;
+}
+
 interface PortalFlowStep {
   id: string;
   action: 'goto' | 'click' | 'fill' | 'wait_for_selector' | 'wait_for_url' | 'press';
@@ -261,6 +268,7 @@ interface PortalProviderFlow {
     resultPolicyNumberSelector?: string;
     noResultsText?: string[];
     instructions?: string;
+    brain?: PortalSearchBrainConfig;
   };
   extraction: {
     policyRowSelector?: string;
@@ -341,6 +349,44 @@ interface PortalJobPolicyItem {
   updatedAt: string;
   startedAt?: string;
   completedAt?: string;
+}
+
+interface PortalBrainMemoryEntry {
+  selector: string;
+  label?: string;
+  notes?: string;
+  successCount: number;
+  lastUsedAt: string;
+  source: 'brain' | 'deterministic' | 'manual';
+}
+
+interface PortalBrainMemory {
+  providerId: string;
+  categoryId: string;
+  updatedAt: string;
+  searchInputHints: PortalBrainMemoryEntry[];
+  searchResultHints: PortalBrainMemoryEntry[];
+  stats: {
+    brainCalls: number;
+    successfulDecisions: number;
+    searchInputSuccesses: number;
+    searchResultSuccesses: number;
+  };
+}
+
+interface PortalBrainMemorySummary {
+  providerId: string;
+  categoryId: string;
+  available: boolean;
+  configured: boolean;
+  model?: string;
+  updatedAt?: string;
+  searchInputHints: number;
+  searchResultHints: number;
+  successfulDecisions: number;
+  brainCalls: number;
+  lastSearchInputSelector?: string;
+  lastResultSelector?: string;
 }
 
 interface PortalDiscoveryReport {
@@ -677,6 +723,247 @@ function normaliseStringList(value: unknown, fallback: string[] = [], limit = 20
   return fallback;
 }
 
+function normaliseBrainConfig(value: unknown, fallback?: PortalSearchBrainConfig): PortalSearchBrainConfig {
+  const entry = (value || {}) as Record<string, unknown>;
+  const maxDecisionsPerItem = Number(entry.maxDecisionsPerItem ?? fallback?.maxDecisionsPerItem ?? 2);
+  return {
+    enabled: typeof entry.enabled === 'boolean' ? entry.enabled : fallback?.enabled ?? false,
+    goal: typeof entry.goal === 'string'
+      ? entry.goal.trim().slice(0, 500)
+      : fallback?.goal,
+    maxDecisionsPerItem: Number.isFinite(maxDecisionsPerItem)
+      ? Math.max(1, Math.min(maxDecisionsPerItem, 5))
+      : 2,
+    rememberSelectors: typeof entry.rememberSelectors === 'boolean'
+      ? entry.rememberSelectors
+      : fallback?.rememberSelectors ?? true,
+  };
+}
+
+function defaultPortalBrainGoal(providerName: string) {
+  return `Use the main provider search journey to find an exact policy-number match for ${providerName}, and stop instead of guessing if confidence is low.`;
+}
+
+function emptyPortalBrainMemory(providerId: string, categoryId: string): PortalBrainMemory {
+  return {
+    providerId,
+    categoryId,
+    updatedAt: new Date().toISOString(),
+    searchInputHints: [],
+    searchResultHints: [],
+    stats: {
+      brainCalls: 0,
+      successfulDecisions: 0,
+      searchInputSuccesses: 0,
+      searchResultSuccesses: 0,
+    },
+  };
+}
+
+function portalBrainMemoryKey(providerId: string, categoryId: string) {
+  return `portal-brain-memory:${providerId}:${categoryId}`;
+}
+
+async function loadPortalBrainMemory(providerId: string, categoryId: string): Promise<PortalBrainMemory> {
+  const stored = (await kv.get(portalBrainMemoryKey(providerId, categoryId))) as PortalBrainMemory | null;
+  if (!stored) return emptyPortalBrainMemory(providerId, categoryId);
+  return {
+    ...emptyPortalBrainMemory(providerId, categoryId),
+    ...stored,
+    providerId,
+    categoryId,
+    searchInputHints: Array.isArray(stored.searchInputHints) ? stored.searchInputHints : [],
+    searchResultHints: Array.isArray(stored.searchResultHints) ? stored.searchResultHints : [],
+    stats: {
+      ...emptyPortalBrainMemory(providerId, categoryId).stats,
+      ...(stored.stats || {}),
+    },
+  };
+}
+
+async function savePortalBrainMemory(memory: PortalBrainMemory) {
+  await kv.set(portalBrainMemoryKey(memory.providerId, memory.categoryId), {
+    ...memory,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+function summarisePortalBrainMemory(
+  memory: PortalBrainMemory,
+  options: { available: boolean; configured: boolean; model?: string },
+): PortalBrainMemorySummary {
+  return {
+    providerId: memory.providerId,
+    categoryId: memory.categoryId,
+    available: options.available,
+    configured: options.configured,
+    model: options.model,
+    updatedAt: memory.updatedAt,
+    searchInputHints: memory.searchInputHints.length,
+    searchResultHints: memory.searchResultHints.length,
+    successfulDecisions: memory.stats.successfulDecisions,
+    brainCalls: memory.stats.brainCalls,
+    lastSearchInputSelector: memory.searchInputHints[0]?.selector,
+    lastResultSelector: memory.searchResultHints[0]?.selector,
+  };
+}
+
+function rememberPortalBrainHint(
+  list: PortalBrainMemoryEntry[],
+  entry: { selector: string; label?: string; notes?: string; source?: PortalBrainMemoryEntry['source'] },
+): PortalBrainMemoryEntry[] {
+  const selector = String(entry.selector || '').trim().slice(0, 500);
+  if (!selector) return list;
+  const now = new Date().toISOString();
+  const existingIndex = list.findIndex((item) => item.selector === selector);
+  const nextEntry: PortalBrainMemoryEntry = existingIndex >= 0
+    ? {
+        ...list[existingIndex],
+        label: entry.label ? String(entry.label).slice(0, 160) : list[existingIndex].label,
+        notes: entry.notes ? String(entry.notes).slice(0, 300) : list[existingIndex].notes,
+        successCount: (list[existingIndex].successCount || 0) + 1,
+        lastUsedAt: now,
+        source: entry.source || list[existingIndex].source || 'brain',
+      }
+    : {
+        selector,
+        label: entry.label ? String(entry.label).slice(0, 160) : undefined,
+        notes: entry.notes ? String(entry.notes).slice(0, 300) : undefined,
+        successCount: 1,
+        lastUsedAt: now,
+        source: entry.source || 'brain',
+      };
+
+  const withoutExisting = existingIndex >= 0 ? list.filter((_, index) => index !== existingIndex) : list.slice();
+  return [nextEntry, ...withoutExisting]
+    .sort((a, b) => (b.successCount - a.successCount) || (new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime()))
+    .slice(0, 12);
+}
+
+function getPortalBrainConfig() {
+  const apiKey = String(
+    Deno.env.get('NW_GOOGLE_AI_API_KEY')
+    || Deno.env.get('GEMINI_API_KEY')
+    || Deno.env.get('GOOGLE_API_KEY')
+    || '',
+  ).trim();
+  const model = String(Deno.env.get('NW_PORTAL_BRAIN_MODEL') || 'gemma-4-26b-a4b-it').trim();
+  const apiBase = String(Deno.env.get('NW_PORTAL_BRAIN_API_BASE') || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
+  const enabled = String(Deno.env.get('NW_PORTAL_BRAIN_ENABLED') || '1').trim() !== '0';
+  return {
+    enabled,
+    available: enabled && !!apiKey,
+    apiKey,
+    model,
+    apiBase,
+  };
+}
+
+function extractFirstJsonObject(value: string): string {
+  const text = String(value || '').trim();
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error('The brain response did not contain a JSON object.');
+  }
+  return text.slice(firstBrace, lastBrace + 1);
+}
+
+async function callPortalBrainModel(options: {
+  prompt: string;
+  model: string;
+  apiBase: string;
+  apiKey: string;
+}): Promise<{ text: string }> {
+  const response = await fetch(`${options.apiBase}/models/${encodeURIComponent(options.model)}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': options.apiKey,
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: options.prompt },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        topP: 0.1,
+        maxOutputTokens: 500,
+      },
+    }),
+  });
+
+  const data = await response.json().catch(() => ({})) as Record<string, unknown>;
+  if (!response.ok) {
+    throw new Error(typeof data.error === 'object' && data.error && 'message' in data.error
+      ? String((data.error as { message?: string }).message || 'Portal brain request failed')
+      : `Portal brain request failed with HTTP ${response.status}`);
+  }
+
+  const candidates = Array.isArray(data.candidates) ? data.candidates as Array<Record<string, unknown>> : [];
+  const text = candidates
+    .flatMap((candidate) => {
+      const content = candidate.content as { parts?: Array<{ text?: string }> } | undefined;
+      return Array.isArray(content?.parts) ? content.parts : [];
+    })
+    .map((part) => String(part.text || ''))
+    .join('\n')
+    .trim();
+
+  if (!text) {
+    throw new Error('The brain response did not contain usable text.');
+  }
+
+  return { text };
+}
+
+function buildPortalBrainPrompt(options: {
+  providerName: string;
+  goal: string;
+  stage: 'search_input' | 'search_result';
+  policyNumber: string;
+  instructions?: string;
+  labels?: string[];
+  memory: PortalBrainMemory;
+  snapshot: Record<string, unknown>;
+}) {
+  const rememberedInputs = options.memory.searchInputHints.slice(0, 5).map((hint) => ({
+    selector: hint.selector,
+    label: hint.label,
+    successCount: hint.successCount,
+  }));
+  const rememberedResults = options.memory.searchResultHints.slice(0, 5).map((hint) => ({
+    selector: hint.selector,
+    label: hint.label,
+    successCount: hint.successCount,
+  }));
+
+  return [
+    'You are a cautious browser-assistance model for a financial policy administration system.',
+    `Provider: ${options.providerName}`,
+    `Stage: ${options.stage}`,
+    `Goal: ${options.goal}`,
+    `Target policy number: ${options.policyNumber}`,
+    options.instructions ? `Provider instructions: ${options.instructions}` : '',
+    Array.isArray(options.labels) && options.labels.length > 0 ? `Preferred search labels: ${options.labels.join(', ')}` : '',
+    'Rules:',
+    '- Never invent a candidate id.',
+    '- Only choose a candidate when it is the best available option for finding or opening the exact policy number.',
+    '- Prefer remembered selectors when they still fit the current page.',
+    '- Avoid OTP, password, username, and unrelated filter fields.',
+    '- If confidence is low, return stop_uncertain.',
+    'Return JSON only, with this exact shape:',
+    '{"action":"use_candidate|stop_uncertain","candidateId":"candidate-id-or-null","confidence":"high|medium|low","reason":"short reason"}',
+    `Remembered input hints: ${JSON.stringify(rememberedInputs)}`,
+    `Remembered result hints: ${JSON.stringify(rememberedResults)}`,
+    `Page snapshot: ${JSON.stringify(options.snapshot)}`,
+  ].filter(Boolean).join('\n');
+}
+
 function normaliseSearchConfig(value: unknown, fallback?: PortalProviderFlow['search']): PortalProviderFlow['search'] {
   const entry = (value || {}) as Record<string, unknown>;
   return {
@@ -690,6 +977,7 @@ function normaliseSearchConfig(value: unknown, fallback?: PortalProviderFlow['se
     resultPolicyNumberSelector: typeof entry.resultPolicyNumberSelector === 'string' ? entry.resultPolicyNumberSelector.trim().slice(0, 500) : fallback?.resultPolicyNumberSelector,
     noResultsText: normaliseStringList(entry.noResultsText, fallback?.noResultsText || ['No results']),
     instructions: typeof entry.instructions === 'string' ? entry.instructions.trim().slice(0, 500) : fallback?.instructions,
+    brain: normaliseBrainConfig(entry.brain, fallback?.brain),
   };
 }
 
@@ -780,6 +1068,12 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
         resultLinkSelector: 'a, button, [role="link"], [role="button"]',
         noResultsText: ['No results', 'No clients found', 'No investments found', 'No policies found'],
         instructions: 'Search Allan Gray by the Navigate Wealth policy number. The worker only opens a result when the policy number is found on the page.',
+        brain: {
+          enabled: true,
+          goal: defaultPortalBrainGoal(providerName),
+          maxDecisionsPerItem: 2,
+          rememberSelectors: true,
+        },
       },
       extraction: {
         policyRowSelector: '[data-testid*="policy" i], table tbody tr',
@@ -845,6 +1139,12 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
       resultLinkSelector: 'a, button, [role="link"], [role="button"]',
       noResultsText: ['No results', 'No policies found'],
       instructions: 'Search by policy number and only open results that contain the exact policy number.',
+      brain: {
+        enabled: false,
+        goal: defaultPortalBrainGoal(providerName),
+        maxDecisionsPerItem: 2,
+        rememberSelectors: true,
+      },
     },
     extraction: { fields: [] },
     policySchedule: {
@@ -1517,6 +1817,36 @@ app.put("/portal-flows/:providerId", requireAuth, async (c) => {
   }
 });
 
+// GET /portal-flows/:providerId/brain-memory
+app.get("/portal-flows/:providerId/brain-memory", requireAuth, async (c) => {
+  try {
+    const providerId = c.req.param("providerId");
+    const categoryId = String(c.req.query("categoryId") || '').trim();
+    if (!categoryId) {
+      return c.json({ error: "Missing categoryId" }, 400);
+    }
+
+    const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
+    if (!provider) {
+      return c.json({ error: "Invalid provider ID" }, 400);
+    }
+
+    const flow = await getPortalFlow(provider, providerId);
+    const memory = await loadPortalBrainMemory(providerId, categoryId);
+    const brainConfig = getPortalBrainConfig();
+    const summary = summarisePortalBrainMemory(memory, {
+      available: brainConfig.available,
+      configured: brainConfig.available && flow.search?.brain?.enabled === true,
+      model: brainConfig.model,
+    });
+
+    return c.json({ success: true, summary });
+  } catch (e) {
+    log.error("Portal brain memory fetch error:", e);
+    return c.json({ error: `Failed to fetch portal brain memory: ${getErrMsg(e)}` }, 500);
+  }
+});
+
 // GET /portal-flows/:providerId/credentials/:profileId
 app.get("/portal-flows/:providerId/credentials/:profileId", requireAuth, async (c) => {
   try {
@@ -2054,6 +2384,8 @@ app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
     const flow = await getPortalFlow(provider, job.providerId);
     const config = (await kv.get(`config:mapping:${job.providerId}:${job.categoryId}`)) as IntegrationConfig | null;
     const items = await loadPortalJobItems(jobId);
+    const brainConfig = getPortalBrainConfig();
+    const brainMemory = await loadPortalBrainMemory(job.providerId, job.categoryId);
     const credentialRecord = (await kv.get(portalCredentialKey(job.providerId, job.credentialProfileId))) as PortalCredentialRecord | null;
     if (!credentialRecord?.username || !credentialRecord?.password) {
       return c.json({ error: "Provider credentials are not saved for this job" }, 400);
@@ -2068,10 +2400,197 @@ app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
         username: credentialRecord.username,
         password: credentialRecord.password,
       },
+      brain: {
+        available: brainConfig.available,
+        configured: brainConfig.available && flow.search?.brain?.enabled === true,
+        model: brainConfig.model,
+        memory: brainMemory,
+        summary: summarisePortalBrainMemory(brainMemory, {
+          available: brainConfig.available,
+          configured: brainConfig.available && flow.search?.brain?.enabled === true,
+          model: brainConfig.model,
+        }),
+      },
     });
   } catch (e) {
     log.error("Portal worker runtime error:", e);
     return c.json({ error: `Failed to load worker runtime: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// POST /portal-worker/jobs/:jobId/brain/decide
+app.post("/portal-worker/jobs/:jobId/brain/decide", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: "Portal job not found" }, 404);
+    }
+
+    const provider = (await kv.get(`provider:${job.providerId}`)) as KvProvider | null;
+    if (!provider) {
+      return c.json({ error: "Invalid provider ID" }, 400);
+    }
+
+    const flow = await getPortalFlow(provider, job.providerId);
+    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+    const stage = String(body.stage || '');
+    const policyNumber = String(body.policyNumber || '').trim();
+    const snapshot = (body.snapshot && typeof body.snapshot === 'object') ? body.snapshot as Record<string, unknown> : null;
+    if (!['search_input', 'search_result'].includes(stage) || !policyNumber || !snapshot) {
+      return c.json({ error: "stage, policyNumber, and snapshot are required" }, 400);
+    }
+
+    const candidates = Array.isArray(snapshot.candidates) ? snapshot.candidates as Array<Record<string, unknown>> : [];
+    if (candidates.length === 0) {
+      return c.json({ error: "No visible candidates were supplied for the brain" }, 400);
+    }
+
+    const brain = getPortalBrainConfig();
+    if (!brain.available || flow.search?.brain?.enabled !== true) {
+      return c.json({
+        success: true,
+        available: false,
+        decision: {
+          action: 'stop_uncertain',
+          candidateId: null,
+          confidence: 'low',
+          reason: flow.search?.brain?.enabled !== true
+            ? 'Smart search assist is disabled for this provider.'
+            : 'Google-hosted brain API is not configured on the backend.',
+        },
+      });
+    }
+
+    const memory = await loadPortalBrainMemory(job.providerId, job.categoryId);
+    memory.stats.brainCalls += 1;
+    await savePortalBrainMemory(memory);
+
+    const prompt = buildPortalBrainPrompt({
+      providerName: job.providerName,
+      goal: flow.search?.brain?.goal || defaultPortalBrainGoal(job.providerName),
+      stage: stage as 'search_input' | 'search_result',
+      policyNumber,
+      instructions: flow.search?.instructions,
+      labels: flow.search?.searchInputLabels,
+      memory,
+      snapshot: {
+        ...snapshot,
+        candidates: candidates.slice(0, 20).map((candidate) => ({
+          candidateId: String(candidate.candidateId || '').slice(0, 80),
+          selector: String(candidate.selector || '').slice(0, 500),
+          tag: String(candidate.tag || '').slice(0, 40),
+          type: String(candidate.type || '').slice(0, 60),
+          role: String(candidate.role || '').slice(0, 60),
+          placeholder: String(candidate.placeholder || '').slice(0, 120),
+          name: String(candidate.name || '').slice(0, 120),
+          id: String(candidate.id || '').slice(0, 120),
+          ariaLabel: String(candidate.ariaLabel || '').slice(0, 120),
+          title: String(candidate.title || '').slice(0, 120),
+          text: String(candidate.text || '').slice(0, 240),
+          nearbyText: String(candidate.nearbyText || '').slice(0, 240),
+        })),
+      },
+    });
+
+    const result = await callPortalBrainModel({
+      prompt,
+      model: brain.model,
+      apiBase: brain.apiBase,
+      apiKey: brain.apiKey,
+    });
+    const parsed = JSON.parse(extractFirstJsonObject(result.text)) as Record<string, unknown>;
+    const candidateIds = new Set(candidates.map((candidate) => String(candidate.candidateId || '')).filter(Boolean));
+    const action = parsed.action === 'use_candidate' ? 'use_candidate' : 'stop_uncertain';
+    const candidateId = action === 'use_candidate' && candidateIds.has(String(parsed.candidateId || ''))
+      ? String(parsed.candidateId)
+      : null;
+    const confidence = ['high', 'medium', 'low'].includes(String(parsed.confidence))
+      ? String(parsed.confidence)
+      : 'low';
+    const reason = String(parsed.reason || 'No reason supplied.').trim().slice(0, 300);
+
+    return c.json({
+      success: true,
+      available: true,
+      model: brain.model,
+      decision: {
+        action: candidateId ? action : 'stop_uncertain',
+        candidateId,
+        confidence,
+        reason,
+      },
+      summary: summarisePortalBrainMemory(memory, {
+        available: true,
+        configured: true,
+        model: brain.model,
+      }),
+    });
+  } catch (e) {
+    log.error("Portal brain decision error:", e);
+    return c.json({ error: `Failed to get a brain decision: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// POST /portal-worker/jobs/:jobId/brain/memory
+app.post("/portal-worker/jobs/:jobId/brain/memory", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: "Portal job not found" }, 404);
+    }
+
+    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+    const stage = String(body.stage || '').trim();
+    const selector = String(body.selector || '').trim();
+    if (!['search_input', 'search_result'].includes(stage) || !selector) {
+      return c.json({ error: "stage and selector are required" }, 400);
+    }
+
+    const memory = await loadPortalBrainMemory(job.providerId, job.categoryId);
+    if (stage === 'search_input') {
+      memory.searchInputHints = rememberPortalBrainHint(memory.searchInputHints, {
+        selector,
+        label: typeof body.label === 'string' ? body.label : undefined,
+        notes: typeof body.notes === 'string' ? body.notes : undefined,
+        source: body.source === 'deterministic' || body.source === 'manual' ? body.source : 'brain',
+      });
+      memory.stats.searchInputSuccesses += 1;
+    } else {
+      memory.searchResultHints = rememberPortalBrainHint(memory.searchResultHints, {
+        selector,
+        label: typeof body.label === 'string' ? body.label : undefined,
+        notes: typeof body.notes === 'string' ? body.notes : undefined,
+        source: body.source === 'deterministic' || body.source === 'manual' ? body.source : 'brain',
+      });
+      memory.stats.searchResultSuccesses += 1;
+    }
+
+    if (body.source !== 'deterministic' && body.source !== 'manual') {
+      memory.stats.successfulDecisions += 1;
+    }
+
+    await savePortalBrainMemory(memory);
+    const brain = getPortalBrainConfig();
+    return c.json({
+      success: true,
+      memory,
+      summary: summarisePortalBrainMemory(memory, {
+        available: brain.available,
+        configured: brain.available,
+        model: brain.model,
+      }),
+    });
+  } catch (e) {
+    log.error("Portal brain memory update error:", e);
+    return c.json({ error: `Failed to update portal brain memory: ${getErrMsg(e)}` }, 500);
   }
 });
 

@@ -264,6 +264,13 @@ export interface PortalFlowField {
   transform?: 'trim' | 'number' | 'date' | string;
 }
 
+export interface PortalSearchBrainConfig {
+  enabled?: boolean;
+  goal?: string;
+  maxDecisionsPerItem?: number;
+  rememberSelectors?: boolean;
+}
+
 export interface PortalFlowStep {
   id: string;
   action: 'goto' | 'click' | 'fill' | 'wait_for_selector' | 'wait_for_url' | 'press';
@@ -321,6 +328,7 @@ export interface PortalProviderFlow {
     resultPolicyNumberSelector?: string;
     noResultsText?: string[];
     instructions?: string;
+    brain?: PortalSearchBrainConfig;
   };
   extraction: {
     policyRowSelector?: string;
@@ -436,6 +444,21 @@ export interface PortalDiscoveryReport {
     rowCount: number;
   }>;
   warnings: string[];
+}
+
+export interface PortalBrainMemorySummary {
+  providerId: string;
+  categoryId: string;
+  available: boolean;
+  configured: boolean;
+  model?: string;
+  updatedAt?: string;
+  searchInputHints: number;
+  searchResultHints: number;
+  successfulDecisions: number;
+  brainCalls: number;
+  lastSearchInputSelector?: string;
+  lastResultSelector?: string;
 }
 
 export interface UploadPreviewResponse {

@@ -10,7 +10,7 @@ import { Separator } from '../../../../ui/separator';
 import { Switch } from '../../../../ui/switch';
 import { Textarea } from '../../../../ui/textarea';
 import { AlertCircle, Bot, CheckCircle2, Clock, FileText, KeyRound, ListChecks, Loader2, Play, RefreshCw, RotateCcw, Search, Settings2 } from 'lucide-react';
-import { IntegrationProvider, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from '../types';
+import { IntegrationProvider, PortalBrainMemorySummary, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from '../types';
 import { cn } from '../../../../ui/utils';
 
 interface PortalAutomationTabProps {
@@ -20,6 +20,7 @@ interface PortalAutomationTabProps {
   job?: PortalSyncJob | null;
   jobItems: PortalJobPolicyItem[];
   discoveryReport?: PortalDiscoveryReport | null;
+  brainMemory?: PortalBrainMemorySummary;
   isLoadingFlow: boolean;
   isLoadingDiscoveryReport: boolean;
   isLoadingJobItems: boolean;
@@ -81,6 +82,7 @@ export function PortalAutomationTab({
   job,
   jobItems,
   discoveryReport,
+  brainMemory,
   isLoadingFlow,
   isLoadingDiscoveryReport,
   isLoadingJobItems,
@@ -118,6 +120,8 @@ export function PortalAutomationTab({
   const [searchSubmitSelector, setSearchSubmitSelector] = useState('');
   const [resultContainerSelector, setResultContainerSelector] = useState('');
   const [resultLinkSelector, setResultLinkSelector] = useState('');
+  const [smartAssistEnabled, setSmartAssistEnabled] = useState(false);
+  const [smartAssistGoal, setSmartAssistGoal] = useState('');
   const [policyScheduleEnabled, setPolicyScheduleEnabled] = useState(false);
   const [policyScheduleLabelsText, setPolicyScheduleLabelsText] = useState('');
   const [policyScheduleSelector, setPolicyScheduleSelector] = useState('');
@@ -147,6 +151,8 @@ export function PortalAutomationTab({
       setSearchSubmitSelector(flow.search?.submitSelector || '');
       setResultContainerSelector(flow.search?.resultContainerSelector || '');
       setResultLinkSelector(flow.search?.resultLinkSelector || '');
+      setSmartAssistEnabled(flow.search?.brain?.enabled === true);
+      setSmartAssistGoal(flow.search?.brain?.goal || '');
       setPolicyScheduleEnabled(flow.policySchedule?.enabled === true);
       setPolicyScheduleLabelsText((flow.policySchedule?.downloadLabels || ['Policy schedule', 'Download policy schedule', 'Download PDF', 'Statement']).join('\n'));
       setPolicyScheduleSelector(flow.policySchedule?.downloadSelector || '');
@@ -210,12 +216,16 @@ export function PortalAutomationTab({
   const searchLabels = splitPortalLines(searchInputLabelsText);
   const hasSearchFallback = Boolean(searchInputSelector.trim() || searchLabels.length > 0);
   const hasPostLoginFallback = configuredPolicyListSteps.length > 0 || hasSearchFallback;
+  const smartAssistReady = Boolean(brainMemory?.available && brainMemory?.configured);
   const setupWarnings = [
     postLoginUrl.trim() && !hasPostLoginFallback
       ? 'A post-login page URL is set, but there is no click-step or search fallback if that page cannot be opened.'
       : '',
     searchPageUrl.trim() && !hasSearchFallback
       ? 'A search page URL is set, but there is no search selector or search-box wording configured if that page cannot be opened.'
+      : '',
+    smartAssistEnabled && !brainMemory?.available
+      ? 'Smart search assist is enabled here, but the Google AI key is not configured on the Supabase backend yet.'
       : '',
   ].filter(Boolean);
   const currentJobWarning = latestPortalWarning(job?.warning, job?.warnings);
@@ -286,6 +296,12 @@ export function PortalAutomationTab({
         resultLinkSelector: resultLinkSelector.trim() || undefined,
         noResultsText: flow.search?.noResultsText || ['No results', 'No policies found'],
         instructions: 'Search by Navigate Wealth policy number and only open exact policy-number matches.',
+        brain: {
+          enabled: smartAssistEnabled,
+          goal: smartAssistGoal.trim() || `Use the main provider search journey to find the exact policy number for ${provider.name}.`,
+          maxDecisionsPerItem: flow.search?.brain?.maxDecisionsPerItem || 2,
+          rememberSelectors: flow.search?.brain?.rememberSelectors ?? true,
+        },
       },
       extraction: {
         ...flow.extraction,
@@ -468,6 +484,90 @@ export function PortalAutomationTab({
                       onChange={(event) => setSearchInputLabelsText(event.target.value)}
                       placeholder="Policy number, Account number, Search"
                     />
+                  </div>
+                </div>
+
+                <div className="rounded-md border bg-gray-50 p-4 space-y-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-md bg-white p-2 text-purple-700">
+                        <Bot className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h5 className="font-medium text-gray-900">Smart Search Assist</h5>
+                        <p className="text-sm text-gray-500">
+                          When the normal flow cannot confidently find the provider search box or result row, the worker can ask a guarded Google-hosted brain for one safe next step.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="smart-assist-enabled" className="text-sm text-gray-700">
+                        Enable assist
+                      </Label>
+                      <Switch
+                        id="smart-assist-enabled"
+                        checked={smartAssistEnabled}
+                        onCheckedChange={setSmartAssistEnabled}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Search goal</Label>
+                      <Textarea
+                        value={smartAssistGoal}
+                        onChange={(event) => setSmartAssistGoal(event.target.value)}
+                        className="min-h-20 bg-white"
+                        placeholder={`Use the main provider search journey to find the exact policy number for ${provider.name}.`}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Keep this simple and outcome-focused. The worker still verifies the policy number before extracting anything.
+                      </p>
+                    </div>
+                    <div className="rounded-md border bg-white p-3 text-sm text-gray-700 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-medium text-gray-900">Backend status</span>
+                        <Badge variant="outline" className={cn(
+                          brainMemory?.available
+                            ? 'border-green-200 bg-green-50 text-green-700'
+                            : 'border-amber-200 bg-amber-50 text-amber-800',
+                        )}>
+                          {brainMemory?.available ? 'Ready' : 'Needs Google AI key'}
+                        </Badge>
+                      </div>
+                      <p>
+                        <span className="font-medium text-gray-900">Model:</span>{' '}
+                        {brainMemory?.model || 'Not configured'}
+                      </p>
+                      <p>
+                        <span className="font-medium text-gray-900">Learned search boxes:</span>{' '}
+                        {brainMemory?.searchInputHints || 0}
+                      </p>
+                      <p>
+                        <span className="font-medium text-gray-900">Learned result openings:</span>{' '}
+                        {brainMemory?.searchResultHints || 0}
+                      </p>
+                      <p>
+                        <span className="font-medium text-gray-900">Successful assists:</span>{' '}
+                        {brainMemory?.successfulDecisions || 0}
+                      </p>
+                      {brainMemory?.updatedAt && (
+                        <p className="text-xs text-gray-500">
+                          Last learned on {new Date(brainMemory.updatedAt).toLocaleString()}.
+                        </p>
+                      )}
+                      {!brainMemory?.available && (
+                        <p className="text-xs text-amber-800">
+                          Add `NW_GOOGLE_AI_API_KEY` or `GEMINI_API_KEY` to the Supabase Edge Function secrets to switch this on.
+                        </p>
+                      )}
+                      {smartAssistReady && (
+                        <p className="text-xs text-green-700">
+                          The brain is ready and provider memory will keep getting better as successful selectors are reused.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 

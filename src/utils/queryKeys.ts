@@ -192,6 +192,8 @@ export const integrationsKeys = {
     [...integrationsKeys.all, 'config', providerId, categoryId] as const,
   portalFlow: (providerId: string | null) =>
     [...integrationsKeys.all, 'portal-flow', providerId] as const,
+  portalBrainMemory: (providerId: string | null, categoryId: string | null) =>
+    [...integrationsKeys.all, 'portal-brain-memory', providerId, categoryId] as const,
   portalCredentialStatus: (providerId: string | null, profileId: string | null) =>
     [...integrationsKeys.all, 'portal-credential-status', providerId, profileId] as const,
   portalJob: (jobId: string | null) =>

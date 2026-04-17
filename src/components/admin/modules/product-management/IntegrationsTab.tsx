@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { IntegrationProvider, IntegrationConfig, PreviewData, IntegrationSyncRun, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from './types';
+import { IntegrationProvider, IntegrationConfig, PreviewData, IntegrationSyncRun, PortalBrainMemorySummary, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from './types';
 import { productManagementApi } from './api';
 import { ProviderList } from './integrations/ProviderList';
 import { IntegrationHeader } from './integrations/IntegrationHeader';
@@ -98,6 +98,12 @@ export function IntegrationsTab() {
     queryKey: integrationsKeys.portalFlow(selectedProviderId),
     enabled: !!selectedProviderId,
     queryFn: () => productManagementApi.fetchPortalFlow(selectedProviderId!)
+  });
+
+  const { data: portalBrainMemory } = useQuery<PortalBrainMemorySummary>({
+    queryKey: integrationsKeys.portalBrainMemory(selectedProviderId, selectedCategoryId),
+    enabled: !!selectedProviderId && !!selectedCategoryId,
+    queryFn: () => productManagementApi.fetchPortalBrainMemory(selectedProviderId!, selectedCategoryId),
   });
 
   useEffect(() => {
@@ -379,6 +385,7 @@ export function IntegrationsTab() {
     onSuccess: () => {
         toast.success("Portal automation flow saved.");
         queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId) });
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalBrainMemory(selectedProviderId, selectedCategoryId) });
     },
     onError: (err: Error) => {
         toast.error(err.message || "Failed to save portal flow");
@@ -580,8 +587,9 @@ export function IntegrationsTab() {
                 isLoadingJobItems={isLoadingPortalJobItems}
                 isCreatingJob={createPortalJobMutation.isPending}
                 credentialStatus={portalCredentialStatus}
-                mappingSourceHeaders={Object.keys(serverConfig?.fieldMapping || {})}
-                selectedCredentialProfileId={selectedPortalCredentialProfileId}
+                  mappingSourceHeaders={Object.keys(serverConfig?.fieldMapping || {})}
+                  brainMemory={portalBrainMemory}
+                  selectedCredentialProfileId={selectedPortalCredentialProfileId}
                 onCredentialProfileChange={setSelectedPortalCredentialProfileId}
                 isSavingCredentials={savePortalCredentialsMutation.isPending}
                 isSavingFlow={savePortalFlowMutation.isPending}
