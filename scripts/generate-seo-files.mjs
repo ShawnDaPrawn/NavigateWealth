@@ -8,14 +8,15 @@ const siteUrl = normalizeSiteUrl(process.env.SITE_URL || process.env.VITE_SITE_U
 const buildDate = new Intl.DateTimeFormat('en-CA', {
   timeZone: process.env.SITEMAP_TIMEZONE || DEFAULT_TIMEZONE,
 }).format(new Date());
+const STATIC_CONTENT_LASTMOD = '2026-04-17';
 
 // Google ignores <priority> and <changefreq> — only <loc> and <lastmod> matter.
 // lastmod should reflect genuinely meaningful content changes.
 // Only canonical, indexable public pages belong here. No auth, dashboard, or admin routes.
 const sitemapEntries = [
-  { path: '/', lastmod: buildDate },
-  { path: '/services', lastmod: buildDate },
-  { path: '/resources', lastmod: buildDate },
+  { path: '/', lastmod: STATIC_CONTENT_LASTMOD },
+  { path: '/services', lastmod: STATIC_CONTENT_LASTMOD },
+  { path: '/resources', lastmod: STATIC_CONTENT_LASTMOD },
   { path: '/about', lastmod: '2026-03-01' },
   { path: '/team', lastmod: '2026-03-01' },
   { path: '/contact', lastmod: '2026-03-01' },
@@ -145,8 +146,8 @@ function main() {
       sitemapEntries.length = 0;
       sitemapEntries.push(...deduped);
 
-      fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), generateSitemapXml(), 'utf8');
-      fs.writeFileSync(path.join(publicDir, 'robots.txt'), generateRobotsTxt(), 'utf8');
+      writeGeneratedFile(path.join(publicDir, 'sitemap.xml'), generateSitemapXml());
+      writeGeneratedFile(path.join(publicDir, 'robots.txt'), generateRobotsTxt());
 
       console.log(`Generated sitemap and robots for ${siteUrl} (${sitemapEntries.length} URLs)`);
     })
@@ -154,6 +155,23 @@ function main() {
       console.error('Failed to generate SEO files:', err);
       process.exitCode = 1;
     });
+}
+
+function normalizeNewlines(value) {
+  return value.replace(/\r\n/g, '\n');
+}
+
+function writeGeneratedFile(filePath, content) {
+  try {
+    const existing = fs.readFileSync(filePath, 'utf8');
+    if (normalizeNewlines(existing) === normalizeNewlines(content)) {
+      return;
+    }
+  } catch {
+    // Missing files are created below.
+  }
+
+  fs.writeFileSync(filePath, content, 'utf8');
 }
 
 function toDateOnly(value) {
