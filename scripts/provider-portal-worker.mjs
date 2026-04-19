@@ -905,19 +905,59 @@ async function findInputByIntent(page, selector, labels = [], rememberedSelector
   throw new Error(message);
 }
 
-async function submitPolicySearch(page, search) {
+function isClickInterceptionError(error) {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return /intercepts pointer events|Timeout .* exceeded|not clickable|element is outside|another element/i.test(message);
+}
+
+async function waitAfterSubmit(page) {
+  await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
+  await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+  await page.waitForTimeout(800);
+}
+
+async function pageContainsPolicyNumber(page, policyNumber) {
+  const normalized = normalisePolicyNumber(policyNumber);
+  if (!normalized) return false;
+  const text = await page.locator('body').innerText({ timeout: 2500 }).catch(() => '');
+  return normalisePolicyNumber(text).includes(normalized);
+}
+
+async function submitPolicySearch(page, search, searchInput, item) {
+  if (searchInput) {
+    await searchInput.press('Enter').catch(async () => page.keyboard.press('Enter'));
+    await waitAfterSubmit(page);
+    if (await pageContainsPolicyNumber(page, item?.policyNumber)) return;
+  }
+
   if (search?.submitSelector) {
     const button = page.locator(search.submitSelector).first();
     if (await button.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await Promise.all([
-        button.click(),
-        page.waitForLoadState('domcontentloaded').catch(() => undefined),
-      ]);
+      try {
+        await button.click({ timeout: 5000 });
+        await waitAfterSubmit(page);
+        return;
+      } catch (error) {
+        if (!isClickInterceptionError(error)) throw error;
+      }
+
+      await page.keyboard.press('Escape').catch(() => undefined);
+      await page.waitForTimeout(400);
+      try {
+        await button.click({ timeout: 5000 });
+        await waitAfterSubmit(page);
+        return;
+      } catch (error) {
+        if (!isClickInterceptionError(error)) throw error;
+      }
+
+      await button.dispatchEvent('click');
+      await waitAfterSubmit(page);
       return;
     }
   }
   await page.keyboard.press('Enter');
-  await page.waitForLoadState('domcontentloaded').catch(() => undefined);
+  await waitAfterSubmit(page);
 }
 
 async function openPolicySearchResult(page, flow, item, brain) {
@@ -1084,7 +1124,7 @@ async function searchPolicyByNumber(page, flow, item, brain) {
 
   await searchInput.fill('');
   await searchInput.fill(item.policyNumber);
-  await submitPolicySearch(page, search);
+  await submitPolicySearch(page, search, searchInput, item);
   await page.waitForTimeout(1500);
   if (usedBrainCandidate && smartAssist.rememberSelectors) {
     await rememberBrainSelector('search_input', item, usedBrainCandidate, 'brain');
