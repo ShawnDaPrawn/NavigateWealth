@@ -480,7 +480,7 @@ async function requestBrainDecision(stage, page, flow, item, snapshot) {
 async function captureInputCandidates(page) {
   return evaluateWithNavigationRetry(page, () => {
     const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
-    const searchRegex = /(search|find|lookup|policy|client|investor|investment|account|portfolio|contract|member|record)/i;
+    const searchRegex = /(search|find|lookup|policy|client|clients|investor|investors|investment|investments|account|portfolio|contract|member|record|practice|funds?|products?)/i;
     const isVisible = (el) => {
       if (!(el instanceof HTMLElement)) return false;
       const style = window.getComputedStyle(el);
@@ -514,6 +514,7 @@ async function captureInputCandidates(page) {
       }
       return parts.join(' > ');
     };
+    const candidateKeyFor = (el) => selectorFor(el) || `${el.tagName}:${normalise(el.textContent).slice(0, 80)}`;
     const nearbyTextFor = (el) => {
       const labels = 'labels' in el && Array.isArray(el.labels) ? el.labels : Array.from(el.labels || []);
       const labelText = labels.map((label) => normalise(label.textContent)).filter(Boolean).join(' | ');
@@ -539,21 +540,86 @@ async function captureInputCandidates(page) {
         nearbyText: nearbyTextFor(el),
         interaction: 'fill',
       }));
-    const triggerElements = Array.from(document.querySelectorAll('button, a, [role="button"], [role="link"], [data-testid*="search" i], [class*="search" i], [aria-label*="search" i], [title*="search" i]'))
-      .filter((el) => {
-        if (!isVisible(el)) return false;
-        const text = [
-          normalise(el.textContent),
-          normalise(el.getAttribute('aria-label')),
-          normalise(el.getAttribute('title')),
-          normalise(el.getAttribute('data-testid')),
-          normalise(el.getAttribute('class')),
-        ].join(' ');
-        return searchRegex.test(text);
-      })
-      .slice(0, 12)
+    const triggerElements = [];
+    const seenTriggers = new Set();
+    const triggerSelector = [
+      'button',
+      'a',
+      '[role="button"]',
+      '[role="link"]',
+      '[role="menuitem"]',
+      '[role="tab"]',
+      '[onclick]',
+      '[tabindex]:not([tabindex="-1"])',
+      '[data-testid*="search" i]',
+      '[data-testid*="client" i]',
+      '[data-testid*="investor" i]',
+      '[data-testid*="policy" i]',
+      '[class*="search" i]',
+      '[class*="client" i]',
+      '[class*="investor" i]',
+      '[class*="policy" i]',
+      '[aria-label*="search" i]',
+      '[aria-label*="client" i]',
+      '[aria-label*="investor" i]',
+      '[aria-label*="policy" i]',
+      '[title*="search" i]',
+      '[title*="client" i]',
+      '[title*="investor" i]',
+      '[title*="policy" i]',
+      'nav a',
+      'nav button',
+      'nav [role="menuitem"]',
+      'header a',
+      'header button',
+      '[class*="nav" i] a',
+      '[class*="nav" i] button',
+      '[class*="menu" i] a',
+      '[class*="menu" i] button',
+    ].join(', ');
+    for (const el of Array.from(document.querySelectorAll(triggerSelector))) {
+      if (!isVisible(el)) continue;
+      const text = [
+        normalise(el.textContent),
+        normalise(el.getAttribute('aria-label')),
+        normalise(el.getAttribute('title')),
+        normalise(el.getAttribute('data-testid')),
+        normalise(el.getAttribute('class')),
+      ].join(' ');
+      if (!searchRegex.test(text)) continue;
+      const visibleText = normalise(el.textContent);
+      if (visibleText.length > 180) continue;
+      const key = candidateKeyFor(el);
+      if (seenTriggers.has(key)) continue;
+      seenTriggers.add(key);
+      triggerElements.push(el);
+      if (triggerElements.length >= 18) break;
+    }
+    const triggerCandidates = triggerElements
       .map((el, index) => ({
         candidateId: `trigger-${index + 1}`,
+        selector: selectorFor(el),
+        tag: el.tagName.toLowerCase(),
+        type: el.getAttribute('type') || '',
+        role: el.getAttribute('role') || '',
+        placeholder: el.getAttribute('placeholder') || '',
+        name: el.getAttribute('name') || '',
+        id: el.getAttribute('id') || '',
+        ariaLabel: el.getAttribute('aria-label') || '',
+        title: el.getAttribute('title') || '',
+        text: normalise(el.textContent || '').slice(0, 160),
+        nearbyText: nearbyTextFor(el),
+        interaction: 'click_then_fill',
+      }));
+    const fallbackTextCandidates = triggerCandidates.length > 0 ? [] : Array.from(document.querySelectorAll('body *'))
+      .filter((el) => {
+        if (!isVisible(el)) return false;
+        const text = normalise(el.textContent || '');
+        return text && text.length <= 80 && searchRegex.test(text);
+      })
+      .slice(0, 10)
+      .map((el, index) => ({
+        candidateId: `text-trigger-${index + 1}`,
         selector: selectorFor(el),
         tag: el.tagName.toLowerCase(),
         type: el.getAttribute('type') || '',
@@ -572,7 +638,7 @@ async function captureInputCandidates(page) {
       currentUrl: window.location.href,
       title: document.title,
       pageTextSample,
-      candidates: [...directElements, ...triggerElements],
+      candidates: [...directElements, ...triggerCandidates, ...fallbackTextCandidates],
     };
   });
 }
