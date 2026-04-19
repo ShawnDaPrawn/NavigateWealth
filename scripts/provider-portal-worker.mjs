@@ -910,6 +910,38 @@ function isClickInterceptionError(error) {
   return /intercepts pointer events|Timeout .* exceeded|not clickable|element is outside|another element/i.test(message);
 }
 
+async function clickWithOverlayFallback(page, locator, options = {}) {
+  const timeout = Number(options.timeout || 5000);
+  const afterClick = async () => {
+    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+    await page.waitForTimeout(Number(options.settleMs || 600));
+  };
+
+  try {
+    await locator.click({ timeout });
+    await afterClick();
+    return 'click';
+  } catch (error) {
+    if (!isClickInterceptionError(error)) throw error;
+  }
+
+  await page.keyboard.press('Escape').catch(() => undefined);
+  await page.waitForTimeout(400);
+
+  try {
+    await locator.click({ timeout });
+    await afterClick();
+    return 'escape_click';
+  } catch (error) {
+    if (!isClickInterceptionError(error)) throw error;
+  }
+
+  await locator.dispatchEvent('click');
+  await afterClick();
+  return 'dom_click';
+}
+
 async function waitAfterSubmit(page) {
   await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
   await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
@@ -933,26 +965,7 @@ async function submitPolicySearch(page, search, searchInput, item) {
   if (search?.submitSelector) {
     const button = page.locator(search.submitSelector).first();
     if (await button.isVisible({ timeout: 1000 }).catch(() => false)) {
-      try {
-        await button.click({ timeout: 5000 });
-        await waitAfterSubmit(page);
-        return;
-      } catch (error) {
-        if (!isClickInterceptionError(error)) throw error;
-      }
-
-      await page.keyboard.press('Escape').catch(() => undefined);
-      await page.waitForTimeout(400);
-      try {
-        await button.click({ timeout: 5000 });
-        await waitAfterSubmit(page);
-        return;
-      } catch (error) {
-        if (!isClickInterceptionError(error)) throw error;
-      }
-
-      await button.dispatchEvent('click');
-      await waitAfterSubmit(page);
+      await clickWithOverlayFallback(page, button, { timeout: 5000, settleMs: 800 });
       return;
     }
   }
@@ -983,15 +996,9 @@ async function openPolicySearchResult(page, flow, item, brain) {
     const linkSelector = search.resultLinkSelector || 'a, button, [role="link"], [role="button"]';
     const link = container.locator(linkSelector).first();
     if (await link.isVisible({ timeout: 800 }).catch(() => false)) {
-      await Promise.all([
-        link.click(),
-        page.waitForLoadState('domcontentloaded').catch(() => undefined),
-      ]);
+      await clickWithOverlayFallback(page, link, { timeout: 5000 });
     } else {
-      await Promise.all([
-        container.click(),
-        page.waitForLoadState('domcontentloaded').catch(() => undefined),
-      ]);
+      await clickWithOverlayFallback(page, container, { timeout: 5000 });
     }
     return;
   }
@@ -1006,17 +1013,12 @@ async function openPolicySearchResult(page, flow, item, brain) {
       const candidate = page.locator(selector).first();
       const text = normalisePolicyNumber(await candidate.textContent().catch(() => ''));
       if (!text || !text.includes(normalizedPolicyNumber)) continue;
-      await Promise.all([
-        candidate.click().catch(async () => {
-          const nestedAction = candidate.locator('a, button, [role="link"], [role="button"]').first();
-          if (await nestedAction.isVisible({ timeout: 500 }).catch(() => false)) {
-            await nestedAction.click();
-          } else {
-            throw new Error('Remembered result selector was not clickable.');
-          }
-        }),
-        page.waitForLoadState('domcontentloaded').catch(() => undefined),
-      ]);
+      const nestedAction = candidate.locator('a, button, [role="link"], [role="button"]').first();
+      if (await nestedAction.isVisible({ timeout: 500 }).catch(() => false)) {
+        await clickWithOverlayFallback(page, nestedAction, { timeout: 5000 });
+      } else {
+        await clickWithOverlayFallback(page, candidate, { timeout: 5000 });
+      }
       await rememberBrainSelector('search_result', item, { selector }, 'deterministic');
       return;
     }
@@ -1027,15 +1029,9 @@ async function openPolicySearchResult(page, flow, item, brain) {
     const locator = page.locator(candidate.selector).first();
     const nestedAction = locator.locator(search.resultLinkSelector || 'a, button, [role="link"], [role="button"]').first();
     if (await nestedAction.isVisible({ timeout: 800 }).catch(() => false)) {
-      await Promise.all([
-        nestedAction.click(),
-        page.waitForLoadState('domcontentloaded').catch(() => undefined),
-      ]);
+      await clickWithOverlayFallback(page, nestedAction, { timeout: 5000 });
     } else {
-      await Promise.all([
-        locator.click(),
-        page.waitForLoadState('domcontentloaded').catch(() => undefined),
-      ]);
+      await clickWithOverlayFallback(page, locator, { timeout: 5000 });
     }
     addItemWarning(item.id, `Smart assist chose a search result. ${describeBrainDecision(decision)}`);
     if (smartAssist.rememberSelectors) {
