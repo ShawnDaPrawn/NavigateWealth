@@ -1,4 +1,15 @@
 project_id = "vpjmdsltwrnpefzcgdmz"
 
 [functions.make-server-91ed8379]
+# `verify_jwt = false` here is INTENTIONAL — the function exposes anonymous
+# health-check endpoints (`/make-server-91ed8379/health` and
+# `/make-server-91ed8379/health/ready`) used by uptime monitoring.
+#
+# Defense-in-depth (Guidelines §12.4): every sub-router applies
+# `app.use('*', requireAuth)` (or stricter) at mount time, so the gateway
+# pass-through does NOT translate to unauthenticated business logic. Adding
+# a new route file? Apply the sub-router middleware first.
+#
+# Phase 1 deliverable (Plan §0.1 step 5): split health into an
+# unauthenticated sibling function so this can flip to `verify_jwt = true`.
 verify_jwt = false
