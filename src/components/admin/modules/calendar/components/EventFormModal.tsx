@@ -145,9 +145,6 @@ export function EventFormModal({
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
 
-  // Reminder state
-  const [sendReminders, setSendReminders] = useState(false);
-  
   // Multi-select state
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [openClientSelect, setOpenClientSelect] = useState(false);
@@ -166,8 +163,6 @@ export function EventFormModal({
         video_link: event.video_link || '',
         client_id: event.client_id || '',
       });
-      // Reset reminder toggle on edit (or could fetch if stored)
-      setSendReminders(false);
 
       // Initialize selected clients from event
       const initialClientIds = new Set<string>();
@@ -225,7 +220,6 @@ export function EventFormModal({
       setRecurrenceFrequency('weekly');
       setRecurrenceInterval(1);
       setRecurrenceEndDate('');
-      setSendReminders(false);
     }
   }, [event, open]);
 
@@ -266,31 +260,6 @@ export function EventFormModal({
     if (formData.location_type === 'in_person' && !formData.location.trim()) {
       toast.error('Please specify the location address or details');
       return;
-    }
-
-    // Validate Reminder Window & Client Email
-    if (sendReminders) {
-      const startMs = new Date(formData.start_at).getTime();
-      const nowMs = new Date().getTime();
-      
-      // 35 minutes buffer
-      if (startMs < nowMs + 35 * 60 * 1000) {
-        toast.error('To send automatic email reminders, the event must start at least 35 minutes in the future.');
-        return;
-      }
-
-      // Check Client Email
-      if (selectedClientIds.length === 0) {
-         toast.error('Please select at least one client to enable email reminders.');
-         return;
-      }
-
-      const primaryClientId = selectedClientIds[0];
-      const client = clients.find(c => c.id === primaryClientId);
-      if (!client?.email) {
-        toast.error('The primary selected client does not have an email address on file. Cannot send reminders.');
-        return;
-      }
     }
 
     // Validate Video URL
@@ -382,7 +351,6 @@ export function EventFormModal({
       client_id: selectedClientIds.length > 0 ? selectedClientIds[0] : null,
       attendees: attendees,
       recurrence_rule: recurrenceRule,
-      create_reminder: sendReminders,
     });
   };
 
@@ -808,29 +776,6 @@ export function EventFormModal({
                     </PopoverContent>
                   </Popover>
                 </div>
-
-                {/* Email Reminders Toggle */}
-                <div className="flex items-center justify-between p-4 rounded-lg border border-gray-100 bg-gray-50/50">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="send_reminders" className="text-sm font-medium text-gray-900 cursor-pointer">
-                      Send Email Reminders
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Send reminders to all selected clients 1 day and 30 mins before
-                    </p>
-                  </div>
-                  <Switch
-                    id="send_reminders"
-                    checked={sendReminders}
-                    onCheckedChange={setSendReminders}
-                    disabled={selectedClientIds.length === 0}
-                  />
-                </div>
-                {sendReminders && selectedClientIds.length === 0 && (
-                   <p className="text-xs text-amber-600 mt-1 pl-4">
-                     Please select at least one client to enable reminders.
-                   </p>
-                )}
 
                 {/* Description */}
                 <div className="space-y-2">

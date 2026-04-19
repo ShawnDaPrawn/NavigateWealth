@@ -8,7 +8,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner@2.0.3';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { calendarApi } from '../api';
 import type {
   CalendarEvent,
@@ -85,39 +84,8 @@ export function useCreateEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateEventInput): Promise<CalendarEvent> => {
-      // Remove create_reminder before sending to database (frontend-only flag)
-      const { create_reminder, ...eventData } = input;
-      
-      const event = await calendarApi.createEvent(eventData);
-
-      // Handle Reminders (if enabled)
-      if (create_reminder && input.client_id) {
-        try {
-          await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/communication/calendar/reminder`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${publicAnonKey}`,
-              },
-              body: JSON.stringify({
-                eventId: event.id,
-                clientId: input.client_id,
-                eventData: event,
-              }),
-            }
-          );
-        } catch (reminderError) {
-          console.error('Failed to schedule reminders:', reminderError);
-          // Don't block success of event creation, just warn
-          toast.warning('Event created but failed to schedule email reminders');
-        }
-      }
-
-      return event;
-    },
+    mutationFn: async (input: CreateEventInput): Promise<CalendarEvent> =>
+      calendarApi.createEvent(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
       toast.success('Event created successfully');
