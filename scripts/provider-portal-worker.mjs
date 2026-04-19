@@ -415,6 +415,11 @@ function describeBrainDecision(decision) {
   return `${decision.action || 'stop_uncertain'} (${decision.confidence || 'low'}): ${decision.reason || 'No reason supplied.'}`;
 }
 
+function describeBrainFallbackError(error) {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return message.replace(/\s+/g, ' ').trim().slice(0, 160) || 'unknown error';
+}
+
 function isNavigationContextError(error) {
   const message = error instanceof Error ? error.message : String(error || '');
   return /Execution context was destroyed|most likely because of a navigation|Cannot find context with specified id|navigation/i.test(message);
@@ -704,6 +709,62 @@ async function captureSearchResultCandidates(page, flow) {
   }, resultSelector);
 }
 
+function fallbackInputCandidateFromSnapshot(candidates = [], labels = []) {
+  const escapedLabels = labels
+    .map((label) => String(label || '').trim())
+    .filter(Boolean)
+    .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const labelRegex = escapedLabels.length > 0 ? new RegExp(escapedLabels.join('|'), 'i') : null;
+  const intentRegex = /(search|find|lookup|policy|client|clients|investor|investors|investment|investments|account|portfolio)/i;
+  const rejectRegex = /(otp|one-time|verification|password|passcode|username|email)/i;
+
+  const scored = candidates
+    .filter((entry) => entry && typeof entry.selector === 'string' && entry.selector.trim())
+    .map((entry) => {
+      const text = [
+        entry.placeholder,
+        entry.ariaLabel,
+        entry.title,
+        entry.name,
+        entry.id,
+        entry.text,
+        entry.nearbyText,
+      ].map((value) => String(value || '').trim()).join(' ');
+      let score = 0;
+      if ((entry.interaction || 'fill') === 'fill') score += 8;
+      if (labelRegex && labelRegex.test(text)) score += 6;
+      if (intentRegex.test(text)) score += 4;
+      if (rejectRegex.test(text)) score -= 20;
+      return { entry, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return scored[0]?.entry || null;
+}
+
+function fallbackResultCandidateFromSnapshot(candidates = [], policyNumber) {
+  const target = normalisePolicyNumber(policyNumber);
+  const scored = candidates
+    .filter((entry) => entry && typeof entry.selector === 'string' && entry.selector.trim())
+    .map((entry) => {
+      const text = normalisePolicyNumber([
+        entry.text,
+        entry.nearbyText,
+        entry.ariaLabel,
+        entry.title,
+        entry.name,
+        entry.id,
+      ].map((value) => String(value || '').trim()).join(' '));
+      let score = 0;
+      if (target && text.includes(target)) score += 20;
+      if (/policy|account|invest|client|result|row/.test(text)) score += 3;
+      return { entry, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return scored[0]?.entry || null;
+}
+
 async function chooseInputWithBrain(page, flow, item) {
   const snapshot = await captureInputCandidates(page);
   if (!Array.isArray(snapshot?.candidates) || snapshot.candidates.length === 0) {
@@ -712,7 +773,23 @@ async function chooseInputWithBrain(page, flow, item) {
       ? `No visible search inputs or search triggers were available for smart assist. Page sample: ${pageHint}`
       : 'No visible search inputs or search triggers were available for smart assist.');
   }
-  const response = await requestBrainDecision('search_input', page, flow, item, snapshot);
+  let response;
+  try {
+    response = await requestBrainDecision('search_input', page, flow, item, snapshot);
+  } catch (error) {
+    const fallbackCandidate = fallbackInputCandidateFromSnapshot(snapshot.candidates, splitLabels(flow?.search?.searchInputLabels));
+    if (!fallbackCandidate?.selector) throw error;
+    return {
+      candidate: fallbackCandidate,
+      decision: {
+        action: 'use_candidate',
+        candidateId: String(fallbackCandidate.candidateId || ''),
+        confidence: 'low',
+        reason: `Smart assist fallback used after brain request failed: ${describeBrainFallbackError(error)}.`,
+        origin: 'fallback',
+      },
+    };
+  }
   const decision = response?.decision || null;
   if (!decision || decision.action !== 'use_candidate' || !decision.candidateId) {
     throw new Error(`Smart assist stopped without a safe search-field choice: ${describeBrainDecision(decision)}`);
@@ -721,7 +798,7 @@ async function chooseInputWithBrain(page, flow, item) {
   if (!candidate?.selector) {
     throw new Error('Smart assist chose a search field candidate that is no longer available.');
   }
-  return { candidate, decision };
+  return { candidate, decision: { ...decision, origin: 'brain' } };
 }
 
 async function chooseSearchResultWithBrain(page, flow, item) {
@@ -729,7 +806,23 @@ async function chooseSearchResultWithBrain(page, flow, item) {
   if (!Array.isArray(snapshot?.candidates) || snapshot.candidates.length === 0) {
     throw new Error('No visible search results were available for smart assist.');
   }
-  const response = await requestBrainDecision('search_result', page, flow, item, snapshot);
+  let response;
+  try {
+    response = await requestBrainDecision('search_result', page, flow, item, snapshot);
+  } catch (error) {
+    const fallbackCandidate = fallbackResultCandidateFromSnapshot(snapshot.candidates, item.policyNumber);
+    if (!fallbackCandidate?.selector) throw error;
+    return {
+      candidate: fallbackCandidate,
+      decision: {
+        action: 'use_candidate',
+        candidateId: String(fallbackCandidate.candidateId || ''),
+        confidence: 'low',
+        reason: `Smart assist fallback used after brain request failed: ${describeBrainFallbackError(error)}.`,
+        origin: 'fallback',
+      },
+    };
+  }
   const decision = response?.decision || null;
   if (!decision || decision.action !== 'use_candidate' || !decision.candidateId) {
     throw new Error(`Smart assist stopped without a safe result choice: ${describeBrainDecision(decision)}`);
@@ -738,7 +831,7 @@ async function chooseSearchResultWithBrain(page, flow, item) {
   if (!candidate?.selector) {
     throw new Error('Smart assist chose a result candidate that is no longer available.');
   }
-  return { candidate, decision };
+  return { candidate, decision: { ...decision, origin: 'brain' } };
 }
 
 async function findClickableByIntent(page, selector, labels = []) {
@@ -1035,7 +1128,7 @@ async function openPolicySearchResult(page, flow, item, brain) {
     }
     addItemWarning(item.id, `Smart assist chose a search result. ${describeBrainDecision(decision)}`);
     if (smartAssist.rememberSelectors) {
-      await rememberBrainSelector('search_result', item, candidate, 'brain');
+      await rememberBrainSelector('search_result', item, candidate, decision?.origin === 'fallback' ? 'deterministic' : 'brain');
     }
     return;
   }
@@ -1096,7 +1189,7 @@ async function searchPolicyByNumber(page, flow, item, brain) {
         ]);
         await page.waitForTimeout(1200);
         if (smartAssist.rememberSelectors) {
-          await rememberBrainSelector('search_input', item, brainChoice.candidate, 'brain');
+          await rememberBrainSelector('search_input', item, brainChoice.candidate, brainChoice.decision?.origin === 'fallback' ? 'deterministic' : 'brain');
         }
         try {
           searchInput = await findInputByIntent(page, search.searchInputSelector, splitLabels(search.searchInputLabels));
@@ -1123,7 +1216,7 @@ async function searchPolicyByNumber(page, flow, item, brain) {
   await submitPolicySearch(page, search, searchInput, item);
   await page.waitForTimeout(1500);
   if (usedBrainCandidate && smartAssist.rememberSelectors) {
-    await rememberBrainSelector('search_input', item, usedBrainCandidate, 'brain');
+    await rememberBrainSelector('search_input', item, usedBrainCandidate, usedBrainDecision?.origin === 'fallback' ? 'deterministic' : 'brain');
   } else if (searchInputMemoryCandidate) {
     await rememberBrainSelector('search_input', item, searchInputMemoryCandidate, 'deterministic');
   }
