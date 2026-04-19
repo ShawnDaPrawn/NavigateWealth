@@ -847,7 +847,7 @@ function getPortalBrainConfig() {
     || Deno.env.get('GOOGLE_API_KEY')
     || '',
   ).trim();
-  const model = String(Deno.env.get('NW_PORTAL_BRAIN_MODEL') || 'gemma-4-26b-a4b-it').trim();
+  const model = String(Deno.env.get('NW_PORTAL_BRAIN_MODEL') || 'gemini-2.5-flash').trim();
   const apiBase = String(Deno.env.get('NW_PORTAL_BRAIN_API_BASE') || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
   const enabled = String(Deno.env.get('NW_PORTAL_BRAIN_ENABLED') || '1').trim() !== '0';
   return {
@@ -859,8 +859,47 @@ function getPortalBrainConfig() {
   };
 }
 
+function redactBrainText(value: string, preserve: string[] = []): string {
+  let text = String(value || '');
+  const placeholders = new Map<string, string>();
+  preserve.filter(Boolean).forEach((item, index) => {
+    const token = `__NW_PRESERVE_${index}__`;
+    placeholders.set(token, item);
+    text = text.split(item).join(token);
+  });
+
+  text = text
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[REDACTED_EMAIL]')
+    .replace(/\+?\d[\d\s().-]{7,}\d/g, '[REDACTED_NUMBER]')
+    .replace(/\bR\s?\d[\d\s,]*(?:\.\d{2})?\b/gi, '[REDACTED_AMOUNT]')
+    .replace(/\b\d{6,16}\b/g, '[REDACTED_ID]');
+
+  for (const [token, original] of placeholders.entries()) {
+    text = text.split(token).join(original);
+  }
+  return text;
+}
+
+function sanitiseBrainSnapshot(value: unknown, preserve: string[] = []): unknown {
+  if (typeof value === 'string') return redactBrainText(value, preserve);
+  if (Array.isArray(value)) return value.map((item) => sanitiseBrainSnapshot(item, preserve));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        sanitiseBrainSnapshot(item, preserve),
+      ]),
+    );
+  }
+  return value;
+}
+
 function extractFirstJsonObject(value: string): string {
-  const text = String(value || '').trim();
+  const text = String(value || '')
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
   const firstBrace = text.indexOf('{');
   const lastBrace = text.lastIndexOf('}');
   if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
@@ -893,6 +932,17 @@ async function callPortalBrainModel(options: {
         temperature: 0.1,
         topP: 0.1,
         maxOutputTokens: 500,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            action: { type: 'STRING', enum: ['use_candidate', 'stop_uncertain'] },
+            candidateId: { type: 'STRING' },
+            confidence: { type: 'STRING', enum: ['high', 'medium', 'low'] },
+            reason: { type: 'STRING' },
+          },
+          required: ['action', 'candidateId', 'confidence', 'reason'],
+        },
       },
     }),
   });
@@ -919,6 +969,19 @@ async function callPortalBrainModel(options: {
   }
 
   return { text };
+}
+
+function parsePortalBrainDecision(text: string): Record<string, unknown> {
+  try {
+    return JSON.parse(extractFirstJsonObject(text)) as Record<string, unknown>;
+  } catch {
+    return {
+      action: 'stop_uncertain',
+      candidateId: null,
+      confidence: 'low',
+      reason: `Brain returned non-JSON output: ${String(text || '').trim().slice(0, 180) || 'empty response'}`,
+    };
+  }
 }
 
 function buildPortalBrainPrompt(options: {
@@ -1057,7 +1120,14 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
         instructions: 'The Allan Gray SMS OTP must be entered by an admin in Navigate Wealth. The worker will pause and poll for it; never store the OTP in a spreadsheet or flow config.',
       },
       navigation: {
-        policyListSteps: [],
+        policyListSteps: [
+          {
+            id: 'click-clients-link',
+            action: 'click',
+            selector: 'a:has-text("Clients"), button:has-text("Clients"), [role="link"]:has-text("Clients"), [role="button"]:has-text("Clients")',
+            description: 'Click the main Clients navigation item after login to reach the Allan Gray client search area.',
+          },
+        ],
         clientListSelector: '[data-testid*="client" i], a:has-text("Clients"), a:has-text("Investors")',
         clientRowSelector: '[data-testid*="client-row" i], table tbody tr',
         nextPageSelector: 'a[rel="next"], button:has-text("Next")',
@@ -2480,7 +2550,7 @@ app.post("/portal-worker/jobs/:jobId/brain/decide", async (c) => {
       instructions: flow.search?.instructions,
       labels: flow.search?.searchInputLabels,
       memory,
-      snapshot: {
+      snapshot: sanitiseBrainSnapshot({
         ...snapshot,
         candidates: candidates.slice(0, 20).map((candidate) => ({
           candidateId: String(candidate.candidateId || '').slice(0, 80),
@@ -2496,7 +2566,7 @@ app.post("/portal-worker/jobs/:jobId/brain/decide", async (c) => {
           text: String(candidate.text || '').slice(0, 240),
           nearbyText: String(candidate.nearbyText || '').slice(0, 240),
         })),
-      },
+      }, [policyNumber]) as Record<string, unknown>,
     });
 
     const result = await callPortalBrainModel({
@@ -2505,7 +2575,7 @@ app.post("/portal-worker/jobs/:jobId/brain/decide", async (c) => {
       apiBase: brain.apiBase,
       apiKey: brain.apiKey,
     });
-    const parsed = JSON.parse(extractFirstJsonObject(result.text)) as Record<string, unknown>;
+    const parsed = parsePortalBrainDecision(result.text);
     const candidateIds = new Set(candidates.map((candidate) => String(candidate.candidateId || '')).filter(Boolean));
     const action = parsed.action === 'use_candidate' ? 'use_candidate' : 'stop_uncertain';
     const candidateId = action === 'use_candidate' && candidateIds.has(String(parsed.candidateId || ''))
