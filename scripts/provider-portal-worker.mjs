@@ -360,6 +360,35 @@ function describeBrainDecision(decision) {
   return `${decision.action || 'stop_uncertain'} (${decision.confidence || 'low'}): ${decision.reason || 'No reason supplied.'}`;
 }
 
+function isNavigationContextError(error) {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return /Execution context was destroyed|most likely because of a navigation|Cannot find context with specified id|navigation/i.test(message);
+}
+
+async function evaluateWithNavigationRetry(page, pageFunction, arg, options = {}) {
+  const attempts = Math.max(1, Number(options.attempts || 3));
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
+      if (attempt > 1) {
+        await page.waitForTimeout(750);
+      }
+      return await page.evaluate(pageFunction, arg);
+    } catch (error) {
+      lastError = error;
+      if (attempt >= attempts || !isNavigationContextError(error)) {
+        throw error;
+      }
+      await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
+      await page.waitForTimeout(500);
+    }
+  }
+
+  throw lastError || new Error('Page evaluation failed.');
+}
+
 async function rememberBrainSelector(stage, item, candidate, source = 'brain') {
   if (!candidate?.selector) return;
   await apiFetch(workerJobPath('/brain/memory'), {
@@ -394,7 +423,7 @@ async function requestBrainDecision(stage, page, flow, item, snapshot) {
 }
 
 async function captureInputCandidates(page) {
-  return page.evaluate(() => {
+  return evaluateWithNavigationRetry(page, () => {
     const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
     const searchRegex = /(search|find|lookup|policy|client|investor|investment|account|portfolio|contract|member|record)/i;
     const isVisible = (el) => {
@@ -495,7 +524,7 @@ async function captureInputCandidates(page) {
 
 async function captureSearchResultCandidates(page, flow) {
   const resultSelector = flow?.search?.resultContainerSelector || 'table tbody tr, [data-testid*="result" i], [data-testid*="policy" i], a, [role="row"]';
-  return page.evaluate((selector) => {
+  return evaluateWithNavigationRetry(page, (selector) => {
     const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
     const isVisible = (el) => {
       if (!(el instanceof HTMLElement)) return false;
@@ -904,7 +933,10 @@ async function searchPolicyByNumber(page, flow, item, brain) {
       addItemWarning(item.id, `Smart assist chose a ${interaction === 'click_then_fill' ? 'search trigger' : 'search field'}. ${describeBrainDecision(brainChoice.decision)}`);
 
       if (interaction === 'click_then_fill') {
-        await candidateLocator.click();
+        await Promise.all([
+          candidateLocator.click(),
+          page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined),
+        ]);
         await page.waitForTimeout(1200);
         if (smartAssist.rememberSelectors) {
           await rememberBrainSelector('search_input', item, brainChoice.candidate, 'brain');
@@ -947,7 +979,7 @@ async function searchPolicyByNumber(page, flow, item, brain) {
 }
 
 async function extractByLabels(page, fields) {
-  return page.evaluate((fieldDefs) => {
+  return evaluateWithNavigationRetry(page, (fieldDefs) => {
     const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
     const isUseful = (value) => {
       const text = normalise(value);
@@ -1073,7 +1105,7 @@ async function postDiscoveryReport(report) {
 }
 
 async function captureDiscoveryReport(page, flow, options = {}) {
-  const report = await page.evaluate(() => {
+  const report = await evaluateWithNavigationRetry(page, () => {
     const safeCommonText = /^(log in|login|sign in|continue|verify|submit|next|previous|clients?|investors?|policies|policy details|investments?|portfolio|search|filter|view|details|statements?|download|export)$/i;
     const getStableLabel = (el) => {
       const attrLabel = el.getAttribute('aria-label')
