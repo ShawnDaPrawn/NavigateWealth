@@ -480,7 +480,8 @@ async function requestBrainDecision(stage, page, flow, item, snapshot) {
 async function captureInputCandidates(page) {
   return evaluateWithNavigationRetry(page, () => {
     const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
-    const searchRegex = /(search|find|lookup|policy|client|investor|investment|account|portfolio|contract|member|record)/i;
+    const searchRegex = /(search|find|lookup|policy|client|investor|investment|account|portfolio|contract|member|record|practice|fund)/i;
+    const navigationRegex = /(clients?|investors?|polic(?:y|ies)|funds?|portfolio|practice|member|account|records?)/i;
     const isVisible = (el) => {
       if (!(el instanceof HTMLElement)) return false;
       const style = window.getComputedStyle(el);
@@ -539,21 +540,22 @@ async function captureInputCandidates(page) {
         nearbyText: nearbyTextFor(el),
         interaction: 'fill',
       }));
-    const triggerElements = Array.from(document.querySelectorAll('button, a, [role="button"], [role="link"], [data-testid*="search" i], [class*="search" i], [aria-label*="search" i], [title*="search" i]'))
-      .filter((el) => {
-        if (!isVisible(el)) return false;
-        const text = [
-          normalise(el.textContent),
-          normalise(el.getAttribute('aria-label')),
-          normalise(el.getAttribute('title')),
-          normalise(el.getAttribute('data-testid')),
-          normalise(el.getAttribute('class')),
-        ].join(' ');
-        return searchRegex.test(text);
-      })
-      .slice(0, 12)
-      .map((el, index) => ({
-        candidateId: `trigger-${index + 1}`,
+    const interactiveElements = Array.from(document.querySelectorAll(
+      'button, a, [role="button"], [role="link"], [role="menuitem"], [role="tab"], [tabindex], [onclick], [data-testid*="search" i], [class*="search" i], [aria-label*="search" i], [title*="search" i]',
+    ))
+      .filter((el) => isVisible(el))
+      .slice(0, 40);
+
+    const triggerCandidates = interactiveElements.map((el) => {
+      const signalText = [
+        normalise(el.textContent),
+        normalise(el.getAttribute('aria-label')),
+        normalise(el.getAttribute('title')),
+        normalise(el.getAttribute('data-testid')),
+        normalise(el.getAttribute('class')),
+      ].join(' ');
+      return {
+        signalText,
         selector: selectorFor(el),
         tag: el.tagName.toLowerCase(),
         type: el.getAttribute('type') || '',
@@ -566,7 +568,34 @@ async function captureInputCandidates(page) {
         text: normalise(el.textContent || '').slice(0, 160),
         nearbyText: nearbyTextFor(el),
         interaction: 'click_then_fill',
-      }));
+      };
+    }).filter((candidate) => candidate.signalText || candidate.text || candidate.nearbyText);
+
+    const searchMatchedTriggers = triggerCandidates.filter((candidate) => searchRegex.test(candidate.signalText));
+    const navMatchedTriggers = triggerCandidates.filter((candidate) => navigationRegex.test(candidate.signalText));
+    const selectedTriggers = (
+      searchMatchedTriggers.length > 0
+        ? searchMatchedTriggers
+        : navMatchedTriggers.length > 0
+          ? navMatchedTriggers
+          : triggerCandidates
+    ).slice(0, 12);
+
+    const triggerElements = selectedTriggers.map((candidate, index) => ({
+      candidateId: `trigger-${index + 1}`,
+      selector: candidate.selector,
+      tag: candidate.tag,
+      type: candidate.type,
+      role: candidate.role,
+      placeholder: candidate.placeholder,
+      name: candidate.name,
+      id: candidate.id,
+      ariaLabel: candidate.ariaLabel,
+      title: candidate.title,
+      text: candidate.text,
+      nearbyText: candidate.nearbyText,
+      interaction: candidate.interaction,
+    }));
     const pageTextSample = normalise(document.body?.innerText || '').slice(0, 1200);
     return {
       currentUrl: window.location.href,
@@ -639,12 +668,22 @@ async function captureSearchResultCandidates(page, flow) {
 }
 
 async function chooseInputWithBrain(page, flow, item) {
-  const snapshot = await captureInputCandidates(page);
+  let snapshot = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    snapshot = await captureInputCandidates(page);
+    if (Array.isArray(snapshot?.candidates) && snapshot.candidates.length > 0) break;
+    if (attempt < 3) {
+      await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
+      await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+      await page.waitForTimeout(1200);
+    }
+  }
+
   if (!Array.isArray(snapshot?.candidates) || snapshot.candidates.length === 0) {
     const pageHint = String(snapshot?.pageTextSample || '').slice(0, 240);
     throw new Error(pageHint
-      ? `No visible search inputs or search triggers were available for smart assist. Page sample: ${pageHint}`
-      : 'No visible search inputs or search triggers were available for smart assist.');
+      ? `No visible search inputs or search triggers were available for smart assist after retrying. Page sample: ${pageHint}`
+      : 'No visible search inputs or search triggers were available for smart assist after retrying.');
   }
   const response = await requestBrainDecision('search_input', page, flow, item, snapshot);
   const decision = response?.decision || null;
