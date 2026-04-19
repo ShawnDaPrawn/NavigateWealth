@@ -1235,7 +1235,27 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
 
 async function getPortalFlow(provider: KvProvider, providerId: string): Promise<PortalProviderFlow> {
   const configured = (await kv.get(`portal-flow:${providerId}`)) as PortalProviderFlow | null;
-  return configured || getDefaultPortalFlow(provider, providerId);
+  const defaultFlow = getDefaultPortalFlow(provider, providerId);
+  if (!configured) return defaultFlow;
+
+  return {
+    ...defaultFlow,
+    ...configured,
+    navigation: {
+      ...(defaultFlow.navigation || {}),
+      ...(configured.navigation || {}),
+      policyListSteps: Array.isArray(configured.navigation?.policyListSteps) && configured.navigation.policyListSteps.length > 0
+        ? configured.navigation.policyListSteps
+        : defaultFlow.navigation?.policyListSteps || [],
+    },
+    search: normaliseSearchConfig(configured.search, defaultFlow.search),
+    extraction: {
+      ...(defaultFlow.extraction || {}),
+      ...(configured.extraction || {}),
+      fields: normaliseExtractionFields(configured.extraction?.fields, defaultFlow.extraction?.fields || []),
+    },
+    policySchedule: normalisePolicyScheduleConfig(configured.policySchedule, defaultFlow.policySchedule),
+  };
 }
 
 function sanitisePortalFlow(flow: PortalProviderFlow): PortalProviderFlow {
@@ -1870,7 +1890,9 @@ app.put("/portal-flows/:providerId", requireAuth, async (c) => {
       navigation: {
         ...(defaultFlow.navigation || {}),
         ...(body?.navigation || {}),
-        policyListSteps: normaliseFlowSteps(body?.navigation?.policyListSteps),
+        policyListSteps: Array.isArray(body?.navigation?.policyListSteps)
+          ? normaliseFlowSteps(body.navigation.policyListSteps)
+          : defaultFlow.navigation?.policyListSteps || [],
       },
       search: normaliseSearchConfig(body?.search, defaultFlow.search),
       extraction: {

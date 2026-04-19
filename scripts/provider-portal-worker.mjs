@@ -364,6 +364,43 @@ function splitLabels(value) {
     .filter(Boolean);
 }
 
+function candidateSearchText(candidate) {
+  return [
+    candidate?.text,
+    candidate?.nearbyText,
+    candidate?.placeholder,
+    candidate?.ariaLabel,
+    candidate?.title,
+    candidate?.name,
+    candidate?.id,
+    candidate?.role,
+  ].map((value) => String(value || '')).join(' ').trim();
+}
+
+function chooseDeterministicSearchCandidate(candidates = []) {
+  const usable = candidates.filter((candidate) => {
+    const text = candidateSearchText(candidate);
+    return !/password|otp|one[-\s]*time|verification|username|log\s*in|login|sign\s*in|home|legal|help|contact/i.test(text);
+  });
+
+  const directInput = usable.find((candidate) =>
+    candidate.interaction === 'fill'
+    && /policy|account|client|investor|search|portfolio|contract|member/i.test(candidateSearchText(candidate)),
+  );
+  if (directInput) return { candidate: directInput, reason: 'deterministic input match' };
+
+  const navTrigger = usable.find((candidate) =>
+    candidate.interaction === 'click_then_fill'
+    && /\b(clients?|investors?|search|accounts?|policies?|portfolio|funds?|practice)\b/i.test(candidateSearchText(candidate)),
+  );
+  if (navTrigger) return { candidate: navTrigger, reason: 'deterministic navigation/search trigger match' };
+
+  const onlyInput = usable.filter((candidate) => candidate.interaction === 'fill');
+  if (onlyInput.length === 1) return { candidate: onlyInput[0], reason: 'only visible fillable candidate' };
+
+  return null;
+}
+
 async function claimNextPolicyItem() {
   const data = await apiFetch(jobPath('/items/claim'), {
     method: 'POST',
@@ -712,9 +749,28 @@ async function chooseInputWithBrain(page, flow, item) {
       ? `No visible search inputs or search triggers were available for smart assist. Page sample: ${pageHint}`
       : 'No visible search inputs or search triggers were available for smart assist.');
   }
-  const response = await requestBrainDecision('search_input', page, flow, item, snapshot);
+  const fallback = chooseDeterministicSearchCandidate(snapshot.candidates);
+  const response = await requestBrainDecision('search_input', page, flow, item, snapshot).catch((error) => ({
+    decision: {
+      action: 'stop_uncertain',
+      candidateId: null,
+      confidence: 'low',
+      reason: `Brain request failed: ${error instanceof Error ? error.message : String(error)}`,
+    },
+  }));
   const decision = response?.decision || null;
   if (!decision || decision.action !== 'use_candidate' || !decision.candidateId) {
+    if (fallback?.candidate) {
+      return {
+        candidate: fallback.candidate,
+        decision: {
+          action: 'use_candidate',
+          candidateId: fallback.candidate.candidateId,
+          confidence: 'medium',
+          reason: `${fallback.reason}; brain said: ${describeBrainDecision(decision)}`.slice(0, 300),
+        },
+      };
+    }
     throw new Error(`Smart assist stopped without a safe search-field choice: ${describeBrainDecision(decision)}`);
   }
   const candidate = snapshot.candidates.find((entry) => entry.candidateId === decision.candidateId);
@@ -849,9 +905,15 @@ async function findInputByIntent(page, selector, labels = [], rememberedSelector
     'input[id*="search" i]',
     'input[aria-label*="search" i]',
     'input[title*="search" i]',
+    'input[data-qa*="search" i]',
+    'input[data-qa*="client" i]',
+    'input[data-qa*="account" i]',
+    'input[data-qa*="policy" i]',
     'textarea[placeholder*="search" i]',
     'textarea[aria-label*="search" i]',
+    'textarea[data-qa*="search" i]',
     'select[name*="search" i]',
+    'select[data-qa*="search" i]',
     '[role="textbox"]',
     '[role="searchbox"]',
     '[role="combobox"]',
@@ -977,10 +1039,19 @@ async function openPolicySearchResult(page, flow, item, brain) {
   const search = flow.search || {};
   const normalizedPolicyNumber = normalisePolicyNumber(item.policyNumber);
   const noResultsText = splitLabels(search.noResultsText);
+  const dataQaKey = String(item.policyNumber || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
   for (const text of noResultsText) {
     if (await page.getByText(new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')).first().isVisible({ timeout: 500 }).catch(() => false)) {
       throw new Error(`Provider search returned "${text}" for policy ${item.policyNumber}.`);
+    }
+  }
+
+  if (dataQaKey) {
+    const exactDataRow = page.locator(`[data-qa-key="${dataQaKey}"]`).first();
+    if (await exactDataRow.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await clickWithOverlayFallback(page, exactDataRow, { timeout: 5000 });
+      return;
     }
   }
 
@@ -1090,10 +1161,7 @@ async function searchPolicyByNumber(page, flow, item, brain) {
       addItemWarning(item.id, `Smart assist chose a ${interaction === 'click_then_fill' ? 'search trigger' : 'search field'}. ${describeBrainDecision(brainChoice.decision)}`);
 
       if (interaction === 'click_then_fill') {
-        await Promise.all([
-          candidateLocator.click(),
-          page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined),
-        ]);
+        await clickWithOverlayFallback(page, candidateLocator, { timeout: 5000, settleMs: 1200 });
         await page.waitForTimeout(1200);
         if (smartAssist.rememberSelectors) {
           await rememberBrainSelector('search_input', item, brainChoice.candidate, 'brain');
