@@ -301,6 +301,61 @@ function normalisePolicyNumber(value) {
     .replace(/[-_/]/g, '');
 }
 
+function sampleText(value, maxLength = 500) {
+  return String(value || '').trim().replace(/\s+/g, ' ').slice(0, maxLength);
+}
+
+async function capturePolicyConfirmationSnapshot(page) {
+  const parts = [];
+  const title = await page.title().catch(() => '');
+  const currentUrl = page.url();
+
+  const mainText = await page.locator('body').innerText({ timeout: 3000 }).catch(() => '');
+  if (mainText) parts.push(mainText);
+
+  for (const frame of page.frames()) {
+    if (frame === page.mainFrame()) continue;
+    const frameText = await frame.locator('body').innerText({ timeout: 1500 }).catch(() => '');
+    if (frameText) parts.push(frameText);
+  }
+
+  const combinedText = parts.join('\n');
+  return {
+    currentUrl,
+    title,
+    text: combinedText,
+    searchableText: [currentUrl, title, combinedText].join('\n'),
+    sample: sampleText(combinedText),
+  };
+}
+
+async function waitForPolicyNumberConfirmation(page, policyNumber, timeoutMs = 25000) {
+  const normalizedPolicyNumber = normalisePolicyNumber(policyNumber);
+  const deadline = Date.now() + timeoutMs;
+  let latestSnapshot = null;
+
+  while (Date.now() < deadline) {
+    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+    latestSnapshot = await capturePolicyConfirmationSnapshot(page);
+    if (normalisePolicyNumber(latestSnapshot.searchableText).includes(normalizedPolicyNumber)) {
+      return { confirmed: true, snapshot: latestSnapshot };
+    }
+    await page.waitForTimeout(1000);
+  }
+
+  return {
+    confirmed: false,
+    snapshot: latestSnapshot || await capturePolicyConfirmationSnapshot(page).catch(() => ({
+      currentUrl: page.url(),
+      title: '',
+      text: '',
+      searchableText: page.url(),
+      sample: '',
+    })),
+  };
+}
+
 function splitLabels(value) {
   if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean);
   return String(value || '')
@@ -972,9 +1027,15 @@ async function searchPolicyByNumber(page, flow, item, brain) {
   }
   await openPolicySearchResult(page, flow, item, brain);
 
-  const bodyText = normalisePolicyNumber(await page.locator('body').innerText({ timeout: 10000 }).catch(() => ''));
-  if (!bodyText.includes(normalisePolicyNumber(item.policyNumber))) {
-    throw new Error(`Opened page did not confirm policy number ${item.policyNumber}.`);
+  const confirmation = await waitForPolicyNumberConfirmation(page, item.policyNumber);
+  if (!confirmation.confirmed) {
+    const snapshot = confirmation.snapshot || {};
+    throw new Error(
+      `Opened page did not confirm policy number ${item.policyNumber}. `
+      + `URL: ${snapshot.currentUrl || page.url()}. `
+      + `Title: ${snapshot.title || 'unknown'}. `
+      + `Visible text sample: ${snapshot.sample || 'none'}`,
+    );
   }
 }
 
