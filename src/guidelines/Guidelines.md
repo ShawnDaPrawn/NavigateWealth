@@ -2,6 +2,15 @@ Navigate Wealth Admin Panel
 
 Production Engineering, Architecture & Design System Guidelines (v5)
 
+> **Companion document - read in tandem.**
+> `docs/PRODUCTION-READINESS.md` is the *status & roadmap*: what is
+> actually landed on clean `main`, what is only proposed or stashed, what to
+> do next, and the incident log. **This file** is the *rules*: how code must
+> be structured. When in doubt about *what to do next*, consult
+> PRODUCTION-READINESS. When in doubt about *how to do it*, consult this
+> file. If status text and the repository disagree, verify the repository
+> first and update the status document.
+
 Purpose and Scope
 These guidelines define how code, UI, and architecture must be structured and evolved within the Navigate Wealth Admin Panel.
 

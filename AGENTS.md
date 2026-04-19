@@ -1,29 +1,100 @@
 # AGENTS.md
 
-## Cursor Cloud specific instructions
+## READ FIRST - Status And Roadmap
 
-**Product**: Navigate Wealth — a React SPA (Vite + TypeScript) for a South African financial advisory platform. Single `package.json`, not a monorepo.
+Before proposing any large change, read:
 
-**Backend**: Fully remote Supabase (Edge Functions via Deno/Hono). No local backend setup is needed. Supabase credentials are hardcoded in `src/utils/supabase/info.tsx`. The frontend connects to the deployed edge functions at `https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379`.
+```text
+docs/PRODUCTION-READINESS.md
+```
 
-### Dev commands
+That file is the status ledger for:
 
-All standard commands are in `package.json`:
+- what is actually landed on clean `main`
+- what was only proposed/stashed by Claude
+- what remains operational versus engineering work
+- known incidents and the lessons from them
+- what future agents should do next
+
+Do not assume Claude's broad production-readiness update is landed just
+because this repository contains a roadmap document. The roadmap explicitly
+separates `current main` from `proposed/stashed`.
+
+If the user asks any version of:
+
+- "Is this production grade?"
+- "What should I do now?"
+- "What should we refactor next?"
+- "Why is CORS permissive?"
+- "What did Claude change?"
+- "What is left?"
+
+read `docs/PRODUCTION-READINESS.md` first and answer from it.
+
+---
+
+## Cursor Cloud Specific Instructions
+
+**Product**: Navigate Wealth - a React SPA (Vite + TypeScript) for a South
+African financial advisory platform. Single `package.json`, not a monorepo.
+
+**Backend**: Fully remote Supabase Edge Functions via Deno/Hono. No local
+backend setup is needed. Supabase credentials currently have hardcoded
+fallbacks in `src/utils/supabase/info.tsx`. The frontend connects to the
+deployed Edge Function at:
+
+```text
+https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379
+```
+
+The Edge Function has an intentional CORS fallback: if `NW_ALLOWED_ORIGINS` is
+unset, it reflects the incoming browser origin and logs a warning. Do not
+"tighten" this fallback casually; it exists because a too-strict fallback
+previously locked production out. Auth middleware is the real security
+boundary.
+
+## Dev Commands
+
+Commands that exist on clean `main` as of 2026-04-20:
 
 | Task | Command |
-|------|---------|
+|---|---|
 | Install deps | `npm install` |
 | Dev server | `npm run dev` (Vite, port 3000) |
 | Build | `npm run build` |
-| Tests | `npm test` (vitest) |
+| Tests | `npm test` |
+| Test watch | `npm run test:watch` |
+| UI inspection | `npm run ui:inspect -- --path /your-route --output tmp/ui-inspect/check.png` |
+| Provider sync | `npm run provider:sync` |
+| Provider worker | `npm run provider:worker` |
 
-### Notes
+Commands that do **not** exist on clean `main` unless later tooling work lands:
 
-- After changing Edge Function behaviour (for example `GET /admin/stats` fields such as `incomplete` or `draft`), deploy the Supabase Edge Function so production returns the updated JSON; the SPA always calls the deployed function URL above.
-- No ESLint config exists in the repo; there is no lint command.
-- The test suite has a pre-existing issue: `resolveNestedKey.test.tsx` uses custom assertion logging instead of vitest `test()`/`it()` functions, so vitest reports it as "failed suite" despite all 17 internal assertions passing. 64 tests across 3 other suites pass cleanly.
-- The Vite dev server opens a browser by default (`server.open: true` in `vite.config.ts`).
-- `tsconfig.json` is at `src/tsconfig.json` (not project root).
-- Path alias `@` maps to `./src` (configured in both `vite.config.ts` and `tsconfig.json`).
-- **Architecture guidelines**: `src/guidelines/Guidelines.md` (full v5). `src/Guidelines.md` is a shorter index. Section **§4.4** (in the full doc) covers code **filenames**, **storage** (KV vs Supabase Storage vs browser), and **repository layout**; Tier 2 references the same.
-- For user-visible UI changes, build-only verification is not enough. Run the browser inspection tool before sign-off: `npm run ui:inspect -- --path /your-route --output tmp/ui-inspect/check.png` (or pass `--url` for an already-running environment). Use `--click` and `--wait-for` when the UI state requires interaction, such as opening a modal or dropdown.
+- `npm run lint`
+- `npm run typecheck`
+- `npm run test:coverage`
+- `npm run format`
+- `npm run deps:audit`
+- `npm run deps:boundaries`
+- `npm run check-env`
+
+## Notes
+
+- After changing Edge Function behavior, deploy:
+  `npx supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir .`
+- The Supabase function deploy entrypoint is
+  `supabase/functions/make-server-91ed8379/index.ts`, which imports
+  `src/supabase/functions/server/index.tsx`.
+- `tsconfig.json` is at the project root.
+- Path alias `@` maps to `./src` in Vite and TypeScript config.
+- No ESLint config is present on clean `main` as of 2026-04-20.
+- The test suite has a known pre-existing issue:
+  `src/components/admin/modules/resources/components/__tests__/resolveNestedKey.test.tsx`
+  uses custom assertion logging instead of Vitest `test()`/`it()` functions.
+  It logs `17/17 passed` internally, but Vitest reports "No test suite found."
+- The Vite dev server opens `http://localhost:3000/` by default.
+- Architecture guidelines live in `src/guidelines/Guidelines.md`.
+- Status and roadmap live in `docs/PRODUCTION-READINESS.md`.
+- For user-visible UI changes, build-only verification is not enough. Run the
+  UI inspection tool before sign-off. Use `--click` and `--wait-for` when the
+  state requires interaction, such as opening a modal or dropdown.
