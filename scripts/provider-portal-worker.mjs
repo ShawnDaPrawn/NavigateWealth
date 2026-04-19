@@ -415,6 +415,87 @@ function describeBrainDecision(decision) {
   return `${decision.action || 'stop_uncertain'} (${decision.confidence || 'low'}): ${decision.reason || 'No reason supplied.'}`;
 }
 
+function chooseDeterministicInputCandidate(snapshot, configuredLabels = []) {
+  const candidates = Array.isArray(snapshot?.candidates) ? snapshot.candidates : [];
+  if (candidates.length === 0) return null;
+
+  const positiveTerms = new Set([
+    'search',
+    'find',
+    'lookup',
+    'policy',
+    'client',
+    'clients',
+    'investor',
+    'investors',
+    'portfolio',
+    'fund',
+    'funds',
+    'product',
+    'products',
+    'practice',
+    ...configuredLabels
+      .map((label) => String(label || '').toLowerCase())
+      .flatMap((label) => label.split(/[^a-z0-9]+/g))
+      .map((term) => term.trim())
+      .filter((term) => term.length >= 3),
+  ]);
+  const negativeTerms = [
+    'home',
+    'legal',
+    'help',
+    'contact',
+    'support',
+    'logout',
+    'log out',
+    'profile',
+    'settings',
+    'terms',
+    'privacy',
+  ];
+
+  let bestCandidate = null;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  for (const candidate of candidates) {
+    if (!candidate?.selector) continue;
+
+    const searchable = [
+      candidate.text,
+      candidate.placeholder,
+      candidate.ariaLabel,
+      candidate.title,
+      candidate.nearbyText,
+      candidate.name,
+      candidate.id,
+      candidate.tag,
+      candidate.type,
+      candidate.role,
+    ].join(' ').toLowerCase();
+
+    let score = 0;
+    if (candidate.interaction === 'fill') score += 100;
+    if (candidate.interaction === 'click_then_fill') score += 10;
+    if (/(searchbox|textbox|combobox)/i.test(String(candidate.role || ''))) score += 30;
+    if (/(search|text|tel|number)/i.test(String(candidate.type || ''))) score += 20;
+    if (/(input|textarea|select)/i.test(String(candidate.tag || ''))) score += 20;
+
+    for (const term of positiveTerms) {
+      if (searchable.includes(term)) score += 8;
+    }
+    for (const term of negativeTerms) {
+      if (searchable.includes(term)) score -= 18;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestCandidate = candidate;
+    }
+  }
+
+  return bestCandidate;
+}
+
 function isNavigationContextError(error) {
   const message = error instanceof Error ? error.message : String(error || '');
   return /Execution context was destroyed|most likely because of a navigation|Cannot find context with specified id|navigation/i.test(message);
@@ -712,7 +793,25 @@ async function chooseInputWithBrain(page, flow, item) {
       ? `No visible search inputs or search triggers were available for smart assist. Page sample: ${pageHint}`
       : 'No visible search inputs or search triggers were available for smart assist.');
   }
-  const response = await requestBrainDecision('search_input', page, flow, item, snapshot);
+
+  const configuredLabels = splitLabels(flow?.search?.searchInputLabels);
+  let response;
+  try {
+    response = await requestBrainDecision('search_input', page, flow, item, snapshot);
+  } catch (error) {
+    const fallbackCandidate = chooseDeterministicInputCandidate(snapshot, configuredLabels);
+    if (!fallbackCandidate) throw error;
+    const brainError = error instanceof Error ? error.message : String(error);
+    return {
+      candidate: fallbackCandidate,
+      decision: {
+        action: 'use_candidate',
+        confidence: 'low',
+        reason: `Brain request failed (${brainError.slice(0, 180)}). Falling back to deterministic candidate selection.`,
+      },
+    };
+  }
+
   const decision = response?.decision || null;
   if (!decision || decision.action !== 'use_candidate' || !decision.candidateId) {
     throw new Error(`Smart assist stopped without a safe search-field choice: ${describeBrainDecision(decision)}`);
