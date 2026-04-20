@@ -45,10 +45,11 @@ export function UploadTab({
   previewData,
   stagedRun,
   stats,
-  matchedColumnsCount
+  matchedColumnsCount,
 }: UploadTabProps) {
+  const categoryName = PRODUCT_CATEGORIES.find((c) => c.id === selectedCategoryId)?.name;
 
-  const publishableRows = stagedRun?.rows.filter(row =>
+  const publishableRows = stagedRun?.rows.filter((row) =>
     row.matchStatus === 'matched' &&
     row.diffs.length > 0 &&
     row.publishStatus !== 'published' &&
@@ -60,10 +61,10 @@ export function UploadTab({
     const className = status === 'published'
       ? 'bg-green-50 text-green-700 border-green-200'
       : status === 'matched' || status === 'pending' || status === 'auto_eligible'
-      ? 'bg-blue-50 text-blue-700 border-blue-200'
-      : status === 'skipped'
-      ? 'bg-gray-50 text-gray-600 border-gray-200'
-      : 'bg-amber-50 text-amber-700 border-amber-200';
+        ? 'bg-blue-50 text-blue-700 border-blue-200'
+        : status === 'skipped'
+          ? 'bg-gray-50 text-gray-600 border-gray-200'
+          : 'bg-amber-50 text-amber-700 border-amber-200';
 
     return (
       <Badge variant="outline" className={cn('text-[10px] capitalize', className)}>
@@ -72,9 +73,246 @@ export function UploadTab({
     );
   };
 
+  const renderStagedRun = () => (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <FileSpreadsheet className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900">
+                {stagedRun?.fileName || `${provider.name} portal extraction`}
+              </h4>
+              <p className="text-sm text-gray-500">
+                {stagedRun?.source === 'portal'
+                  ? 'Portal extraction staged from the Playwright worker'
+                  : 'Sync run staged for review'}
+              </p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClear} aria-label="Clear staged run">
+            <X className="w-4 h-4 text-gray-400" />
+          </Button>
+        </div>
+
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="rounded-lg border bg-gray-50 p-3">
+              <p className="text-[10px] uppercase text-gray-500 font-medium">Rows</p>
+              <p className="text-lg font-semibold text-gray-900">{stagedRun?.summary.totalRows || 0}</p>
+            </div>
+            <div className="rounded-lg border bg-blue-50 p-3">
+              <p className="text-[10px] uppercase text-blue-700 font-medium">Matched</p>
+              <p className="text-lg font-semibold text-blue-900">{stagedRun?.summary.matchedRows || 0}</p>
+            </div>
+            <div className="rounded-lg border bg-amber-50 p-3">
+              <p className="text-[10px] uppercase text-amber-700 font-medium">Held</p>
+              <p className="text-lg font-semibold text-amber-900">{stagedRun?.summary.heldRows || 0}</p>
+            </div>
+            <div className="rounded-lg border bg-red-50 p-3">
+              <p className="text-[10px] uppercase text-red-700 font-medium">Issues</p>
+              <p className="text-lg font-semibold text-red-900">
+                {(stagedRun?.summary.invalidRows || 0) + (stagedRun?.summary.duplicateRows || 0) + (stagedRun?.summary.unmatchedRows || 0)}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-green-50 p-3">
+              <p className="text-[10px] uppercase text-green-700 font-medium">Published</p>
+              <p className="text-lg font-semibold text-green-900">{stagedRun?.summary.publishedRows || 0}</p>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div>
+              <h5 className="font-medium text-blue-900">Policy Sync Staged</h5>
+              <p className="text-sm text-blue-700 mt-1">
+                Rows were matched by policy number, provider, and product category. Review the changes before publishing to client policies.
+              </p>
+            </div>
+          </div>
+
+          <div className="border rounded-lg overflow-x-auto bg-white">
+            <Table>
+              <TableHeader className="bg-gray-50">
+                <TableRow>
+                  <TableHead>Row</TableHead>
+                  <TableHead>Policy Number</TableHead>
+                  <TableHead>Match</TableHead>
+                  <TableHead>Publish</TableHead>
+                  <TableHead>Changes</TableHead>
+                  <TableHead>Warnings</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {stagedRun?.rows.slice(0, 25).map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="text-xs">{row.rowNumber}</TableCell>
+                    <TableCell className="text-xs font-medium">{row.policyNumber || '-'}</TableCell>
+                    <TableCell>{getStatusBadge(row.matchStatus)}</TableCell>
+                    <TableCell>{getStatusBadge(row.publishStatus)}</TableCell>
+                    <TableCell className="text-xs">
+                      {row.diffs.length > 0 ? (
+                        <div className="space-y-1">
+                          {row.diffs.slice(0, 3).map((diff) => (
+                            <div key={diff.fieldId}>
+                              <span className="font-medium">{diff.fieldName}:</span> {String(diff.oldValue ?? '-')} to {String(diff.newValue ?? '-')}
+                            </div>
+                          ))}
+                          {row.diffs.length > 3 && <span className="text-gray-400">+{row.diffs.length - 3} more</span>}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">No changes</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-amber-700">
+                      {[...row.validationErrors, ...row.warnings].slice(0, 2).join('; ') || '-'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="outline" onClick={onClear}>
+              Clear
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={onPublishRun}
+              disabled={isPublishingRun || publishableRows.length === 0}
+            >
+              {isPublishingRun ? (
+                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <UploadCloud className="w-4 h-4 mr-2" />
+              )}
+              Publish Matched Rows
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderUploadedFile = () => (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <FileSpreadsheet className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900">{uploadedFile?.name}</h4>
+              <p className="text-sm text-gray-500">{uploadedFile?.size} • Uploaded at {uploadedFile?.uploadedAt}</p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClear} aria-label="Clear uploaded file">
+            <X className="w-4 h-4 text-gray-400" />
+          </Button>
+        </div>
+
+        {!showPreview ? (
+          <div className="flex justify-end pt-4 border-t">
+            <Button
+              onClick={onProcess}
+              disabled={isProcessing}
+              className="bg-purple-600 hover:bg-purple-700 min-w-[140px]"
+            >
+              {isProcessing ? (
+                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <FileAxis3D className="w-4 h-4 mr-2" />
+              )}
+              {isProcessing ? 'Processing...' : 'Process & Preview'}
+            </Button>
+          </div>
+        ) : (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+            {previewData?.validationErrors && previewData.validationErrors.length > 0 && (
+              <div className="bg-red-50 border border-red-100 rounded-lg p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                <div>
+                  <h5 className="font-medium text-red-900">Validation Errors Detected</h5>
+                  <ul className="list-disc list-inside text-sm text-red-700 mt-1">
+                    {previewData.validationErrors.map((err, i) => <li key={i}>{err}</li>)}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div>
+                <h5 className="font-medium text-blue-900">File Processed Successfully</h5>
+                <p className="text-sm text-blue-700 mt-1">
+                  The file matched {matchedColumnsCount} configured columns for {categoryName}. Review the preview below before confirming the import.
+                </p>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-x-auto bg-white">
+              <Table>
+                <TableHeader className="bg-gray-50">
+                  <TableRow>
+                    {previewData?.headers.map((col, i) => (
+                      <TableHead
+                        key={i}
+                        className={cn(
+                          'whitespace-nowrap border-b-2',
+                          isColumnMapped(col) ? 'border-green-400 bg-green-50/20 text-green-700' : 'border-red-300 bg-red-50/20 text-red-700',
+                        )}
+                      >
+                        {col}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {previewData?.rows.map((row, idx) => (
+                    <TableRow key={idx}>
+                      {previewData.headers.map((_, cellIdx) => {
+                        const colName = previewData.headers[cellIdx];
+                        const mapped = isColumnMapped(colName);
+                        const cell = row[colName] || '';
+                        return (
+                          <TableCell
+                            key={cellIdx}
+                            className={cn(
+                              'whitespace-nowrap text-xs',
+                              mapped ? 'text-gray-700' : 'text-gray-400 bg-gray-50/50',
+                            )}
+                          >
+                            {typeof cell === 'object' ? JSON.stringify(cell) : cell}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button variant="outline" onClick={onClear}>
+                Cancel
+              </Button>
+              <Button className="bg-green-600 hover:bg-green-700" onClick={onConfirm}>
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Stage for Review
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="bg-gray-50 border-gray-200 shadow-none">
           <CardContent className="p-4">
@@ -83,9 +321,9 @@ export function UploadTab({
           </CardContent>
         </Card>
         <Card className={cn(
-          "border-gray-200 shadow-none",
-          stats.lastUpdateStatus === 'success' ? "bg-green-50/50" : 
-          stats.lastUpdateStatus === 'failed' ? "bg-red-50/50" : "bg-gray-50"
+          'border-gray-200 shadow-none',
+          stats.lastUpdateStatus === 'success' ? 'bg-green-50/50' :
+            stats.lastUpdateStatus === 'failed' ? 'bg-red-50/50' : 'bg-gray-50',
         )}>
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500 uppercase mb-1">Last Status</p>
@@ -115,8 +353,10 @@ export function UploadTab({
           <h3 className="text-lg font-semibold text-gray-900">Spreadsheet Upload</h3>
         </div>
 
-        {!uploadedFile ? (
-          <div 
+        {stagedRun ? (
+          renderStagedRun()
+        ) : !uploadedFile ? (
+          <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={onDrop}
             className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center bg-white hover:bg-blue-50/50 hover:border-blue-300 transition-all cursor-pointer"
@@ -126,225 +366,18 @@ export function UploadTab({
             </div>
             <h4 className="font-medium text-gray-900 mb-1">Drag and drop your file here</h4>
             <p className="text-sm text-gray-500 mb-6">
-              Using saved mapping for <span className="font-semibold text-blue-600">{PRODUCT_CATEGORIES.find(c => c.id === selectedCategoryId)?.name}</span>
+              Using saved mapping for <span className="font-semibold text-blue-600">{categoryName}</span>
             </p>
-            <Button 
-              onClick={onManualUpload} 
-              variant="outline" 
+            <Button
+              onClick={onManualUpload}
+              variant="outline"
               className="mx-auto"
             >
               Browse Files
             </Button>
           </div>
         ) : (
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <FileSpreadsheet className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">{uploadedFile.name}</h4>
-                    <p className="text-sm text-gray-500">{uploadedFile.size} • Uploaded at {uploadedFile.uploadedAt}</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="icon" onClick={onClear} aria-label="Clear uploaded file">
-                  <X className="w-4 h-4 text-gray-400" />
-                </Button>
-              </div>
-
-              {stagedRun ? (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                    <div className="rounded-lg border bg-gray-50 p-3">
-                      <p className="text-[10px] uppercase text-gray-500 font-medium">Rows</p>
-                      <p className="text-lg font-semibold text-gray-900">{stagedRun.summary.totalRows}</p>
-                    </div>
-                    <div className="rounded-lg border bg-blue-50 p-3">
-                      <p className="text-[10px] uppercase text-blue-700 font-medium">Matched</p>
-                      <p className="text-lg font-semibold text-blue-900">{stagedRun.summary.matchedRows}</p>
-                    </div>
-                    <div className="rounded-lg border bg-amber-50 p-3">
-                      <p className="text-[10px] uppercase text-amber-700 font-medium">Held</p>
-                      <p className="text-lg font-semibold text-amber-900">{stagedRun.summary.heldRows}</p>
-                    </div>
-                    <div className="rounded-lg border bg-red-50 p-3">
-                      <p className="text-[10px] uppercase text-red-700 font-medium">Issues</p>
-                      <p className="text-lg font-semibold text-red-900">{stagedRun.summary.invalidRows + stagedRun.summary.duplicateRows + stagedRun.summary.unmatchedRows}</p>
-                    </div>
-                    <div className="rounded-lg border bg-green-50 p-3">
-                      <p className="text-[10px] uppercase text-green-700 font-medium">Published</p>
-                      <p className="text-lg font-semibold text-green-900">{stagedRun.summary.publishedRows}</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5" />
-                    <div>
-                      <h5 className="font-medium text-blue-900">Policy Sync Staged</h5>
-                      <p className="text-sm text-blue-700 mt-1">
-                        Rows were matched by policy number, provider, and product category. Review the changes before publishing to client policies.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="border rounded-lg overflow-x-auto bg-white">
-                    <Table>
-                      <TableHeader className="bg-gray-50">
-                        <TableRow>
-                          <TableHead>Row</TableHead>
-                          <TableHead>Policy Number</TableHead>
-                          <TableHead>Match</TableHead>
-                          <TableHead>Publish</TableHead>
-                          <TableHead>Changes</TableHead>
-                          <TableHead>Warnings</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {stagedRun.rows.slice(0, 25).map((row) => (
-                          <TableRow key={row.id}>
-                            <TableCell className="text-xs">{row.rowNumber}</TableCell>
-                            <TableCell className="text-xs font-medium">{row.policyNumber || '-'}</TableCell>
-                            <TableCell>{getStatusBadge(row.matchStatus)}</TableCell>
-                            <TableCell>{getStatusBadge(row.publishStatus)}</TableCell>
-                            <TableCell className="text-xs">
-                              {row.diffs.length > 0 ? (
-                                <div className="space-y-1">
-                                  {row.diffs.slice(0, 3).map(diff => (
-                                    <div key={diff.fieldId}>
-                                      <span className="font-medium">{diff.fieldName}:</span> {String(diff.oldValue ?? '-')} to {String(diff.newValue ?? '-')}
-                                    </div>
-                                  ))}
-                                  {row.diffs.length > 3 && <span className="text-gray-400">+{row.diffs.length - 3} more</span>}
-                                </div>
-                              ) : (
-                                <span className="text-gray-400">No changes</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-xs text-amber-700">
-                              {[...row.validationErrors, ...row.warnings].slice(0, 2).join('; ') || '-'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-4 border-t">
-                    <Button variant="outline" onClick={onClear}>
-                      Clear
-                    </Button>
-                    <Button
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={onPublishRun}
-                      disabled={isPublishingRun || publishableRows.length === 0}
-                    >
-                      {isPublishingRun ? (
-                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <UploadCloud className="w-4 h-4 mr-2" />
-                      )}
-                      Publish Matched Rows
-                    </Button>
-                  </div>
-                </div>
-              ) : !showPreview ? (
-                <div className="flex justify-end pt-4 border-t">
-                   <Button 
-                    onClick={onProcess} 
-                    disabled={isProcessing}
-                    className="bg-purple-600 hover:bg-purple-700 min-w-[140px]"
-                  >
-                    {isProcessing ? (
-                      <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <FileAxis3D className="w-4 h-4 mr-2" />
-                    )}
-                    {isProcessing ? 'Processing...' : 'Process & Preview'}
-                  </Button>
-                </div>
-              ) : (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                  {previewData?.validationErrors && previewData.validationErrors.length > 0 && (
-                      <div className="bg-red-50 border border-red-100 rounded-lg p-4 flex items-start gap-3">
-                         <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-                         <div>
-                           <h5 className="font-medium text-red-900">Validation Errors Detected</h5>
-                           <ul className="list-disc list-inside text-sm text-red-700 mt-1">
-                               {previewData.validationErrors.map((err, i) => <li key={i}>{err}</li>)}
-                           </ul>
-                         </div>
-                      </div>
-                  )}
-                  
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">
-                     <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5" />
-                     <div>
-                       <h5 className="font-medium text-blue-900">File Processed Successfully</h5>
-                       <p className="text-sm text-blue-700 mt-1">
-                         The file matched {matchedColumnsCount} configured columns for {PRODUCT_CATEGORIES.find(c => c.id === selectedCategoryId)?.name}. 
-                         Review the preview below before confirming the import.
-                       </p>
-                     </div>
-                  </div>
-
-                  {/* Read-Only Preview Table */}
-                   <div className="border rounded-lg overflow-x-auto bg-white">
-                      <Table>
-                        <TableHeader className="bg-gray-50">
-                          <TableRow>
-                            {previewData?.headers.map((col, i) => (
-                              <TableHead 
-                                key={i} 
-                                className={cn(
-                                  "whitespace-nowrap border-b-2",
-                                  isColumnMapped(col) ? "border-green-400 bg-green-50/20 text-green-700" : "border-red-300 bg-red-50/20 text-red-700"
-                                )}
-                              >
-                                {col}
-                              </TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {previewData?.rows.map((row, idx) => (
-                            <TableRow key={idx}>
-                              {previewData.headers.map((_, cellIdx) => {
-                                const colName = previewData.headers[cellIdx];
-                                const mapped = isColumnMapped(colName);
-                                const cell = row[colName] || ''; 
-                                return (
-                                  <TableCell 
-                                    key={cellIdx} 
-                                    className={cn(
-                                      "whitespace-nowrap text-xs",
-                                      mapped ? "text-gray-700" : "text-gray-400 bg-gray-50/50"
-                                    )}
-                                  >
-                                    {typeof cell === 'object' ? JSON.stringify(cell) : cell}
-                                  </TableCell>
-                                );
-                              })}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                    
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                      <Button variant="outline" onClick={onClear}>
-                        Cancel
-                      </Button>
-                      <Button className="bg-green-600 hover:bg-green-700" onClick={onConfirm}>
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Stage for Review
-                      </Button>
-                    </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          renderUploadedFile()
         )}
       </div>
     </div>
