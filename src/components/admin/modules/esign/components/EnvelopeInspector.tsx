@@ -488,9 +488,23 @@ export function EnvelopeInspector({
                       </div>
                     )}
                     {isCompleted && (
-                      <DropdownMenuItem onClick={() => onDownloadDocument?.(envelope.id)}>
-                        <Download className="mr-2 h-4 w-4" /> Download Signed PDF
-                      </DropdownMenuItem>
+                      <div className="contents">
+                        <DropdownMenuItem onClick={() => onDownloadDocument?.(envelope.id)}>
+                          <Download className="mr-2 h-4 w-4" /> Download Signed PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            try {
+                              await esignApi.downloadEvidencePack(envelope.id, envelope.title);
+                            } catch (err) {
+                              const message = err instanceof Error ? err.message : 'Failed to export evidence pack';
+                              toast.error(message);
+                            }
+                          }}
+                        >
+                          <FileDown className="mr-2 h-4 w-4" /> Download Evidence Pack (.zip)
+                        </DropdownMenuItem>
+                      </div>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>

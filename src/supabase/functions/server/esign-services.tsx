@@ -14,6 +14,7 @@ import type {
 } from "./esign-types.ts";
 import { createModuleLogger } from "./stderr-logger.ts";
 import { getErrMsg } from "./shared-logger-utils.ts";
+import { esignPgRepo } from "./esign-postgres-repo.ts";
 
 const log = createModuleLogger('esign-services');
 
@@ -24,7 +25,9 @@ const log = createModuleLogger('esign-services');
  */
 export async function logAuditEvent(data: {
   envelopeId: string;
-  actorType: 'system' | 'sender_user' | 'signer';
+  // P2.5 2.8 — admit 'witness' so the signer/sign and signer/reject routes
+  // can mark events with a witness footprint when the signer is a witness.
+  actorType: 'system' | 'sender_user' | 'signer' | 'witness';
   actorId?: string;
   action: string;
   ip?: string;
@@ -49,7 +52,7 @@ export async function logAuditEvent(data: {
       metadata: data.metadata || {},
     };
 
-    // Store audit event
+    // Store audit event (canonical write)
     await kv.set(EsignKeys.PREFIX_AUDIT + auditId, auditEvent);
 
     // Add to envelope's audit trail
@@ -57,6 +60,21 @@ export async function logAuditEvent(data: {
     const auditIds = await kv.get(auditKey) || [];
     auditIds.push(auditId);
     await kv.set(auditKey, auditIds);
+
+    // Phase 0.1 — shadow write to Postgres (no-op unless ESIGN_DUAL_WRITE=true).
+    // Failures here are logged-and-swallowed by the repo helper; the KV
+    // write above is canonical so audit data is never lost.
+    void esignPgRepo.insertAudit({
+      envelope_id: data.envelopeId,
+      actor_type: data.actorType,
+      actor_id: data.actorId ?? null,
+      email: data.email ?? null,
+      action: data.action,
+      ip: data.ip ?? null,
+      user_agent: data.userAgent ?? null,
+      metadata: data.metadata ?? {},
+      occurred_at: auditEvent.at,
+    });
 
     log.success(`Audit event logged: ${data.action} for envelope ${data.envelopeId}`);
   } catch (error) {
@@ -83,6 +101,31 @@ export async function createEnvelope(params: {
   message?: string;
   expiryDays?: number;
   signingMode?: 'sequential' | 'parallel';
+  /** P4.1 / P4.2 — When the envelope is materialised from a saved
+   *  template, persist the template id and the exact version that was
+   *  in effect so subsequent edits to the template do not retroactively
+   *  rewrite the envelope's structure. */
+  templateId?: string;
+  templateVersion?: number;
+  /** P4.7 / P4.8 — bulk-send and packet provenance. Stamped at create
+   *  time so the dashboard can group envelopes by campaign/packet run. */
+  campaignId?: string;
+  packetRunId?: string;
+  packetStepIndex?: number;
+  /** P6.4 — pin the ECTA consent text version that will be shown to
+   *  every signer of this envelope. Stamped at create-time so
+   *  subsequent revisions to the active consent text do not mutate
+   *  historical envelopes. */
+  consentVersion?: string;
+  /** P6.5 — optional signing reason/capacity prompt. When present the
+   *  signer UI surfaces a read-only capacity block and records the
+   *  acknowledgement on the signer record. */
+  signingReasonRequired?: boolean;
+  signingReasonPrompt?: string;
+  /** P6.6 — gate the envelope on a KBA check. `kbaProvider` selects the
+   *  adapter at runtime; omitted → uses KBA_PROVIDER env. */
+  kbaRequired?: boolean;
+  kbaProvider?: string;
 }): Promise<{ envelopeId?: string; error?: string }> {
   try {
     const envelopeId = crypto.randomUUID();
@@ -108,10 +151,41 @@ export async function createEnvelope(params: {
       advice_case_id: params.adviceCaseId,
       request_id: params.requestId,
       product_id: params.productId,
-    };
+      template_id: params.templateId,
+      template_version: params.templateVersion,
+      campaign_id: params.campaignId,
+      packet_run_id: params.packetRunId,
+      packet_step_index: params.packetStepIndex,
+      consent_version: params.consentVersion,
+      signing_reason_required: params.signingReasonRequired,
+      signing_reason_prompt: params.signingReasonPrompt,
+      kba_required: params.kbaRequired,
+      kba_provider: params.kbaProvider,
+    } as EsignEnvelope;
 
-    // Store envelope
+    // Store envelope (canonical write)
     await kv.set(EsignKeys.envelope(envelopeId), envelope);
+
+    // Phase 0.1 — shadow write to Postgres (no-op unless ESIGN_DUAL_WRITE=true).
+    void esignPgRepo.upsertEnvelope({
+      id: envelopeId,
+      firm_id: params.firmId,
+      created_by: params.createdByUserId,
+      title: params.title,
+      message: params.message ?? null,
+      status: 'draft',
+      signing_mode: envelope.signing_mode,
+      expires_at: envelope.expires_at,
+      metadata: {
+        client_id: params.clientId,
+        document_id: params.documentId,
+        advice_case_id: params.adviceCaseId,
+        request_id: params.requestId,
+        product_id: params.productId,
+      },
+      created_at: now,
+      updated_at: now,
+    });
 
     // Add to client's envelope list
     const clientListKey = EsignKeys.clientEnvelopes(params.clientId);
@@ -222,6 +296,8 @@ export async function getClientEnvelopes(clientId: string, clientEmail?: string)
       envelopeIds.map(async (envelopeId: string) => {
         const envelope = await kv.get(EsignKeys.envelope(envelopeId));
         if (!envelope) return null;
+        // P6.8 — hide soft-deleted envelopes from client-facing lists.
+        if ((envelope as { deleted_at?: string }).deleted_at) return null;
 
         // Get document details
         const document = await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id);
@@ -294,10 +370,11 @@ export async function getAllEnvelopes(status?: string): Promise<Record<string, u
       item.document_id
     );
 
-    // Apply status filter if provided
-    let filtered = envelopes;
+    // P6.8 — exclude soft-deleted envelopes from the default listing.
+    // The recovery-bin route is the only caller that should see them.
+    let filtered = envelopes.filter((e: Record<string, unknown>) => !e.deleted_at);
     if (status) {
-      filtered = envelopes.filter((e: EsignEnvelope) => e.status === status);
+      filtered = filtered.filter((e: EsignEnvelope) => e.status === status);
     }
     
     // Enrich with signers/recipients and document info for display in list
@@ -403,9 +480,15 @@ export async function addSignersToEnvelope(
     email: string;
     phone?: string;
     role?: string;
+    // P2.5 2.8 — caller can mark a recipient as a witness (or cc-only) so the
+    // audit trail and Postgres mirror tag attestations correctly.
+    kind?: 'signer' | 'witness' | 'cc';
     requiresOtp?: boolean;
     accessCode?: string;
     clientId?: string;
+    // P5.1 — opt-in for SMS channel (OTP + invite + reminder). Off by
+    // default to honour POPIA; only respected when `phone` is also set.
+    smsOptIn?: boolean;
   }>
 ): Promise<{ signerIds: string[]; error?: string }> {
   try {
@@ -427,19 +510,39 @@ export async function addSignersToEnvelope(
         phone: signerData.phone,
         order: existingSignerIds.length + i + 1,
         role: signerData.role,
+        kind: signerData.kind ?? 'signer',
         status: 'pending',
         access_code: signerData.accessCode,
         access_token: accessToken,
         requires_otp: signerData.requiresOtp,
         otp_verified: false,
+        sms_opt_in: signerData.smsOptIn === true && !!signerData.phone,
         created_at: new Date().toISOString(),
       };
 
-      // Store signer
+      // Store signer (canonical write)
       await kv.set(EsignKeys.PREFIX_SIGNER + signerId, signer);
       
       // Map token to signer
       await kv.set(EsignKeys.signerToken(accessToken), signerId);
+
+      // Phase 0.1 — shadow write to Postgres.
+      void esignPgRepo.upsertSigner({
+        id: signerId,
+        envelope_id: envelopeId,
+        email: signerData.email,
+        name: signerData.name,
+        phone: signerData.phone ?? null,
+        role: signerData.role ?? null,
+        kind: signerData.kind ?? 'signer',
+        signing_order: signer.order,
+        status: 'pending',
+        access_token: accessToken,
+        otp_required: !!signerData.requiresOtp,
+        access_code: signerData.accessCode ?? null,
+        client_id: signerData.clientId ?? null,
+        is_system_client: !!signerData.clientId,
+      });
 
       // If signer is a system client, link envelope to their client envelope list
       // so it appears on their client management page
@@ -508,6 +611,59 @@ export async function getSignerByToken(token: string): Promise<EsignSigner | nul
     return signer || null;
   } catch (error: unknown) {
     log.error('Failed to get signer by token:', error);
+    return null;
+  }
+}
+
+/**
+ * P5.6 — Rotate a signer's access token.
+ *
+ * Used on recall, resend-invite, and immediately after a successful
+ * submission so stale invite links cannot be replayed. The previous token
+ * mapping is deleted, a fresh UUID is minted and indexed, and the signer
+ * record is bumped with `token_rotated_at` + `token_rotation_count` for
+ * audit visibility.
+ *
+ * Callers that need the new URL should read `signer.access_token` from
+ * the returned record and rebuild the signing URL.
+ */
+export async function rotateSignerToken(
+  signerId: string,
+  reason: string,
+): Promise<EsignSigner | null> {
+  try {
+    const signer = await kv.get(EsignKeys.PREFIX_SIGNER + signerId);
+    if (!signer) return null;
+
+    const oldToken = signer.access_token;
+    const newToken = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    if (oldToken) {
+      try { await kv.del(EsignKeys.signerToken(oldToken)); } catch { /* best-effort */ }
+    }
+    await kv.set(EsignKeys.signerToken(newToken), signerId);
+
+    const updated: EsignSigner = {
+      ...signer,
+      access_token: newToken,
+      token_rotated_at: now,
+      token_rotation_count: ((signer.token_rotation_count as number | undefined) ?? 0) + 1,
+    };
+    await kv.set(EsignKeys.PREFIX_SIGNER + signerId, updated);
+
+    await logAuditEvent({
+      envelopeId: signer.envelope_id,
+      actorType: 'system',
+      actorId: signerId,
+      action: 'signer_token_rotated',
+      email: signer.email,
+      metadata: { reason, rotation: updated.token_rotation_count },
+    });
+
+    return updated;
+  } catch (error: unknown) {
+    log.error('Failed to rotate signer token:', error);
     return null;
   }
 }

@@ -152,23 +152,85 @@ export function ReminderConfigPanel({ envelopeId, envelopeStatus }: ReminderConf
 
         {config.auto_remind && (
           <div className="contents">
-            {/* Interval */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  Interval (days)
-                </Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={config.remind_interval_days}
-                  onChange={(e) => handleUpdate({ remind_interval_days: parseInt(e.target.value) || 3 })}
+            {/* P5.3 — cadence strategy */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Cadence</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
                   disabled={saving || !isActive}
-                  className="h-8 text-sm"
-                />
+                  onClick={() => handleUpdate({ schedule: 'escalating' })}
+                  className={`p-2.5 rounded-md border text-left transition-colors ${
+                    (config.schedule ?? 'escalating') === 'escalating'
+                      ? 'border-purple-400 bg-purple-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } disabled:opacity-60`}
+                >
+                  <div className="text-xs font-medium text-gray-800">Escalating (recommended)</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    Reminders at {(config.escalation_offsets_days ?? [3, 7, 10, 13]).join(', ')} days after invite.
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  disabled={saving || !isActive}
+                  onClick={() => handleUpdate({ schedule: 'fixed' })}
+                  className={`p-2.5 rounded-md border text-left transition-colors ${
+                    config.schedule === 'fixed'
+                      ? 'border-purple-400 bg-purple-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } disabled:opacity-60`}
+                >
+                  <div className="text-xs font-medium text-gray-800">Fixed interval</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    Every {config.remind_interval_days} day(s) until signed.
+                  </div>
+                </button>
               </div>
+            </div>
+
+            {/* Interval (fixed mode) + Max reminders */}
+            <div className="grid grid-cols-2 gap-3">
+              {config.schedule === 'fixed' ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Interval (days)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={30}
+                    value={config.remind_interval_days}
+                    onChange={(e) => handleUpdate({ remind_interval_days: parseInt(e.target.value) || 3 })}
+                    disabled={saving || !isActive}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Offsets (days, comma-separated)
+                  </Label>
+                  <Input
+                    type="text"
+                    defaultValue={(config.escalation_offsets_days ?? [3, 7, 10, 13]).join(',')}
+                    onBlur={(e) => {
+                      const parsed = e.target.value
+                        .split(',')
+                        .map((s) => parseInt(s.trim(), 10))
+                        .filter((n) => Number.isFinite(n) && n > 0);
+                      if (parsed.length > 0) {
+                        handleUpdate({ escalation_offsets_days: parsed });
+                      }
+                    }}
+                    disabled={saving || !isActive}
+                    className="h-8 text-sm"
+                    placeholder="3,7,10,13"
+                  />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground flex items-center gap-1">
                   <RefreshCw className="h-3 w-3" />

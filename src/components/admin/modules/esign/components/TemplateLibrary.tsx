@@ -54,6 +54,7 @@ import { format } from 'date-fns';
 import type { EsignTemplateRecord } from '../types';
 import { TEMPLATE_CATEGORIES } from '../types';
 import { EditTemplateDialog } from './EditTemplateDialog';
+import { SkeletonCardGrid } from './EsignSkeleton';
 
 interface TemplateLibraryProps {
   onUseTemplate: (template: EsignTemplateRecord) => void;
@@ -104,12 +105,19 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
     return matchesSearch && matchesCategory;
   });
 
-  // Category counts
+  // P4.4 — Always show the full canonical list of categories (TEMPLATE_CATEGORIES)
+  // so senders can filter by an empty category to confirm "no investment templates yet".
+  // We merge in any ad-hoc categories that exist on persisted templates so legacy
+  // entries aren't lost.
   const categoryCounts = templates.reduce<Record<string, number>>((acc, t) => {
     const cat = t.category || 'Uncategorised';
     acc[cat] = (acc[cat] || 0) + 1;
     return acc;
   }, {});
+  const knownCategories = new Set<string>([
+    ...TEMPLATE_CATEGORIES,
+    ...Object.keys(categoryCounts),
+  ]);
 
   const handleDelete = async () => {
     if (!templateToDelete) return;
@@ -170,9 +178,10 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-purple-600 mr-2" />
-        <span className="text-sm text-muted-foreground">Loading templates...</span>
+      // P8.3 — Skeleton matches the card grid that the templates render
+      // into so the layout doesn't jump when data lands.
+      <div className="space-y-4">
+        <SkeletonCardGrid cards={6} />
       </div>
     );
   }
@@ -211,13 +220,13 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
                   {templates.length}
                 </Badge>
               </DropdownMenuItem>
-              {Object.entries(categoryCounts)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([cat, count]) => (
+              {Array.from(knownCategories)
+                .sort((a, b) => a.localeCompare(b))
+                .map((cat) => (
                   <DropdownMenuItem key={cat} onClick={() => setCategoryFilter(cat)}>
                     {cat}
                     <Badge variant="secondary" className="ml-auto text-[10px]">
-                      {count}
+                      {categoryCounts[cat] ?? 0}
                     </Badge>
                   </DropdownMenuItem>
                 ))}
@@ -250,18 +259,27 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
         </div>
       </div>
 
-      {/* Empty State */}
+      {/* Empty State (P8.2 — always offers exactly one obvious action) */}
       {filteredTemplates.length === 0 && (
         <div className="text-center py-16">
-          <Bookmark className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
+          <Bookmark className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" aria-hidden="true" />
           <h3 className="text-lg font-semibold text-gray-900 mb-1">
             {searchQuery || categoryFilter !== 'all' ? 'No templates match your filters' : 'No templates yet'}
           </h3>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
             {searchQuery || categoryFilter !== 'all'
               ? 'Try adjusting your search or category filter.'
               : 'Save an envelope as a template to reuse its configuration across future documents.'}
           </p>
+          {(searchQuery || categoryFilter !== 'all') && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setSearchQuery(''); setCategoryFilter('all'); }}
+            >
+              Clear filters
+            </Button>
+          )}
         </div>
       )}
 

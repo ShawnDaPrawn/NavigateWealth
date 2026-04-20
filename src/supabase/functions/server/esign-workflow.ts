@@ -14,12 +14,22 @@ import { PDFService } from "./esign-pdf.service.ts";
 import type { EsignSigner } from "./esign-types.ts";
 import { downloadDocument, uploadSignedDocument, calculateHash } from "./esign-storage.ts";
 import { sendEmail } from "./email-service.ts";
+import { shouldDeliverSenderEvent } from "./esign-notification-prefs.ts";
+import { enqueue as enqueueInAppNotification } from "./esign-inapp-notifications.ts";
+import { emitWebhookEvent } from "./webhook-service.ts";
 import { createEnvelopeCompleteEmail, createSigningCompleteEmail } from "./esign-email-templates.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 import { encodeBase64 } from "jsr:@std/encoding/base64";
 import { createModuleLogger } from "./stderr-logger.ts";
 import { getErrMsg } from "./shared-logger-utils.ts";
 import { signAndProtectPdf } from "./esign-pdf-protect.ts";
+// P4.8 — completion of envelope N may need to trigger envelope N+1 in a
+// packet run. The advancement helper is best-effort and never throws so
+// the primary completion flow is unaffected by packet failures.
+import { advancePacketRunFromCompletion } from "./esign-packet-service.ts";
+import * as kv from "./kv_store.tsx";
+import { EsignKeys } from "./esign-keys.ts";
+import type { EsignEnvelope } from "./esign-types.ts";
 
 const log = createModuleLogger('esign-workflow');
 
@@ -128,6 +138,20 @@ export async function completeEnvelope(envelopeId: string): Promise<{ success: b
 
     log.success(`Envelope ${envelopeId} completion workflow finished. Artifact: ${signedDocPath}`);
 
+    // 7.5 P4.8 — If the envelope was spawned from a packet run, advance
+    //     the run so step N+1 sends automatically. We re-read the
+    //     envelope record so we hit the canonical packet provenance
+    //     instead of relying on the (possibly stale) `envelope`
+    //     reference taken at the top of the workflow.
+    try {
+      const fresh = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
+      if (fresh?.packet_run_id != null && typeof fresh.packet_step_index === 'number') {
+        await advancePacketRunFromCompletion(envelopeId, fresh.packet_run_id, fresh.packet_step_index);
+      }
+    } catch (packetErr) {
+      log.warn(`Packet advancement failed for envelope ${envelopeId}: ${getErrMsg(packetErr)}`);
+    }
+
     // 8. Email all parties with the signed document
     try {
         log.info(`Sending completion emails for envelope ${envelopeId}...`);
@@ -160,13 +184,25 @@ export async function completeEnvelope(envelopeId: string): Promise<{ success: b
                 downloadLink: 'https://www.navigatewealth.co/portal' // TODO: Deep link to envelope
             });
 
-            await sendEmail({
-                to: senderEmail,
-                subject: `Completed: ${envelope.title}`,
-                html,
-                text,
-                attachments
-            });
+            // P5.2 — completion is terminal; `completion_only` senders MUST
+            // still see it. Only `off` and `digest` affect it (and even
+            // digest-mode gets a full email because completion carries the
+            // signed document attachment that must land immediately).
+            const decision = await shouldDeliverSenderEvent(
+                envelope.created_by_user_id,
+                'envelope.completed',
+            );
+            if (decision.mode === 'off') {
+                log.info(`Completion email suppressed for ${senderEmail} (mode=off)`);
+            } else {
+                await sendEmail({
+                    to: senderEmail,
+                    subject: `Completed: ${envelope.title}`,
+                    html,
+                    text,
+                    attachments
+                });
+            }
         }
 
         // Email Signers
@@ -190,6 +226,36 @@ export async function completeEnvelope(envelopeId: string): Promise<{ success: b
         }
         
         log.success(`Completion emails sent for envelope ${envelopeId}`);
+
+        // P5.4 — fan-out envelope.completed to firm webhooks.
+        void emitWebhookEvent({
+            firmId: envelope.firm_id || 'standalone',
+            eventType: 'envelope.completed',
+            envelopeId,
+            payload: {
+                envelope: { id: envelope.id, title: envelope.title, status: 'completed' },
+                signers: signers.map((s: EsignSigner) => ({
+                    id: s.id,
+                    name: s.name,
+                    email: s.email,
+                    signed_at: s.signed_at,
+                })),
+                completed_at: new Date().toISOString(),
+            },
+        });
+
+        // P5.7 — bell-UI copy for the sender. Unconditional; the bell is
+        // a complete log of envelope activity regardless of email prefs.
+        if (envelope.created_by_user_id) {
+            void enqueueInAppNotification({
+                userId: envelope.created_by_user_id,
+                type: 'envelope.completed',
+                title: 'Envelope completed',
+                body: `"${envelope.title}" was signed by all ${signers.length} recipient(s).`,
+                envelopeId,
+                metadata: { signer_count: signers.length },
+            });
+        }
 
     } catch (emailError) {
         log.error('Failed to send completion emails:', emailError);

@@ -25,11 +25,31 @@ export interface SignerSessionData {
   is_turn?: boolean;
   /** Summary of all signers on the envelope for the waiting UI */
   all_signers?: SignerOrderSummary[];
+  /** Previously adopted signature for this email (data URL), if any.
+   *  Surfaced so a returning signer can re-use it across envelopes. */
+  saved_signature?: string | null;
+  /** Previously adopted initials for this email (data URL), if any. */
+  saved_initials?: string | null;
+  /** P8.7 — preferred language code (`en` | `af` | `zu`). Driven by the
+   *  signer record on the server; defaults to `en` when unset. */
+  signer_language?: string;
+  /** P8.6 — Per-firm signer-page branding pulled from KV at session-start.
+   *  Null when the firm has not configured any branding yet, in which case
+   *  the signer UI uses its built-in defaults. */
+  branding?: {
+    display_name: string | null;
+    logo_url: string | null;
+    accent_hex: string | null;
+    support_email: string | null;
+  } | null;
 }
 
 export interface SignerField {
   id: string;
-  type: 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'auto_date' | 'dropdown';
+  // P3.5 — `attachment` requires the signer to upload a file. The value
+  // is stored as `attachment:{attachmentId}` so completion checks see a
+  // non-empty string and the certificate can resolve the file metadata.
+  type: 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'auto_date' | 'dropdown' | 'attachment';
   page: number;
   x: number;
   y: number;
@@ -43,7 +63,7 @@ export interface SignerField {
 
 export interface SignatureData {
   field_id: string;
-  type: 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'auto_date' | 'dropdown';
+  type: 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'auto_date' | 'dropdown' | 'attachment';
   value: string;
 }
 

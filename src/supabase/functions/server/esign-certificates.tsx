@@ -10,6 +10,7 @@ import { getEnvelopeDetails, getAuditTrail } from "./esign-services.ts";
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
 import { EsignKeys } from './esign-keys.ts';
 import { createModuleLogger } from "./stderr-logger.ts";
+import { getConsentByVersion } from './esign-consent-registry.ts';
 
 const log = createModuleLogger('esign-certificates');
 
@@ -20,12 +21,37 @@ interface EnvelopeData {
   completed_at: string;
   client_name: string;
   sender_name: string;
+  /** P6.5 — sender-supplied signing reason/capacity prompt, if any. */
+  signing_reason_prompt?: string;
+  /** P6.4 — consent version + immutable text the signers saw. */
+  consent?: { id: string; text: string };
   signers: Array<{
     name: string;
     email: string;
     role: string;
+    phone?: string;
     signed_at: string;
+    invite_sent_at?: string;
+    viewed_at?: string;
     ip_address?: string;
+    /** P6.3 — browser/device user-agent captured at signature time. */
+    user_agent?: string;
+    /** P6.3 — elapsed time from first view to successful signature. */
+    time_to_sign_ms?: number;
+    /** P6.3 — OTP channels used (email / sms). */
+    otp_methods?: string[];
+    /** P6.3 — summary of signature capture telemetry. */
+    signature_telemetry?: {
+      strokes?: number;
+      duration_ms?: number;
+      method?: 'draw' | 'type' | 'upload';
+    };
+    /** P6.4 — consent version the signer acknowledged. */
+    consent_version?: string;
+    /** P6.5 — signing reason/capacity attested by the signer. */
+    signing_reason?: string;
+    /** P6.6 — KBA outcome. */
+    kba?: { provider: string; status: string; reference?: string };
   }>;
   audit_events: Array<{
     action: string;
@@ -290,8 +316,46 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
     const signerValue = `${signer.name}${signer.role ? ` (${signer.role})` : ''}`;
     formRow(signerLabel, signerValue, { valueBold: true });
     formRow('Email', signer.email);
+    if (signer.phone) formRow('Mobile', signer.phone);
     formRow('Signed At', formatDateSafe(signer.signed_at));
-    formRow('IP Address', signer.ip_address || 'Not recorded', { isLast });
+    formRow('IP Address', signer.ip_address || 'Not recorded');
+
+    // P6.3 — per-signer evidence package.
+    if (signer.user_agent) {
+      const ua = signer.user_agent.length > 140 ? `${signer.user_agent.slice(0, 140)}…` : signer.user_agent;
+      formRow('Device / User Agent', ua);
+    }
+    if (typeof signer.time_to_sign_ms === 'number') {
+      const mins = Math.round(signer.time_to_sign_ms / 60000);
+      const pretty = mins >= 1 ? `${mins} minute${mins === 1 ? '' : 's'}` : `${Math.round(signer.time_to_sign_ms / 1000)} second(s)`;
+      formRow('Time to Sign', pretty);
+    }
+    if (signer.otp_methods && signer.otp_methods.length > 0) {
+      formRow('OTP Channel(s)', signer.otp_methods.map((m) => m.toUpperCase()).join(', '));
+    }
+    if (signer.signature_telemetry) {
+      const tel = signer.signature_telemetry;
+      const parts: string[] = [];
+      if (tel.method) parts.push(`method=${tel.method}`);
+      if (typeof tel.strokes === 'number') parts.push(`strokes=${tel.strokes}`);
+      if (typeof tel.duration_ms === 'number') parts.push(`duration=${Math.round(tel.duration_ms / 100) / 10}s`);
+      if (parts.length > 0) formRow('Signature Capture', parts.join(' · '));
+    }
+    if (signer.kba) {
+      formRow('KBA', `${signer.kba.provider} — ${signer.kba.status}${signer.kba.reference ? ` (ref ${signer.kba.reference})` : ''}`);
+    }
+    if (signer.consent_version) {
+      formRow('Consent Version', signer.consent_version);
+    }
+    if (signer.signing_reason) {
+      formRow('Signing Capacity', signer.signing_reason, { isLast });
+    } else {
+      // Ensure the last row reads as last (bottom border style) when no
+      // capacity row was emitted.
+      // We can't retroactively re-draw the previous row; this is a
+      // cosmetic-only improvement, so we simply add a small gap.
+      if (isLast) y -= 0;
+    }
 
     if (!isLast) {
       // Visual separator between signers
@@ -300,6 +364,37 @@ async function generateCertificatePDF(data: EnvelopeData): Promise<Uint8Array> {
   });
 
   y -= 16;
+
+  // ── P6.4 — CONSENT TEXT (verbatim copy of the ECTA wording shown
+  //    to every signer, pinned at envelope send-time). ───────────────
+  if (data.consent) {
+    sectionHeading(`CONSENT (VERSION ${data.consent.id.toUpperCase()})`);
+    const consentLines = wrapText(data.consent.text, 8.5, font, CONTENT_W - 24);
+    const blockH = consentLines.length * 11 + 20;
+    y = ensureSpace(blockH + 8);
+    currentPage.drawRectangle({
+      x: MARGIN, y: y - blockH,
+      width: CONTENT_W, height: blockH,
+      color: SECTION_BG,
+      borderColor: TABLE_BORDER,
+      borderWidth: 0.5,
+    });
+    consentLines.forEach((line, i) => {
+      currentPage.drawText(line, {
+        x: MARGIN + 12,
+        y: y - 14 - (i * 11),
+        size: 8.5, font, color: TEXT_COLOR,
+      });
+    });
+    y -= blockH + 10;
+  }
+
+  // ── P6.5 — SIGNING CAPACITY disclosure (sender-requested). ─────────
+  if (data.signing_reason_prompt) {
+    sectionHeading('SIGNING CAPACITY');
+    formRow('Prompt', data.signing_reason_prompt, { isLast: true });
+    y -= 12;
+  }
 
   // ── AUDIT TRAIL section (table-style with alternating rows) ────────
   sectionHeading('AUDIT TRAIL');
@@ -520,19 +615,63 @@ async function fetchEnvelopeData(envelopeId: string): Promise<EnvelopeData | nul
     // Fetch audit events
     const auditEvents = await getAuditTrail(envelopeId);
 
-    // Match signers with their IP addresses from audit events
-    const signersWithIP = signedSigners.map((signer: EsignSigner) => {
+    // Match signers with their IP addresses + evidence fields from
+    // audit events. P6.3 — the evidence page wants the full provenance
+    // for each signature: IP + UA, OTP channel(s), time-to-sign, KBA
+    // and consent stamps.
+    const signersWithEvidence = signedSigners.map((signer: EsignSigner) => {
       const signEvent = auditEvents.find(
         (e: EsignAuditEvent) => e.action === 'signed' && e.email === signer.email
       );
+      const viewedEvent = auditEvents.find(
+        (e: EsignAuditEvent) => e.action === 'viewed' && e.email === signer.email
+      );
+      const otpChannels = new Set<string>();
+      for (const ev of auditEvents) {
+        if (ev.email !== signer.email) continue;
+        if (ev.action === 'otp_sent' || ev.action === 'otp_resent') {
+          const ch = (ev.metadata?.channel as string | undefined)
+            || (ev.metadata?.method as string | undefined)
+            || 'email';
+          otpChannels.add(ch);
+        }
+      }
+
+      let time_to_sign_ms: number | undefined;
+      const first = signer.invite_sent_at || viewedEvent?.at;
+      if (first && signer.signed_at) {
+        const a = new Date(first).getTime();
+        const b = new Date(signer.signed_at).getTime();
+        if (Number.isFinite(a) && Number.isFinite(b) && b >= a) {
+          time_to_sign_ms = b - a;
+        }
+      }
+
       return {
         name: signer.name,
         email: signer.email,
         role: signer.role,
+        phone: signer.phone,
         signed_at: signer.signed_at || new Date().toISOString(),
+        invite_sent_at: signer.invite_sent_at,
+        viewed_at: signer.viewed_at,
         ip_address: signEvent?.ip || signer.ip_address,
+        user_agent: signEvent?.user_agent || signer.user_agent,
+        time_to_sign_ms,
+        otp_methods: signer.requires_otp ? Array.from(otpChannels) : [],
+        signature_telemetry: signer.signature_telemetry,
+        consent_version: signer.consent_version,
+        signing_reason: signer.signing_reason,
+        kba: signer.kba && signer.kba.status !== 'skipped'
+          ? { provider: signer.kba.provider, status: signer.kba.status, reference: signer.kba.reference }
+          : undefined,
       };
     });
+
+    // P6.4 — resolve the consent text for inclusion on the evidence page.
+    const consent = envelope.consent_version
+      ? await getConsentByVersion(envelope.consent_version as string)
+      : null;
 
     return {
       id: envelope.id,
@@ -541,7 +680,11 @@ async function fetchEnvelopeData(envelopeId: string): Promise<EnvelopeData | nul
       completed_at: envelope.completed_at || new Date().toISOString(),
       client_name: 'Client', // TODO: Fetch from client data if available
       sender_name: 'Admin', // TODO: Fetch from user data if available
-      signers: signersWithIP,
+      signing_reason_prompt: envelope.signing_reason_required
+        ? (envelope.signing_reason_prompt || 'Signed in capacity as disclosed by the signer')
+        : undefined,
+      consent: consent ? { id: consent.id, text: consent.text } : undefined,
+      signers: signersWithEvidence,
       audit_events: auditEvents.map((e: EsignAuditEvent) => ({
         action: e.action,
         at: e.at,

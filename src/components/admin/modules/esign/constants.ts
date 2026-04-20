@@ -65,6 +65,16 @@ export const ENVELOPE_STATUS_CONFIG: Record<EnvelopeStatus, StatusConfig> = {
     dotClass: 'bg-yellow-500',
     icon: Clock,
   },
+  // P7.5 — transient state during background completion (burn-in,
+  // certificate merge, PKCS#7 seal, upload). Surfaced to the sender
+  // so the UI doesn't appear to regress ("Partially Signed") while
+  // the queue finishes the heavy work.
+  completing: {
+    label: 'Finalising',
+    badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+    dotClass: 'bg-amber-500',
+    icon: Clock,
+  },
   completed: {
     label: 'Completed',
     badgeClass: 'bg-green-100 text-green-800 border-green-200',

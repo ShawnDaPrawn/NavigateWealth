@@ -21,6 +21,8 @@ import { OtpVerificationStep } from './OtpVerificationStep';
 import { SigningWorkflow } from './SigningWorkflow';
 import { SigningCompletePage } from './SigningCompletePage';
 import { useSignerSession } from './hooks/useSignerSession';
+import { useSignerBranding } from './hooks/useSignerBranding';
+import { t, normaliseLang } from './i18n';
 import type { SignerOrderSummary } from './types';
 
 type SigningStep = 'loading' | 'expired' | 'otp' | 'signing' | 'waiting' | 'complete' | 'rejected' | 'error';
@@ -96,44 +98,65 @@ export function SignerLandingPage() {
     }
   };
 
+  // P8.6 / P8.7 — derive firm branding + signer-preferred language
+  // once per render. Both fall back to platform defaults when nothing
+  // is configured for this firm/signer.
+  const branding = useSignerBranding(sessionData?.branding ?? null);
+  const lang = normaliseLang(sessionData?.signer_language);
+
   // ==================== LOADING STATE ====================
   if (currentStep === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 flex items-center justify-center p-4">
+      <main
+        role="main"
+        aria-label={t('loading.title', lang)}
+        className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 flex items-center justify-center p-4"
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="w-full max-w-md"
         >
           <Card className="overflow-hidden shadow-lg border-0">
-            <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 h-1.5" />
+            <div className="h-1.5" style={branding.stripStyle} />
             <div className="p-8 flex flex-col items-center text-center space-y-5">
               <div className="relative">
-                <div className="h-16 w-16 rounded-full bg-indigo-50 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
+                <div
+                  className="h-16 w-16 rounded-full flex items-center justify-center"
+                  style={{ background: `${branding.accentHex}1a` }}
+                >
+                  <Loader2
+                    className="h-8 w-8 animate-spin"
+                    style={{ color: branding.accentHex }}
+                    aria-hidden="true"
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <h2 className="text-xl font-bold text-gray-900">Loading Document</h2>
+                <h2 className="text-xl font-bold text-gray-900">{t('loading.title', lang)}</h2>
                 <p className="text-gray-500 text-sm">
-                  Please wait while we verify your access...
+                  {t('loading.subtitle', lang)}
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                <span>Secure connection verified</span>
+              <div className="flex items-center gap-2 text-xs text-gray-400" role="status" aria-live="polite">
+                <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>{t('loading.secure', lang)}</span>
               </div>
             </div>
           </Card>
         </motion.div>
-      </div>
+      </main>
     );
   }
 
   // ==================== EXPIRED/INVALID TOKEN STATE ====================
   if (currentStep === 'expired') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50/20 flex items-center justify-center p-4">
+      <main
+        role="main"
+        aria-label={t('expired.title', lang)}
+        className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50/20 flex items-center justify-center p-4"
+      >
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -143,12 +166,12 @@ export function SignerLandingPage() {
             <div className="bg-gradient-to-r from-red-400 to-orange-400 h-1.5" />
             <div className="p-8 flex flex-col items-center text-center space-y-5">
               <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
-                <AlertCircle className="h-8 w-8 text-red-600" />
+                <AlertCircle className="h-8 w-8 text-red-600" aria-hidden="true" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-xl font-bold text-gray-900">Link Unavailable</h2>
-                <p className="text-gray-500 text-sm leading-relaxed">
-                  {errorMessage || 'This signing link has expired or is no longer valid. Please contact the sender for a new link.'}
+                <h2 className="text-xl font-bold text-gray-900">{t('expired.title', lang)}</h2>
+                <p className="text-gray-500 text-sm leading-relaxed" role="alert">
+                  {errorMessage || t('expired.fallback', lang)}
                 </p>
               </div>
               <div className="w-full pt-2">
@@ -157,20 +180,24 @@ export function SignerLandingPage() {
                   variant="outline"
                   className="w-full"
                 >
-                  Return to Home
+                  {t('expired.return', lang)}
                 </Button>
               </div>
             </div>
           </Card>
         </motion.div>
-      </div>
+      </main>
     );
   }
 
   // ==================== REJECTED STATE ====================
   if (currentStep === 'rejected') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50/20 flex items-center justify-center p-4">
+      <main
+        role="main"
+        aria-label={t('rejected.title', lang)}
+        className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50/20 flex items-center justify-center p-4"
+      >
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -180,14 +207,14 @@ export function SignerLandingPage() {
             <div className="bg-gradient-to-r from-orange-400 to-amber-400 h-1.5" />
             <div className="p-8 flex flex-col items-center text-center space-y-5">
               <div className="h-16 w-16 rounded-full bg-orange-100 flex items-center justify-center">
-                <XCircle className="h-8 w-8 text-orange-600" />
+                <XCircle className="h-8 w-8 text-orange-600" aria-hidden="true" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-xl font-bold text-gray-900">Document Declined</h2>
-                <p className="text-gray-500 text-sm leading-relaxed">
-                  You have declined to sign{' '}
-                  <span className="font-medium text-gray-700">{sessionData?.envelope_title || 'this document'}</span>.
-                  The sender has been notified.
+                <h2 className="text-xl font-bold text-gray-900">{t('rejected.title', lang)}</h2>
+                <p className="text-gray-500 text-sm leading-relaxed" role="status">
+                  {t('rejected.body', lang, {
+                    title: sessionData?.envelope_title || 'this document',
+                  })}
                 </p>
               </div>
               <div className="w-full pt-2">
@@ -196,13 +223,13 @@ export function SignerLandingPage() {
                   variant="outline"
                   className="w-full"
                 >
-                  Close
+                  {t('rejected.close', lang)}
                 </Button>
               </div>
             </div>
           </Card>
         </motion.div>
-      </div>
+      </main>
     );
   }
 
@@ -239,7 +266,11 @@ export function SignerLandingPage() {
     const allSigners: SignerOrderSummary[] = sessionData?.all_signers || [];
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-amber-50/20 flex items-center justify-center p-4">
+      <main
+        role="main"
+        aria-label={t('waiting.title', lang)}
+        className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-amber-50/20 flex items-center justify-center p-4"
+      >
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -249,20 +280,19 @@ export function SignerLandingPage() {
             <div className="bg-gradient-to-r from-amber-400 to-yellow-400 h-1.5" />
             <div className="p-6 md:p-8 flex flex-col items-center text-center space-y-5">
               <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center">
-                <Clock className="h-8 w-8 text-amber-600" />
+                <Clock className="h-8 w-8 text-amber-600" aria-hidden="true" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-xl font-bold text-gray-900">Waiting for Previous Signers</h2>
+                <h2 className="text-xl font-bold text-gray-900">{t('waiting.title', lang)}</h2>
                 <p className="text-gray-500 text-sm leading-relaxed">
-                  This document requires signatures in a specific order.
-                  You'll receive an email when it's your turn to sign.
+                  {t('waiting.body', lang)}
                 </p>
               </div>
 
               {/* Signing order progress */}
               {allSigners.length > 0 && (
                 <div className="w-full bg-white border border-gray-100 rounded-xl p-4 text-left space-y-3">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Signing Order</h3>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('waiting.order', lang)}</h3>
                   <div className="space-y-2">
                     {allSigners.map((s) => {
                       const isSigned = s.status === 'signed';
@@ -336,7 +366,7 @@ export function SignerLandingPage() {
             </div>
           </Card>
         </motion.div>
-      </div>
+      </main>
     );
   }
 

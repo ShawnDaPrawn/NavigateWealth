@@ -50,6 +50,7 @@ import { DateRange } from 'react-day-picker';
 import { VoidEnvelopeDialog } from './VoidEnvelopeDialog';
 import { DiscardEnvelopeDialog } from './DiscardEnvelopeDialog';
 import { BulkRemindDialog, BulkVoidDialog } from './BulkActionDialogs';
+import { EnvelopeThumbnail } from './EnvelopeThumbnail';
 import { toast } from 'sonner@2.0.3';
 
 interface EnvelopesListProps {
@@ -372,10 +373,17 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                       aria-label={`Select envelope ${envelope.title}`}
                     />
                   </TableCell>
-                  <TableCell className="max-w-[250px] sm:max-w-[300px]">
-                    <div className="flex flex-col">
-                      <span className="font-medium truncate" title={envelope.title}>{envelope.title}</span>
-                      <span className="text-xs text-muted-foreground">ID: {envelope.id.slice(0, 8)}...</span>
+                  <TableCell className="max-w-[280px] sm:max-w-[340px]">
+                    <div className="flex items-center gap-3">
+                      {/* P8.1 — page-1 PDF thumbnail (60x80, lazy + cached). */}
+                      <EnvelopeThumbnail
+                        envelopeId={envelope.id}
+                        version={envelope.updated_at || envelope.updatedAt}
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-medium truncate" title={envelope.title}>{envelope.title}</span>
+                        <span className="text-xs text-muted-foreground">ID: {envelope.id.slice(0, 8)}...</span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>

@@ -4,7 +4,7 @@
  * Provides high-level metrics, envelope management, and templates via tabs.
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { 
@@ -17,10 +17,15 @@ import {
   TrendingUp,
   Timer,
   AlertCircle,
+  Activity,
+  Loader2,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { EnvelopesList } from './EnvelopesList';
 import { TemplateLibrary } from './TemplateLibrary';
+import { NotificationBell } from './NotificationBell';
+// P7.1 — metrics panel is lazily loaded so the envelopes tab stays fast.
+const MetricsPanel = React.lazy(() => import('./MetricsPanel').then(m => ({ default: m.MetricsPanel })));
 import type { EsignEnvelope, EsignTemplateRecord } from '../types';
 import { useEnvelopes } from '../hooks/useEnvelopes';
 import { EXPIRING_SOON_DAYS } from '../constants';
@@ -31,10 +36,26 @@ interface EsignDashboardProps {
   onResumePrepare?: (envelope: EsignEnvelope) => void;
   resumingEnvelopeId?: string | null;
   onUseTemplate?: (template: EsignTemplateRecord) => void;
+  /** P4.7 — opens the bulk-send dialog. */
+  onBulkSend?: () => void;
+  /** P4.8 — opens the packet workflows dialog. */
+  onPackets?: () => void;
+  /** P5.2 — opens the sender notification preferences dialog. */
+  onNotificationPrefs?: () => void;
+  /** P5.4 — opens the webhook management dialog. */
+  onWebhooks?: () => void;
+  /** P6.8 — opens the recovery bin dialog. */
+  onRecoveryBin?: () => void;
+  /** P7.3 — opens the global audit log dialog. */
+  onAuditLog?: () => void;
+  /** P7.7 — opens the retention policy dialog. */
+  onRetentionPolicy?: () => void;
+  /** P8.6 — opens the firm-branding editor. */
+  onBranding?: () => void;
   refreshTrigger?: number;
 }
 
-export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, resumingEnvelopeId, onUseTemplate, refreshTrigger }: EsignDashboardProps) {
+export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, resumingEnvelopeId, onUseTemplate, onBulkSend, onPackets, onNotificationPrefs, onWebhooks, onRecoveryBin, onAuditLog, onRetentionPolicy, onBranding, refreshTrigger }: EsignDashboardProps) {
   const { envelopes, refetch } = useEnvelopes({ autoLoad: true, refreshTrigger });
 
   // Calculate metrics
@@ -69,6 +90,96 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
           <p className="text-sm text-gray-500">Manage your documents and signature requests</p>
         </div>
         <div className="flex items-center gap-2">
+          <NotificationBell
+            onOpenEnvelope={(envelopeId) => {
+              const target = envelopes.find((e) => e.id === envelopeId);
+              if (target) onViewEnvelope(target);
+            }}
+          />
+          {onNotificationPrefs && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onNotificationPrefs}
+              title="Notification preferences"
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Notifications…
+            </Button>
+          )}
+          {onWebhooks && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onWebhooks}
+              title="Webhook endpoints"
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Webhooks…
+            </Button>
+          )}
+          {onRecoveryBin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRecoveryBin}
+              title="Recovery bin"
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Recovery bin…
+            </Button>
+          )}
+          {onAuditLog && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onAuditLog}
+              title="Global audit log"
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Audit log…
+            </Button>
+          )}
+          {onRetentionPolicy && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRetentionPolicy}
+              title="Retention policy"
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Retention…
+            </Button>
+          )}
+          {onBranding && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBranding}
+              title="Signer-page branding"
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Branding…
+            </Button>
+          )}
+          {onPackets && (
+            <Button
+              variant="outline"
+              onClick={onPackets}
+              className="border-purple-300 text-purple-700 hover:bg-purple-50"
+            >
+              Packets…
+            </Button>
+          )}
+          {onBulkSend && (
+            <Button
+              variant="outline"
+              onClick={onBulkSend}
+              className="border-purple-300 text-purple-700 hover:bg-purple-50"
+            >
+              Bulk send…
+            </Button>
+          )}
           <Button 
             onClick={onCreateNew}
             className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
@@ -171,6 +282,10 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
             <Bookmark className="h-4 w-4" />
             Templates
           </TabsTrigger>
+          <TabsTrigger value="metrics" className="gap-1.5">
+            <Activity className="h-4 w-4" />
+            Metrics
+          </TabsTrigger>
         </TabsList>
 
         {/* Envelopes Tab */}
@@ -190,6 +305,19 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Metrics Tab (P7.1) */}
+        <TabsContent value="metrics" className="mt-0">
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              </div>
+            }
+          >
+            <MetricsPanel onOpenEnvelope={onViewEnvelope} />
+          </Suspense>
         </TabsContent>
 
         {/* Templates Tab */}

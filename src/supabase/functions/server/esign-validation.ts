@@ -24,10 +24,15 @@ export const EnvelopeContextSchema = z.object({
 export const SignerSchema = z.object({
   name: z.string().min(1, 'Signer name is required').max(200),
   email: z.string().email('Valid signer email is required'),
+  // P5.1 — phone is optional; server normalises to E.164 at send-time.
+  phone: z.string().max(32).optional(),
   role: z.enum(['signer', 'witness', 'approver', 'cc']).optional().default('signer'),
   order: z.number().int().nonnegative().optional(),
   signerType: z.enum(['client', 'adviser', 'witness', 'external']).optional(),
-});
+  // P5.1 — per-signer SMS channel opt-in. Never inferred; always
+  // explicit, per POPIA s69 direct-marketing consent.
+  smsOptIn: z.boolean().optional(),
+}).passthrough();
 
 export const DraftSignersSchema = z.object({
   signers: z.array(SignerSchema).min(1, 'At least one signer is required'),

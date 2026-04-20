@@ -24,7 +24,7 @@ export interface TemplateRecipient {
 }
 
 export interface TemplateField {
-  type: 'signature' | 'initials' | 'text' | 'date' | 'checkbox';
+  type: 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'attachment';
   page: number;
   x: number;
   y: number;
@@ -48,6 +48,14 @@ export interface EsignTemplateRecord {
   fields: TemplateField[];
   /** Number of times this template has been used to create envelopes */
   usageCount: number;
+  /**
+   * P4.2 — Monotonically increasing template version. Starts at 1 on
+   * create. Every `updateTemplate` snapshots the outgoing record into
+   * the history index (`templateVersion(id, prevVersion)`) and bumps
+   * this number. Envelopes pin their `template_version` so the exact
+   * snapshot stays retrievable even after later edits.
+   */
+  version: number;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -82,6 +90,7 @@ export async function createTemplate(params: {
     recipients: params.recipients || [],
     fields: params.fields || [],
     usageCount: 0,
+    version: 1,
     createdBy: params.createdBy,
     createdAt: now,
     updatedAt: now,
@@ -107,7 +116,13 @@ export async function createTemplate(params: {
 export async function getTemplate(templateId: string): Promise<EsignTemplateRecord | null> {
   try {
     const template = await kv.get(EsignKeys.template(templateId));
-    return template || null;
+    if (!template) return null;
+    // Defensive backfill so callers can rely on `version` always
+    // being set without a separate migration script.
+    if (typeof (template as EsignTemplateRecord).version !== 'number') {
+      (template as EsignTemplateRecord).version = 1;
+    }
+    return template as EsignTemplateRecord;
   } catch (error) {
     log.error(`Failed to get template ${templateId}:`, error);
     return null;
@@ -141,14 +156,54 @@ export async function listTemplates(): Promise<EsignTemplateRecord[]> {
 // UPDATE
 // ============================================================================
 
+/**
+ * Substantive fields that, when changed, should bump the version. Pure
+ * metadata (description, category) doesn't justify a version bump and
+ * stays on the live record. Definition tracks the surface that
+ * envelopes rely on for legal/structural reproducibility.
+ */
+const VERSIONED_KEYS = [
+  'signingMode',
+  'recipients',
+  'fields',
+  'defaultExpiryDays',
+] as const;
+
+function shouldBumpVersion(
+  prev: EsignTemplateRecord,
+  next: Partial<EsignTemplateRecord>,
+): boolean {
+  for (const key of VERSIONED_KEYS) {
+    if (next[key] === undefined) continue;
+    if (JSON.stringify(prev[key]) !== JSON.stringify(next[key])) return true;
+  }
+  return false;
+}
+
 export async function updateTemplate(
   templateId: string,
-  updates: Partial<Omit<EsignTemplateRecord, 'id' | 'createdAt' | 'createdBy' | 'usageCount'>>
+  updates: Partial<Omit<EsignTemplateRecord, 'id' | 'createdAt' | 'createdBy' | 'usageCount' | 'version'>>
 ): Promise<EsignTemplateRecord | null> {
   const existing = await getTemplate(templateId);
   if (!existing) {
     log.warn(`Template not found for update: ${templateId}`);
     return null;
+  }
+
+  const bump = shouldBumpVersion(existing, updates as Partial<EsignTemplateRecord>);
+  if (bump) {
+    // Snapshot the outgoing record under its current version before
+    // any mutation so envelopes pinned to that version can replay it.
+    try {
+      await kv.set(EsignKeys.templateVersion(templateId, existing.version ?? 1), existing);
+      const idxKey = EsignKeys.templateVersionsIndex(templateId);
+      const idx = ((await kv.get(idxKey)) as number[] | null) ?? [];
+      const v = existing.version ?? 1;
+      if (!idx.includes(v)) idx.push(v);
+      await kv.set(idxKey, idx);
+    } catch (err) {
+      log.warn(`Failed to snapshot template ${templateId} v${existing.version}:`, err);
+    }
   }
 
   const updated: EsignTemplateRecord = {
@@ -158,12 +213,55 @@ export async function updateTemplate(
     createdAt: existing.createdAt,
     createdBy: existing.createdBy,
     usageCount: existing.usageCount,
+    version: bump ? (existing.version ?? 1) + 1 : (existing.version ?? 1),
     updatedAt: new Date().toISOString(),
   };
 
   await kv.set(EsignKeys.template(templateId), updated);
-  log.success(`Template updated: "${updated.name}" (${templateId})`);
+  log.success(
+    `Template updated: "${updated.name}" (${templateId}) v${existing.version ?? 1}${bump ? ` \u2192 v${updated.version}` : ' (no version bump)'}`,
+  );
   return updated;
+}
+
+/**
+ * P4.2 — Retrieve a specific historical version of a template. Returns
+ * the live record when `version === template.version`, otherwise looks
+ * up the snapshot. Returns null if neither exists.
+ */
+export async function getTemplateVersion(
+  templateId: string,
+  version: number,
+): Promise<EsignTemplateRecord | null> {
+  const live = await getTemplate(templateId);
+  if (live && (live.version ?? 1) === version) return live;
+  try {
+    const snap = await kv.get(EsignKeys.templateVersion(templateId, version));
+    return (snap as EsignTemplateRecord | null) ?? null;
+  } catch (err) {
+    log.error(`Failed to load template ${templateId} v${version}:`, err);
+    return null;
+  }
+}
+
+/** P4.2 — list available historical versions for a template. */
+export async function listTemplateVersions(
+  templateId: string,
+): Promise<{ version: number; isLive: boolean; record: EsignTemplateRecord | null }[]> {
+  const live = await getTemplate(templateId);
+  const idxKey = EsignKeys.templateVersionsIndex(templateId);
+  const idx = ((await kv.get(idxKey)) as number[] | null) ?? [];
+  const versions = new Set<number>(idx);
+  if (live) versions.add(live.version ?? 1);
+  const ordered = Array.from(versions).sort((a, b) => a - b);
+  const records = await Promise.all(
+    ordered.map(async (v) => ({
+      version: v,
+      isLive: !!live && (live.version ?? 1) === v,
+      record: await getTemplateVersion(templateId, v),
+    })),
+  );
+  return records;
 }
 
 /**

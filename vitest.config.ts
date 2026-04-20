@@ -20,6 +20,10 @@ export default defineConfig({
       'node-forge@1.3.1': 'node-forge',
       '@supabase/supabase-js@2.39.3': '@supabase/supabase-js',
       '@jsr/supabase__supabase-js@2.49.8': '@jsr/supabase__supabase-js',
+      // Edge functions import via the Deno `jsr:` specifier; rewrite to the
+      // npm package so Vitest can resolve it. The test files separately
+      // `vi.mock(...)` the same specifier so no real network calls happen.
+      'jsr:@supabase/supabase-js@2.49.8': '@supabase/supabase-js',
       '@': path.resolve(__dirname, './src'),
     },
   },
@@ -28,11 +32,17 @@ export default defineConfig({
     globals: true,
     css: false,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Note: we deliberately do NOT exclude `src/supabase/functions/**`
+    // here. Edge-function source files use Deno-only imports
+    // (`npm:`/`jsr:`/`Deno.*`) that can't run in Node, but the only files
+    // matched by the `include` glob are `*.test.ts` / `*.spec.ts` test
+    // files, which mock those imports and run cleanly in Vitest.
     exclude: [
       'node_modules',
       'dist',
-      'src/supabase/functions/**',
       'scripts/**',
+      // P8.9 — Playwright specs run via `npm run test:e2e`, not Vitest.
+      'e2e/**',
     ],
     coverage: {
       provider: 'v8',

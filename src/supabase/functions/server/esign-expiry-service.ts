@@ -18,6 +18,9 @@ import {
   logAuditEvent,
 } from './esign-services.ts';
 import { sendEmail } from './email-service.ts';
+import { shouldDeliverSenderEvent, queueForDigest } from './esign-notification-prefs.ts';
+import { emitWebhookEvent } from './webhook-service.ts';
+import { enqueue as enqueueInAppNotification } from './esign-inapp-notifications.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import type { EsignEnvelope, EsignSigner } from './esign-types.ts';
@@ -80,7 +83,9 @@ export async function runExpirySweep(dryRun = true): Promise<ExpirySweepResult> 
       !Array.isArray(item) &&
       item.id &&
       item.status &&
-      item.document_id
+      item.document_id &&
+      // P6.8 — soft-deleted envelopes can't expire; they await purge.
+      !item.deleted_at
     ) as unknown as EsignEnvelope[];
 
     // 2. Filter to expirable statuses
@@ -201,14 +206,59 @@ async function notifyExpiry(
       </div>
     `;
 
-    await sendEmail({
-      to: senderEmail,
-      subject: `Expired: ${envelope.title}`,
-      html,
-      text: `Envelope "${envelope.title}" has expired. ${signedCount} of ${signers.length} signers completed. Pending: ${pendingSigners || 'none'}.`,
+    // P5.2 — respect the sender's notification preferences. Expiry is a
+    // terminal event so it bypasses `completion_only` gating.
+    const subject = `Expired: ${envelope.title}`;
+    const text = `Envelope "${envelope.title}" has expired. ${signedCount} of ${signers.length} signers completed. Pending: ${pendingSigners || 'none'}.`;
+    const decision = await shouldDeliverSenderEvent(
+      envelope.created_by_user_id,
+      'envelope.expired',
+    );
+    if (decision.deliver) {
+      await sendEmail({ to: senderEmail, subject, html, text });
+      log.info(`Expiry notification sent to ${senderEmail} for envelope ${envelope.id}`);
+    } else if (decision.digest) {
+      await queueForDigest({
+        userId: envelope.created_by_user_id,
+        event: 'envelope.expired',
+        envelopeId: envelope.id,
+        envelopeTitle: envelope.title,
+        subject,
+        body: text,
+      });
+      log.info(`Expiry queued for digest for ${senderEmail}`);
+    } else {
+      log.info(`Expiry notification suppressed for ${senderEmail} (mode=${decision.mode})`);
+    }
+
+    // P5.4 — webhook fan-out. Always fires regardless of email prefs since
+    // webhook subscriptions are configured separately from email digest
+    // mode.
+    void emitWebhookEvent({
+      firmId: envelope.firm_id || 'standalone',
+      eventType: 'envelope.expired',
+      envelopeId: envelope.id,
+      payload: {
+        envelope: { id: envelope.id, title: envelope.title, status: 'expired' },
+        signed_count: signedCount,
+        total_signers: signers.length,
+        pending_signers: signers
+          .filter((s) => s.status !== 'signed')
+          .map((s) => ({ id: s.id, name: s.name, email: s.email, status: s.status })),
+      },
     });
 
-    log.info(`Expiry notification sent to ${senderEmail} for envelope ${envelope.id}`);
+    // P5.7 — bell-UI copy; mirrors webhook behaviour (always enqueue).
+    if (envelope.created_by_user_id) {
+      void enqueueInAppNotification({
+        userId: envelope.created_by_user_id,
+        type: 'envelope.expired',
+        title: 'Envelope expired',
+        body: `"${envelope.title}" expired before all recipients signed (${signedCount}/${signers.length}).`,
+        envelopeId: envelope.id,
+        metadata: { signed_count: signedCount, total_signers: signers.length },
+      });
+    }
   } catch (err) {
     log.error(`Failed to send expiry notification for envelope ${envelope.id}:`, err);
     // Best-effort — don't throw

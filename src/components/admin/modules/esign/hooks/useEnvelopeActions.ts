@@ -103,7 +103,13 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
       }
       const response = await esignApi.uploadDocument(request);
       logger.debug('✅ Document uploaded successfully');
-      return response.envelope;
+      // P3.1 + P3.2 — attach autodetect candidates onto the envelope so
+      // the studio can pick them up without a second roundtrip. The
+      // property is purged from the envelope on subsequent GETs.
+      return {
+        ...response.envelope,
+        field_candidates: response.field_candidates ?? [],
+      };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload failed';
       logger.error('❌ Upload error:', errorMessage);

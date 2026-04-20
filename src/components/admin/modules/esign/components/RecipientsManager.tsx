@@ -36,10 +36,13 @@ import {
   Building2,
   Info,
   ExternalLink,
+  PenSquare,
+  ScrollText,
+  Send,
 } from 'lucide-react';
 import { clientApi } from '../../client-management/api';
 import { SIGNER_ROLES, SIGNER_COLORS, CURRENT_MAX_SIGNERS } from '../constants';
-import type { SignerFormData } from '../types';
+import type { SignerFormData, SignerKind } from '../types';
 
 /**
  * Optional client context — when provided, the client is pre-populated as
@@ -99,8 +102,13 @@ export function RecipientsManager({
 
   // Shared signer config
   const [signerRole, setSignerRole] = useState('signer');
+  const [signerKind, setSignerKind] = useState<SignerKind>('signer');
   const [otpRequired, setOtpRequired] = useState(true);
   const [accessCode, setAccessCode] = useState('');
+  // P5.1 — SMS channel opt-in for the new signer. UI is disabled
+  // until a phone number is entered so senders can't opt-in blind.
+  const [manualPhone, setManualPhone] = useState('');
+  const [smsOptIn, setSmsOptIn] = useState(false);
 
   // Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -245,25 +253,40 @@ export function RecipientsManager({
 
     const roleLabel = SIGNER_ROLES.find((r) => r.value === signerRole)?.label || signerRole;
 
+    // CC recipients receive a copy only and are never required to sign, so we
+    // hard-default OTP / access-code off for them. The Studio also suppresses
+    // field placement when `kind === 'cc'`.
+    const effectiveOtp = signerKind === 'cc' ? false : otpRequired;
+    const effectiveAccessCode = signerKind === 'cc' ? undefined : (accessCode || undefined);
+
+    const phoneTrimmed = manualPhone.trim();
+    const effectiveSmsOptIn = signerKind !== 'cc' && smsOptIn && !!phoneTrimmed;
+
     const newSigner: SignerFormData = addMode === 'system'
       ? {
           name: `${selectedClient!.firstName} ${selectedClient!.lastName}`.trim(),
           email: selectedClient!.email,
+          phone: phoneTrimmed || undefined,
           role: roleLabel,
           order: signers.length + 1,
-          otpRequired,
-          accessCode: accessCode || undefined,
+          otpRequired: effectiveOtp,
+          accessCode: effectiveAccessCode,
           clientId: selectedClient!.id,
           isSystemClient: true,
+          kind: signerKind,
+          smsOptIn: effectiveSmsOptIn,
         }
       : {
           name: manualName.trim(),
           email: manualEmail.trim(),
+          phone: phoneTrimmed || undefined,
           role: roleLabel,
           order: signers.length + 1,
-          otpRequired,
-          accessCode: accessCode || undefined,
+          otpRequired: effectiveOtp,
+          accessCode: effectiveAccessCode,
           isSystemClient: false,
+          kind: signerKind,
+          smsOptIn: effectiveSmsOptIn,
         };
 
     onChange([...signers, newSigner]);
@@ -288,12 +311,48 @@ export function RecipientsManager({
     setSearchQuery('');
     setManualName('');
     setManualEmail('');
+    setManualPhone('');
+    setSmsOptIn(false);
     setSignerRole('signer');
+    setSignerKind('signer');
     setOtpRequired(true);
     setAccessCode('');
     setErrors({});
     setShowDropdown(false);
   };
+
+  // Visual presets for the recipient kind selector. Keeps the UI explicit
+  // about what each type means so admins don't accidentally CC a required
+  // signer (or vice-versa).
+  const KIND_OPTIONS: Array<{
+    value: SignerKind;
+    label: string;
+    sublabel: string;
+    icon: typeof PenSquare;
+    accent: string;
+  }> = [
+    {
+      value: 'signer',
+      label: 'Needs to sign',
+      sublabel: 'Standard signer — must complete fields',
+      icon: PenSquare,
+      accent: 'border-purple-500 bg-purple-50 text-purple-700',
+    },
+    {
+      value: 'witness',
+      label: 'Witness',
+      sublabel: 'Co-signs to attest the agreement',
+      icon: ScrollText,
+      accent: 'border-amber-500 bg-amber-50 text-amber-700',
+    },
+    {
+      value: 'cc',
+      label: 'Receives a copy',
+      sublabel: 'Notified only — does not sign',
+      icon: Send,
+      accent: 'border-cyan-500 bg-cyan-50 text-cyan-700',
+    },
+  ];
 
   // ==================== DRAG & DROP ====================
 
@@ -481,6 +540,18 @@ export function RecipientsManager({
                   <Badge variant="outline" className="text-xs font-normal">
                     {signer.role || 'Signer'}
                   </Badge>
+                  {signer.kind === 'cc' && (
+                    <Badge variant="outline" className="text-xs font-normal bg-cyan-50 border-cyan-200 text-cyan-700">
+                      <Send className="h-3 w-3 mr-1" />
+                      Receives copy
+                    </Badge>
+                  )}
+                  {signer.kind === 'witness' && (
+                    <Badge variant="outline" className="text-xs font-normal bg-amber-50 border-amber-200 text-amber-700">
+                      <ScrollText className="h-3 w-3 mr-1" />
+                      Witness
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
                   <span className="flex items-center gap-1 truncate">
@@ -687,6 +758,41 @@ export function RecipientsManager({
                 </div>
               )}
 
+              {/* Recipient kind — Signer / Witness / CC. Drives the entire
+                  downstream UX: CCs skip OTP, can't have fields placed on
+                  them, and are shown as "copy only" in the audit trail. */}
+              <div className="space-y-2 pt-2 border-t border-gray-200">
+                <Label>What does this recipient need to do?</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {KIND_OPTIONS.map((opt) => {
+                    const Icon = opt.icon;
+                    const isActive = signerKind === opt.value;
+                    return (
+                      <button
+                        type="button"
+                        key={opt.value}
+                        onClick={() => {
+                          setSignerKind(opt.value);
+                          if (opt.value === 'cc') {
+                            setOtpRequired(false);
+                            setAccessCode('');
+                          }
+                        }}
+                        className={`text-left rounded-lg border-2 p-3 transition-colors ${
+                          isActive ? opt.accent : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icon className="h-4 w-4" />
+                          <span className="text-sm font-semibold">{opt.label}</span>
+                        </div>
+                        <span className="text-xs text-gray-500 block leading-snug">{opt.sublabel}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Shared Config: Role, OTP, Access Code */}
               <div className="space-y-4 pt-2 border-t border-gray-200">
                 <div className="space-y-1">
@@ -718,10 +824,13 @@ export function RecipientsManager({
                         placeholder="e.g. 1234"
                         value={accessCode}
                         onChange={(e) => setAccessCode(e.target.value)}
+                        disabled={signerKind === 'cc'}
                       />
                     </div>
                     <p className="text-xs text-gray-400">
-                      Additional security code the signer must enter
+                      {signerKind === 'cc'
+                        ? 'Not applicable for CC recipients'
+                        : 'Additional security code the signer must enter'}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 pt-6">
@@ -729,12 +838,50 @@ export function RecipientsManager({
                       id="new-otp"
                       checked={otpRequired}
                       onCheckedChange={(c) => setOtpRequired(c === true)}
+                      disabled={signerKind === 'cc'}
                     />
                     <Label htmlFor="new-otp" className="text-sm cursor-pointer">
                       Require OTP Verification
                     </Label>
                   </div>
                 </div>
+
+                {/* P5.1 — Optional SMS channel. Phone is optional; when
+                    present the sender can tick SMS opt-in so OTP + invite
+                    are mirrored to SMS alongside email. */}
+                {signerKind !== 'cc' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label>Mobile Number (Optional)</Label>
+                      <Input
+                        type="tel"
+                        placeholder="e.g. 082 123 4567"
+                        value={manualPhone}
+                        onChange={(e) => {
+                          setManualPhone(e.target.value);
+                          if (!e.target.value.trim()) setSmsOptIn(false);
+                        }}
+                      />
+                      <p className="text-xs text-gray-400">
+                        Enables SMS channel for OTP / invites when consent is given.
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2 pt-6">
+                      <Checkbox
+                        id="new-sms-optin"
+                        checked={smsOptIn}
+                        onCheckedChange={(c) => setSmsOptIn(c === true)}
+                        disabled={!manualPhone.trim()}
+                      />
+                      <Label
+                        htmlFor="new-sms-optin"
+                        className={`text-sm cursor-pointer ${!manualPhone.trim() ? 'text-gray-400' : ''}`}
+                      >
+                        Signer consents to SMS
+                      </Label>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Limit warning */}

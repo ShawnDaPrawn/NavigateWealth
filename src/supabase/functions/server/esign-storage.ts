@@ -19,6 +19,9 @@ const BUCKETS = {
   DOCUMENTS: 'make-91ed8379-esign-documents',
   SIGNATURES: 'make-91ed8379-esign-signatures',
   CERTIFICATES: 'make-91ed8379-esign-certificates',
+  // P3.5 — Signer-uploaded attachments. Private bucket, stricter MIME
+  // allow-list than DOCUMENTS so signers can't upload arbitrary executables.
+  ATTACHMENTS: 'make-91ed8379-esign-attachments',
 } as const;
 
 /**
@@ -40,6 +43,18 @@ export async function initializeStorageBuckets(): Promise<void> {
     },
     { name: BUCKETS.SIGNATURES, public: false, allowedMimeTypes: ['image/png', 'image/jpeg'] },
     { name: BUCKETS.CERTIFICATES, public: false, allowedMimeTypes: ['application/pdf'] },
+    {
+      name: BUCKETS.ATTACHMENTS,
+      public: false,
+      allowedMimeTypes: [
+        'application/pdf',
+        'image/png',
+        'image/jpeg',
+        'image/heic',
+        'image/heif',
+        'image/webp',
+      ],
+    },
   ];
 
   for (const config of bucketConfigs) {
@@ -281,6 +296,72 @@ export async function getSignatureUrl(path: string): Promise<string | null> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// P3.5 — Attachment storage helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Hard cap so a signer can't ddos us with a 1GB upload. */
+export const ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
+
+/** Closed list of MIME types we accept for attachments. */
+export const ATTACHMENT_ALLOWED_MIME = new Set<string>([
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'image/heic',
+  'image/heif',
+  'image/webp',
+]);
+
+export async function uploadAttachment(
+  envelopeId: string,
+  attachmentId: string,
+  fileName: string,
+  fileBuffer: Uint8Array,
+  mimeType: string,
+): Promise<{ path: string; error: string | null }> {
+  try {
+    // Defence-in-depth — the bucket allow-list also blocks these, but
+    // failing fast here gives a nicer error message.
+    if (!ATTACHMENT_ALLOWED_MIME.has(mimeType)) {
+      return { path: '', error: `Unsupported attachment type: ${mimeType}` };
+    }
+    if (fileBuffer.length > ATTACHMENT_MAX_BYTES) {
+      return { path: '', error: `Attachment exceeds ${Math.floor(ATTACHMENT_MAX_BYTES / 1024 / 1024)}MB limit` };
+    }
+    const supabase = getSupabase();
+    // Sanitise filename so we never write `..` / slashes into the storage path.
+    const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+    const path = `${envelopeId}/${attachmentId}-${safeName}`;
+    const { error } = await supabase.storage
+      .from(BUCKETS.ATTACHMENTS)
+      .upload(path, fileBuffer, { contentType: mimeType, upsert: false });
+    if (error) {
+      log.error('Attachment upload error:', error);
+      return { path: '', error: error.message };
+    }
+    log.success(`Uploaded attachment: ${path}`);
+    return { path, error: null };
+  } catch (err) {
+    log.error('Attachment upload exception:', err);
+    return { path: '', error: String(err) };
+  }
+}
+
+export async function getAttachmentUrl(path: string): Promise<string | null> {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.storage
+      .from(BUCKETS.ATTACHMENTS)
+      .createSignedUrl(path, 3600);
+    if (error || !data) return null;
+    return data.signedUrl;
+  } catch (err) {
+    log.error('Get attachment URL exception:', err);
+    return null;
+  }
+}
+
 /**
  * Get a presigned URL for a completion certificate
  */
@@ -299,6 +380,41 @@ export async function getCertificateUrl(path: string): Promise<string | null> {
     return data.signedUrl;
   } catch (error) {
     log.error('Get certificate URL exception:', error);
+    return null;
+  }
+}
+
+/**
+ * P6.7 — raw download helpers for certificate + attachment buckets so
+ * the evidence-pack exporter can bundle everything into a single ZIP
+ * without round-tripping through signed URLs.
+ */
+export async function downloadCertificate(path: string): Promise<Uint8Array | null> {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.storage.from(BUCKETS.CERTIFICATES).download(path);
+    if (error || !data) {
+      log.error('Certificate download error:', error);
+      return null;
+    }
+    return new Uint8Array(await data.arrayBuffer());
+  } catch (err) {
+    log.error('Certificate download exception:', err);
+    return null;
+  }
+}
+
+export async function downloadAttachment(path: string): Promise<Uint8Array | null> {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.storage.from(BUCKETS.ATTACHMENTS).download(path);
+    if (error || !data) {
+      log.error('Attachment download error:', error);
+      return null;
+    }
+    return new Uint8Array(await data.arrayBuffer());
+  } catch (err) {
+    log.error('Attachment download exception:', err);
     return null;
   }
 }
