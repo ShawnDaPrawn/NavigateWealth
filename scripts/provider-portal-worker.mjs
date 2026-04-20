@@ -401,6 +401,38 @@ function chooseDeterministicSearchCandidate(candidates = []) {
   return null;
 }
 
+function chooseDeterministicResultCandidate(candidates = [], policyNumber = '') {
+  const normalizedPolicyNumber = normalisePolicyNumber(policyNumber);
+  const scored = candidates
+    .filter((candidate) => candidate?.selector)
+    .map((candidate) => {
+      const text = candidateSearchText(candidate);
+      const normalizedText = normalisePolicyNumber(text);
+      let score = 0;
+
+      if (!text || /password|otp|one[-\s]*time|verification|username|log\s*in|login|sign\s*in/i.test(text)) {
+        score -= 25;
+      }
+      if (normalizedPolicyNumber && normalizedText.includes(normalizedPolicyNumber)) score += 20;
+      if (/\b(policy|account|contract|portfolio|member|client|investor|result|row)\b/i.test(text)) score += 4;
+      if (candidate.tag === 'tr' || candidate.role === 'row') score += 2;
+      if (/link|button/i.test(`${candidate.tag || ''} ${candidate.role || ''}`)) score += 1;
+
+      return { candidate, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  if (scored[0]?.score > 0) {
+    return {
+      candidate: scored[0].candidate,
+      reason: normalizedPolicyNumber ? 'deterministic policy-number result match' : 'deterministic result candidate match',
+    };
+  }
+
+  if (scored.length === 1) return { candidate: scored[0].candidate, reason: 'only visible result candidate' };
+  return null;
+}
+
 async function claimNextPolicyItem() {
   const data = await apiFetch(jobPath('/items/claim'), {
     method: 'POST',
@@ -450,6 +482,11 @@ function rememberedSelectorsForStage(brain, stage) {
 function describeBrainDecision(decision) {
   if (!decision) return 'no decision';
   return `${decision.action || 'stop_uncertain'} (${decision.confidence || 'low'}): ${decision.reason || 'No reason supplied.'}`;
+}
+
+function describeBrainFallbackError(error) {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return message.replace(/\s+/g, ' ').trim().slice(0, 160) || 'unknown error';
 }
 
 function isNavigationContextError(error) {
@@ -742,22 +779,41 @@ async function captureSearchResultCandidates(page, flow) {
 }
 
 async function chooseInputWithBrain(page, flow, item) {
-  const snapshot = await captureInputCandidates(page);
+  let snapshot = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    snapshot = await captureInputCandidates(page);
+    if (Array.isArray(snapshot?.candidates) && snapshot.candidates.length > 0) break;
+    if (attempt < 3) {
+      await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
+      await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+      await page.waitForTimeout(1200);
+    }
+  }
   if (!Array.isArray(snapshot?.candidates) || snapshot.candidates.length === 0) {
     const pageHint = String(snapshot?.pageTextSample || '').slice(0, 240);
     throw new Error(pageHint
-      ? `No visible search inputs or search triggers were available for smart assist. Page sample: ${pageHint}`
-      : 'No visible search inputs or search triggers were available for smart assist.');
+      ? `No visible search inputs or search triggers were available for smart assist after retrying. Page sample: ${pageHint}`
+      : 'No visible search inputs or search triggers were available for smart assist after retrying.');
   }
   const fallback = chooseDeterministicSearchCandidate(snapshot.candidates);
-  const response = await requestBrainDecision('search_input', page, flow, item, snapshot).catch((error) => ({
-    decision: {
-      action: 'stop_uncertain',
-      candidateId: null,
-      confidence: 'low',
-      reason: `Brain request failed: ${error instanceof Error ? error.message : String(error)}`,
-    },
-  }));
+  let response = null;
+  try {
+    response = await requestBrainDecision('search_input', page, flow, item, snapshot);
+  } catch (error) {
+    if (fallback?.candidate) {
+      return {
+        candidate: fallback.candidate,
+        decision: {
+          action: 'use_candidate',
+          candidateId: fallback.candidate.candidateId,
+          confidence: 'medium',
+          reason: `${fallback.reason}; brain request failed: ${describeBrainFallbackError(error)}`.slice(0, 300),
+          origin: 'fallback',
+        },
+      };
+    }
+    throw error;
+  }
   const decision = response?.decision || null;
   if (!decision || decision.action !== 'use_candidate' || !decision.candidateId) {
     if (fallback?.candidate) {
@@ -768,6 +824,7 @@ async function chooseInputWithBrain(page, flow, item) {
           candidateId: fallback.candidate.candidateId,
           confidence: 'medium',
           reason: `${fallback.reason}; brain said: ${describeBrainDecision(decision)}`.slice(0, 300),
+          origin: 'fallback',
         },
       };
     }
@@ -777,7 +834,7 @@ async function chooseInputWithBrain(page, flow, item) {
   if (!candidate?.selector) {
     throw new Error('Smart assist chose a search field candidate that is no longer available.');
   }
-  return { candidate, decision };
+  return { candidate, decision: { ...decision, origin: 'brain' } };
 }
 
 async function chooseSearchResultWithBrain(page, flow, item) {
@@ -785,16 +842,46 @@ async function chooseSearchResultWithBrain(page, flow, item) {
   if (!Array.isArray(snapshot?.candidates) || snapshot.candidates.length === 0) {
     throw new Error('No visible search results were available for smart assist.');
   }
-  const response = await requestBrainDecision('search_result', page, flow, item, snapshot);
+  const fallback = chooseDeterministicResultCandidate(snapshot.candidates, item.policyNumber);
+  let response = null;
+  try {
+    response = await requestBrainDecision('search_result', page, flow, item, snapshot);
+  } catch (error) {
+    if (fallback?.candidate) {
+      return {
+        candidate: fallback.candidate,
+        decision: {
+          action: 'use_candidate',
+          candidateId: fallback.candidate.candidateId,
+          confidence: 'medium',
+          reason: `${fallback.reason}; brain request failed: ${describeBrainFallbackError(error)}`.slice(0, 300),
+          origin: 'fallback',
+        },
+      };
+    }
+    throw error;
+  }
   const decision = response?.decision || null;
   if (!decision || decision.action !== 'use_candidate' || !decision.candidateId) {
+    if (fallback?.candidate) {
+      return {
+        candidate: fallback.candidate,
+        decision: {
+          action: 'use_candidate',
+          candidateId: fallback.candidate.candidateId,
+          confidence: 'medium',
+          reason: `${fallback.reason}; brain said: ${describeBrainDecision(decision)}`.slice(0, 300),
+          origin: 'fallback',
+        },
+      };
+    }
     throw new Error(`Smart assist stopped without a safe result choice: ${describeBrainDecision(decision)}`);
   }
   const candidate = snapshot.candidates.find((entry) => entry.candidateId === decision.candidateId);
   if (!candidate?.selector) {
     throw new Error('Smart assist chose a result candidate that is no longer available.');
   }
-  return { candidate, decision };
+  return { candidate, decision: { ...decision, origin: 'brain' } };
 }
 
 async function findClickableByIntent(page, selector, labels = []) {
@@ -1106,7 +1193,7 @@ async function openPolicySearchResult(page, flow, item, brain) {
     }
     addItemWarning(item.id, `Smart assist chose a search result. ${describeBrainDecision(decision)}`);
     if (smartAssist.rememberSelectors) {
-      await rememberBrainSelector('search_result', item, candidate, 'brain');
+      await rememberBrainSelector('search_result', item, candidate, decision?.origin === 'fallback' ? 'deterministic' : 'brain');
     }
     return;
   }
@@ -1164,7 +1251,7 @@ async function searchPolicyByNumber(page, flow, item, brain) {
         await clickWithOverlayFallback(page, candidateLocator, { timeout: 5000, settleMs: 1200 });
         await page.waitForTimeout(1200);
         if (smartAssist.rememberSelectors) {
-          await rememberBrainSelector('search_input', item, brainChoice.candidate, 'brain');
+          await rememberBrainSelector('search_input', item, brainChoice.candidate, brainChoice.decision?.origin === 'fallback' ? 'deterministic' : 'brain');
         }
         try {
           searchInput = await findInputByIntent(page, search.searchInputSelector, splitLabels(search.searchInputLabels));
@@ -1191,7 +1278,7 @@ async function searchPolicyByNumber(page, flow, item, brain) {
   await submitPolicySearch(page, search, searchInput, item);
   await page.waitForTimeout(1500);
   if (usedBrainCandidate && smartAssist.rememberSelectors) {
-    await rememberBrainSelector('search_input', item, usedBrainCandidate, 'brain');
+    await rememberBrainSelector('search_input', item, usedBrainCandidate, usedBrainDecision?.origin === 'fallback' ? 'deterministic' : 'brain');
   } else if (searchInputMemoryCandidate) {
     await rememberBrainSelector('search_input', item, searchInputMemoryCandidate, 'deterministic');
   }
