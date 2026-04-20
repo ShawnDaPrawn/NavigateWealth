@@ -285,6 +285,19 @@ export const productManagementApi = {
     return data.run as IntegrationSyncRun;
   },
 
+  fetchIntegrationSyncRun: async (runId: string): Promise<IntegrationSyncRun> => {
+    const token = await getSupabaseAuthToken();
+    const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/sync-runs/${runId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch sync run');
+    return data.run as IntegrationSyncRun;
+  },
+
   downloadIntegrationTemplate: async (providerId: string, categoryId: string): Promise<void> => {
     const token = await getSupabaseAuthToken();
     const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/template?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`, {

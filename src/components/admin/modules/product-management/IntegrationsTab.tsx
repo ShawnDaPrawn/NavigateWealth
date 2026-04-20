@@ -146,6 +146,14 @@ export function IntegrationsTab() {
     refetchIntervalInBackground: true,
   });
 
+  const stagedRunId = portalJob?.stagedRunId || latestPortalJob?.stagedRunId || null;
+
+  const { data: portalStagedRun } = useQuery({
+    queryKey: integrationsKeys.syncRun(stagedRunId),
+    enabled: !!stagedRunId,
+    queryFn: () => productManagementApi.fetchIntegrationSyncRun(stagedRunId!),
+  });
+
   useEffect(() => {
     if (!latestPortalJob) return;
 
@@ -164,6 +172,16 @@ export function IntegrationsTab() {
       return currentJob;
     });
   }, [latestPortalJob]);
+
+  useEffect(() => {
+    if (!portalStagedRun) return;
+
+    setStagedRun((currentRun) => {
+      if (!currentRun) return portalStagedRun;
+      if (currentRun.id !== portalStagedRun.id) return portalStagedRun;
+      return currentRun.updatedAt === portalStagedRun.updatedAt ? currentRun : portalStagedRun;
+    });
+  }, [portalStagedRun]);
 
   // Sync server config to local state
   useEffect(() => {
@@ -580,6 +598,7 @@ export function IntegrationsTab() {
                 selectedCategoryId={selectedCategoryId}
                 flow={portalFlow}
                 job={portalJob}
+                stagedRun={stagedRun}
                 jobItems={portalJobItemsData?.items || []}
                 discoveryReport={portalDiscoveryReport}
                 isLoadingFlow={isLoadingPortalFlow}
@@ -602,6 +621,7 @@ export function IntegrationsTab() {
                 onRefreshJob={() => refreshPortalJobMutation.mutate()}
                 onRetryItem={(item) => retryPortalJobItemMutation.mutate(item)}
                 onApplyFlow={(patch) => applyPortalFlowMutation.mutate(patch)}
+                onOpenUploadTab={() => setActiveTab('upload')}
                 isApplyingFlow={applyPortalFlowMutation.isPending}
               />
             </TabsContent>

@@ -10,7 +10,7 @@ import { Separator } from '../../../../ui/separator';
 import { Switch } from '../../../../ui/switch';
 import { Textarea } from '../../../../ui/textarea';
 import { AlertCircle, Bot, CheckCircle2, Clock, FileText, KeyRound, ListChecks, Loader2, Play, RefreshCw, RotateCcw, Search, Settings2 } from 'lucide-react';
-import { IntegrationProvider, PortalBrainMemorySummary, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from '../types';
+import { IntegrationProvider, IntegrationSyncRun, PortalBrainMemorySummary, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from '../types';
 import { cn } from '../../../../ui/utils';
 
 interface PortalAutomationTabProps {
@@ -18,6 +18,7 @@ interface PortalAutomationTabProps {
   selectedCategoryId: string;
   flow?: PortalProviderFlow;
   job?: PortalSyncJob | null;
+  stagedRun?: IntegrationSyncRun | null;
   jobItems: PortalJobPolicyItem[];
   discoveryReport?: PortalDiscoveryReport | null;
   brainMemory?: PortalBrainMemorySummary;
@@ -40,6 +41,7 @@ interface PortalAutomationTabProps {
   onRefreshJob: () => void;
   onRetryItem: (item: PortalJobPolicyItem) => void;
   onApplyFlow: (patch: { policyRowSelector?: string; fields: PortalFlowField[] }) => void;
+  onOpenUploadTab: () => void;
   isApplyingFlow: boolean;
 }
 
@@ -65,6 +67,14 @@ const itemStatusClassNames: Record<PortalJobPolicyItem['status'], string> = {
   skipped: 'bg-gray-50 text-gray-600 border-gray-200',
 };
 
+const itemStatusLabels: Record<PortalJobPolicyItem['status'], string> = {
+  queued: 'Queued',
+  in_progress: 'Working',
+  completed: 'Extracted',
+  failed: 'Failed',
+  skipped: 'Skipped',
+};
+
 const splitPortalLines = (value: string) => value
   .split(/\r?\n|,/)
   .map((item) => item.trim())
@@ -80,6 +90,7 @@ export function PortalAutomationTab({
   selectedCategoryId,
   flow,
   job,
+  stagedRun,
   jobItems,
   discoveryReport,
   brainMemory,
@@ -102,6 +113,7 @@ export function PortalAutomationTab({
   onRefreshJob,
   onRetryItem,
   onApplyFlow,
+  onOpenUploadTab,
   isApplyingFlow,
 }: PortalAutomationTabProps) {
   const [runMode, setRunMode] = useState<PortalJobRunMode>('run');
@@ -217,6 +229,17 @@ export function PortalAutomationTab({
   const hasSearchFallback = Boolean(searchInputSelector.trim() || searchLabels.length > 0);
   const hasPostLoginFallback = configuredPolicyListSteps.length > 0 || hasSearchFallback;
   const smartAssistReady = Boolean(brainMemory?.available && brainMemory?.configured);
+  const stagedRowsAwaitingPublish = stagedRun?.rows.filter((row) =>
+    row.matchStatus === 'matched' &&
+    row.diffs.length > 0 &&
+    row.publishStatus !== 'published' &&
+    row.publishStatus !== 'failed' &&
+    row.publishStatus !== 'skipped'
+  ).length || 0;
+  const stagedChangedRows = stagedRun?.rows.filter((row) => row.diffs.length > 0) || [];
+  const stagedPreviewRow = stagedChangedRows.find((row) =>
+    jobItems.some((item) => item.policyNumber === row.policyNumber)
+  ) || stagedChangedRows[0];
   const setupWarnings = [
     postLoginUrl.trim() && !hasPostLoginFallback
       ? 'A post-login page URL is set, but there is no click-step or search fallback if that page cannot be opened.'
@@ -884,6 +907,54 @@ export function PortalAutomationTab({
             )}
             {job.error && <p className="text-sm text-red-700">{job.error}</p>}
 
+            {job.stagedRunId && (
+              <Alert className="border-blue-200 bg-blue-50 text-blue-900">
+                <FileText className="h-4 w-4" />
+                <AlertTitle>
+                  {stagedRun?.summary.publishedRows
+                    ? 'Portal extraction published'
+                    : 'Portal extraction staged for review'}
+                </AlertTitle>
+                <AlertDescription className="space-y-3">
+                  <p>
+                    {stagedRun
+                      ? `This run extracted ${stagedRun.summary.totalRows} row${stagedRun.summary.totalRows === 1 ? '' : 's'}. Published rows: ${stagedRun.summary.publishedRows}.`
+                      : 'The worker extracted policy data and created a staged sync run.'}
+                    {stagedRun && stagedRowsAwaitingPublish > 0
+                      ? ` ${stagedRowsAwaitingPublish} row${stagedRowsAwaitingPublish === 1 ? '' : 's'} still need to be published before the live policy records change.`
+                      : ''}
+                  </p>
+                  {stagedPreviewRow && (
+                    <div className="rounded-md border border-blue-200 bg-white/80 p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-blue-700">
+                        Staged changes for {stagedPreviewRow.policyNumber}
+                      </p>
+                      <div className="mt-2 space-y-1 text-sm text-slate-700">
+                        {stagedPreviewRow.diffs.slice(0, 4).map((diff) => (
+                          <div key={`${stagedPreviewRow.id}-${diff.fieldId}`} className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                            <span className="font-medium text-slate-900">{diff.fieldName}</span>
+                            <span className="text-slate-600 sm:text-right">
+                              {String(diff.oldValue ?? '-')} {' -> '} {String(diff.newValue ?? '-')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" onClick={onOpenUploadTab}>
+                      Open Upload &amp; Sync
+                    </Button>
+                    {stagedRun && stagedRowsAwaitingPublish === 0 && stagedRun.summary.publishedRows === 0 && (
+                      <span className="text-xs text-blue-800">
+                        No live policy values were changed yet.
+                      </span>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {job.status === 'waiting_for_otp' && (
               <>
                 <Separator />
@@ -953,7 +1024,7 @@ export function PortalAutomationTab({
                         <tr key={item.id} className="border-t align-top">
                           <td className="px-3 py-2">
                             <Badge variant="outline" className={cn('capitalize', itemStatusClassNames[item.status])}>
-                              {item.status.replace(/_/g, ' ')}
+                              {itemStatusLabels[item.status]}
                             </Badge>
                           </td>
                           <td className="px-3 py-2 font-medium text-gray-900">{item.clientName}</td>

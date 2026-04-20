@@ -204,6 +204,8 @@ export const integrationsKeys = {
     [...integrationsKeys.all, 'portal-job-latest', providerId, categoryId] as const,
   portalDiscoveryReport: (jobId: string | null) =>
     [...integrationsKeys.all, 'portal-discovery-report', jobId] as const,
+  syncRun: (runId: string | null) =>
+    [...integrationsKeys.all, 'sync-run', runId] as const,
 } as const;
 
 // ============================================================================
