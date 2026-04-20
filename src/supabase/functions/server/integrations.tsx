@@ -220,6 +220,7 @@ interface PortalFlowStep {
   key?: string;
   timeoutMs?: number;
   description?: string;
+  optional?: boolean;
 }
 
 interface PortalPolicyScheduleConfig {
@@ -702,6 +703,7 @@ function normaliseFlowSteps(value: unknown): PortalFlowStep[] {
       key: typeof entry.key === 'string' ? entry.key.slice(0, 80) : undefined,
       timeoutMs: typeof entry.timeoutMs === 'number' ? Math.max(1000, Math.min(entry.timeoutMs, 120000)) : undefined,
       description: typeof entry.description === 'string' ? entry.description.slice(0, 300) : undefined,
+      optional: entry.optional === true,
     };
   });
 }
@@ -1124,7 +1126,9 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
           {
             id: 'click-clients-link',
             action: 'click',
-            selector: 'a:has-text("Clients"), button:has-text("Clients"), [role="link"]:has-text("Clients"), [role="button"]:has-text("Clients")',
+            selector: 'a:has-text("Clients"), button:has-text("Clients"), [role="link"]:has-text("Clients"), [role="button"]:has-text("Clients"), [role="menuitem"]:has-text("Clients")',
+            timeoutMs: 45000,
+            optional: true,
             description: 'Click the main Clients navigation item after login to reach the Allan Gray client search area.',
           },
         ],

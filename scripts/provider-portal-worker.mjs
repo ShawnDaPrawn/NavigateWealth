@@ -1619,21 +1619,32 @@ async function processPolicyQueue(page, flow, config, jobMode, brain) {
 async function runPolicyListSteps(page, steps = []) {
   for (const step of steps) {
     const timeout = Number(step.timeoutMs || 30000);
-    if (step.action === 'goto') {
-      if (!step.url) throw new Error(`Policy list step ${step.id || ''} is missing a URL.`);
-      await page.goto(step.url, { waitUntil: 'domcontentloaded', timeout });
-    } else if (step.action === 'click') {
-      await (await visibleLocator(page, step.selector, timeout)).click();
-      await page.waitForLoadState('domcontentloaded', { timeout }).catch(() => undefined);
-    } else if (step.action === 'fill') {
-      await (await visibleLocator(page, step.selector, timeout)).fill(step.value || '');
-    } else if (step.action === 'press') {
-      await (await visibleLocator(page, step.selector, timeout)).press(step.key || 'Enter');
-    } else if (step.action === 'wait_for_url') {
-      if (!step.url) throw new Error(`Policy list step ${step.id || ''} is missing a URL pattern.`);
-      await page.waitForURL(step.url, { timeout });
-    } else {
-      await visibleLocator(page, step.selector, timeout);
+    try {
+      await page.waitForLoadState('domcontentloaded', { timeout: Math.min(timeout, 10000) }).catch(() => undefined);
+      await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+
+      if (step.action === 'goto') {
+        if (!step.url) throw new Error(`Policy list step ${step.id || ''} is missing a URL.`);
+        await page.goto(step.url, { waitUntil: 'domcontentloaded', timeout });
+      } else if (step.action === 'click') {
+        await clickWithOverlayFallback(page, await visibleLocator(page, step.selector, timeout), { timeout: Math.min(timeout, 8000), settleMs: 1200 });
+      } else if (step.action === 'fill') {
+        await (await visibleLocator(page, step.selector, timeout)).fill(step.value || '');
+      } else if (step.action === 'press') {
+        await (await visibleLocator(page, step.selector, timeout)).press(step.key || 'Enter');
+      } else if (step.action === 'wait_for_url') {
+        if (!step.url) throw new Error(`Policy list step ${step.id || ''} is missing a URL pattern.`);
+        await page.waitForURL(step.url, { timeout });
+      } else {
+        await visibleLocator(page, step.selector, timeout);
+      }
+    } catch (error) {
+      const message = `Provider navigation step "${step.id || step.action}" did not complete: ${error instanceof Error ? error.message : String(error)}`.slice(0, 500);
+      if (step.optional === true || step.id === 'click-clients-link') {
+        addJobWarning(`${message}. Continuing with search fallback from ${page.url()}.`);
+        continue;
+      }
+      throw error;
     }
   }
 }
@@ -1688,6 +1699,9 @@ async function runJob(jobId, requestedMode = mode) {
       const otp = await waitForManualOtp(flow.otp.timeoutMs || 600000);
       await (await visibleLocator(page, flow.otp.inputSelector)).fill(otp);
       await (await visibleLocator(page, flow.otp.submitSelector)).click();
+      await page.waitForLoadState('domcontentloaded', { timeout: 45000 }).catch(() => undefined);
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
+      await page.waitForTimeout(1500);
     }
 
     if (flow.navigation?.postLoginUrl) {
