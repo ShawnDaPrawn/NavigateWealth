@@ -26,6 +26,7 @@ import { Input } from '../../../../ui/input';
 import { Textarea } from '../../../../ui/textarea';
 import { ScrollArea } from '../../../../ui/scroll-area';
 import { Badge } from '../../../../ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import {
   Select,
   SelectContent,
@@ -41,11 +42,14 @@ import {
   CheckCircle2,
   XCircle,
   Send,
+  Download,
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { esignApi } from '../api';
 import type { EsignTemplateRecord, CampaignRecord, CampaignRecipientResult } from '../types';
 import { logger } from '../../../../../utils/logger';
+import { communicationApi } from '../../communication/api';
+import type { Client, ClientGroup } from '../../communication/types';
 
 interface BulkSendDialogProps {
   open: boolean;
@@ -61,7 +65,12 @@ interface BulkSendDialogProps {
 export function BulkSendDialog({ open, onOpenChange, initialTemplate, onCompleted }: BulkSendDialogProps) {
   const [templates, setTemplates] = useState<EsignTemplateRecord[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [loadingGroups, setLoadingGroups] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(initialTemplate?.id ?? null);
+  const [sourceMode, setSourceMode] = useState<'group' | 'csv'>('group');
+  const [groups, setGroups] = useState<ClientGroup[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [csvText, setCsvText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [title, setTitle] = useState(initialTemplate?.name ?? '');
@@ -74,6 +83,7 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
   useEffect(() => {
     if (!open) return;
     setLoadingTemplates(true);
+    setLoadingGroups(true);
     esignApi
       .listTemplates()
       .then(r => {
@@ -84,6 +94,17 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
       })
       .catch(() => setTemplates([]))
       .finally(() => setLoadingTemplates(false));
+
+    Promise.all([communicationApi.getGroups(1, 200), communicationApi.getClients()])
+      .then(([groupList, clientList]) => {
+        setGroups(groupList || []);
+        setClients(clientList || []);
+      })
+      .catch(() => {
+        setGroups([]);
+        setClients([]);
+      })
+      .finally(() => setLoadingGroups(false));
   }, [open, initialTemplate]);
 
   const selectedTemplate = useMemo(
@@ -92,6 +113,88 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
   );
 
   const recipientCount = selectedTemplate?.recipients.length ?? 0;
+  const selectedGroup = useMemo(
+    () => groups.find((group) => group.id === selectedGroupId) ?? null,
+    [groups, selectedGroupId],
+  );
+
+  const groupRecipients = useMemo(() => {
+    if (!selectedGroup) return [];
+
+    const clientMap = new Map(clients.map((client) => [client.id, client]));
+    const clientMembers = (selectedGroup.clientIds || [])
+      .map((clientId) => clientMap.get(clientId))
+      .filter((client): client is Client => Boolean(client))
+      .map((client) => ({
+        id: client.id,
+        name: getClientDisplayName(client),
+        email: client.email?.trim() || '',
+        source: 'client' as const,
+      }));
+
+    const externalMembers = (selectedGroup.externalContacts || []).map((contact, index) => ({
+      id: `external-${index}-${contact.email}`,
+      name: contact.name?.trim() || contact.email,
+      email: contact.email?.trim() || '',
+      source: 'external' as const,
+    }));
+
+    return [...clientMembers, ...externalMembers];
+  }, [selectedGroup, clients]);
+
+  const templateHasDefaultEmailsForAdditionalRecipients = useMemo(() => {
+    if (!selectedTemplate) return false;
+    if (selectedTemplate.recipients.length <= 1) return true;
+    return selectedTemplate.recipients.slice(1).every((recipient) => Boolean(recipient.email?.trim()));
+  }, [selectedTemplate]);
+
+  const groupRows = useMemo(() => {
+    if (!selectedTemplate || !selectedGroup) return [];
+
+    return groupRecipients
+      .filter((recipient) => recipient.email)
+      .map((recipient, index) => ({
+        rowId: `group-${selectedGroup.id}-${index + 1}`,
+        signers: selectedTemplate.recipients.map((templateRecipient, recipientIndex) => {
+          if (recipientIndex === 0) {
+            return {
+              name: recipient.name || templateRecipient.name || 'Client',
+              email: recipient.email,
+              role: templateRecipient.role,
+              order: templateRecipient.order ?? recipientIndex + 1,
+            };
+          }
+
+          return {
+            name: templateRecipient.name || `Recipient ${recipientIndex + 1}`,
+            email: templateRecipient.email || '',
+            role: templateRecipient.role,
+            order: templateRecipient.order ?? recipientIndex + 1,
+          };
+        }),
+      }))
+      .filter((row) => row.signers.every((signer) => signer.email));
+  }, [selectedTemplate, selectedGroup, groupRecipients]);
+
+  const groupWarnings = useMemo(() => {
+    const warnings: string[] = [];
+
+    if (selectedGroup && recipientCount > 1 && !templateHasDefaultEmailsForAdditionalRecipients) {
+      warnings.push(
+        'This template has multiple recipient slots. Group send can only fill the first slot unless the remaining slots already have default email addresses saved on the template.',
+      );
+    }
+
+    groupRecipients.forEach((recipient) => {
+      if (!recipient.email) {
+        warnings.push(`${recipient.name || 'Unnamed recipient'} has no email address and will be skipped.`);
+      }
+    });
+
+    return warnings;
+  }, [selectedGroup, recipientCount, templateHasDefaultEmailsForAdditionalRecipients, groupRecipients]);
+
+  const groupRowCount = groupRows.length;
   const csvRowCount = useMemo(() => {
     const trimmed = csvText.trim();
     if (!trimmed) return 0;
@@ -103,11 +206,41 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
     if (!selectedTemplate) return '';
     if (recipientCount === 1) return 'email,name,role';
     return selectedTemplate.recipients
-      .map((r, i) => {
-        const slug = (r.name || `recipient_${i + 1}`).toLowerCase().replace(/\s+/g, '_');
-        return `${slug}_email,${slug}_name`;
-      })
-      .join(',');
+      .map((r, i) => [
+        `email_${i + 1}`,
+        `name_${i + 1}`,
+        `role_${i + 1}`,
+        `${(r.name || `recipient_${i + 1}`).toLowerCase().replace(/\s+/g, '_')}_email`,
+        `${(r.name || `recipient_${i + 1}`).toLowerCase().replace(/\s+/g, '_')}_name`,
+      ].join(' / '))
+      .join(' | ');
+  }, [selectedTemplate, recipientCount]);
+
+  const csvTemplateText = useMemo(() => {
+    if (!selectedTemplate) return '';
+    const headers =
+      recipientCount <= 1
+        ? ['email', 'name', 'role']
+        : selectedTemplate.recipients.flatMap((recipient, index) => [
+            `email_${index + 1}`,
+            `name_${index + 1}`,
+            `role_${index + 1}`,
+          ]);
+
+    const sampleRow =
+      recipientCount <= 1
+        ? [
+            'client@example.com',
+            selectedTemplate.recipients[0]?.name || 'Client Name',
+            selectedTemplate.recipients[0]?.role || 'Signer',
+          ]
+        : selectedTemplate.recipients.flatMap((recipient, index) => [
+            `${(recipient.name || `recipient_${index + 1}`).toLowerCase().replace(/\s+/g, '_')}@example.com`,
+            recipient.name || `Recipient ${index + 1}`,
+            recipient.role || 'Signer',
+          ]);
+
+    return `${headers.join(',')}\n${sampleRow.join(',')}`;
   }, [selectedTemplate, recipientCount]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,6 +256,23 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
     setCsvText(text);
   };
 
+  const handleDownloadCsvTemplate = () => {
+    if (!csvTemplateText) {
+      toast.error('Pick a template first to generate a matching CSV template.');
+      return;
+    }
+
+    const blob = new Blob([csvTemplateText], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `esign-bulk-send-template-${selectedTemplate?.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'template'}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
   const handleStart = async () => {
     if (!selectedTemplate) {
       toast.error('Pick a template first.');
@@ -132,12 +282,28 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
       toast.error('Upload a document for the campaign.');
       return;
     }
-    if (csvText.trim().length === 0) {
-      toast.error('Paste a CSV or upload a file.');
-      return;
-    }
     if (!title.trim()) {
       toast.error('Give the campaign a title.');
+      return;
+    }
+
+    if (sourceMode === 'group') {
+      if (!selectedGroup) {
+        toast.error('Choose a client group first.');
+        return;
+      }
+      if (groupWarnings.length > 0 && groupRows.length === 0) {
+        toast.error(groupWarnings[0]);
+        return;
+      }
+      if (groupRowCount === 0) {
+        toast.error('No usable recipients were found in the selected group.');
+        return;
+      }
+    }
+
+    if (sourceMode === 'csv' && csvText.trim().length === 0) {
+      toast.error('Paste a CSV or upload a file.');
       return;
     }
 
@@ -149,10 +315,12 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
         title: title.trim(),
         message: message.trim() || undefined,
         expiryDays,
-        csvText,
+        ...(sourceMode === 'group'
+          ? { rows: groupRows }
+          : { csvText }),
       });
       setCampaign(created.campaign);
-      setWarnings(created.warnings || []);
+      setWarnings(sourceMode === 'group' ? groupWarnings : (created.warnings || []));
 
       // Walk through queued rows in series. Series (not parallel)
       // keeps the rate limiter happy and surfaces errors row-by-row
@@ -262,6 +430,8 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
     setPhase('compose');
     setCampaign(null);
     setWarnings([]);
+    setSourceMode('group');
+    setSelectedGroupId('');
     setCsvText('');
     setFiles([]);
     onOpenChange(false);
@@ -288,7 +458,7 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
             Bulk send from template
           </DialogTitle>
           <DialogDescription>
-            Send the same template to many recipients in one go. Each row in the CSV becomes its own envelope.
+            Send the same template to many recipients in one go. Start with an existing client group, or use CSV when you need a custom recipient list.
           </DialogDescription>
         </DialogHeader>
 
@@ -326,6 +496,101 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
                 )}
               </div>
 
+              <div className="space-y-3">
+                <Label>Recipient source</Label>
+                <Tabs value={sourceMode} onValueChange={(value) => setSourceMode(value as 'group' | 'csv')} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="group">Client Groups</TabsTrigger>
+                    <TabsTrigger value="csv">CSV Import</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="group" className="mt-3 space-y-3 rounded-lg border border-gray-200 p-4">
+                    <div className="space-y-2">
+                      <Label>Select group</Label>
+                      <Select
+                        value={selectedGroupId}
+                        onValueChange={setSelectedGroupId}
+                        disabled={loadingGroups}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingGroups ? 'Loading client groups…' : 'Choose a predefined client group'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {groups.map((group) => (
+                            <SelectItem key={group.id} value={group.id}>
+                              {group.name} · {group.clientCount} member{group.clientCount === 1 ? '' : 's'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedGroup && (
+                      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">{selectedGroup.name}</Badge>
+                          <span className="text-muted-foreground">
+                            {groupRecipients.length} total member{groupRecipients.length === 1 ? '' : 's'}
+                          </span>
+                          <span className="text-muted-foreground">·</span>
+                          <span className="text-muted-foreground">
+                            {groupRowCount} ready envelope{groupRowCount === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Group send uses the selected client group as the primary recipient source. CSV remains available below when you need custom rows or multi-recipient overrides.
+                        </p>
+                      </div>
+                    )}
+
+                    {groupWarnings.length > 0 && (
+                      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs space-y-1">
+                        {groupWarnings.map((warning, index) => (
+                          <p key={index} className="text-amber-800">{warning}</p>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="csv" className="mt-3 space-y-3 rounded-lg border border-gray-200 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <Label>CSV upload</Label>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Use CSV when you need to override recipient slots row by row.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDownloadCsvTemplate}
+                        disabled={!selectedTemplate}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download CSV template
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs">
+                      <Input type="file" accept=".csv,text/csv" onChange={handleCsvFile} className="flex-1" />
+                      <Badge variant="outline">{csvRowCount} row{csvRowCount === 1 ? '' : 's'}</Badge>
+                    </div>
+                    {csvHeadersHint && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Accepted headers: <code className="font-mono">{csvHeadersHint}</code>
+                      </p>
+                    )}
+                    <Textarea
+                      value={csvText}
+                      onChange={(e) => setCsvText(e.target.value)}
+                      className="min-h-[120px] font-mono text-xs"
+                      placeholder="Paste CSV here or upload a file above"
+                    />
+                  </TabsContent>
+                </Tabs>
+              </div>
+
               <div className="space-y-2">
                 <Label>Document(s)</Label>
                 <Input type="file" accept="application/pdf" multiple onChange={handleFileChange} />
@@ -360,25 +625,6 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
                   onChange={(e) => setMessage(e.target.value)}
                   className="min-h-[64px]"
                   placeholder="Sent to every recipient as the invitation body."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Recipients (CSV)</Label>
-                <div className="flex items-center gap-2 text-xs">
-                  <Input type="file" accept=".csv,text/csv" onChange={handleCsvFile} className="flex-1" />
-                  <Badge variant="outline">{csvRowCount} row{csvRowCount === 1 ? '' : 's'}</Badge>
-                </div>
-                {csvHeadersHint && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Expected headers: <code className="font-mono">{csvHeadersHint}</code>
-                  </p>
-                )}
-                <Textarea
-                  value={csvText}
-                  onChange={(e) => setCsvText(e.target.value)}
-                  className="min-h-[120px] font-mono text-xs"
-                  placeholder="Paste CSV here or upload a file above"
                 />
               </div>
             </div>
@@ -455,10 +701,15 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
               <Button
                 onClick={handleStart}
                 className="bg-purple-600 hover:bg-purple-700"
-                disabled={!selectedTemplate || files.length === 0 || csvRowCount === 0}
+                disabled={
+                  !selectedTemplate ||
+                  files.length === 0 ||
+                  (sourceMode === 'group' ? groupRowCount === 0 : csvRowCount === 0)
+                }
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Send {csvRowCount > 0 ? `${csvRowCount} ` : ''}envelope{csvRowCount === 1 ? '' : 's'}
+                Send {sourceMode === 'group' ? groupRowCount : csvRowCount}{' '}
+                envelope{(sourceMode === 'group' ? groupRowCount : csvRowCount) === 1 ? '' : 's'}
               </Button>
             </>
           )}
@@ -476,4 +727,10 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
       </DialogContent>
     </Dialog>
   );
+}
+
+function getClientDisplayName(client: Client): string {
+  const first = client.firstName || '';
+  const last = client.surname || client.lastName || '';
+  return `${first} ${last}`.trim() || client.email || 'Unknown client';
 }

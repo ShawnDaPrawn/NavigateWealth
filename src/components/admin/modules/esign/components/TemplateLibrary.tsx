@@ -28,6 +28,14 @@ import {
   AlertDialogTitle,
 } from '../../../../ui/alert-dialog';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../ui/dialog';
+import {
   Search,
   Plus,
   MoreVertical,
@@ -51,7 +59,16 @@ import { toast } from 'sonner@2.0.3';
 import { esignApi } from '../api';
 import { cn } from '../../../../ui/utils';
 import { format } from 'date-fns';
-import type { EsignTemplateRecord } from '../types';
+import { Label } from '../../../../ui/label';
+import { Textarea } from '../../../../ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
+import type { EsignTemplateRecord, SigningMode } from '../types';
 import { TEMPLATE_CATEGORIES } from '../types';
 import { EditTemplateDialog } from './EditTemplateDialog';
 import { SkeletonCardGrid } from './EsignSkeleton';
@@ -66,6 +83,12 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateDescription, setNewTemplateDescription] = useState('');
+  const [newTemplateCategory, setNewTemplateCategory] = useState('');
+  const [newTemplateSigningMode, setNewTemplateSigningMode] = useState<SigningMode>('sequential');
 
   // Edit dialog state
   const [editingTemplate, setEditingTemplate] = useState<EsignTemplateRecord | null>(null);
@@ -174,6 +197,38 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
     setEditingTemplate(null);
   };
 
+  const resetCreateDialog = () => {
+    setNewTemplateName('');
+    setNewTemplateDescription('');
+    setNewTemplateCategory('');
+    setNewTemplateSigningMode('sequential');
+  };
+
+  const handleCreateTemplate = async () => {
+    if (!newTemplateName.trim()) {
+      toast.error('Template name is required');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const result = await esignApi.createTemplate({
+        name: newTemplateName.trim(),
+        description: newTemplateDescription.trim() || undefined,
+        category: newTemplateCategory || undefined,
+        signingMode: newTemplateSigningMode,
+      });
+      setTemplates((prev) => [result.template, ...prev]);
+      setCreateDialogOpen(false);
+      resetCreateDialog();
+      toast.success(`Template "${result.template.name}" created`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create template');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   // ========== RENDER ==========
 
   if (loading) {
@@ -203,6 +258,15 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            className="h-9 gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
+            onClick={() => setCreateDialogOpen(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Create Template
+          </Button>
+
           {/* Category filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -269,8 +333,18 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
           <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
             {searchQuery || categoryFilter !== 'all'
               ? 'Try adjusting your search or category filter.'
-              : 'Save an envelope as a template to reuse its configuration across future documents.'}
+              : 'Create a blank template here, or save an envelope as a template to reuse its configuration across future documents.'}
           </p>
+          {!(searchQuery || categoryFilter !== 'all') && (
+            <Button
+              size="sm"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={() => setCreateDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Create Template
+            </Button>
+          )}
           {(searchQuery || categoryFilter !== 'all') && (
             <Button
               variant="outline"
@@ -326,6 +400,98 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
           ))}
         </div>
       )}
+
+      <Dialog
+        open={createDialogOpen}
+        onOpenChange={(open) => {
+          setCreateDialogOpen(open);
+          if (!open) resetCreateDialog();
+        }}
+      >
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Create Template</DialogTitle>
+            <DialogDescription>
+              Start a reusable template from the Templates tab, then refine it for your e-sign workflow.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="create-template-name">Template Name *</Label>
+              <Input
+                id="create-template-name"
+                value={newTemplateName}
+                onChange={(e) => setNewTemplateName(e.target.value)}
+                placeholder="e.g., Standard Client Agreement"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="create-template-description">Description</Label>
+              <Textarea
+                id="create-template-description"
+                value={newTemplateDescription}
+                onChange={(e) => setNewTemplateDescription(e.target.value)}
+                placeholder="Brief description of when this template should be used..."
+                rows={2}
+                maxLength={300}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Category</Label>
+              <Select
+                value={newTemplateCategory || '__none'}
+                onValueChange={(value) => setNewTemplateCategory(value === '__none' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">No Category</SelectItem>
+                  {TEMPLATE_CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Default Signing Order</Label>
+              <Select
+                value={newTemplateSigningMode}
+                onValueChange={(value) => setNewTemplateSigningMode(value as SigningMode)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sequential">Sequential</SelectItem>
+                  <SelectItem value="parallel">Parallel</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={creating}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateTemplate}
+              disabled={creating || !newTemplateName.trim()}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {creating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
+              Create Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

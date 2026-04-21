@@ -76,6 +76,7 @@ import { PageManagerDialog } from './PageManagerDialog';
 interface PrepareFormStudioProps {
   envelope: EsignEnvelope;
   signers: SignerFormData[];
+  autoPopulateSuggestedFields?: boolean;
   onBack?: () => void;
   onSaveFields?: (fields: EsignField[]) => Promise<void>;
   onSendForSignature?: (fields?: EsignField[]) => Promise<void>;
@@ -99,6 +100,7 @@ interface PrepareFormStudioProps {
 export function PrepareFormStudio({
   envelope,
   signers,
+  autoPopulateSuggestedFields = true,
   onBack,
   onSaveFields,
   onSendForSignature,
@@ -150,6 +152,7 @@ export function PrepareFormStudio({
   const [showCandidatesPanel, setShowCandidatesPanel] = useState<boolean>(
     (envelope.field_candidates?.length ?? 0) > 0,
   );
+  const autoPopulateHandledRef = useRef<string | null>(null);
 
   // Phase 2 dialogs / sheets
   const [showSettings, setShowSettings] = useState(false);
@@ -226,6 +229,43 @@ export function PrepareFormStudio({
   const eligibleSigners = useMemo(
     () => signers.filter((s) => s.kind !== 'cc'),
     [signers],
+  );
+
+  const buildFieldsFromCandidates = useCallback(
+    (
+      candidateList: NonNullable<EsignEnvelope['field_candidates']>,
+      targetSignerId: string,
+    ): EsignField[] => {
+      const now = new Date().toISOString();
+      const newFields: EsignField[] = [];
+      for (const cand of candidateList) {
+        const dupe = fields.some(
+          (f) =>
+            f.page === cand.page &&
+            f.type === cand.type &&
+            Math.abs(f.x - cand.x) < 1.5 &&
+            Math.abs(f.y - cand.y) < 1.5,
+        );
+        if (dupe) continue;
+        newFields.push({
+          id: `field-${Date.now()}-${newFields.length}-${Math.random().toString(36).slice(2, 6)}`,
+          envelope_id: envelope.id,
+          signer_id: targetSignerId,
+          type: cand.type,
+          page: cand.page,
+          x: cand.x,
+          y: cand.y,
+          width: cand.width,
+          height: cand.height,
+          required: cand.required,
+          metadata: { ...(cand.metadata ?? {}), source: cand.source, label: cand.label },
+          created_at: now,
+          updated_at: now,
+        });
+      }
+      return newFields;
+    },
+    [fields, envelope.id],
   );
 
   // ── P3.4 — Load envelope documents ──
@@ -607,33 +647,7 @@ export function PrepareFormStudio({
       return;
     }
     if (candidates.length === 0) return;
-    const now = new Date().toISOString();
-    const newFields: EsignField[] = [];
-    for (const cand of candidates) {
-      const dupe = fields.some(
-        (f) =>
-          f.page === cand.page &&
-          f.type === cand.type &&
-          Math.abs(f.x - cand.x) < 1.5 &&
-          Math.abs(f.y - cand.y) < 1.5,
-      );
-      if (dupe) continue;
-      newFields.push({
-        id: `field-${Date.now()}-${newFields.length}-${Math.random().toString(36).slice(2, 6)}`,
-        envelope_id: envelope.id,
-        signer_id: target,
-        type: cand.type,
-        page: cand.page,
-        x: cand.x,
-        y: cand.y,
-        width: cand.width,
-        height: cand.height,
-        required: cand.required,
-        metadata: { ...(cand.metadata ?? {}), source: cand.source, label: cand.label },
-        created_at: now,
-        updated_at: now,
-      });
-    }
+    const newFields = buildFieldsFromCandidates(candidates, target);
     if (newFields.length === 0) {
       toast.info('All suggested fields already match an existing one.');
       setCandidates([]);
@@ -642,7 +656,45 @@ export function PrepareFormStudio({
     pushToHistory([...fields, ...newFields]);
     setCandidates([]);
     toast.success(`Accepted ${newFields.length} suggested field${newFields.length === 1 ? '' : 's'}`);
-  }, [candidates, selectedSignerId, eligibleSigners, fields, envelope.id, history, historyIndex]);
+  }, [candidates, selectedSignerId, eligibleSigners, buildFieldsFromCandidates, fields, history, historyIndex]);
+
+  useEffect(() => {
+    if (!autoPopulateSuggestedFields) {
+      autoPopulateHandledRef.current = envelope.id;
+      return;
+    }
+    if (candidates.length === 0) {
+      autoPopulateHandledRef.current = envelope.id;
+      return;
+    }
+    if (autoPopulateHandledRef.current === envelope.id) return;
+
+    const target = selectedSignerId || eligibleSigners[0]?.email;
+    if (!target) return;
+
+    const newFields = buildFieldsFromCandidates(candidates, target);
+    autoPopulateHandledRef.current = envelope.id;
+    setShowCandidatesPanel(false);
+    setCandidates([]);
+
+    if (newFields.length === 0) {
+      toast.info('Suggested PDF fields were already present on this envelope.');
+      return;
+    }
+
+    pushToHistory([...fields, ...newFields]);
+    toast.success(`Auto-added ${newFields.length} suggested field${newFields.length === 1 ? '' : 's'} from the PDF.`);
+  }, [
+    autoPopulateSuggestedFields,
+    candidates,
+    selectedSignerId,
+    eligibleSigners,
+    buildFieldsFromCandidates,
+    envelope.id,
+    fields,
+    history,
+    historyIndex,
+  ]);
 
   const dismissCandidate = useCallback(
     (candidateId: string) => setCandidates((prev) => prev.filter((c) => c.id !== candidateId)),

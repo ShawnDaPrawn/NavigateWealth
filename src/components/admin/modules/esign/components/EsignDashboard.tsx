@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Activity,
   Loader2,
+  Settings2,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { EnvelopesList } from './EnvelopesList';
@@ -81,96 +82,139 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
     ? Math.round((metrics.completed / (metrics.total - metrics.draft)) * 100) 
     : 0;
 
+  const manageTabs = [
+    {
+      value: 'notifications',
+      label: 'Notifications',
+      title: 'Notifications',
+      description: 'Check recent signer activity and adjust how in-app notifications behave for your team.',
+      render: onNotificationPrefs ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            <NotificationBell
+              onOpenEnvelope={(envelopeId) => {
+                const target = envelopes.find((e) => e.id === envelopeId);
+                if (target) onViewEnvelope(target);
+              }}
+            />
+            <div className="text-sm">
+              <div className="font-medium text-gray-900">Open inbox</div>
+              <div className="text-xs text-muted-foreground">Review unread envelope activity.</div>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            onClick={onNotificationPrefs}
+            className="border-purple-300 text-purple-700 hover:bg-purple-50"
+          >
+            Notification preferences
+          </Button>
+        </div>
+      ) : null,
+    },
+    {
+      value: 'webhooks',
+      label: 'Webhooks',
+      title: 'Webhooks',
+      description: 'Manage delivery endpoints and inspect e-sign integration hooks for downstream systems.',
+      render: onWebhooks ? (
+        <Button
+          variant="outline"
+          onClick={onWebhooks}
+          className="border-purple-300 text-purple-700 hover:bg-purple-50"
+        >
+          Open webhooks
+        </Button>
+      ) : null,
+    },
+    {
+      value: 'packets',
+      label: 'Packets',
+      title: 'Packets',
+      description: 'Chain template steps into a guided packet flow for multi-stage signature journeys.',
+      render: onPackets ? (
+        <Button
+          variant="outline"
+          onClick={onPackets}
+          className="border-purple-300 text-purple-700 hover:bg-purple-50"
+        >
+          Open packets
+        </Button>
+      ) : null,
+    },
+    {
+      value: 'recovery',
+      label: 'Recovery Bin',
+      title: 'Recovery Bin',
+      description: 'Restore soft-deleted envelopes or permanently purge old records inside the retention window.',
+      render: onRecoveryBin ? (
+        <Button
+          variant="outline"
+          onClick={onRecoveryBin}
+          className="border-purple-300 text-purple-700 hover:bg-purple-50"
+        >
+          Open recovery bin
+        </Button>
+      ) : null,
+    },
+    {
+      value: 'audit',
+      label: 'Audit Log',
+      title: 'Audit Log',
+      description: 'Search firm-wide envelope activity, delivery events, and signature actions from one place.',
+      render: onAuditLog ? (
+        <Button
+          variant="outline"
+          onClick={onAuditLog}
+          className="border-purple-300 text-purple-700 hover:bg-purple-50"
+        >
+          Open audit log
+        </Button>
+      ) : null,
+    },
+    {
+      value: 'retention',
+      label: 'Retention',
+      title: 'Retention',
+      description: 'Adjust how long documents and certificates remain available for operational and compliance use.',
+      render: onRetentionPolicy ? (
+        <Button
+          variant="outline"
+          onClick={onRetentionPolicy}
+          className="border-purple-300 text-purple-700 hover:bg-purple-50"
+        >
+          Open retention policy
+        </Button>
+      ) : null,
+    },
+    {
+      value: 'branding',
+      label: 'Branding',
+      title: 'Branding',
+      description: 'Control the signer-facing branding applied to your envelopes, notifications, and completion flow.',
+      render: onBranding ? (
+        <Button
+          variant="outline"
+          onClick={onBranding}
+          className="border-purple-300 text-purple-700 hover:bg-purple-50"
+        >
+          Open branding
+        </Button>
+      ) : null,
+    },
+  ].filter((tab) => tab.render !== null);
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">E-Signature Overview</h1>
-          <p className="text-sm text-gray-500">Manage your documents and signature requests</p>
+          <h2 className="text-3xl font-bold tracking-tight">E-Signature</h2>
+          <p className="text-muted-foreground">
+            Manage signature envelopes, templates, and signer workflows.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell
-            onOpenEnvelope={(envelopeId) => {
-              const target = envelopes.find((e) => e.id === envelopeId);
-              if (target) onViewEnvelope(target);
-            }}
-          />
-          {onNotificationPrefs && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onNotificationPrefs}
-              title="Notification preferences"
-              className="text-gray-500 hover:text-gray-700"
-            >
-              Notifications…
-            </Button>
-          )}
-          {onWebhooks && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onWebhooks}
-              title="Webhook endpoints"
-              className="text-gray-500 hover:text-gray-700"
-            >
-              Webhooks…
-            </Button>
-          )}
-          {onRecoveryBin && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRecoveryBin}
-              title="Recovery bin"
-              className="text-gray-500 hover:text-gray-700"
-            >
-              Recovery bin…
-            </Button>
-          )}
-          {onAuditLog && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onAuditLog}
-              title="Global audit log"
-              className="text-gray-500 hover:text-gray-700"
-            >
-              Audit log…
-            </Button>
-          )}
-          {onRetentionPolicy && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRetentionPolicy}
-              title="Retention policy"
-              className="text-gray-500 hover:text-gray-700"
-            >
-              Retention…
-            </Button>
-          )}
-          {onBranding && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onBranding}
-              title="Signer-page branding"
-              className="text-gray-500 hover:text-gray-700"
-            >
-              Branding…
-            </Button>
-          )}
-          {onPackets && (
-            <Button
-              variant="outline"
-              onClick={onPackets}
-              className="border-purple-300 text-purple-700 hover:bg-purple-50"
-            >
-              Packets…
-            </Button>
-          )}
+        <div className="flex flex-wrap items-center gap-2 md:justify-end">
           {onBulkSend && (
             <Button
               variant="outline"
@@ -286,6 +330,12 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
             <Activity className="h-4 w-4" />
             Metrics
           </TabsTrigger>
+          {manageTabs.length > 0 && (
+            <TabsTrigger value="manage" className="gap-1.5">
+              <Settings2 className="h-4 w-4" />
+              Manage
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Envelopes Tab */}
@@ -334,6 +384,46 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
             </CardContent>
           </Card>
         </TabsContent>
+
+        {manageTabs.length > 0 && (
+          <TabsContent value="manage" className="mt-0">
+            <Card>
+              <CardHeader>
+                <CardTitle>E-Signature Management</CardTitle>
+                <CardDescription>
+                  Open delivery settings, operational tools, and maintenance controls without crowding the page header.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue={manageTabs[0]?.value} className="w-full">
+                  <TabsList className="mb-4 h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
+                    {manageTabs.map((tab) => (
+                      <TabsTrigger
+                        key={tab.value}
+                        value={tab.value}
+                        className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm data-[state=active]:border-purple-300 data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700"
+                      >
+                        {tab.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+
+                  {manageTabs.map((tab) => (
+                    <TabsContent key={tab.value} value={tab.value} className="mt-0">
+                      <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-5">
+                        <h3 className="text-lg font-semibold text-gray-900">{tab.title}</h3>
+                        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{tab.description}</p>
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                          {tab.render}
+                        </div>
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

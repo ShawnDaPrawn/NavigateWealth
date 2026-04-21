@@ -13,6 +13,8 @@
 import React, { useState, Suspense } from 'react';
 import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
+import { Label } from '../../../ui/label';
+import { Switch } from '../../../ui/switch';
 import { 
   ArrowLeft,
   ArrowRight,
@@ -86,6 +88,7 @@ export function EsignModule() {
   const [auditLogOpen, setAuditLogOpen] = useState(false);
   const [retentionOpen, setRetentionOpen] = useState(false);
   const [brandingOpen, setBrandingOpen] = useState(false);
+  const [autoPopulateSuggestedFields, setAutoPopulateSuggestedFields] = useState(true);
   const { canDo } = useCurrentUserPermissions();
 
   const canCreate = canDo('esign', 'create');
@@ -139,6 +142,7 @@ export function EsignModule() {
     setDocumentUrl(null);
     setPendingEnvelopes([]);
     setTemplateContext(null);
+    setAutoPopulateSuggestedFields(true);
   };
 
   const handleStartNew = () => {
@@ -641,6 +645,7 @@ export function EsignModule() {
           <PrepareFormStudio
             envelope={activeEnvelope}
             signers={wizardData.signers}
+            autoPopulateSuggestedFields={autoPopulateSuggestedFields}
             onBack={() => {
               // If we have wizard files, we came from the normal wizard flow — go back to recipients.
               // If no files (resumed draft), go back to dashboard and clear
@@ -753,6 +758,28 @@ export function EsignModule() {
                       onChange={(signers) => setWizardData(prev => ({ ...prev, signers }))}
                     />
                   </Suspense>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4 sm:p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1">
+                      <Label htmlFor="auto-populate-suggested-fields" className="text-sm font-medium text-gray-900">
+                        Auto-add suggested PDF fields
+                      </Label>
+                      <p className="text-xs text-muted-foreground max-w-2xl">
+                        When Navigate detects fillable fields or signature anchors during upload, add those
+                        suggestions automatically before the field studio opens. You can still move, edit, or
+                        delete them manually afterward.
+                      </p>
+                    </div>
+                    <Switch
+                      id="auto-populate-suggested-fields"
+                      checked={autoPopulateSuggestedFields}
+                      onCheckedChange={setAutoPopulateSuggestedFields}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
