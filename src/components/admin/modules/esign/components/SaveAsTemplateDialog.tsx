@@ -179,9 +179,9 @@ export function SaveAsTemplateDialog({
               {/* Info */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-800">
-                  The template will capture this envelope's recipients, signing order, field layout,
-                  message, and expiry settings. The uploaded document is not included — you'll upload
-                  a new document each time you use the template.
+                  The template will capture this envelope's recipients, signing order, source document,
+                  placed fields, message, and expiry settings so you can reuse it later without uploading
+                  and configuring the PDF again.
                 </p>
               </div>
 

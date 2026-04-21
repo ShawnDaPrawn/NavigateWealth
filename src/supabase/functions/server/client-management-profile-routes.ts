@@ -7,11 +7,12 @@ import { Hono } from "npm:hono";
 import { ZipWriter, Uint8ArrayWriter, Uint8ArrayReader } from "npm:@zip.js/zip.js";
 import { sendEmail } from './email-service.ts';
 import * as kv from './kv_store.tsx';
-import { SUPER_ADMIN_EMAIL, PERSONNEL_ROLES } from './constants.ts';
+import { SUPER_ADMIN_EMAIL } from './constants.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 import { asyncHandler } from './error.middleware.ts';
+import { isPersonnelAuthUser, shouldIncludeInClientManagement } from './client-management-visibility.ts';
 import {
   UpdateSuperAdminProfileSchema,
   PersonalInfoQuerySchema,
@@ -84,37 +85,6 @@ function deepSanitize(obj: unknown): unknown {
   }
   
   return cleaned;
-}
-
-/**
- * Determine whether a Supabase Auth user is a personnel (staff) account.
- * Checks user_metadata.role against PERSONNEL_ROLES and the `invited` flag
- * set by the personnel invite flow.  Also cross-checks the KV personnel
- * profile prefix as a belt-and-suspenders guard.
- *
- * Returns `true` if the user should be excluded from Client Management.
- */
-function isPersonnelUser(
-  user: { user_metadata?: Record<string, unknown>; id: string },
-  personnelIds: Set<string>,
-): boolean {
-  // 1. Check user_metadata.role — set during personnel invite
-  const metaRole = user.user_metadata?.role as string | undefined;
-  if (metaRole && (PERSONNEL_ROLES as readonly string[]).includes(metaRole)) {
-    return true;
-  }
-
-  // 2. Check user_metadata.invited — personnel invite flag
-  if (user.user_metadata?.invited === true) {
-    return true;
-  }
-
-  // 3. Check against the pre-fetched personnel profile IDs
-  if (personnelIds.has(user.id)) {
-    return true;
-  }
-
-  return false;
 }
 
 /**
@@ -302,48 +272,61 @@ router.get("/all-users", async (c) => {
     // Get profiles AND security entries for all users from KV store
     const usersWithProfiles = await Promise.all(
       users
-        .filter(user => !isPersonnelUser(user, personnelIds))
+        .filter(user => !isPersonnelAuthUser(user, personnelIds))
         .map(async (user) => {
-        const profileKey = `user_profile:${user.id}:personal_info`;
-        const [profile, security] = await Promise.all([
-          kv.get(profileKey),
-          kv.get(`security:${user.id}`)
-        ]);
-        
-        return {
-          id: user.id,
-          email: user.email,
-          created_at: user.created_at,
-          user_metadata: user.user_metadata,
-          profile: profile || null,
-          // Add derived fields for compatibility
-          name: user.user_metadata?.name || 
-                (profile?.firstName && profile?.lastName 
-                  ? `${profile.firstName} ${profile.lastName}` 
-                  : ''),
-          application_number: profile?.applicationNumber || null,
-          application_status: profile?.applicationStatus || 'not_started',
-          account_type: profile?.accountType || null,
-          // Status fields for admin filtering and display
-          deleted: security?.deleted || false,
-          suspended: security?.suspended || false,
-          account_status: profile?.accountStatus || null,
-        };
-      })
-    );
-    
+          const profileKey = `user_profile:${user.id}:personal_info`;
+          const [profile, security] = await Promise.all([
+            kv.get(profileKey),
+            kv.get(`security:${user.id}`)
+          ]);
+          
+          const response = {
+            id: user.id,
+            email: user.email,
+            created_at: user.created_at,
+            user_metadata: user.user_metadata,
+            profile: profile || null,
+            // Add derived fields for compatibility
+            name: user.user_metadata?.name || 
+                  (profile?.firstName && profile?.lastName 
+                    ? `${profile.firstName} ${profile.lastName}` 
+                    : ''),
+            application_number: profile?.applicationNumber || null,
+            application_status: profile?.applicationStatus || 'not_started',
+            account_type: profile?.accountType || null,
+            // Status fields for admin filtering and display
+            deleted: security?.deleted || false,
+            suspended: security?.suspended || false,
+            account_status: profile?.accountStatus || null,
+          };
+
+          return { response, user };
+        })
+      );
+
+    const visibleUsers = usersWithProfiles
+      .filter(({ response, user }) =>
+        shouldIncludeInClientManagement({
+          user,
+          personnelIds,
+          profile: response.profile,
+          applicationStatus: response.application_status,
+        })
+      )
+      .map(({ response }) => response);
+
     log.success('Clients retrieved (personnel excluded)', {
       totalAuthUsers: users.length,
       personnelExcluded: users.length - usersWithProfiles.length,
-      clientsReturned: usersWithProfiles.length,
+      clientsReturned: visibleUsers.length,
     });
-    
+
     // Apply server-side pagination if params provided
     if (page !== null && perPage !== null) {
-      const total = usersWithProfiles.length;
+      const total = visibleUsers.length;
       const totalPages = Math.ceil(total / perPage);
       const offset = (page - 1) * perPage;
-      const paginatedUsers = usersWithProfiles.slice(offset, offset + perPage);
+      const paginatedUsers = visibleUsers.slice(offset, offset + perPage);
 
       return c.json({
         success: true,
@@ -358,7 +341,7 @@ router.get("/all-users", async (c) => {
     // Unpaginated (backward compat)
     return c.json({ 
       success: true, 
-      users: usersWithProfiles 
+      users: visibleUsers 
     });
     
   } catch (error) {

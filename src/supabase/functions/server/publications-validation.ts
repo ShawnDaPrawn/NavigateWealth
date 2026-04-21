@@ -65,6 +65,8 @@ export const ArticleReshareSchema = z.object({
 export const ArticleDeliveryRetrySchema = z.object({
   dryRun: z.boolean().optional().default(false),
   source: z.enum(['publish', 'reshare']).optional().default('publish'),
+  /** When true (publish only), finalize stuck jobs and re-send to the full subscriber list, then queue failures for retry. */
+  blastAll: z.boolean().optional().default(false),
 });
 
 export const ArticleEmailEngagementEventSchema = z.object({

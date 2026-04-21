@@ -44,9 +44,10 @@ interface EditTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (updated: EsignTemplateRecord) => void;
+  onConfigureTemplate?: () => void;
 }
 
-export function EditTemplateDialog({ template, open, onOpenChange, onSave }: EditTemplateDialogProps) {
+export function EditTemplateDialog({ template, open, onOpenChange, onSave, onConfigureTemplate }: EditTemplateDialogProps) {
   const [name, setName] = useState(template.name);
   const [description, setDescription] = useState(template.description || '');
   const [category, setCategory] = useState(template.category || '');
@@ -273,6 +274,11 @@ export function EditTemplateDialog({ template, open, onOpenChange, onSave }: Edi
         </div>
 
         <DialogFooter>
+          {onConfigureTemplate && (
+            <Button variant="outline" onClick={onConfigureTemplate} disabled={saving}>
+              Configure form
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>

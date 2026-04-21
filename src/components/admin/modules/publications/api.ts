@@ -463,17 +463,22 @@ export const ArticlesAPI = {
     id: string,
     input?: {
       source?: 'publish' | 'reshare';
+      /** Re-send to the full newsletter list (publish only), then queue failures for retry. */
+      blastAll?: boolean;
     },
-  ): Promise<ArticleNotificationJob> {
+  ): Promise<ArticleNotificationJob & { blastRecipientCount?: number; mode?: 'blast_all' | 'resume_undelivered' }> {
     const authHeaders = await getAuthHeaders();
     const response = await fetch(`${BASE_URL}/articles/${id}/retry-undelivered`, {
       method: 'POST',
       headers: authHeaders,
       body: JSON.stringify({
         source: input?.source ?? 'publish',
+        blastAll: input?.blastAll ?? false,
       }),
     });
-    const result = await handleResponse<ArticleNotificationJob>(response);
+    const result = await handleResponse<
+      ArticleNotificationJob & { blastRecipientCount?: number; mode?: 'blast_all' | 'resume_undelivered' }
+    >(response);
     notifyEmailEngagementChanged(result.articleId, 'retry_queued');
     return result;
   },

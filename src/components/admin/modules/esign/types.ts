@@ -884,6 +884,17 @@ export interface TemplateRecipient {
   role?: string;
   order: number;
   otpRequired: boolean;
+  accessCode?: string;
+  kind?: 'signer' | 'witness' | 'cc';
+}
+
+export interface TemplateDocument {
+  documentId: string;
+  order: number;
+  displayName: string;
+  originalFilename: string;
+  pageCount: number;
+  storagePath: string;
 }
 
 export interface TemplateField {
@@ -896,6 +907,8 @@ export interface TemplateField {
   required: boolean;
   /** Index into the recipients array */
   recipientIndex: number;
+  /** Template-owned source document this field belongs to. */
+  documentId?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -908,6 +921,7 @@ export interface EsignTemplateRecord {
   defaultMessage?: string;
   defaultExpiryDays: number;
   recipients: TemplateRecipient[];
+  documents: TemplateDocument[];
   fields: TemplateField[];
   usageCount: number;
   /**
@@ -930,6 +944,7 @@ export interface CreateTemplateInput {
   defaultMessage?: string;
   defaultExpiryDays?: number;
   recipients?: TemplateRecipient[];
+  documents?: TemplateDocument[];
   fields?: TemplateField[];
   /** If provided, template is created from this envelope's config */
   fromEnvelopeId?: string;
@@ -943,6 +958,7 @@ export interface UpdateTemplateInput {
   defaultMessage?: string;
   defaultExpiryDays?: number;
   recipients?: TemplateRecipient[];
+  documents?: TemplateDocument[];
   fields?: TemplateField[];
 }
 

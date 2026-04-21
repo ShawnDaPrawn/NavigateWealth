@@ -9,7 +9,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ValidationError, NotFoundError } from './error.middleware.ts';
 import type { Client, ClientFilters, ClientProfile, ClientSecurity, PaginatedClientResponse, GroupMatcherData, CommunicationRecord } from './client-management-types.ts';
-import { PERSONNEL_ROLES } from './constants.ts';
+import { shouldIncludeInClientManagement } from './client-management-visibility.ts';
 
 const log = createModuleLogger('clients-service');
 
@@ -112,13 +112,12 @@ export class ClientsService {
     );
 
     // Filter out personnel users before the expensive per-user KV reads
-    const clientUsers = users.filter(user => {
-      const metaRole = user.user_metadata?.role as string | undefined;
-      if (metaRole && (PERSONNEL_ROLES as readonly string[]).includes(metaRole)) return false;
-      if (user.user_metadata?.invited === true) return false;
-      if (personnelIds.has(user.id)) return false;
-      return true;
-    });
+    const clientUsers = users.filter(user => shouldIncludeInClientManagement({
+      user,
+      personnelIds,
+      profile: undefined,
+      applicationStatus: undefined,
+    }));
 
     log.info('Personnel filtered from client list', {
       totalAuthUsers: users.length,
@@ -180,7 +179,19 @@ export class ClientsService {
     );
     
     // Apply filters
-    let filteredClients = enhancedUsers;
+    let filteredClients = enhancedUsers.filter(client => shouldIncludeInClientManagement({
+      user: {
+        id: client.id,
+        user_metadata: {
+          role: client.role,
+          accountStatus: client.accountStatus,
+          applicationStatus: client.applicationStatus,
+        },
+      },
+      personnelIds,
+      profile: client.profile as Record<string, unknown> | undefined,
+      applicationStatus: client.applicationStatus,
+    }));
     
     if (filters?.status) {
       filteredClients = filteredClients.filter(c => c.applicationStatus === filters.status);

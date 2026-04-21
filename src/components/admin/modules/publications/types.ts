@@ -1103,6 +1103,9 @@ export interface ArticleNotificationJob {
   processedCount: number;
   progressPercent: number;
   stuck: boolean;
+  /** Present on retry-undelivered API when re-blasting to all subscribers. */
+  blastRecipientCount?: number;
+  mode?: 'blast_all' | 'resume_undelivered';
 }
 
 export interface ArticleNotificationProcessorResult {

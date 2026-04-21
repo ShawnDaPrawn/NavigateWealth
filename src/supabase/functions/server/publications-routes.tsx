@@ -14,7 +14,10 @@ import {
   processArticleNotificationJobs,
   resumeArticleNotificationDelivery,
   runArticleNotificationDelivery,
-  sendArticlePublishedNotifications,
+  sendArticlePublishedNotificationsBlastThenRetryQueue,
+  finalizeActiveArticleNotificationJobsForPublish,
+  type ArticleNotificationJobSnapshot,
+  type ArticleNotificationRunResult,
 } from './publications-notification-service.ts';
 import {
   CreateCategorySchema,
@@ -33,7 +36,7 @@ import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import {
-  listAllArticleEmailTrackingRecords,
+  listArticleIdsFromEmailTrackingKeyScan,
   listArticleEmailTrackingRecords,
   markArticleEmailOpened,
   markArticleEmailRead,
@@ -209,6 +212,50 @@ async function isAuthorizedPublicationsCronRequest(
     });
     return false;
   }
+}
+
+/** When a blast finishes with no retry queue, the API still returns a job-shaped payload for the admin client. */
+function completedBlastNotificationJobPlaceholder(
+  article: Article,
+  blast: ArticleNotificationRunResult,
+): ArticleNotificationJobSnapshot {
+  const now = new Date().toISOString();
+  return {
+    id: `blast-${article.id}`,
+    articleId: article.id,
+    articleTitle: article.title,
+    articleSlug: article.slug,
+    articleExcerpt: article.excerpt || '',
+    source: 'publish',
+    kind: 'publish',
+    status: 'completed',
+    recipientCount: 0,
+    currentIndex: 0,
+    prepareCursor: 0,
+    items: [],
+    createdAt: now,
+    updatedAt: now,
+    startedAt: null,
+    completedAt: now,
+    lastProgressAt: now,
+    lastPreparedAt: null,
+    lastDeliveredAt: now,
+    lastError: null,
+    lockId: null,
+    lockExpiresAt: null,
+    phase: 'completed',
+    preparedCount: 0,
+    unpreparedCount: 0,
+    sentCount: blast.sent,
+    failedCount: blast.failed,
+    failedRetryableCount: 0,
+    failedTerminalCount: blast.failed,
+    pendingCount: 0,
+    sendingCount: 0,
+    processedCount: blast.sent + blast.failed,
+    progressPercent: 100,
+    stuck: false,
+  };
 }
 
 function buildCampaignFirstEmailEngagementSummary(
@@ -884,23 +931,27 @@ publications.put('/articles/:id', async (c) => {
       log.error('Failed to create version snapshot on article update', vErr);
     }
     
-    let publishNotificationJob: Awaited<ReturnType<typeof sendArticlePublishedNotifications>> | null = null;
+    let publishNotificationJob: Awaited<ReturnType<typeof sendArticlePublishedNotificationsBlastThenRetryQueue>>['retryJob'] | null = null;
     let publishNotificationCampaign: Awaited<ReturnType<typeof getArticleNotificationCampaign>> | null = null;
     let publishNotificationError: string | null = null;
+    let publishNotificationRecipientCount = 0;
 
     // If status just changed to published, notify newsletter subscribers
     if (body.status === 'published' && existing.status !== 'published') {
       try {
-        publishNotificationJob = await sendArticlePublishedNotifications({
+        const publishResult = await sendArticlePublishedNotificationsBlastThenRetryQueue({
           id: updated.id,
           title: updated.title,
           slug: updated.slug,
           excerpt: updated.excerpt,
         });
-        if (publishNotificationJob.recipientCount > 0) {
+        publishNotificationRecipientCount = publishResult.blast.recipientCount;
+        publishNotificationJob = publishResult.retryJob;
+        if (publishNotificationJob && publishNotificationJob.recipientCount > 0) {
           publishNotificationJob = await kickArticleNotificationJob(publishNotificationJob.id) ?? publishNotificationJob;
         }
-        publishNotificationCampaign = await getArticleNotificationCampaign(publishNotificationJob.id);
+        publishNotificationCampaign = publishResult.publishCampaign
+          ?? (publishNotificationJob ? await getArticleNotificationCampaign(publishNotificationJob.id) : null);
       } catch (notificationError) {
         publishNotificationError = notificationError instanceof Error ? notificationError.message : 'Notification delivery failed';
         log.error('Article publish notifications via update failed', notificationError);
@@ -929,7 +980,7 @@ publications.put('/articles/:id', async (c) => {
         previousStatus: existing.status,
         newStatus: updated.status,
         titleChanged: body.title !== undefined && body.title !== existing.title,
-        notificationRecipientCount: publishNotificationJob?.recipientCount ?? 0,
+        notificationRecipientCount: publishNotificationRecipientCount || publishNotificationJob?.recipientCount || 0,
         notificationJobId: publishNotificationJob?.id ?? null,
         notificationCampaignId: publishNotificationCampaign?.id ?? null,
         notificationCampaignStatus: publishNotificationCampaign?.status ?? null,
@@ -946,11 +997,12 @@ publications.put('/articles/:id', async (c) => {
       notification: publishNotificationJob ? {
         jobId: publishNotificationJob.id,
         campaignId: publishNotificationCampaign?.id ?? null,
-        recipientCount: publishNotificationJob.recipientCount,
+        recipientCount: publishNotificationRecipientCount || publishNotificationCampaign?.intendedRecipientCount || publishNotificationJob.recipientCount,
         status: publishNotificationJob.status,
       } : publishNotificationCampaign ? {
         campaignId: publishNotificationCampaign.id,
         status: publishNotificationCampaign.status,
+        recipientCount: publishNotificationRecipientCount || publishNotificationCampaign.intendedRecipientCount,
         error: publishNotificationError,
       } : publishNotificationError ? { error: publishNotificationError } : null,
     });
@@ -984,24 +1036,27 @@ publications.post('/articles/:id/publish', async (c) => {
     
     await kv.set(`article:${id}`, updated);
     
-    let notificationJob: Awaited<ReturnType<typeof sendArticlePublishedNotifications>> | null = null;
+    let notificationJob: Awaited<ReturnType<typeof sendArticlePublishedNotificationsBlastThenRetryQueue>>['retryJob'] | null = null;
     let notificationCampaign: Awaited<ReturnType<typeof getArticleNotificationCampaign>> | null = null;
     let notificationError: string | null = null;
+    let notificationRecipientCount = 0;
 
-    // Queue delivery separately so publish completes quickly and the send can
-    // resume across multiple short processor requests.
+    // Blast full list on publish; only failures stay on the retry queue for cron.
     if (notifySubscribers) {
       try {
-        notificationJob = await sendArticlePublishedNotifications({
+        const publishResult = await sendArticlePublishedNotificationsBlastThenRetryQueue({
           id: updated.id,
           title: updated.title,
           slug: updated.slug,
           excerpt: updated.excerpt,
         });
-        if (notificationJob.recipientCount > 0) {
+        notificationRecipientCount = publishResult.blast.recipientCount;
+        notificationJob = publishResult.retryJob;
+        if (notificationJob && notificationJob.recipientCount > 0) {
           notificationJob = await kickArticleNotificationJob(notificationJob.id) ?? notificationJob;
         }
-        notificationCampaign = await getArticleNotificationCampaign(notificationJob.id);
+        notificationCampaign = publishResult.publishCampaign
+          ?? (notificationJob ? await getArticleNotificationCampaign(notificationJob.id) : null);
       } catch (deliveryError) {
         notificationError = deliveryError instanceof Error ? deliveryError.message : 'Notification delivery failed';
         log.error('Failed to deliver article published notifications', deliveryError);
@@ -1028,7 +1083,7 @@ publications.post('/articles/:id/publish', async (c) => {
       entityId: id,
       metadata: {
         notifySubscribers,
-        notificationRecipientCount: notificationJob?.recipientCount ?? 0,
+        notificationRecipientCount: notificationRecipientCount || notificationJob?.recipientCount || 0,
         notificationJobId: notificationJob?.id ?? null,
         notificationCampaignId: notificationCampaign?.id ?? null,
         notificationCampaignStatus: notificationCampaign?.status ?? null,
@@ -1048,11 +1103,12 @@ publications.post('/articles/:id/publish', async (c) => {
       notification: notificationJob ? {
         jobId: notificationJob.id,
         campaignId: notificationCampaign?.id ?? null,
-        recipientCount: notificationJob.recipientCount,
+        recipientCount: notificationRecipientCount || notificationCampaign?.intendedRecipientCount || notificationJob.recipientCount,
         status: notificationJob.status,
       } : notificationCampaign ? {
         campaignId: notificationCampaign.id,
         status: notificationCampaign.status,
+        recipientCount: notificationRecipientCount || notificationCampaign.intendedRecipientCount,
         error: notificationError,
       } : notificationError ? { error: notificationError } : null,
     });
@@ -1133,20 +1189,13 @@ publications.post('/articles/:id/reshare', requireAuth, requireAdmin, asyncHandl
 
 publications.get('/email-engagement/summary', requireAuth, requireAdmin, asyncHandler(async (c) => {
   const includeDeleted = c.req.query('include_deleted') === 'true';
-  const records = await listAllArticleEmailTrackingRecords();
   const articles = await kv.getByPrefix('article:') as Article[];
   const deletedArticles = await kv.getByPrefix('article_deleted:') as DeletedArticleRecord[];
   const campaigns = await listArticleNotificationCampaigns({ source: 'publish' });
   const articleMap = new Map(articles.map((article) => [article.id, article]));
   const deletedArticleMap = new Map(deletedArticles.map((article) => [article.id, article]));
 
-  const grouped = new Map<string, typeof records>();
-  for (const record of records) {
-    const existing = grouped.get(record.articleId) || [];
-    existing.push(record);
-    grouped.set(record.articleId, existing);
-  }
-
+  const trackingArticleIds = await listArticleIdsFromEmailTrackingKeyScan();
   const latestCampaignByArticle = new Map<string, (typeof campaigns)[number]>();
   for (const campaign of campaigns) {
     if (!latestCampaignByArticle.has(campaign.articleId)) {
@@ -1155,10 +1204,25 @@ publications.get('/email-engagement/summary', requireAuth, requireAdmin, asyncHa
   }
 
   const articleIds = new Set<string>([
-    ...grouped.keys(),
+    ...articles.map((a) => a.id),
+    ...trackingArticleIds,
     ...latestCampaignByArticle.keys(),
     ...deletedArticleMap.keys(),
   ]);
+
+  const grouped = new Map<string, Awaited<ReturnType<typeof listArticleEmailTrackingRecords>>>();
+  const articleIdList = [...articleIds];
+  const chunkSize = 10;
+  for (let index = 0; index < articleIdList.length; index += chunkSize) {
+    const chunk = articleIdList.slice(index, index + chunkSize);
+    const rows = await Promise.all(chunk.map((articleId) => listArticleEmailTrackingRecords(articleId)));
+    chunk.forEach((articleId, offset) => {
+      const articleRecords = rows[offset];
+      if (articleRecords.length > 0) {
+        grouped.set(articleId, articleRecords);
+      }
+    });
+  }
 
   const summaries = [...articleIds]
     .map((articleId) => {
@@ -1217,42 +1281,81 @@ publications.post('/articles/:id/retry-undelivered', requireAuth, requireAdmin, 
     return c.json({ success: false, error: 'Only published articles can retry delivery' }, 400);
   }
 
-  const notificationJob = await resumeArticleNotificationDelivery({
-    id: article.id,
-    title: article.title,
-    slug: article.slug,
-    excerpt: article.excerpt,
-  }, {
-    source: parsed.data.source,
-  });
-  const liveNotificationJob = notificationJob.recipientCount > 0
-    ? await kickArticleNotificationJob(notificationJob.id) ?? notificationJob
-    : notificationJob;
+  const blastAll = parsed.data.source === 'publish' && parsed.data.blastAll === true;
+
+  let liveNotificationJob: Awaited<ReturnType<typeof resumeArticleNotificationDelivery>>;
+  let blastRecipientCount: number | null = null;
+
+  if (blastAll) {
+    await finalizeActiveArticleNotificationJobsForPublish(article.id);
+    const publishResult = await sendArticlePublishedNotificationsBlastThenRetryQueue({
+      id: article.id,
+      title: article.title,
+      slug: article.slug,
+      excerpt: article.excerpt,
+    });
+    blastRecipientCount = publishResult.blast.recipientCount;
+    let retryJob = publishResult.retryJob;
+    if (retryJob && retryJob.recipientCount > 0) {
+      retryJob = await kickArticleNotificationJob(retryJob.id) ?? retryJob;
+    }
+    liveNotificationJob = retryJob
+      ?? publishResult.retryJob
+      ?? completedBlastNotificationJobPlaceholder(article, publishResult.blast);
+  } else {
+    const notificationJob = await resumeArticleNotificationDelivery({
+      id: article.id,
+      title: article.title,
+      slug: article.slug,
+      excerpt: article.excerpt,
+    }, {
+      source: parsed.data.source,
+    });
+    liveNotificationJob = notificationJob.recipientCount > 0
+      ? await kickArticleNotificationJob(notificationJob.id) ?? notificationJob
+      : notificationJob;
+  }
 
   const adminUserId = c.get('userId') || 'system';
   AdminAuditService.record({
     actorId: adminUserId,
     actorRole: c.get('userRole') || 'admin',
     category: 'communication',
-    action: 'article_delivery_retried',
-    summary: `Queued undelivered article notification retry: ${article.title}`,
+    action: blastAll ? 'article_delivery_blast_all' : 'article_delivery_retried',
+    summary: blastAll
+      ? `Blast publish to all subscribers: ${article.title}`
+      : `Queued undelivered article notification retry: ${article.title}`,
     severity: 'info',
     entityType: 'article',
     entityId: id,
     metadata: {
       source: parsed.data.source,
+      blastAll,
+      blastRecipientCount,
       recipientCount: liveNotificationJob.recipientCount,
       notificationJobId: liveNotificationJob.id,
       notificationStatus: liveNotificationJob.status,
     },
   }).catch(() => {});
 
+  const message = blastAll
+    ? (blastRecipientCount !== null && blastRecipientCount > 0
+      ? `Blast sent to ${blastRecipientCount} recipient(s)` + (liveNotificationJob.recipientCount > 0
+        ? `; ${liveNotificationJob.recipientCount} queued for retry`
+        : '')
+      : 'Blast complete')
+    : liveNotificationJob.recipientCount > 0
+      ? `Queued retry for ${liveNotificationJob.recipientCount} undelivered recipient(s)`
+      : 'No undelivered recipients remain for this source';
+
   return c.json({
     success: true,
-    data: liveNotificationJob,
-    message: liveNotificationJob.recipientCount > 0
-      ? `Queued retry for ${liveNotificationJob.recipientCount} undelivered recipient(s)`
-      : 'No undelivered recipients remain for this source',
+    data: {
+      ...liveNotificationJob,
+      blastRecipientCount: blastRecipientCount ?? undefined,
+      mode: blastAll ? 'blast_all' as const : 'resume_undelivered' as const,
+    },
+    message,
   });
 }));
 
@@ -1792,22 +1895,24 @@ publications.post('/cron/process-scheduled', async (c) => {
 
           if (shouldNotify) {
             try {
-              let notificationJob = await sendArticlePublishedNotifications({
+              const publishResult = await sendArticlePublishedNotificationsBlastThenRetryQueue({
                 id: article.id,
                 title: article.title,
                 slug: article.slug,
                 excerpt: article.excerpt,
               });
-              if (notificationJob.recipientCount > 0) {
+              let notificationJob = publishResult.retryJob;
+              if (notificationJob && notificationJob.recipientCount > 0) {
                 notificationJob = await kickArticleNotificationJob(notificationJob.id) ?? notificationJob;
               }
-              const notificationCampaign = await getArticleNotificationCampaign(notificationJob.id);
+              const notificationCampaign = publishResult.publishCampaign
+                ?? (notificationJob ? await getArticleNotificationCampaign(notificationJob.id) : null);
               log.info(`Scheduled article notifications complete for ${article.id}`, {
-                recipientCount: notificationJob.recipientCount,
-                notificationJobId: notificationJob.id,
+                recipientCount: publishResult.blast.recipientCount,
+                notificationJobId: notificationJob?.id ?? null,
                 notificationCampaignId: notificationCampaign?.id ?? null,
                 notificationCampaignStatus: notificationCampaign?.status ?? null,
-                status: notificationJob.status,
+                status: notificationJob?.status ?? null,
               });
             } catch (notificationError) {
               log.error(`Failed to send notifications for scheduled article ${article.id}`, notificationError);
@@ -1871,22 +1976,24 @@ publications.post('/process-scheduled', async (c) => {
           // Notify newsletter subscribers only if opted-in at scheduling time
           if (shouldNotify) {
             try {
-              let notificationJob = await sendArticlePublishedNotifications({
+              const publishResult = await sendArticlePublishedNotificationsBlastThenRetryQueue({
                 id: article.id,
                 title: article.title,
                 slug: article.slug,
                 excerpt: article.excerpt,
               });
-              if (notificationJob.recipientCount > 0) {
+              let notificationJob = publishResult.retryJob;
+              if (notificationJob && notificationJob.recipientCount > 0) {
                 notificationJob = await kickArticleNotificationJob(notificationJob.id) ?? notificationJob;
               }
-              const notificationCampaign = await getArticleNotificationCampaign(notificationJob.id);
+              const notificationCampaign = publishResult.publishCampaign
+                ?? (notificationJob ? await getArticleNotificationCampaign(notificationJob.id) : null);
               log.info(`Scheduled article notifications complete for ${article.id}`, {
-                recipientCount: notificationJob.recipientCount,
-                notificationJobId: notificationJob.id,
+                recipientCount: publishResult.blast.recipientCount,
+                notificationJobId: notificationJob?.id ?? null,
                 notificationCampaignId: notificationCampaign?.id ?? null,
                 notificationCampaignStatus: notificationCampaign?.status ?? null,
-                status: notificationJob.status,
+                status: notificationJob?.status ?? null,
               });
             } catch (notificationError) {
               log.error(`Failed to send notifications for scheduled article ${article.id}`, notificationError);

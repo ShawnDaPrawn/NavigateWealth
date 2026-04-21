@@ -487,6 +487,37 @@ export async function listAllArticleEmailTrackingRecords(): Promise<ArticleEmail
   });
 }
 
+/**
+ * Discover article IDs that have tracking rows by scanning KV keys only (no
+ * value payloads). Used for engagement summaries so we do not load every
+ * tracking record in one request (which can hang or time out at scale).
+ */
+export async function listArticleIdsFromEmailTrackingKeyScan(): Promise<string[]> {
+  const ids = new Set<string>();
+  let startAfter: string | undefined;
+
+  while (true) {
+    const rows = await kv.listByPrefix(ARTICLE_EMAIL_TRACKING_PREFIX, {
+      startAfter,
+      limit: 500,
+    });
+    if (rows.length === 0) break;
+
+    for (const row of rows) {
+      const key = row.key;
+      if (!key.startsWith(ARTICLE_EMAIL_TRACKING_PREFIX)) continue;
+      const rest = key.slice(ARTICLE_EMAIL_TRACKING_PREFIX.length);
+      const articleId = rest.split(':')[0];
+      if (articleId) ids.add(articleId);
+    }
+
+    startAfter = rows[rows.length - 1]?.key;
+    if (rows.length < 500) break;
+  }
+
+  return [...ids];
+}
+
 export async function listUndeliveredArticleEmailTrackingRecords(
   articleId: string,
   source?: ArticleEmailTrackingSource,

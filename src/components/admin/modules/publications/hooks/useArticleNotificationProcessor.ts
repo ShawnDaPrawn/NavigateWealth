@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { PublicationsAPI } from '../api';
 import { createClient } from '../../../../../utils/supabase/client';
 
-const POLL_INTERVAL_MS = 20_000;
-const INITIAL_DELAY_MS = 15_000;
+const POLL_INTERVAL_MS = 15_000;
+const INITIAL_DELAY_MS = 12_000;
 
 export function useArticleNotificationProcessor(options?: {
   enabled?: boolean;
@@ -25,8 +25,8 @@ export function useArticleNotificationProcessor(options?: {
       }
 
       const result = await PublicationsAPI.Articles.processNotificationJobs({
-        maxJobs: 2,
-        maxBatchesPerJob: 3,
+        maxJobs: 5,
+        maxBatchesPerJob: 4,
       });
       if (result.advancedJobs > 0) {
         onProcessed?.(result.advancedJobs);

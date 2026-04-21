@@ -665,6 +665,28 @@ export const esignApi = {
   },
 
   /**
+   * Rebuild an existing template from a configured draft envelope so the
+   * saved documents, fields, and recipient slots all stay in sync.
+   */
+  async syncTemplateFromEnvelope(input: {
+    templateId: string;
+    envelopeId: string;
+    name?: string;
+    description?: string;
+    category?: string;
+  }): Promise<{ template: EsignTemplateRecord }> {
+    return api.post<{ template: EsignTemplateRecord }>(
+      `/esign/templates/${input.templateId}/from-envelope`,
+      {
+        envelopeId: input.envelopeId,
+        name: input.name,
+        description: input.description,
+        category: input.category,
+      },
+    );
+  },
+
+  /**
    * Delete a template
    */
   async deleteTemplate(templateId: string): Promise<{ success: boolean }> {
@@ -683,6 +705,36 @@ export const esignApi = {
     template: EsignTemplateRecord;
   }> {
     return api.post(`/esign/templates/${templateId}/use`);
+  },
+
+  /**
+   * Clone a template's saved source documents into a fresh draft envelope,
+   * returning a document-id map so the client can hydrate template fields
+   * onto the new draft without re-uploading a PDF.
+   */
+  async materialiseTemplateDraft(input: {
+    templateId: string;
+    title?: string;
+    message?: string;
+    expiryDays?: number;
+    clientId?: string;
+    campaignId?: string;
+    packetRunId?: string;
+    packetStepIndex?: number;
+  }): Promise<{
+    envelope: EsignEnvelope;
+    documentMap: Record<string, string>;
+    documents: EnvelopeDocumentRef[];
+  }> {
+    return api.post(`/esign/templates/${input.templateId}/materialise-draft`, {
+      title: input.title,
+      message: input.message,
+      expiryDays: input.expiryDays,
+      clientId: input.clientId,
+      campaignId: input.campaignId,
+      packetRunId: input.packetRunId,
+      packetStepIndex: input.packetStepIndex,
+    });
   },
 
   /** P4.2 — list versions of a template. */

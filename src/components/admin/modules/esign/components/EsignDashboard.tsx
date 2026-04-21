@@ -37,6 +37,8 @@ interface EsignDashboardProps {
   onResumePrepare?: (envelope: EsignEnvelope) => void;
   resumingEnvelopeId?: string | null;
   onUseTemplate?: (template: EsignTemplateRecord) => void;
+  onStartTemplateBuilder?: (seed: { name: string; description?: string; category?: string }) => void;
+  onConfigureTemplate?: (template: EsignTemplateRecord) => void;
   /** P4.7 — opens the bulk-send dialog. */
   onBulkSend?: () => void;
   /** P4.8 — opens the packet workflows dialog. */
@@ -56,7 +58,7 @@ interface EsignDashboardProps {
   refreshTrigger?: number;
 }
 
-export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, resumingEnvelopeId, onUseTemplate, onBulkSend, onPackets, onNotificationPrefs, onWebhooks, onRecoveryBin, onAuditLog, onRetentionPolicy, onBranding, refreshTrigger }: EsignDashboardProps) {
+export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, resumingEnvelopeId, onUseTemplate, onStartTemplateBuilder, onConfigureTemplate, onBulkSend, onPackets, onNotificationPrefs, onWebhooks, onRecoveryBin, onAuditLog, onRetentionPolicy, onBranding, refreshTrigger }: EsignDashboardProps) {
   const { envelopes, refetch } = useEnvelopes({ autoLoad: true, refreshTrigger });
 
   // Calculate metrics
@@ -219,7 +221,7 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
             <Button
               variant="outline"
               onClick={onBulkSend}
-              className="border-purple-300 text-purple-700 hover:bg-purple-50"
+              className="min-w-[128px] whitespace-nowrap border-purple-300 text-purple-700 hover:bg-purple-50"
             >
               Bulk send…
             </Button>

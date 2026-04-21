@@ -168,8 +168,11 @@ export function ArticleEmailEngagementPanel() {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [retryingArticleId, setRetryingArticleId] = useState<string | null>(null);
 
-  const loadSummary = useCallback(async () => {
-    setIsLoading(true);
+  const loadSummary = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!silent) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
@@ -189,7 +192,9 @@ export function ArticleEmailEngagementPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load article email engagement');
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, [includeDeleted]);
 
@@ -199,7 +204,7 @@ export function ArticleEmailEngagementPanel() {
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      void loadSummary();
+      void loadSummary({ silent: true });
     }, 30_000);
 
     return () => clearInterval(intervalId);
@@ -227,7 +232,7 @@ export function ArticleEmailEngagementPanel() {
       if (refreshTimeout) return;
       refreshTimeout = setTimeout(() => {
         refreshTimeout = null;
-        void loadSummary();
+        void loadSummary({ silent: true });
       }, 300);
     };
 
@@ -270,9 +275,21 @@ export function ArticleEmailEngagementPanel() {
     try {
       const result = await PublicationsAPI.Articles.retryUndeliveredArticleNotifications(articleId, {
         source: 'publish',
+        blastAll: true,
       });
 
-      if (result.kind === 'publish' && result.pendingCount > 0) {
+      if (result.mode === 'blast_all') {
+        const blasted = result.blastRecipientCount ?? result.recipientCount;
+        if (typeof blasted === 'number' && blasted > 0) {
+          toast.success(
+            result.recipientCount > 0
+              ? `Re-sent to ${blasted} subscriber(s); ${result.recipientCount} still queued for retry`
+              : `Re-sent to ${blasted} subscriber(s)`,
+          );
+        } else {
+          toast.success('Publish blast completed');
+        }
+      } else if (result.kind === 'publish' && result.pendingCount > 0) {
         toast.success(`Resumed publish delivery for ${result.pendingCount} remaining recipient(s)`);
       } else if (result.recipientCount === 0) {
         toast.info('No undelivered publish recipients remain for this article');
@@ -280,7 +297,7 @@ export function ArticleEmailEngagementPanel() {
         toast.success(`Queued retry for ${result.recipientCount} undelivered publish recipient(s)`);
       }
 
-      await loadSummary();
+      await loadSummary({ silent: true });
       if (selectedArticleId === articleId) {
         await openDetail(articleId);
       }
@@ -354,7 +371,7 @@ export function ArticleEmailEngagementPanel() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Delivery Processor Health</CardTitle>
             <CardDescription>
-              Cron is the authoritative driver for article delivery. The browser can help, but delivery should continue without an admin session.
+              Supabase cron should call the notification processor periodically. While this admin session is open, the dashboard also nudges the processor every 15s so queues can drain without relying on cron alone.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -425,7 +442,7 @@ export function ArticleEmailEngagementPanel() {
                   Same-domain links only. No tracking pixel. Opens and reads are recorded after on-page engagement signals.
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={() => void loadSummary()} disabled={isLoading}>
+              <Button variant="outline" size="sm" onClick={() => void loadSummary()} disabled={isLoading} title="Refresh engagement data">
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                 <span className="ml-1.5">Refresh</span>
               </Button>
@@ -525,7 +542,7 @@ export function ArticleEmailEngagementPanel() {
                               ) : (
                                 <RefreshCw className="h-4 w-4" />
                               )}
-                              <span className="ml-1.5">Resume {summary.publishUndelivered}</span>
+                              <span className="ml-1.5">Re-send all</span>
                             </Button>
                           )}
                           <Button variant="outline" size="sm" onClick={() => void openDetail(summary.articleId)}>
@@ -604,7 +621,7 @@ export function ArticleEmailEngagementPanel() {
                         {detail.summary.publishUndelivered} publish recipient(s) still need delivery attention
                       </p>
                       <p className="text-xs text-amber-700 mt-1">
-                        Resume the remaining publish recipients for this article.
+                        Re-send to all newsletter subscribers (same as publish). Failed addresses stay on the retry queue.
                       </p>
                     </div>
                     <Button
@@ -617,7 +634,7 @@ export function ArticleEmailEngagementPanel() {
                       ) : (
                         <RefreshCw className="h-4 w-4" />
                       )}
-                      <span className="ml-1.5">Resume Remaining</span>
+                      <span className="ml-1.5">Re-send all</span>
                     </Button>
                   </div>
                 )}

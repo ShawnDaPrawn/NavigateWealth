@@ -1,9 +1,9 @@
 /**
  * Publications Notification Service
  *
- * Publish delivery is modeled as a durable queued job stored in KV. The job
- * can be resumed across multiple short HTTP requests, which prevents the
- * publish endpoint from trying to send the entire audience in one request.
+ * On publish we send to the full audience immediately (batched), then enqueue
+ * only undelivered recipients into the existing retry job processor so cron /
+ * manual runs can finish delivery without leaving a stuck "publish" queue.
  *
  * Reshare delivery remains an explicit direct-send workflow because it is a
  * manually targeted admin action.
@@ -1247,6 +1247,22 @@ async function queueArticleNotificationJob(
   return snapshot;
 }
 
+/**
+ * Completes any in-flight publish/retry jobs for an article so a new blast or
+ * retry queue can be created without colliding with active job pointers.
+ */
+export async function finalizeActiveArticleNotificationJobsForPublish(articleId: string): Promise<void> {
+  for (const kind of ['publish', 'retry_undelivered'] as const) {
+    const job = await getActiveArticleNotificationJob(articleId, 'publish', kind);
+    if (!job) continue;
+    if (job.status === 'completed' || job.status === 'completed_with_failures') {
+      await removeActiveJobPointer(job);
+      continue;
+    }
+    await finalizeArticleNotificationJob(job);
+  }
+}
+
 async function finalizeArticleNotificationJob(
   job: ArticleNotificationJob,
 ): Promise<ArticleNotificationJobSnapshot> {
@@ -1356,6 +1372,109 @@ export async function sendArticlePublishedNotifications(
     kind: 'publish',
     source: 'publish',
   });
+}
+
+/** Stable KV id for publish campaigns driven by tracking records (not a processor job id). */
+const PUBLISH_TRACKING_CAMPAIGN_ID = (articleId: string) => `publish_tracking_${articleId}`;
+
+async function syncPublishNotificationCampaignFromTrackingState(
+  article: PublishedArticle,
+  options?: { retryJobId?: string | null },
+): Promise<ArticleNotificationCampaign | null> {
+  const records = await listArticleEmailTrackingRecords(article.id);
+  const publishRecords = records.filter((r) => r.source === 'publish');
+  if (publishRecords.length === 0) {
+    return null;
+  }
+
+  const totals = summarizeTrackedRecipientDeliveries(publishRecords, 'publish');
+  const campaignId = PUBLISH_TRACKING_CAMPAIGN_ID(article.id);
+  const existing = await getArticleNotificationCampaignRecord(campaignId);
+  const now = nowIso();
+  const intended = publishRecords.length;
+  const processedCount = totals.sent + totals.failedTerminal;
+  const progressPercent = intended > 0 ? Math.round((processedCount / intended) * 1000) / 10 : 100;
+
+  const workRemaining = totals.undelivered > 0;
+  let status: ArticleNotificationCampaignStatus;
+  if (workRemaining) {
+    status = options?.retryJobId ? 'processing' : 'queued';
+  } else if (totals.failedTerminal > 0) {
+    status = 'completed_with_failures';
+  } else {
+    status = 'completed';
+  }
+
+  const phase: ArticleNotificationJobPhase = workRemaining ? 'sending' : 'completed';
+
+  const campaign: ArticleNotificationCampaign = {
+    id: campaignId,
+    articleId: article.id,
+    articleTitle: article.title,
+    articleSlug: article.slug,
+    articleExcerpt: article.excerpt,
+    source: 'publish',
+    status,
+    phase,
+    intendedRecipientCount: intended,
+    preparedCount: intended,
+    unpreparedCount: 0,
+    pendingCount: totals.undelivered,
+    sendingCount: totals.sending,
+    sentCount: totals.sent,
+    failedRetryableCount: totals.failedRetryable,
+    failedTerminalCount: totals.failedTerminal,
+    processedCount,
+    progressPercent,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+    startedAt: existing?.startedAt ?? now,
+    completedAt: !workRemaining ? now : existing?.completedAt ?? null,
+    lastActivityAt: now,
+    lastError: null,
+    // Keep null so getArticleNotificationCampaign() does not merge processor state
+    // into this row (would duplicate keys and break the engagement summary).
+    jobId: null,
+    stuck: false,
+  };
+
+  await persistArticleNotificationCampaign(campaign);
+  return campaign;
+}
+
+/**
+ * Send publish notifications to all subscribers immediately, then queue only
+ * undelivered addresses for the existing retry processor (cron / manual).
+ */
+export async function sendArticlePublishedNotificationsBlastThenRetryQueue(
+  article: PublishedArticle,
+): Promise<{
+  blast: ArticleNotificationRunResult;
+  retryJob: ArticleNotificationJobSnapshot | null;
+  publishCampaign: ArticleNotificationCampaign | null;
+}> {
+  const blast = await runArticleNotificationDelivery(article, { source: 'publish' });
+
+  let retryJob: ArticleNotificationJobSnapshot | null = null;
+  if (blast.recipientCount > 0) {
+    const undelivered = await listUndeliveredArticleEmailTrackingRecords(article.id, 'publish');
+    if (undelivered.length > 0) {
+      try {
+        retryJob = await retryUndeliveredArticleNotifications(article, { source: 'publish' });
+      } catch (error) {
+        log.error('Failed to queue undelivered publish recipients after blast', {
+          articleId: article.id,
+          error: normalizeSendError(error),
+        });
+      }
+    }
+  }
+
+  const publishCampaign = await syncPublishNotificationCampaignFromTrackingState(article, {
+    retryJobId: retryJob?.id ?? null,
+  });
+
+  return { blast, retryJob, publishCampaign };
 }
 
 export async function retryUndeliveredArticleNotifications(

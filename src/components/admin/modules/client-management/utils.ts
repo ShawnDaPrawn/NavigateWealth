@@ -2,6 +2,24 @@ import { Client, ClientFilters } from './types';
 import { CONFIG, PERSONNEL_ROLES } from './constants';
 import type { HealthSubCategory, KPIStatus } from './constants';
 
+function normalizeClientStatus(value: string | undefined): string | undefined {
+  const normalized = value?.trim().toLowerCase();
+  return normalized || undefined;
+}
+
+function isRejectedClient(client: Client): boolean {
+  const statuses = [
+    client.applicationStatus,
+    client.accountStatus,
+    client.profile?.applicationStatus as string | undefined,
+  ];
+
+  return statuses.some((status) => {
+    const normalized = normalizeClientStatus(status);
+    return normalized === 'declined' || normalized === 'rejected';
+  });
+}
+
 // ── Financial KPI Calculations (§7.1 — pure utility functions) ───────────
 
 /**
@@ -327,6 +345,10 @@ export const filterClients = (clients: Client[], filters: ClientFilters): Client
 
     // Exclude all personnel roles
     if (role && (PERSONNEL_ROLES as readonly string[]).includes(role)) {
+      return false;
+    }
+
+    if (isRejectedClient(client)) {
       return false;
     }
 

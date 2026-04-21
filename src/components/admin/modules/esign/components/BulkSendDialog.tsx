@@ -111,6 +111,16 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
     () => templates.find(t => t.id === selectedTemplateId) ?? initialTemplate ?? null,
     [templates, selectedTemplateId, initialTemplate],
   );
+  const templateHasSavedDocuments = useMemo(
+    () => Boolean(selectedTemplate?.documents?.length),
+    [selectedTemplate],
+  );
+
+  useEffect(() => {
+    if (templateHasSavedDocuments) {
+      setFiles([]);
+    }
+  }, [templateHasSavedDocuments]);
 
   const recipientCount = selectedTemplate?.recipients.length ?? 0;
   const selectedGroup = useMemo(
@@ -278,8 +288,8 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
       toast.error('Pick a template first.');
       return;
     }
-    if (files.length === 0) {
-      toast.error('Upload a document for the campaign.');
+    if (!templateHasSavedDocuments && files.length === 0) {
+      toast.error('Upload a document for this legacy template, or re-save the template with its source PDF.');
       return;
     }
     if (!title.trim()) {
@@ -329,23 +339,32 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
       for (const row of created.campaign.results) {
         if (row.status !== 'queued') continue;
         try {
-          // Materialise an envelope for this row by uploading the
-          // shared document and pinning it to the template snapshot.
-          const upload = await esignApi.uploadDocument({
-            files,
-            context: {
-              title: created.campaign.title,
-              message: created.campaign.message,
-              expiryDays: created.campaign.expiryDays,
-              expiresAt: new Date(
-                Date.now() + created.campaign.expiryDays * 24 * 60 * 60 * 1000,
-              ).toISOString(),
-              templateId: created.campaign.templateId,
-              templateVersion: created.campaign.templateVersion,
-              campaignId: created.campaign.id,
-            },
-          });
-          const envelopeId = upload.envelope?.id;
+          const draft = templateHasSavedDocuments
+            ? await esignApi.materialiseTemplateDraft({
+                templateId: created.campaign.templateId,
+                title: created.campaign.title,
+                message: created.campaign.message,
+                expiryDays: created.campaign.expiryDays,
+                campaignId: created.campaign.id,
+              })
+            : null;
+          const upload = !templateHasSavedDocuments
+            ? await esignApi.uploadDocument({
+                files,
+                context: {
+                  title: created.campaign.title,
+                  message: created.campaign.message,
+                  expiryDays: created.campaign.expiryDays,
+                  expiresAt: new Date(
+                    Date.now() + created.campaign.expiryDays * 24 * 60 * 60 * 1000,
+                  ).toISOString(),
+                  templateId: created.campaign.templateId,
+                  templateVersion: created.campaign.templateVersion,
+                  campaignId: created.campaign.id,
+                },
+              })
+            : null;
+          const envelopeId = draft?.envelope?.id || upload?.envelope?.id;
           if (!envelopeId) throw new Error('Upload did not return an envelope id');
 
           // Persist signers as a draft, then send invites with the
@@ -364,6 +383,10 @@ export function BulkSendDialog({ open, onOpenChange, initialTemplate, onComplete
               return {
                 id: `${envelopeId}:tpl:${idx}`,
                 envelope_id: envelopeId,
+                document_id:
+                  (tf.documentId && draft?.documentMap?.[tf.documentId]) ||
+                  draft?.envelope?.document_id ||
+                  upload?.envelope?.document_id,
                 signer_id: recipient.email,
                 signerIndex: tf.recipientIndex,
                 type: tf.type,

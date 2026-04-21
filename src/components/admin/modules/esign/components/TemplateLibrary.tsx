@@ -68,16 +68,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import type { EsignTemplateRecord, SigningMode } from '../types';
+import type { EsignTemplateRecord } from '../types';
 import { TEMPLATE_CATEGORIES } from '../types';
 import { EditTemplateDialog } from './EditTemplateDialog';
 import { SkeletonCardGrid } from './EsignSkeleton';
 
 interface TemplateLibraryProps {
   onUseTemplate: (template: EsignTemplateRecord) => void;
+  onStartTemplateBuilder?: (seed: { name: string; description?: string; category?: string }) => void;
+  onConfigureTemplate?: (template: EsignTemplateRecord) => void;
 }
 
-export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
+export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfigureTemplate }: TemplateLibraryProps) {
   const [templates, setTemplates] = useState<EsignTemplateRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,7 +90,6 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateDescription, setNewTemplateDescription] = useState('');
   const [newTemplateCategory, setNewTemplateCategory] = useState('');
-  const [newTemplateSigningMode, setNewTemplateSigningMode] = useState<SigningMode>('sequential');
 
   // Edit dialog state
   const [editingTemplate, setEditingTemplate] = useState<EsignTemplateRecord | null>(null);
@@ -168,6 +169,7 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
         defaultMessage: template.defaultMessage,
         defaultExpiryDays: template.defaultExpiryDays,
         recipients: template.recipients,
+        documents: template.documents,
         fields: template.fields,
       });
       setTemplates(prev => [result.template, ...prev]);
@@ -201,7 +203,6 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
     setNewTemplateName('');
     setNewTemplateDescription('');
     setNewTemplateCategory('');
-    setNewTemplateSigningMode('sequential');
   };
 
   const handleCreateTemplate = async () => {
@@ -212,18 +213,16 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
 
     setCreating(true);
     try {
-      const result = await esignApi.createTemplate({
+      onStartTemplateBuilder?.({
         name: newTemplateName.trim(),
         description: newTemplateDescription.trim() || undefined,
         category: newTemplateCategory || undefined,
-        signingMode: newTemplateSigningMode,
       });
-      setTemplates((prev) => [result.template, ...prev]);
       setCreateDialogOpen(false);
       resetCreateDialog();
-      toast.success(`Template "${result.template.name}" created`);
+      toast.success(`Starting the builder for "${newTemplateName.trim()}".`);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create template');
+      toast.error(err instanceof Error ? err.message : 'Failed to start the template builder');
     } finally {
       setCreating(false);
     }
@@ -365,6 +364,7 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
               key={template.id}
               template={template}
               onUse={() => handleUseTemplate(template)}
+              onConfigure={() => onConfigureTemplate?.(template)}
               onEdit={() => {
                 setEditingTemplate(template);
                 setEditDialogOpen(true);
@@ -387,6 +387,7 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
               key={template.id}
               template={template}
               onUse={() => handleUseTemplate(template)}
+              onConfigure={() => onConfigureTemplate?.(template)}
               onEdit={() => {
                 setEditingTemplate(template);
                 setEditDialogOpen(true);
@@ -460,20 +461,9 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Default Signing Order</Label>
-              <Select
-                value={newTemplateSigningMode}
-                onValueChange={(value) => setNewTemplateSigningMode(value as SigningMode)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sequential">Sequential</SelectItem>
-                  <SelectItem value="parallel">Parallel</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
+              After this step, you'll upload the template PDF, define recipients, place the reusable fields,
+              and then save the finished template from the form builder.
             </div>
           </div>
 
@@ -527,6 +517,11 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
             if (!open) setEditingTemplate(null);
           }}
           onSave={handleEditSave}
+          onConfigureTemplate={() => {
+            onConfigureTemplate?.(editingTemplate);
+            setEditDialogOpen(false);
+            setEditingTemplate(null);
+          }}
         />
       )}
     </div>
@@ -540,12 +535,13 @@ export function TemplateLibrary({ onUseTemplate }: TemplateLibraryProps) {
 interface TemplateItemProps {
   template: EsignTemplateRecord;
   onUse: () => void;
+  onConfigure: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }
 
-function TemplateCard({ template, onUse, onEdit, onDuplicate, onDelete }: TemplateItemProps) {
+function TemplateCard({ template, onUse, onConfigure, onEdit, onDuplicate, onDelete }: TemplateItemProps) {
   return (
     <Card className="group hover:shadow-md transition-shadow relative">
       <CardContent className="p-5">
@@ -575,6 +571,9 @@ function TemplateCard({ template, onUse, onEdit, onDuplicate, onDelete }: Templa
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem onClick={onEdit}>
                 <Edit3 className="h-3.5 w-3.5 mr-2" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onConfigure}>
+                <FileText className="h-3.5 w-3.5 mr-2" /> Configure form
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onDuplicate}>
                 <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate
@@ -654,7 +653,7 @@ function TemplateCard({ template, onUse, onEdit, onDuplicate, onDelete }: Templa
 // TEMPLATE ROW (List View)
 // ============================================================================
 
-function TemplateRow({ template, onUse, onEdit, onDuplicate, onDelete }: TemplateItemProps) {
+function TemplateRow({ template, onUse, onConfigure, onEdit, onDuplicate, onDelete }: TemplateItemProps) {
   return (
     <div className="group flex items-center gap-4 p-4 border rounded-lg hover:shadow-sm transition-shadow bg-white">
       {/* Icon */}
@@ -724,6 +723,9 @@ function TemplateRow({ template, onUse, onEdit, onDuplicate, onDelete }: Templat
           <DropdownMenuContent align="end" className="w-40">
             <DropdownMenuItem onClick={onEdit}>
               <Edit3 className="h-3.5 w-3.5 mr-2" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onConfigure}>
+              <FileText className="h-3.5 w-3.5 mr-2" /> Configure form
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onDuplicate}>
               <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate

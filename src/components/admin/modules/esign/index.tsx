@@ -72,6 +72,14 @@ interface TemplateContext {
   version: number;
 }
 
+interface TemplateBuilderContext {
+  mode: 'create' | 'edit';
+  templateId?: string;
+  name: string;
+  description?: string;
+  category?: string;
+}
+
 export function EsignModule() {
   const [view, setView] = useState<ViewState>('dashboard');
   const [selectedEnvelope, setSelectedEnvelope] = useState<EsignEnvelope | null>(null);
@@ -80,6 +88,7 @@ export function EsignModule() {
   const [resumingEnvelopeId, setResumingEnvelopeId] = useState<string | null>(null);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [templateContext, setTemplateContext] = useState<TemplateContext | null>(null);
+  const [templateBuilder, setTemplateBuilder] = useState<TemplateBuilderContext | null>(null);
   const [bulkSendOpen, setBulkSendOpen] = useState(false);
   const [packetsOpen, setPacketsOpen] = useState(false);
   const [notificationPrefsOpen, setNotificationPrefsOpen] = useState(false);
@@ -115,6 +124,7 @@ export function EsignModule() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [pendingEnvelopes, setPendingEnvelopes] = useState<EsignEnvelope[]>([]);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   const { 
     uploadDocument, 
@@ -142,6 +152,7 @@ export function EsignModule() {
     setDocumentUrl(null);
     setPendingEnvelopes([]);
     setTemplateContext(null);
+    setTemplateBuilder(null);
     setAutoPopulateSuggestedFields(true);
   };
 
@@ -165,6 +176,132 @@ export function EsignModule() {
     setView('wizard-upload');
   };
 
+  const templateHasSavedDocuments = (template: EsignTemplateRecord | null | undefined): boolean =>
+    Array.isArray(template?.documents) && template.documents.length > 0;
+
+  const mapTemplateRecipientsToWizard = (template: EsignTemplateRecord): SignerFormData[] =>
+    template.recipients.map((recipient, index) => ({
+      name: recipient.name || '',
+      email: recipient.email || '',
+      role: recipient.role || 'Signer',
+      order: recipient.order ?? index + 1,
+      otpRequired: recipient.otpRequired ?? false,
+      accessCode: recipient.accessCode,
+      kind: recipient.kind,
+      clientId: undefined,
+      isSystemClient: false,
+    }));
+
+  const syncDraftSigners = async (envelopeId: string, signers: SignerFormData[]) => {
+    await esignApi.saveDraftSigners(
+      envelopeId,
+      signers.map((signer, index) => ({
+        name: signer.name,
+        email: signer.email,
+        phone: signer.phone,
+        role: signer.role || 'Signer',
+        order: signer.order ?? index + 1,
+        otpRequired: signer.otpRequired,
+        accessCode: signer.accessCode,
+        clientId: signer.clientId,
+        isSystemClient: signer.isSystemClient,
+        smsOptIn: signer.smsOptIn,
+      })),
+    );
+  };
+
+  const hydrateTemplateFieldsOntoEnvelope = async (params: {
+    envelope: EsignEnvelope;
+    template: EsignTemplateRecord;
+    signers: SignerFormData[];
+    documentMap?: Record<string, string>;
+  }): Promise<EsignField[]> => {
+    if (params.template.fields.length === 0) {
+      return [];
+    }
+
+    const nowIso = new Date().toISOString();
+    const primaryDocumentId =
+      params.envelope.document?.id ??
+      params.envelope.document_id ??
+      Object.values(params.documentMap || {})[0];
+
+    const fields = params.template.fields
+      .map((templateField, index) => {
+        const recipient = params.signers[templateField.recipientIndex];
+        if (!recipient) return null;
+
+        return {
+          id: `tpl-${params.envelope.id}-${index}`,
+          envelope_id: params.envelope.id,
+          document_id:
+            (templateField.documentId && params.documentMap?.[templateField.documentId]) ||
+            primaryDocumentId,
+          signer_id: recipient.email,
+          type: templateField.type,
+          page: templateField.page,
+          x: templateField.x,
+          y: templateField.y,
+          width: templateField.width,
+          height: templateField.height,
+          required: templateField.required,
+          metadata: templateField.metadata ?? {},
+          created_at: nowIso,
+          updated_at: nowIso,
+        } satisfies EsignField;
+      })
+      .filter((field): field is EsignField => field !== null);
+
+    if (fields.length > 0) {
+      await saveFields(params.envelope.id, fields);
+      setActiveEnvelope({ ...params.envelope, fields });
+    }
+
+    return fields;
+  };
+
+  const materialiseTemplateDraftForWizard = async (
+    template: EsignTemplateRecord,
+    options?: { campaignId?: string; packetRunId?: string; packetStepIndex?: number },
+  ): Promise<{ envelope: EsignEnvelope; fields: EsignField[]; documentMap: Record<string, string> }> => {
+    const primarySystemSigner = wizardData.signers.find((signer) => signer.isSystemClient && signer.clientId);
+    const clientId = primarySystemSigner?.clientId;
+    const result = await esignApi.materialiseTemplateDraft({
+      templateId: template.id,
+      title: wizardData.title || template.name,
+      message: wizardData.message,
+      expiryDays: wizardData.expiryDays,
+      clientId,
+      campaignId: options?.campaignId,
+      packetRunId: options?.packetRunId,
+      packetStepIndex: options?.packetStepIndex,
+    });
+
+    setPendingEnvelopes([]);
+    setActiveEnvelope(result.envelope);
+    const url = result.envelope.document?.url || result.envelope.documentUrl;
+    if (url) setDocumentUrl(url);
+
+    try {
+      await syncDraftSigners(result.envelope.id, wizardData.signers);
+    } catch (draftErr) {
+      logger.warn('Failed to persist draft signers on template draft (non-critical):', draftErr);
+    }
+
+    const hydratedFields = await hydrateTemplateFieldsOntoEnvelope({
+      envelope: result.envelope,
+      template,
+      signers: wizardData.signers,
+      documentMap: result.documentMap,
+    });
+
+    return {
+      envelope: { ...result.envelope, fields: hydratedFields },
+      fields: hydratedFields,
+      documentMap: result.documentMap,
+    };
+  };
+
   /**
    * P4.1 / P4.3 — User picked a template. Capture the template + pinned
    * version, hydrate wizardData with the template's recipients (slot
@@ -181,24 +318,14 @@ export function EsignModule() {
     // Map template recipients → SignerFormData slots. Names default to
     // the template's recipient name (e.g. "Client", "Adviser") so the
     // user just has to fill in the email; this is the express-wizard win.
-    const signers: SignerFormData[] = template.recipients.map((r, idx) => ({
-      name: r.name || '',
-      email: r.email || '',
-      role: r.role || 'Signer',
-      order: r.order ?? idx + 1,
-      otpRequired: r.otpRequired ?? false,
-      accessCode: r.accessCode,
-      clientId: undefined,
-      isSystemClient: false,
-    }));
     setWizardData({
       files: [],
       title: template.name,
       message: template.defaultMessage || '',
       expiryDays: template.defaultExpiryDays ?? 30,
-      signers,
+      signers: mapTemplateRecipientsToWizard(template),
     });
-    setView('wizard-upload');
+    setView(templateHasSavedDocuments(template) ? 'wizard-recipients' : 'wizard-upload');
   };
 
   const handleUploadNext = (files: File[], title: string, message: string, expiryDays: number) => {
@@ -210,6 +337,84 @@ export function EsignModule() {
       expiryDays
     }));
     setView('wizard-recipients');
+  };
+
+  const handleStartTemplateBuilder = (seed: {
+    name: string;
+    description?: string;
+    category?: string;
+  }) => {
+    if (!canCreate) return;
+    resetWizardState();
+    setTemplateBuilder({
+      mode: 'create',
+      name: seed.name,
+      description: seed.description,
+      category: seed.category,
+    });
+    setTemplateContext({
+      version: 1,
+      template: {
+        id: 'template-builder-draft',
+        name: seed.name,
+        description: seed.description,
+        category: seed.category,
+        signingMode: 'sequential',
+        defaultExpiryDays: 30,
+        recipients: [],
+        documents: [],
+        fields: [],
+        usageCount: 0,
+        version: 1,
+        createdBy: 'template-builder',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    setWizardData({
+      files: [],
+      title: seed.name,
+      message: '',
+      expiryDays: 30,
+      signers: [],
+    });
+    setView('wizard-upload');
+  };
+
+  const handleConfigureTemplate = async (template: EsignTemplateRecord) => {
+    if (!canCreate) return;
+
+    resetWizardState();
+    setTemplateBuilder({
+      mode: 'edit',
+      templateId: template.id,
+      name: template.name,
+      description: template.description,
+      category: template.category,
+    });
+    setTemplateContext({ template, version: template.version ?? 1 });
+    setWizardData({
+      files: [],
+      title: template.name,
+      message: template.defaultMessage || '',
+      expiryDays: template.defaultExpiryDays ?? 30,
+      signers: mapTemplateRecipientsToWizard(template),
+    });
+
+    if (!templateHasSavedDocuments(template)) {
+      setView('wizard-upload');
+      return;
+    }
+
+    try {
+      await materialiseTemplateDraftForWizard(template);
+      setView('prepare');
+      toast.success(`Template "${template.name}" loaded for editing.`);
+    } catch (error: unknown) {
+      logger.error('Failed to open template builder:', error);
+      resetWizardState();
+      toast.error(error instanceof Error ? error.message : 'Failed to load template builder');
+    }
   };
 
   /**
@@ -234,25 +439,15 @@ export function EsignModule() {
 
     if (activeEnvelope?.id && activeEnvelope.status === 'draft') {
       try {
-        await esignApi.saveDraftSigners(
-          activeEnvelope.id,
-          wizardData.signers.map((s, idx) => ({
-            name: s.name,
-            email: s.email,
-            phone: s.phone,
-            role: s.role || 'Signer',
-            order: s.order ?? idx + 1,
-            otpRequired: s.otpRequired,
-            accessCode: s.accessCode,
-            clientId: s.clientId,
-            isSystemClient: s.isSystemClient,
-            smsOptIn: s.smsOptIn,
-          })),
-        );
+        await syncDraftSigners(activeEnvelope.id, wizardData.signers);
       } catch (draftErr) {
         logger.warn('Failed to update draft signers on existing envelope (non-critical):', draftErr);
       }
       return { envelope: activeEnvelope, fields: activeEnvelope.fields ?? [] };
+    }
+
+    if (templateContext && templateHasSavedDocuments(templateContext.template)) {
+      return materialiseTemplateDraftForWizard(templateContext.template);
     }
 
     if (!wizardData.files || wizardData.files.length === 0) {
@@ -289,18 +484,7 @@ export function EsignModule() {
     if (url) setDocumentUrl(url);
 
     try {
-      await esignApi.saveDraftSigners(result.id, wizardData.signers.map((s, idx) => ({
-        name: s.name,
-        email: s.email,
-        phone: s.phone,
-        role: s.role || 'Signer',
-        order: s.order ?? idx + 1,
-        otpRequired: s.otpRequired,
-        accessCode: s.accessCode,
-        clientId: s.clientId,
-        isSystemClient: s.isSystemClient,
-        smsOptIn: s.smsOptIn,
-      })));
+      await syncDraftSigners(result.id, wizardData.signers);
     } catch (draftErr) {
       logger.warn('Failed to persist draft signers (non-critical):', draftErr);
     }
@@ -308,36 +492,11 @@ export function EsignModule() {
     let hydratedFields: EsignField[] = [];
     if (templateContext && templateContext.template.fields.length > 0) {
       try {
-        const nowIso = new Date().toISOString();
-        const docId = result.document?.id ?? (result as { documentId?: string }).documentId;
-        hydratedFields = templateContext.template.fields
-          .map((tf, idx) => {
-            const recipient = wizardData.signers[tf.recipientIndex];
-            if (!recipient) return null;
-            const field: EsignField = {
-              id: `tpl-${result.id}-${idx}`,
-              envelope_id: result.id,
-              document_id: docId,
-              signer_id: recipient.email,
-              type: tf.type,
-              page: tf.page,
-              x: tf.x,
-              y: tf.y,
-              width: tf.width,
-              height: tf.height,
-              required: tf.required,
-              metadata: tf.metadata ?? {},
-              created_at: nowIso,
-              updated_at: nowIso,
-            };
-            return field;
-          })
-          .filter((f): f is EsignField => f !== null);
-
-        if (hydratedFields.length > 0) {
-          await saveFields(result.id, hydratedFields);
-          setActiveEnvelope({ ...result, fields: hydratedFields });
-        }
+        hydratedFields = await hydrateTemplateFieldsOntoEnvelope({
+          envelope: result,
+          template: templateContext.template,
+          signers: wizardData.signers,
+        });
       } catch (hydrateErr) {
         logger.warn('Failed to hydrate template fields (non-critical):', hydrateErr);
       }
@@ -364,21 +523,7 @@ export function EsignModule() {
     // also find them.
     if (activeEnvelope?.id && activeEnvelope.status === 'draft') {
       try {
-        await esignApi.saveDraftSigners(
-          activeEnvelope.id,
-          wizardData.signers.map((s, idx) => ({
-            name: s.name,
-            email: s.email,
-            phone: s.phone,
-            role: s.role || 'Signer',
-            order: s.order ?? idx + 1,
-            otpRequired: s.otpRequired,
-            accessCode: s.accessCode,
-            clientId: s.clientId,
-            isSystemClient: s.isSystemClient,
-            smsOptIn: s.smsOptIn,
-          })),
-        );
+        await syncDraftSigners(activeEnvelope.id, wizardData.signers);
       } catch (draftErr) {
         logger.warn('Failed to update draft signers on existing envelope (non-critical):', draftErr);
       }
@@ -393,11 +538,13 @@ export function EsignModule() {
       const out = await materialiseEnvelopeFromWizard();
       if (!out) return;
 
-      const sourceMsg = templateContext
-        ? `Template "${templateContext.template.name}" applied — ${out.fields.length} field(s) placed.`
-        : (wizardData.files.length > 1
-          ? `${wizardData.files.length} documents merged! Proceeding to prepare the form fields.`
-          : 'Document uploaded! Now prepare the form fields.');
+      const sourceMsg = templateBuilder
+        ? 'Template draft ready - place the reusable fields and save it.'
+        : templateContext
+          ? `Template "${templateContext.template.name}" applied - ${out.fields.length} field(s) placed.`
+          : (wizardData.files.length > 1
+            ? `${wizardData.files.length} documents merged! Proceeding to prepare the form fields.`
+            : 'Document uploaded! Now prepare the form fields.');
       toast.success(sourceMsg);
 
       setView('prepare');
@@ -463,6 +610,59 @@ export function EsignModule() {
     } catch (error: unknown) {
       logger.error('Failed to send:', error);
       toast.error('Failed to send envelope');
+    }
+  };
+
+  const handleSaveTemplate = async (currentFields?: EsignField[]) => {
+    if (!activeEnvelope || !templateBuilder) return;
+
+    const fieldsToUse = currentFields || activeEnvelope.fields || [];
+    if (fieldsToUse.length === 0) {
+      toast.error('Place at least one field before saving this template.');
+      return;
+    }
+
+    setSavingTemplate(true);
+    try {
+      const templateName = (activeEnvelope.title || templateBuilder.name || wizardData.title).trim();
+      const payload = {
+        name: templateName,
+        description: templateBuilder.description,
+        category: templateBuilder.category,
+      };
+
+      const result = templateBuilder.mode === 'edit' && templateBuilder.templateId
+        ? await esignApi.syncTemplateFromEnvelope({
+            templateId: templateBuilder.templateId,
+            envelopeId: activeEnvelope.id,
+            ...payload,
+          })
+        : await esignApi.createTemplate({
+            ...payload,
+            fromEnvelopeId: activeEnvelope.id,
+          });
+
+      if (canDelete) {
+        try {
+          await deleteEnvelope(activeEnvelope.id);
+        } catch (cleanupErr) {
+          logger.warn('Template builder draft cleanup failed (non-critical):', cleanupErr);
+        }
+      }
+
+      toast.success(
+        templateBuilder.mode === 'edit'
+          ? `Template "${result.template.name}" updated.`
+          : `Template "${result.template.name}" created.`,
+      );
+      resetWizardState();
+      setRefreshTrigger((prev) => prev + 1);
+      setView('dashboard');
+    } catch (error: unknown) {
+      logger.error('Failed to save template:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save template');
+    } finally {
+      setSavingTemplate(false);
     }
   };
 
@@ -611,6 +811,8 @@ export function EsignModule() {
         if (Number.isFinite(diffDays) && diffDays > 0) expiryDays = diffDays;
       }
 
+      setTemplateBuilder(null);
+      setTemplateContext(null);
       setWizardData({
         files: [],
         title: fullEnvelope.title,
@@ -650,7 +852,7 @@ export function EsignModule() {
               // If we have wizard files, we came from the normal wizard flow — go back to recipients.
               // If no files (resumed draft), go back to dashboard and clear
               // the active envelope so subsequent "Start New" doesn't reuse it.
-              if (wizardData.files.length > 0) {
+              if (wizardData.files.length > 0 || templateContext || templateBuilder) {
                 setView('wizard-recipients');
               } else {
                 setActiveEnvelope(null);
@@ -660,7 +862,9 @@ export function EsignModule() {
               }
             }}
             onSaveFields={handleSaveFields}
-            onSendForSignature={handleSend}
+            onSendForSignature={templateBuilder ? handleSaveTemplate : handleSend}
+            sendActionLabel={templateBuilder ? 'Save Template' : 'Send'}
+            sendActionBusyLabel={templateBuilder ? 'Saving template...' : 'Sending...'}
             onSignersChange={(next) => {
               // Phase 2: keep the wizard's signer list in sync with edits
               // performed via the studio's Recipients side-sheet so the
@@ -674,10 +878,24 @@ export function EsignModule() {
               // it locally so the title in the toolbar updates instantly and
               // the dashboard cache picks up the diff on next visit.
               setActiveEnvelope(updated);
+              const expiresAtIso = (updated as { expires_at?: string; expiresAt?: string }).expires_at
+                ?? (updated as { expiresAt?: string }).expiresAt;
+              let expiryDays = wizardData.expiryDays;
+              if (expiresAtIso) {
+                const diffMs = new Date(expiresAtIso).getTime() - new Date(updated.created_at).getTime();
+                const diffDays = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+                if (Number.isFinite(diffDays) && diffDays > 0) expiryDays = diffDays;
+              }
+              setWizardData((prev) => ({
+                ...prev,
+                title: updated.title,
+                message: updated.message || '',
+                expiryDays,
+              }));
               setRefreshTrigger((p) => p + 1);
             }}
             saving={savingFields}
-            sending={sending}
+            sending={templateBuilder ? savingTemplate : sending}
             documentUrl={documentUrl || undefined}
           />
         </Suspense>
@@ -695,6 +913,8 @@ export function EsignModule() {
                 resetWizardState();
                 handleSelectTemplate(template);
               }}
+              onStartTemplateBuilder={handleStartTemplateBuilder}
+              onConfigureTemplate={handleConfigureTemplate}
               onBulkSend={canSend ? () => setBulkSendOpen(true) : undefined}
               onPackets={canSend ? () => setPacketsOpen(true) : undefined}
               onNotificationPrefs={() => setNotificationPrefsOpen(true)}
@@ -711,7 +931,10 @@ export function EsignModule() {
             <Suspense fallback={<StepFallback />}>
               <DocumentUploadStep
                 onNext={handleUploadNext}
-                onCancel={() => setView('dashboard')}
+                onCancel={() => {
+                  resetWizardState();
+                  setView('dashboard');
+                }}
                 initialData={{
                    files: wizardData.files,
                    title: wizardData.title,
@@ -732,7 +955,7 @@ export function EsignModule() {
               {/* P4.3 — Express-send banner. When the wizard is using a
                   template that already has a complete field layout, surface
                   a clear shortcut so the user can skip the studio. */}
-              {templateContext && templateContext.template.fields.length > 0 && (
+              {!templateBuilder && templateContext && templateContext.template.fields.length > 0 && (
                 <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 flex items-start gap-3">
                   <div className="h-8 w-8 rounded-md bg-purple-100 flex items-center justify-center shrink-0">
                     <ArrowRight className="h-4 w-4 text-purple-700" />
@@ -784,12 +1007,22 @@ export function EsignModule() {
               </Card>
 
               <div className="flex justify-between">
-                <Button variant="ghost" onClick={() => setView('wizard-upload')}>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    if (wizardData.files.length > 0 || (templateBuilder && !templateHasSavedDocuments(templateContext?.template))) {
+                      setView('wizard-upload');
+                    } else {
+                      resetWizardState();
+                      setView('dashboard');
+                    }
+                  }}
+                >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back
                 </Button>
                 <div className="flex items-center gap-2">
-                  {templateContext && templateContext.template.fields.length > 0 && canSend && (
+                  {!templateBuilder && templateContext && templateContext.template.fields.length > 0 && canSend && (
                     <Button
                       type="button"
                       variant="outline"

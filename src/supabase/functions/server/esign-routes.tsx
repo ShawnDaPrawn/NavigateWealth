@@ -54,6 +54,7 @@ import {
   remapFieldsForConcatenation,
   removeEnvelopeDocument,
   reorderEnvelopeDocuments,
+  setEnvelopeDocuments,
 } from './esign-documents.ts';
 import { resolvePrefilledFields } from './esign-prefill.ts';
 import {
@@ -80,8 +81,10 @@ import { runExpirySweep } from './esign-expiry-service.ts';
 import { runReminderSweep } from './esign-reminder-service.ts';
 import {
   createTemplate,
+  cloneTemplateDocumentsToEnvelope,
   getTemplate,
   listTemplates,
+  syncTemplateFromEnvelope,
   updateTemplate,
   deleteTemplate,
   createTemplateFromEnvelope,
@@ -1009,9 +1012,11 @@ esignRoutes.post('/envelopes/upload', requireIdempotency(), rateLimit('SENDER_MU
     const hash = await calculateHash(finalFileBuffer);
     const pageCount = extractPageCount(finalFileBuffer);
 
-    // Generate IDs
+    // Generate IDs. New e-sign records must live in the authenticated
+    // sender's firm scope or the dashboard history list will immediately
+    // filter them back out as "not mine".
     const documentId = crypto.randomUUID();
-    const firmId = 'firm_' + crypto.randomUUID(); // Placeholder firm ID
+    const firmId = resolveFirmId(user);
 
     // Determine MIME type (Always PDF for merged or single PDF, but if single was docx we might have issues)
     // The current validateDocument allows PDF. If we merged, it's definitely PDF.
@@ -5272,6 +5277,144 @@ esignRoutes.put('/templates/:templateId', async (c) => {
 });
 
 /**
+ * POST /templates/:templateId/from-envelope
+ * Rebuild a template from a configured draft envelope so documents, fields,
+ * signing mode, and recipient slots can be updated in one save.
+ */
+esignRoutes.post('/templates/:templateId/from-envelope', async (c) => {
+  try {
+    await getAuthContext(c);
+    const templateId = c.req.param('templateId');
+    const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+    if (!body) {
+      return c.json({ error: 'Invalid JSON body' }, 400);
+    }
+
+    const envelopeId = String(body.envelopeId ?? '').trim();
+    if (!envelopeId) {
+      return c.json({ error: 'envelopeId is required' }, 400);
+    }
+
+    const updated = await syncTemplateFromEnvelope({
+      templateId,
+      envelopeId,
+      name: typeof body.name === 'string' ? body.name : undefined,
+      description: typeof body.description === 'string' ? body.description : undefined,
+      category: typeof body.category === 'string' ? body.category : undefined,
+    });
+
+    if (!updated) {
+      return c.json({ error: 'Template not found' }, 404);
+    }
+
+    return c.json({ template: updated });
+  } catch (error: unknown) {
+    if (error instanceof AuthError) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    log.error('Sync template from envelope error:', error);
+    return c.json({ error: error instanceof Error ? error.message : 'Failed to sync template' }, 500);
+  }
+});
+
+/**
+ * POST /templates/:templateId/materialise-draft
+ * Clone the template's saved source documents into a fresh draft envelope
+ * so the admin can edit recipients, fields, or send without re-uploading.
+ */
+esignRoutes.post('/templates/:templateId/materialise-draft', async (c) => {
+  try {
+    const ctx = await getAuthContext(c);
+    const user = ctx.user;
+    const templateId = c.req.param('templateId');
+    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+
+    const template = await getTemplate(templateId);
+    if (!template) {
+      return c.json({ error: 'Template not found' }, 404);
+    }
+    if (!Array.isArray(template.documents) || template.documents.length === 0) {
+      return c.json({ error: 'This template does not have a saved source document yet.' }, 400);
+    }
+
+    await ensureStorageBuckets();
+
+    const firmId = resolveFirmId(user);
+    const title = typeof body.title === 'string' && body.title.trim()
+      ? body.title.trim()
+      : template.name;
+    const message = typeof body.message === 'string'
+      ? body.message
+      : template.defaultMessage;
+    const expiryDays = typeof body.expiryDays === 'number' && Number.isFinite(body.expiryDays)
+      ? Math.max(1, Math.round(body.expiryDays))
+      : (template.defaultExpiryDays || 30);
+    const clientId = typeof body.clientId === 'string' && body.clientId.trim()
+      ? body.clientId.trim()
+      : 'standalone';
+
+    const cloned = await cloneTemplateDocumentsToEnvelope({
+      template,
+      firmId,
+      addedByUserId: user.id,
+    });
+
+    const { envelopeId, error: envError } = await createEnvelope({
+      firmId,
+      clientId,
+      title,
+      documentId: cloned.primaryDocumentId,
+      createdByUserId: user.id,
+      signers: [],
+      message,
+      expiryDays,
+      signingMode: template.signingMode,
+      templateId: template.id,
+      templateVersion: template.version,
+      campaignId: typeof body.campaignId === 'string' ? body.campaignId : undefined,
+      packetRunId: typeof body.packetRunId === 'string' ? body.packetRunId : undefined,
+      packetStepIndex: typeof body.packetStepIndex === 'number' ? body.packetStepIndex : undefined,
+    });
+    if (envError || !envelopeId) {
+      return c.json({ error: envError || 'Failed to create envelope from template' }, 500);
+    }
+
+    if (cloned.documents.length > 1) {
+      await setEnvelopeDocuments(envelopeId, cloned.documents);
+    }
+
+    const envelope = await getEnvelopeDetails(envelopeId);
+    if (!envelope) {
+      return c.json({ error: 'Draft envelope could not be loaded' }, 500);
+    }
+
+    const documentUrl = cloned.documents[0]?.storage_path
+      ? await getDocumentUrl(cloned.documents[0].storage_path)
+      : null;
+
+    return c.json({
+      envelope: {
+        ...envelope,
+        document: envelope.document
+          ? {
+              ...envelope.document,
+              url: documentUrl,
+            }
+          : envelope.document,
+      },
+      documentMap: cloned.documentMap,
+      documents: cloned.documents,
+    });
+  } catch (error: unknown) {
+    if (error instanceof AuthError) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    log.error('Materialise template draft error:', error);
+    return c.json({ error: error instanceof Error ? error.message : 'Failed to start from template' }, 500);
+  }
+});
+
+/**
  * DELETE /templates/:templateId
  * Delete template
  */
@@ -5545,7 +5688,7 @@ esignRoutes.post('/documents/upload', requireIdempotency(), rateLimit('SENDER_MU
     const hash = await calculateHash(buffer);
     const pageCount = extractPageCount(buffer);
     const documentId = crypto.randomUUID();
-    const firmId = (formData.get('firmId') as string | null) || 'standalone';
+    const firmId = resolveFirmId(ctx.user);
 
     const { path, error: uploadError } = await uploadDocument(
       firmId,
@@ -5583,12 +5726,12 @@ esignRoutes.post('/packets', requireIdempotency(), rateLimit('SENDER_MUTATE'), a
   try {
     const ctx = await getAuthContext(c);
     const body = await c.req.json();
-    const { name, description, steps, firmId } = body || {};
+    const { name, description, steps } = body || {};
     if (!name || !Array.isArray(steps) || steps.length === 0) {
       return c.json({ error: 'name and at least one step are required' }, 400);
     }
     const result = await createPacket({
-      firmId: firmId || 'standalone',
+      firmId: resolveFirmId(ctx.user),
       name,
       description,
       steps: steps.map((s: { templateId: string; templateVersion?: number; label?: string }) => ({
@@ -5659,7 +5802,7 @@ esignRoutes.post('/packet-runs', requireIdempotency(), rateLimit('SENDER_MUTATE'
   try {
     const ctx = await getAuthContext(c);
     const body = await c.req.json();
-    const { packetId, recipients, documentIdsByStep, clientId, firmId, expiryDays, message } = body || {};
+    const { packetId, recipients, documentIdsByStep, clientId, expiryDays, message } = body || {};
     if (!packetId) return c.json({ error: 'packetId required' }, 400);
     if (!Array.isArray(recipients) || recipients.length === 0) {
       return c.json({ error: 'At least one recipient required' }, 400);
@@ -5670,7 +5813,7 @@ esignRoutes.post('/packet-runs', requireIdempotency(), rateLimit('SENDER_MUTATE'
 
     const result = await startPacketRun({
       packetId,
-      firmId: firmId || 'standalone',
+      firmId: resolveFirmId(ctx.user),
       clientId: clientId || 'standalone',
       recipients,
       documentIdsByStep,

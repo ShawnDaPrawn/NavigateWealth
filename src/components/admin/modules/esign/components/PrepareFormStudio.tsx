@@ -80,6 +80,8 @@ interface PrepareFormStudioProps {
   onBack?: () => void;
   onSaveFields?: (fields: EsignField[]) => Promise<void>;
   onSendForSignature?: (fields?: EsignField[]) => Promise<void>;
+  sendActionLabel?: string;
+  sendActionBusyLabel?: string;
   /**
    * Optional callback for when the user updates recipients (Phase 2 quick
    * edit). The studio will save the new signer list to the draft envelope
@@ -104,6 +106,8 @@ export function PrepareFormStudio({
   onBack,
   onSaveFields,
   onSendForSignature,
+  sendActionLabel = 'Send',
+  sendActionBusyLabel = 'Sending...',
   onSignersChange,
   onEnvelopeUpdated,
   saving = false,
@@ -1205,16 +1209,16 @@ export function PrepareFormStudio({
           <Button
             onClick={handleSend}
             disabled={sending}
-            className="bg-purple-600 hover:bg-purple-700 w-32"
+            className="min-w-[140px] bg-purple-600 hover:bg-purple-700"
           >
             {sending ? (
               <div className="contents">
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Sending...
+                {sendActionBusyLabel}
               </div>
             ) : (
               <div className="contents">
-                Send
+                {sendActionLabel}
                 <Send className="h-4 w-4 ml-2" />
               </div>
             )}

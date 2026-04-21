@@ -538,6 +538,7 @@ export class AdminApplicationsService {
         await kv.set(profileKey, {
           ...existingProfile,
           accountStatus: 'declined',
+          applicationStatus: 'declined',
         });
         log.info('Decline-time profile accountStatus updated', { userId });
       }
