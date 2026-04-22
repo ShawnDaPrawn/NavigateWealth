@@ -382,6 +382,8 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
             <CardContent>
               <TemplateLibrary
                 onUseTemplate={(template) => onUseTemplate?.(template)}
+                onStartTemplateBuilder={onStartTemplateBuilder}
+                onConfigureTemplate={onConfigureTemplate}
               />
             </CardContent>
           </Card>

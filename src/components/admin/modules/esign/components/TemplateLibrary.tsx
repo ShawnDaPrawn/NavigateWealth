@@ -211,9 +211,14 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
       return;
     }
 
+    if (!onStartTemplateBuilder) {
+      toast.error('Template builder is not available in this view.');
+      return;
+    }
+
     setCreating(true);
     try {
-      onStartTemplateBuilder?.({
+      onStartTemplateBuilder({
         name: newTemplateName.trim(),
         description: newTemplateDescription.trim() || undefined,
         category: newTemplateCategory || undefined,
@@ -517,11 +522,13 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
             if (!open) setEditingTemplate(null);
           }}
           onSave={handleEditSave}
-          onConfigureTemplate={() => {
-            onConfigureTemplate?.(editingTemplate);
-            setEditDialogOpen(false);
-            setEditingTemplate(null);
-          }}
+          onConfigureTemplate={onConfigureTemplate
+            ? () => {
+                onConfigureTemplate(editingTemplate);
+                setEditDialogOpen(false);
+                setEditingTemplate(null);
+              }
+            : undefined}
         />
       )}
     </div>
@@ -535,7 +542,7 @@ export function TemplateLibrary({ onUseTemplate, onStartTemplateBuilder, onConfi
 interface TemplateItemProps {
   template: EsignTemplateRecord;
   onUse: () => void;
-  onConfigure: () => void;
+  onConfigure?: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -572,9 +579,11 @@ function TemplateCard({ template, onUse, onConfigure, onEdit, onDuplicate, onDel
               <DropdownMenuItem onClick={onEdit}>
                 <Edit3 className="h-3.5 w-3.5 mr-2" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onConfigure}>
-                <FileText className="h-3.5 w-3.5 mr-2" /> Configure form
-              </DropdownMenuItem>
+              {onConfigure && (
+                <DropdownMenuItem onClick={onConfigure}>
+                  <FileText className="h-3.5 w-3.5 mr-2" /> Configure form
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={onDuplicate}>
                 <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate
               </DropdownMenuItem>
@@ -724,9 +733,11 @@ function TemplateRow({ template, onUse, onConfigure, onEdit, onDuplicate, onDele
             <DropdownMenuItem onClick={onEdit}>
               <Edit3 className="h-3.5 w-3.5 mr-2" /> Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onConfigure}>
-              <FileText className="h-3.5 w-3.5 mr-2" /> Configure form
-            </DropdownMenuItem>
+            {onConfigure && (
+              <DropdownMenuItem onClick={onConfigure}>
+                <FileText className="h-3.5 w-3.5 mr-2" /> Configure form
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={onDuplicate}>
               <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate
             </DropdownMenuItem>
