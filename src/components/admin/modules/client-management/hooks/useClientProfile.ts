@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner@2.0.3';
-import { clientApi } from '../api';
+import { clientApi, getClientProfileQueryOptions } from '../api';
 import { 
   Client, 
   ProfileData, 
@@ -35,6 +36,7 @@ function createProfileSnapshot(data: ProfileData): string {
 }
 
 export function useClientProfile(clientData: Client, onSave?: (data: ProfileData) => void) {
+  const queryClient = useQueryClient();
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -194,31 +196,31 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       }
 
       try {
-        const result = await clientApi.fetchClientProfile(userId);
-        if (result.success && result.data) {
-          const grossAnnual = result.data.grossAnnualIncome ?? ((result.data.grossMonthlyIncome || result.data.grossIncome || 0) * 12);
-          const netAnnual = result.data.netAnnualIncome ?? ((result.data.netMonthlyIncome || result.data.netIncome || 0) * 12);
+        const profile = await queryClient.fetchQuery(getClientProfileQueryOptions(userId));
+        if (profile) {
+          const grossAnnual = profile.grossAnnualIncome ?? ((profile.grossMonthlyIncome || profile.grossIncome || 0) * 12);
+          const netAnnual = profile.netAnnualIncome ?? ((profile.netMonthlyIncome || profile.netIncome || 0) * 12);
           
           setProfileData(prev => ({
             ...prev,
-            ...result.data,
+            ...profile,
             grossAnnualIncome: grossAnnual,
             netAnnualIncome: netAnnual,
             // Ensure arrays are properly initialized
-            identityDocuments: result.data.identityDocuments || [],
-            employers: result.data.employers || [],
-            chronicConditions: result.data.chronicConditions || [],
-            familyMembers: result.data.familyMembers || [],
-            bankAccounts: result.data.bankAccounts || [],
-            assets: result.data.assets || [],
-            liabilities: result.data.liabilities || [],
+            identityDocuments: profile.identityDocuments || [],
+            employers: profile.employers || [],
+            chronicConditions: profile.chronicConditions || [],
+            familyMembers: profile.familyMembers || [],
+            bankAccounts: profile.bankAccounts || [],
+            assets: profile.assets || [],
+            liabilities: profile.liabilities || [],
             // Ensure identity fields are not undefined/null
-            idCountry: result.data.idCountry || 'South Africa',
-            idNumber: result.data.idNumber || '',
-            passportCountry: result.data.passportCountry || '',
-            passportNumber: result.data.passportNumber || '',
-            employmentCountry: result.data.employmentCountry || '',
-            workPermitNumber: result.data.workPermitNumber || '',
+            idCountry: profile.idCountry || 'South Africa',
+            idNumber: profile.idNumber || '',
+            passportCountry: profile.passportCountry || '',
+            passportNumber: profile.passportNumber || '',
+            employmentCountry: profile.employmentCountry || '',
+            workPermitNumber: profile.workPermitNumber || '',
           }));
           setSnapshotPending(true);
         }
@@ -256,7 +258,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     };
 
     loadClientProfile();
-  }, [clientData.id]);
+  }, [clientData.id, queryClient]);
 
   // Capture snapshot of merged profileData after server data has been applied.
   // Runs once after load, and again after save. The snapshot represents the
@@ -322,6 +324,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       }
 
       await clientApi.updateClientProfile(userId, profileData);
+      queryClient.setQueryData(getClientProfileQueryOptions(userId).queryKey, profileData);
 
       toast.success('Profile updated successfully');
       // Update the snapshot to the current state so hasChanges resets correctly.

@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { 
   Sheet, 
   SheetContent, 
@@ -10,37 +10,41 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../../ui/avatar';
 import { Badge } from '../../../../ui/badge';
 import { Client } from '../types';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { communicationApi } from '../../communication/api';
 import { clientKeys } from '../hooks/queryKeys';
+import { getClientProfileQueryOptions } from '../api';
+import { NotesAPI } from '../../notes/api';
+import { NOTES_STALE_TIME } from '../../notes/constants';
+import { noteKeys } from '../../../../../utils/queryKeys';
 
-const ClientProfileViewerFull = React.lazy(() =>
-  import('../../../ClientProfileViewerFull').then((m) => ({ default: m.ClientProfileViewerFull }))
-);
-const PolicyDetailsSection = React.lazy(() =>
-  import('../../../profile-sections/PolicyDetailsSection').then((m) => ({ default: m.PolicyDetailsSection }))
-);
-const DocumentsTab = React.lazy(() =>
-  import('./DocumentsTab').then((m) => ({ default: m.DocumentsTab }))
-);
-const SecurityTab = React.lazy(() =>
-  import('./SecurityTab').then((m) => ({ default: m.SecurityTab }))
-);
-const ComplianceTab = React.lazy(() =>
-  import('./ComplianceTab').then((m) => ({ default: m.ComplianceTab }))
-);
-const CommunicationTab = React.lazy(() =>
-  import('./CommunicationTab').then((m) => ({ default: m.CommunicationTab }))
-);
-const EsignTab = React.lazy(() =>
-  import('./EsignTab').then((m) => ({ default: m.EsignTab }))
-);
-const ClientOverviewTab = React.lazy(() =>
-  import('./ClientOverviewTab').then((m) => ({ default: m.ClientOverviewTab }))
-);
-const ClientNotesTab = React.lazy(() =>
-  import('./ClientNotesTab').then((m) => ({ default: m.ClientNotesTab }))
-);
+const loadClientProfileViewerFull = () =>
+  import('../../../ClientProfileViewerFull').then((m) => ({ default: m.ClientProfileViewerFull }));
+const ClientProfileViewerFull = React.lazy(loadClientProfileViewerFull);
+const loadPolicyDetailsSection = () =>
+  import('../../../profile-sections/PolicyDetailsSection').then((m) => ({ default: m.PolicyDetailsSection }));
+const PolicyDetailsSection = React.lazy(loadPolicyDetailsSection);
+const loadDocumentsTab = () =>
+  import('./DocumentsTab').then((m) => ({ default: m.DocumentsTab }));
+const DocumentsTab = React.lazy(loadDocumentsTab);
+const loadSecurityTab = () =>
+  import('./SecurityTab').then((m) => ({ default: m.SecurityTab }));
+const SecurityTab = React.lazy(loadSecurityTab);
+const loadComplianceTab = () =>
+  import('./ComplianceTab').then((m) => ({ default: m.ComplianceTab }));
+const ComplianceTab = React.lazy(loadComplianceTab);
+const loadCommunicationTab = () =>
+  import('./CommunicationTab').then((m) => ({ default: m.CommunicationTab }));
+const CommunicationTab = React.lazy(loadCommunicationTab);
+const loadEsignTab = () =>
+  import('./EsignTab').then((m) => ({ default: m.EsignTab }));
+const EsignTab = React.lazy(loadEsignTab);
+const loadClientOverviewTab = () =>
+  import('./ClientOverviewTab').then((m) => ({ default: m.ClientOverviewTab }));
+const ClientOverviewTab = React.lazy(loadClientOverviewTab);
+const loadClientNotesTab = () =>
+  import('./ClientNotesTab').then((m) => ({ default: m.ClientNotesTab }));
+const ClientNotesTab = React.lazy(loadClientNotesTab);
 
 interface ClientDrawerProps {
   client: Client | null;
@@ -96,7 +100,9 @@ function TabPanelFallback() {
  * SheetOverlay always renders and onOpenChange remains wired.
  */
 function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: ClientDrawerInnerProps) {
+  const queryClient = useQueryClient();
   const [sanctionsScreeningRunning, setSanctionsScreeningRunning] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
   // Hardcoded for now as in original file
   const lastSanctionsCheck = '2024-01-15 14:30:00';
 
@@ -115,6 +121,62 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
   });
 
   const communicationCount = communications.length;
+
+  useEffect(() => {
+    if (!open) {
+      setActiveTab('overview');
+      return;
+    }
+
+    let cancelled = false;
+    const wait = (ms: number) => new Promise<void>((resolve) => {
+      window.setTimeout(resolve, ms);
+    });
+
+    const preloadSequence: Array<() => Promise<unknown>> = [
+      () => queryClient.prefetchQuery(getClientProfileQueryOptions(client.id)),
+      () => loadClientProfileViewerFull(),
+      () => loadDocumentsTab(),
+      () => loadPolicyDetailsSection(),
+      () => queryClient.prefetchQuery({
+        queryKey: noteKeys.clientNotes(client.id),
+        queryFn: () => NotesAPI.getClientNotes(client.id),
+        staleTime: NOTES_STALE_TIME,
+      }),
+      () => loadClientNotesTab(),
+      () => queryClient.prefetchQuery({
+        queryKey: clientKeys.communicationLogs(client.id),
+        queryFn: () => communicationApi.getClientLogs(client.id),
+        staleTime: 60 * 1000,
+      }),
+      () => loadCommunicationTab(),
+      () => loadSecurityTab(),
+      () => loadEsignTab(),
+      () => loadComplianceTab(),
+    ];
+
+    const runSmartPreload = async () => {
+      await wait(200);
+
+      for (const step of preloadSequence) {
+        if (cancelled) return;
+
+        try {
+          await step();
+        } catch (error) {
+          console.warn('[ClientDrawer] Background preload step failed', error);
+        }
+
+        await wait(120);
+      }
+    };
+
+    void runSmartPreload();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client.id, open, queryClient]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
@@ -150,7 +212,7 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
         {/* MAIN TABS - Level 1: Primary Navigation
             Uses ShadCN Tabs component with rounded, filled style
             See: /components/admin/TAB_DESIGN_STANDARDS.md */}
-        <Tabs defaultValue="overview" className="mt-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
           <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="personal">Personal Details</TabsTrigger>

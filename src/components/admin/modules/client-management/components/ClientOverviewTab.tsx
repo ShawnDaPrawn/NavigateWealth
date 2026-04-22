@@ -38,6 +38,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Separator } from '../../../../ui/separator';
@@ -93,7 +94,7 @@ import {
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { createClient as createSupabaseClient } from '../../../../../utils/supabase/client';
-import { clientApi } from '../api';
+import { getClientProfileQueryOptions } from '../api';
 import { Client, ProfileData } from '../types';
 import { PolicyOverviewTab } from '../../../../admin/profile-sections/PolicyOverviewTab';
 
@@ -571,6 +572,7 @@ interface ClientOverviewTabProps {
 // ── Component ───────────────────────────────────────────────────────────
 
 export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTabProps) {
+  const queryClient = useQueryClient();
   const isClient = mode === 'client';
   // ── Phase 1 state ───────────────────────────────────────────────────
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -655,18 +657,14 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
   const fetchProfile = useCallback(async () => {
     setLoadingProfile(true);
     try {
-      const result = await clientApi.fetchClientProfile(client.id);
-      if (result.success && result.data) {
-        setProfile(result.data);
-      } else {
-        setProfile(client.profile?.personalInformation || null);
-      }
+      const profile = await queryClient.fetchQuery(getClientProfileQueryOptions(client.id));
+      setProfile(profile || client.profile?.personalInformation || null);
     } catch {
       setProfile(client.profile?.personalInformation || null);
     } finally {
       setLoadingProfile(false);
     }
-  }, [client.id]);
+  }, [client.id, client.profile?.personalInformation, queryClient]);
 
   const fetchPolicies = useCallback(async () => {
     setLoadingPolicies(true);
@@ -792,11 +790,12 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   const refreshAll = useCallback(() => {
     setError(null);
+    queryClient.invalidateQueries({ queryKey: getClientProfileQueryOptions(client.id).queryKey });
     fetchProfile().catch(() => { /* handled internally */ });
     fetchPolicies().catch(() => { /* handled internally */ });
     refetchFna(); // React Query handles cache invalidation and re-fetch
     fetchActivityLogs().catch(() => { /* handled internally */ });
-  }, [fetchProfile, fetchPolicies, refetchFna, fetchActivityLogs]);
+  }, [client.id, fetchProfile, fetchPolicies, refetchFna, fetchActivityLogs, queryClient]);
 
   // ── Derived data ──────────────────────────────────────────────────────
 

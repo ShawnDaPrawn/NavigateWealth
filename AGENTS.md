@@ -98,3 +98,8 @@ Commands that do **not** exist on clean `main` unless later tooling work lands:
 - For user-visible UI changes, build-only verification is not enough. Run the
   UI inspection tool before sign-off. Use `--click` and `--wait-for` when the
   state requires interaction, such as opening a modal or dropdown.
+- For authenticated admin UI verification, use the machine-local encrypted
+  credential file at
+  `C:\Users\ShawnFrancisco\.codex\secrets\navigate-wealth-admin.credential.clixml`.
+  This file is intentionally outside the repo; do not copy credentials into
+  source, commits, screenshots, or logs.

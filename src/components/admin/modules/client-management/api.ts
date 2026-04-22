@@ -5,6 +5,7 @@ import { ENDPOINTS } from './constants';
 import { ClientKeysResponse } from './hooks/useClientKeys';
 import { ALL_PRODUCT_KEYS } from '../product-management/keyManagerConstants';
 import type { ProductKey } from '../product-management/types';
+import { clientKeys } from '../../../../utils/queryKeys';
 
 // ── Key registry lookup map ──────────────────────────────────────────────────
 // Built once at module load from the canonical key definitions.
@@ -245,6 +246,19 @@ export const clientApi = {
     }
   },
 };
+
+export const CLIENT_PROFILE_STALE_TIME = 5 * 60 * 1000;
+
+export function getClientProfileQueryOptions(userId: string) {
+  return {
+    queryKey: clientKeys.profile(userId),
+    queryFn: async (): Promise<ProfileData | null> => {
+      const result = await clientApi.fetchClientProfile(userId);
+      return result.success && result.data ? result.data : null;
+    },
+    staleTime: CLIENT_PROFILE_STALE_TIME,
+  };
+}
 
 // Export individual functions for convenience
 export const {

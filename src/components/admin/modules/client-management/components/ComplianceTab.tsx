@@ -16,6 +16,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
@@ -57,7 +58,7 @@ import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../u
 import { getAuthToken } from './compliance/compliance-auth';
 
 import { Client } from '../types';
-import { clientApi } from '../api';
+import { getClientProfileQueryOptions } from '../api';
 import { RiskAssessmentPanel } from './RiskAssessmentPanel';
 import { IdentityVerificationPanel } from './compliance/IdentityVerificationPanel';
 import { FinancialIntelligencePanel } from './compliance/FinancialIntelligencePanel';
@@ -125,6 +126,7 @@ export function ComplianceTab({
   onRunSanctionsScreening,
   lastSanctionsCheck,
 }: ComplianceTabProps) {
+  const queryClient = useQueryClient();
   const [registrationStatus, setRegistrationStatus] = useState<'loading' | 'registered' | 'unregistered'>('loading');
   const [isRegistering, setIsRegistering] = useState(false);
   const [honeycombId, setHoneycombId] = useState<string | null>(null);
@@ -146,10 +148,10 @@ export function ComplianceTab({
     const loadProfileForCompliance = async () => {
       setProfileLoading(true);
       try {
-        const result = await clientApi.fetchClientProfile(selectedClient.id);
-        if (result.success && result.data) {
-          const idNum = result.data.idNumber;
-          const passport = result.data.passportNumber;
+        const profile = await queryClient.fetchQuery(getClientProfileQueryOptions(selectedClient.id));
+        if (profile) {
+          const idNum = profile.idNumber;
+          const passport = profile.passportNumber;
           setKvProfileIdNumber(isValidIdNumber(idNum) ? idNum : null);
           setKvProfilePassport(isValidIdNumber(passport) ? passport : null);
         } else {
@@ -168,7 +170,7 @@ export function ComplianceTab({
     if (selectedClient.id) {
       loadProfileForCompliance();
     }
-  }, [selectedClient.id]);
+  }, [selectedClient.id, queryClient]);
 
   const resolvedIdNumber = [
     kvProfileIdNumber,
