@@ -308,13 +308,13 @@ export const productManagementApi = {
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'Failed to download mapping template');
+      throw new Error(data.error || 'Failed to download integration template');
     }
 
     const blob = await res.blob();
     const disposition = res.headers.get('Content-Disposition') || '';
     const match = disposition.match(/filename="([^"]+)"/);
-    const fileName = match?.[1] || `mapping-template-${providerId}-${categoryId}.xlsx`;
+    const fileName = match?.[1] || `integration-template-${providerId}-${categoryId}.xlsx`;
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;

@@ -43,6 +43,15 @@ import type {
   ExtractionHistoryEntry,
   FieldDiff,
 } from './policy-extraction-types.ts';
+import {
+  buildIntegrationBindingsForFields,
+  buildLegacyFieldMappingFromBindings,
+  buildPortalFieldsFromBindings,
+  normaliseIntegrationBlankBehavior,
+  normaliseIntegrationColumnName,
+  normaliseIntegrationLabelList,
+  type IntegrationBlankBehavior,
+} from '../../../shared/integrations/binding-utils.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations');
@@ -73,12 +82,25 @@ interface IntegrationConfig {
   updatedAt: string;
   updatedBy: string;
   fieldMapping: Record<string, string>;
+  fieldBindings?: IntegrationFieldBinding[];
   settings: {
     autoMap: boolean;
     ignoreUnmatched: boolean;
     strictMode: boolean;
     autoPublish?: boolean;
   };
+}
+
+interface IntegrationFieldBinding {
+  targetFieldId: string;
+  targetFieldName?: string;
+  columnName: string;
+  required?: boolean;
+  fieldType?: string;
+  portalLabels?: string[];
+  portalSelector?: string;
+  blankBehavior?: IntegrationBlankBehavior;
+  transform?: 'trim' | 'number' | 'date' | string;
 }
 
 interface UploadHistory {
@@ -124,6 +146,7 @@ interface IntegrationSyncRow {
   mappedData: Record<string, unknown>;
   policyNumber: string;
   normalizedPolicyNumber: string;
+  matchMethod: 'template_metadata' | 'policy_number' | 'none';
   matchStatus: SyncMatchStatus;
   publishStatus: SyncPublishStatus;
   autoPublishEligible: boolean;
@@ -162,6 +185,27 @@ interface IntegrationSyncRun {
   rows: IntegrationSyncRow[];
 }
 
+const CANONICAL_TEMPLATE_SHEET_NAME = 'Integration Update Template';
+const TEMPLATE_DICTIONARY_SHEET_NAME = 'Field Dictionary';
+const TEMPLATE_INSTRUCTIONS_SHEET_NAME = 'Instructions';
+const TEMPLATE_METADATA_COLUMNS = {
+  templateVersion: '_NW Template Version',
+  policyId: '_NW Policy ID',
+  clientId: '_NW Client ID',
+  providerId: '_NW Provider ID',
+  categoryId: '_NW Category ID',
+  normalizedPolicyNumber: '_NW Normalized Policy Number',
+} as const;
+
+interface IntegrationTemplateRowMetadata {
+  templateVersion?: string;
+  policyId?: string;
+  clientId?: string;
+  providerId?: string;
+  categoryId?: string;
+  normalizedPolicyNumber?: string;
+}
+
 type PortalJobStatus = 'queued' | 'running' | 'waiting_for_otp' | 'discovering' | 'discovery_ready' | 'extracting' | 'dry_run_ready' | 'staging' | 'staged' | 'failed' | 'cancelled';
 type PortalJobRunMode = 'discover' | 'dry-run' | 'run';
 type PortalAutomationHost = 'github_actions' | 'hosted_worker' | 'manual';
@@ -197,6 +241,9 @@ interface PortalCredentialStatus {
 
 interface PortalFlowField {
   sourceHeader: string;
+  columnName?: string;
+  targetFieldId?: string;
+  targetFieldName?: string;
   selector: string;
   labels?: string[];
   attribute?: 'text' | 'value' | 'href' | string;
@@ -439,6 +486,217 @@ function normaliseSettings(settings?: Partial<IntegrationConfig['settings']>): I
     ...getDefaultIntegrationSettings(),
     ...(settings || {}),
   };
+}
+
+function normaliseColumnName(value: unknown): string {
+  return normaliseIntegrationColumnName(value);
+}
+
+function buildFieldBinding(
+  field: SchemaField | undefined,
+  targetFieldId: string,
+  columnName: string,
+  existing?: Partial<IntegrationFieldBinding>,
+): IntegrationFieldBinding {
+  return {
+    targetFieldId,
+    targetFieldName: String(existing?.targetFieldName || field?.name || targetFieldId).trim(),
+    columnName: normaliseColumnName(columnName),
+    required: field?.required === true,
+    fieldType: String(existing?.fieldType || field?.type || 'text').trim() || 'text',
+    portalLabels: normaliseIntegrationLabelList(existing?.portalLabels),
+    portalSelector: String(existing?.portalSelector || '').trim().slice(0, 500) || undefined,
+    blankBehavior: normaliseIntegrationBlankBehavior(existing?.blankBehavior),
+    transform: String(existing?.transform || 'trim').trim().slice(0, 40) || 'trim',
+  };
+}
+
+function normaliseFieldBindings(
+  bindings: unknown,
+  legacyFieldMapping: Record<string, string> = {},
+  fields: SchemaField[] = [],
+): IntegrationFieldBinding[] {
+  const hydratedBindings = buildIntegrationBindingsForFields(
+    fields.map((field) => ({
+      id: field.id,
+      name: field.name,
+      required: field.required === true,
+      type: field.type,
+    })),
+    Array.isArray(bindings) ? bindings as IntegrationFieldBinding[] : [],
+    legacyFieldMapping,
+  );
+
+  return hydratedBindings.map((binding) =>
+    buildFieldBinding(
+      fields.find((field) => field.id === binding.targetFieldId),
+      binding.targetFieldId,
+      binding.columnName,
+      binding,
+    ),
+  );
+}
+
+function fieldBindingsToMapping(
+  bindings: IntegrationFieldBinding[] = [],
+  fallbackFieldMapping: Record<string, string> = {},
+): Record<string, string> {
+  const fieldMapping = buildLegacyFieldMappingFromBindings(bindings);
+  if (Object.keys(fieldMapping).length > 0) return fieldMapping;
+
+  return Object.fromEntries(
+    Object.entries(fallbackFieldMapping || {})
+      .map(([columnName, targetFieldId]) => [normaliseColumnName(columnName), String(targetFieldId || '').trim()])
+      .filter(([columnName, targetFieldId]) => columnName && targetFieldId),
+  );
+}
+
+function getPortalFieldColumnName(field: Partial<PortalFlowField>): string {
+  return normaliseColumnName(field.columnName || field.sourceHeader);
+}
+
+function getPortalFieldDisplayName(field: Partial<PortalFlowField>): string {
+  return String(field.targetFieldName || field.columnName || field.sourceHeader || field.targetFieldId || 'Field').trim();
+}
+
+function normaliseIntegrationConfig(
+  config: Partial<IntegrationConfig> | null | undefined,
+  fields: SchemaField[] = [],
+): IntegrationConfig {
+  const fieldBindings = normaliseFieldBindings(config?.fieldBindings, config?.fieldMapping || {}, fields);
+  return {
+    providerId: String(config?.providerId || ''),
+    categoryId: String(config?.categoryId || ''),
+    updatedAt: String(config?.updatedAt || new Date().toISOString()),
+    updatedBy: String(config?.updatedBy || 'system'),
+    fieldBindings,
+    fieldMapping: fieldBindingsToMapping(fieldBindings, config?.fieldMapping || {}),
+    settings: normaliseSettings(config?.settings),
+  };
+}
+
+function getCategoryLabel(categoryId: string): string {
+  return POLICY_CATEGORY_LABELS[categoryId] || categoryId;
+}
+
+function normaliseTemplateMetadataValue(value: unknown): string {
+  return String(value || '').trim().slice(0, 240);
+}
+
+function getTemplateFieldBindings(config: IntegrationConfig, fields: SchemaField[]): IntegrationFieldBinding[] {
+  const configured = Array.isArray(config.fieldBindings) ? config.fieldBindings : [];
+  const bindingsByTarget = new Map(configured.map((binding) => [binding.targetFieldId, binding]));
+  const orderedBindings: IntegrationFieldBinding[] = [];
+  const policyNumberField = findPolicyNumberField(fields);
+
+  if (configured.length > 0) {
+    for (const field of fields) {
+      const binding = bindingsByTarget.get(field.id);
+      if (!binding) continue;
+      orderedBindings.push(buildFieldBinding(field, field.id, binding.columnName, binding));
+    }
+
+    for (const binding of configured) {
+      if (orderedBindings.some((entry) => entry.targetFieldId === binding.targetFieldId)) continue;
+      const targetFieldId = String(binding.targetFieldId || '').trim();
+      const columnName = normaliseColumnName(binding.columnName);
+      if (!targetFieldId || !columnName) continue;
+      orderedBindings.push({
+        ...binding,
+        targetFieldId,
+        columnName,
+        targetFieldName: binding.targetFieldName || targetFieldId,
+      });
+    }
+
+    if (policyNumberField && !orderedBindings.some((binding) => binding.targetFieldId === policyNumberField.id)) {
+      orderedBindings.unshift(buildFieldBinding(policyNumberField, policyNumberField.id, policyNumberField.name || policyNumberField.id));
+    }
+
+    return orderedBindings.filter((binding) => normaliseColumnName(binding.columnName));
+  }
+
+  return fields
+    .map((field) => buildFieldBinding(field, field.id, field.name || field.id))
+    .filter((binding) => normaliseColumnName(binding.columnName));
+}
+
+function buildPortalExtractionFieldsForBindings(
+  bindings: IntegrationFieldBinding[],
+  existingFields: PortalFlowField[] = [],
+): PortalFlowField[] {
+  return buildPortalFieldsFromBindings(bindings, existingFields).map((field) => ({
+    sourceHeader: field.sourceHeader || field.columnName || '',
+    columnName: field.columnName || field.sourceHeader || '',
+    targetFieldId: field.targetFieldId,
+    targetFieldName: field.targetFieldName,
+    selector: field.selector || '',
+    labels: normaliseIntegrationLabelList(field.labels),
+    attribute: typeof field.attribute === 'string' ? field.attribute : 'text',
+    required: field.required === true,
+    transform: typeof field.transform === 'string' ? field.transform : 'trim',
+  }));
+}
+
+function isTemplateMetadataColumn(header: unknown): boolean {
+  const value = String(header || '').trim();
+  return Object.values(TEMPLATE_METADATA_COLUMNS).includes(value as typeof TEMPLATE_METADATA_COLUMNS[keyof typeof TEMPLATE_METADATA_COLUMNS]);
+}
+
+function getTemplateRowMetadata(rawData: Record<string, unknown>): IntegrationTemplateRowMetadata {
+  return {
+    templateVersion: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.templateVersion]),
+    policyId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.policyId]),
+    clientId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.clientId]),
+    providerId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.providerId]),
+    categoryId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.categoryId]),
+    normalizedPolicyNumber: normalisePolicyNumber(rawData[TEMPLATE_METADATA_COLUMNS.normalizedPolicyNumber]),
+  };
+}
+
+function applyTemplateRowMetadata(rawData: Record<string, unknown>, metadata: Partial<IntegrationTemplateRowMetadata>): Record<string, unknown> {
+  return {
+    ...rawData,
+    [TEMPLATE_METADATA_COLUMNS.templateVersion]: normaliseTemplateMetadataValue(metadata.templateVersion),
+    [TEMPLATE_METADATA_COLUMNS.policyId]: normaliseTemplateMetadataValue(metadata.policyId),
+    [TEMPLATE_METADATA_COLUMNS.clientId]: normaliseTemplateMetadataValue(metadata.clientId),
+    [TEMPLATE_METADATA_COLUMNS.providerId]: normaliseTemplateMetadataValue(metadata.providerId),
+    [TEMPLATE_METADATA_COLUMNS.categoryId]: normaliseTemplateMetadataValue(metadata.categoryId),
+    [TEMPLATE_METADATA_COLUMNS.normalizedPolicyNumber]: normalisePolicyNumber(metadata.normalizedPolicyNumber),
+  };
+}
+
+function stripTemplateMetadataColumns(rawData: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(rawData || {}).filter(([key]) => !isTemplateMetadataColumn(key)),
+  );
+}
+
+function hasVisibleRowData(rawData: Record<string, unknown>, headers: string[]): boolean {
+  const visibleHeaders = headers.filter((header) => !isTemplateMetadataColumn(header));
+  if (visibleHeaders.some((header) => !isBlank(rawData[header]))) return true;
+  const metadata = getTemplateRowMetadata(rawData);
+  return Boolean(metadata.policyId || metadata.clientId || metadata.normalizedPolicyNumber);
+}
+
+function serialiseTemplateCellValue(value: unknown): unknown {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return value;
+}
+
+function buildTemplateFileName(providerName: string, categoryId: string): string {
+  const categoryLabel = getCategoryLabel(categoryId);
+  const parts = [providerName || 'Provider', categoryLabel, 'Integration Template']
+    .map((part) => String(part || '').replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  return `${parts.join(' - ')}.xlsx`;
 }
 
 function normalisePolicyNumber(value: unknown): string {
@@ -1053,8 +1311,14 @@ function normaliseExtractionFields(value: unknown, fallback: PortalFlowField[] =
   if (!Array.isArray(value)) return fallback;
   return value.slice(0, 80).map((field, index) => {
     const entry = field as Record<string, unknown>;
+    const columnName = normaliseColumnName(entry.columnName || entry.sourceHeader || `Field ${index + 1}`);
+    const targetFieldId = String(entry.targetFieldId || '').trim();
+    const targetFieldName = String(entry.targetFieldName || '').trim();
     return {
-      sourceHeader: String(entry.sourceHeader || `Field ${index + 1}`).trim().slice(0, 120),
+      sourceHeader: columnName,
+      columnName,
+      targetFieldId: targetFieldId || undefined,
+      targetFieldName: targetFieldName || undefined,
       selector: typeof entry.selector === 'string' ? entry.selector.trim().slice(0, 500) : '',
       labels: normaliseStringList(entry.labels, [], 12),
       attribute: typeof entry.attribute === 'string' ? entry.attribute.slice(0, 40) : 'text',
@@ -1155,10 +1419,10 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
       extraction: {
         policyRowSelector: '[data-testid*="policy" i], table tbody tr',
         fields: [
-          { sourceHeader: 'Policy Number', selector: '[data-field="policyNumber"], [data-testid*="policy-number" i], td:nth-child(1)', labels: ['Policy number', 'Account number', 'Investment number'], attribute: 'text', required: true, transform: 'trim' },
-          { sourceHeader: 'Product Type', selector: '[data-field="productType"], [data-testid*="product" i], td:nth-child(2)', labels: ['Product type', 'Product name', 'Investment type'], attribute: 'text', transform: 'trim' },
-          { sourceHeader: 'Date of Inception', selector: '[data-field="inceptionDate"], [data-testid*="inception" i], td:nth-child(3)', labels: ['Date of inception', 'Start date', 'Investment start date'], attribute: 'text', transform: 'trim' },
-          { sourceHeader: 'Fund Value', selector: '[data-field="fundValue"], [data-testid*="value" i], td:nth-child(4)', labels: ['Fund value', 'Market value', 'Current value'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Policy Number', columnName: 'Policy Number', targetFieldName: 'Policy Number', selector: '[data-field="policyNumber"], [data-testid*="policy-number" i], td:nth-child(1)', labels: ['Policy number', 'Account number', 'Investment number'], attribute: 'text', required: true, transform: 'trim' },
+          { sourceHeader: 'Product Type', columnName: 'Product Type', targetFieldName: 'Product Type', selector: '[data-field="productType"], [data-testid*="product" i], td:nth-child(2)', labels: ['Product type', 'Product name', 'Investment type'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Date of Inception', columnName: 'Date of Inception', targetFieldName: 'Date of Inception', selector: '[data-field="inceptionDate"], [data-testid*="inception" i], td:nth-child(3)', labels: ['Date of inception', 'Start date', 'Investment start date'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Fund Value', columnName: 'Fund Value', targetFieldName: 'Fund Value', selector: '[data-field="fundValue"], [data-testid*="value" i], td:nth-child(4)', labels: ['Fund value', 'Market value', 'Current value'], attribute: 'text', transform: 'trim' },
         ],
       },
       policySchedule: {
@@ -1361,34 +1625,46 @@ function coerceFieldValue(field: SchemaField, value: unknown): { value: unknown;
   return { value: raw };
 }
 
-async function buildPolicyMatchIndex(
-  providerId: string,
-  categoryId: string,
-  fields: SchemaField[],
-): Promise<Map<string, KvPolicy[]>> {
-  const policyNumberField = findPolicyNumberField(fields);
-  const index = new Map<string, KvPolicy[]>();
-  const schemaCache = new Map<string, KvSchema>();
-
-  if (!policyNumberField) return index;
-
+async function listPoliciesForProviderCategory(providerId: string, categoryId: string): Promise<KvPolicy[]> {
   const allClientPolicies = await kv.getByPrefix('policies:client:');
+  const policies: KvPolicy[] = [];
+
   for (const clientPolicies of allClientPolicies || []) {
     if (!Array.isArray(clientPolicies)) continue;
 
     for (const policy of clientPolicies as KvPolicy[]) {
       if (policy.archived || policy.providerId !== providerId || !categoryMatches(categoryId, policy.categoryId)) continue;
-
-      const normalised = normalisePolicyNumber(await getPolicyNumberForPolicy(policy, fields, schemaCache));
-      if (!normalised) continue;
-
-      const current = index.get(normalised) || [];
-      current.push(policy);
-      index.set(normalised, current);
+      policies.push(policy);
     }
   }
 
-  return index;
+  return policies;
+}
+
+async function buildPolicyIndexes(
+  providerId: string,
+  categoryId: string,
+  fields: SchemaField[],
+): Promise<{ policyNumberIndex: Map<string, KvPolicy[]>; policyIdIndex: Map<string, KvPolicy> }> {
+  const policyNumberField = findPolicyNumberField(fields);
+  const policyNumberIndex = new Map<string, KvPolicy[]>();
+  const policyIdIndex = new Map<string, KvPolicy>();
+  const schemaCache = new Map<string, KvSchema>();
+  const policies = await listPoliciesForProviderCategory(providerId, categoryId);
+
+  for (const policy of policies) {
+    policyIdIndex.set(policy.id, policy);
+    if (!policyNumberField) continue;
+
+    const normalised = normalisePolicyNumber(await getPolicyNumberForPolicy(policy, fields, schemaCache));
+    if (!normalised) continue;
+
+    const current = policyNumberIndex.get(normalised) || [];
+    current.push(policy);
+    policyNumberIndex.set(normalised, current);
+  }
+
+  return { policyNumberIndex, policyIdIndex };
 }
 
 function summariseSyncRows(rows: IntegrationSyncRow[]): IntegrationSyncRun['summary'] {
@@ -1414,18 +1690,57 @@ async function buildSyncRun(params: {
   source?: 'spreadsheet' | 'portal';
   rawRows: Record<string, unknown>[];
   fieldMapping: Record<string, string>;
+  fieldBindings?: IntegrationFieldBinding[];
   settings: IntegrationConfig['settings'];
+  ignoreBlankValues?: boolean;
 }): Promise<IntegrationSyncRun> {
   const schema = await getSchemaForCategory(params.categoryId);
   const fields = schema.fields || [];
   const fieldById = new Map(fields.map((field) => [field.id, field]));
+  const bindingByColumnName = new Map(
+    (params.fieldBindings || [])
+      .map((binding) => [normaliseColumnName(binding.columnName), binding] as const)
+      .filter(([columnName]) => columnName),
+  );
   const policyNumberField = findPolicyNumberField(fields);
-  const policyIndex = await buildPolicyMatchIndex(params.providerId, params.categoryId, fields);
+  const { policyNumberIndex, policyIdIndex } = await buildPolicyIndexes(params.providerId, params.categoryId, fields);
+  const schemaCache = new Map<string, KvSchema>();
+  const rows: IntegrationSyncRow[] = [];
 
-  const rows: IntegrationSyncRow[] = params.rawRows.map((rawData, index) => {
+  for (const [index, rawData] of params.rawRows.entries()) {
     const mappedData: Record<string, unknown> = {};
     const validationErrors: string[] = [];
     const warnings: string[] = [];
+    const rowMetadata = getTemplateRowMetadata(rawData);
+    const hasStableMetadata = Boolean(
+      rowMetadata.policyId ||
+      rowMetadata.clientId ||
+      rowMetadata.providerId ||
+      rowMetadata.categoryId,
+    );
+
+    if (rowMetadata.providerId && rowMetadata.providerId !== params.providerId) {
+      validationErrors.push('This row belongs to a different provider template');
+    }
+    if (rowMetadata.categoryId && !categoryMatches(params.categoryId, rowMetadata.categoryId)) {
+      validationErrors.push('This row belongs to a different product template');
+    }
+
+    let matchedPolicy: KvPolicy | undefined;
+    if (validationErrors.length === 0 && hasStableMetadata) {
+      if (!rowMetadata.policyId || !rowMetadata.clientId) {
+        validationErrors.push('Template row metadata is incomplete');
+      } else {
+        const metadataPolicy = policyIdIndex.get(rowMetadata.policyId);
+        if (!metadataPolicy) {
+          validationErrors.push('Template row no longer matches an existing policy');
+        } else if (metadataPolicy.clientId !== rowMetadata.clientId) {
+          validationErrors.push('Template row metadata does not match the current policy owner');
+        } else {
+          matchedPolicy = metadataPolicy;
+        }
+      }
+    }
 
     for (const [sourceHeader, targetFieldId] of Object.entries(params.fieldMapping)) {
       const field = fieldById.get(targetFieldId);
@@ -1434,32 +1749,57 @@ async function buildSyncRun(params: {
         continue;
       }
 
-      const { value, error } = coerceFieldValue(field, rawData[sourceHeader]);
+      const rawValue = rawData[sourceHeader];
+      const binding = bindingByColumnName.get(normaliseColumnName(sourceHeader));
+      const blankBehavior = normaliseIntegrationBlankBehavior(binding?.blankBehavior);
+      if (isBlank(rawValue) && blankBehavior === 'error') {
+        validationErrors.push(`${field.name} cannot be blank for this integration`);
+        continue;
+      }
+      if (params.ignoreBlankValues && isBlank(rawValue) && blankBehavior !== 'clear') {
+        continue;
+      }
+
+      const { value, error } = coerceFieldValue(field, rawValue);
       mappedData[targetFieldId] = value;
       if (error) validationErrors.push(error);
     }
 
-    for (const field of fields) {
-      if (field.required && isBlank(mappedData[field.id])) {
-        validationErrors.push(`${field.name} is required`);
+    let policyNumber = policyNumberField ? String(mappedData[policyNumberField.id] ?? '').trim() : '';
+    let normalisedPolicyNumber = rowMetadata.normalizedPolicyNumber || normalisePolicyNumber(policyNumber);
+
+    if (!matchedPolicy && validationErrors.length === 0) {
+      if (!policyNumberField) {
+        validationErrors.push('No policy number field exists in this product structure');
+      } else if (!normalisedPolicyNumber) {
+        validationErrors.push('Policy number is required for matching');
       }
     }
 
-    const policyNumber = policyNumberField ? String(mappedData[policyNumberField.id] ?? '').trim() : '';
-    const normalisedPolicyNumber = normalisePolicyNumber(policyNumber);
-    if (!policyNumberField) {
-      validationErrors.push('No policy number field exists in this product structure');
-    } else if (!normalisedPolicyNumber) {
-      validationErrors.push('Policy number is required for matching');
+    const candidateMatches = !matchedPolicy && validationErrors.length === 0 && normalisedPolicyNumber
+      ? (policyNumberIndex.get(normalisedPolicyNumber) || [])
+      : [];
+
+    if (!matchedPolicy && candidateMatches.length === 1 && validationErrors.length === 0) {
+      matchedPolicy = candidateMatches[0];
     }
 
-    const matches = normalisedPolicyNumber ? (policyIndex.get(normalisedPolicyNumber) || []) : [];
+    if (matchedPolicy && !policyNumber) {
+      policyNumber = await getPolicyNumberForPolicy(matchedPolicy, fields, schemaCache);
+      normalisedPolicyNumber = normalisePolicyNumber(policyNumber) || normalisedPolicyNumber;
+    }
+
+    const matchMethod: IntegrationSyncRow['matchMethod'] = hasStableMetadata
+      ? 'template_metadata'
+      : normalisedPolicyNumber
+        ? 'policy_number'
+        : 'none';
+
     let matchStatus: SyncMatchStatus = 'unmatched';
     if (validationErrors.length > 0) matchStatus = 'invalid';
-    else if (matches.length === 1) matchStatus = 'matched';
-    else if (matches.length > 1) matchStatus = 'duplicate';
+    else if (matchedPolicy) matchStatus = 'matched';
+    else if (candidateMatches.length > 1) matchStatus = 'duplicate';
 
-    const matchedPolicy = matches.length === 1 ? matches[0] : undefined;
     const diffs: SyncDiff[] = [];
     const lockedFields = new Set(matchedPolicy?.lockedFields || []);
 
@@ -1485,13 +1825,14 @@ async function buildSyncRun(params: {
     else if (matchStatus === 'matched' && validationErrors.length === 0 && warnings.length === 0 && params.settings.autoPublish) publishStatus = 'auto_eligible';
     else if (matchStatus === 'matched' && validationErrors.length === 0) publishStatus = 'pending';
 
-    return {
+    rows.push({
       id: crypto.randomUUID(),
       rowNumber: index + 2,
       rawData,
       mappedData,
       policyNumber,
       normalizedPolicyNumber: normalisedPolicyNumber,
+      matchMethod,
       matchStatus,
       publishStatus,
       autoPublishEligible: publishStatus === 'auto_eligible',
@@ -1501,8 +1842,8 @@ async function buildSyncRun(params: {
       clientId: matchedPolicy?.clientId,
       policyId: matchedPolicy?.id,
       providerName: matchedPolicy?.providerName,
-    };
-  });
+    });
+  }
 
   const now = new Date().toISOString();
   const run: IntegrationSyncRun = {
@@ -1623,11 +1964,18 @@ async function stagePortalRows(jobId: string, rawRows: Record<string, unknown>[]
     throw new Error("Invalid provider ID");
   }
 
-  const config = (await kv.get(`config:mapping:${job.providerId}:${job.categoryId}`)) as IntegrationConfig | null;
-  if (!config) {
+  const storedConfig = (await kv.get(`config:mapping:${job.providerId}:${job.categoryId}`)) as IntegrationConfig | null;
+  if (!storedConfig) {
     throw new Error("No mapping configuration found. Please configure mappings first.");
   }
+  const schema = await getSchemaForCategory(job.categoryId);
+  const config = normaliseIntegrationConfig({
+    ...storedConfig,
+    providerId: job.providerId,
+    categoryId: job.categoryId,
+  }, schema.fields || []);
 
+  const templateBindings = getTemplateFieldBindings(config, schema.fields || []);
   const settings = normaliseSettings(config.settings);
   const syncRun = await buildSyncRun({
     provider,
@@ -1636,8 +1984,10 @@ async function stagePortalRows(jobId: string, rawRows: Record<string, unknown>[]
     fileName: `${job.providerName} portal extraction ${new Date().toISOString()}`,
     source: 'portal',
     rawRows,
-    fieldMapping: config.fieldMapping || {},
+    fieldMapping: fieldBindingsToMapping(templateBindings, config.fieldMapping || {}),
+    fieldBindings: templateBindings,
     settings,
+    ignoreBlankValues: true,
   });
 
   const finalRun = settings.autoPublish
@@ -1722,6 +2072,8 @@ app.get("/config", requireAuth, async (c) => {
 
   const key = `config:mapping:${providerId}:${categoryId}`;
   const config = await kv.get(key);
+  const schema = await getSchemaForCategory(categoryId);
+  const fields = schema.fields || [];
 
   if (!config) {
     return c.json({
@@ -1730,6 +2082,7 @@ app.get("/config", requireAuth, async (c) => {
       updatedAt: new Date().toISOString(),
       updatedBy: "system",
       fieldMapping: {},
+      fieldBindings: [],
       settings: {
         autoMap: true,
         ignoreUnmatched: false,
@@ -1739,10 +2092,11 @@ app.get("/config", requireAuth, async (c) => {
     });
   }
 
-  return c.json({
+  return c.json(normaliseIntegrationConfig({
     ...(config as IntegrationConfig),
-    settings: normaliseSettings((config as IntegrationConfig).settings),
-  });
+    providerId,
+    categoryId,
+  }, fields));
 });
 
 // POST /config
@@ -1753,7 +2107,10 @@ app.post("/config", requireAuth, async (c) => {
     if (!parsed.success) {
       return c.json({ error: "Validation failed", ...formatZodError(parsed.error) }, 400);
     }
-    const { providerId, categoryId, fieldMapping, settings } = parsed.data;
+    const { providerId, categoryId, fieldMapping, fieldBindings, settings } = parsed.data;
+    const schema = await getSchemaForCategory(categoryId);
+    const fields = schema.fields || [];
+    const normalisedBindings = normaliseFieldBindings(fieldBindings, fieldMapping as Record<string, string>, fields);
 
     const key = `config:mapping:${providerId}:${categoryId}`;
     
@@ -1762,7 +2119,8 @@ app.post("/config", requireAuth, async (c) => {
       categoryId,
       updatedAt: new Date().toISOString(),
       updatedBy: "user",
-      fieldMapping,
+      fieldBindings: normalisedBindings,
+      fieldMapping: fieldBindingsToMapping(normalisedBindings, fieldMapping as Record<string, string>),
       settings: normaliseSettings(settings as Partial<IntegrationConfig['settings']>),
     };
 
@@ -1791,69 +2149,127 @@ app.get("/template", requireAuth, async (c) => {
     }
 
     const schema = await getSchemaForCategory(categoryId);
-    const config = (await kv.get(`config:mapping:${providerId}:${categoryId}`)) as IntegrationConfig | null;
-    const fieldMapping = config?.fieldMapping || {};
+    const fields = schema.fields || [];
+    const storedConfig = (await kv.get(`config:mapping:${providerId}:${categoryId}`)) as IntegrationConfig | null;
+    const config = normaliseIntegrationConfig(storedConfig ? {
+      ...storedConfig,
+      providerId,
+      categoryId,
+    } : null, fields);
     const settings = normaliseSettings(config?.settings);
-    const sourceByTarget = new Map(Object.entries(fieldMapping).map(([source, target]) => [target, source]));
+    const templateBindings = getTemplateFieldBindings(config, fields);
+    const templateVersion = `${providerId}:${categoryId}:${config.updatedAt || new Date().toISOString()}`;
+    const schemaCache = new Map<string, KvSchema>();
+    const fieldById = new Map(fields.map((field) => [field.id, field]));
+    const providerPolicies = await listPoliciesForProviderCategory(providerId, categoryId);
 
     const workbook = XLSX.utils.book_new();
+    const categoryLabel = getCategoryLabel(categoryId);
+    const visibleHeaders = templateBindings.map((binding) => binding.columnName);
+    const allHeaders = [...visibleHeaders, ...Object.values(TEMPLATE_METADATA_COLUMNS)];
+
     const instructions = [
-      ['Navigate Wealth Integration Mapping Template'],
+      ['Navigate Wealth Integration Template'],
       ['Provider', provider.name || providerId],
-      ['Category', categoryId],
-      ['Purpose', 'Use this workbook to define source headers and provide provider data for staging. Do not add credentials or OTP codes here.'],
+      ['Product Type', categoryLabel],
+      ['Purpose', 'This workbook mirrors the Mapping Configuration and contains the current database snapshot for this provider/product combination.'],
       [],
       ['Workflow'],
-      ['1. Maintain the Field Mapping sheet so each required Navigate Wealth field has a provider/source column.'],
-      ['2. Put provider-extracted policy rows in the Provider Data sheet using those source column names.'],
-      ['3. Upload the workbook in Product Configuration > Integrations to stage a policy sync run.'],
-      ['4. Review matches and diffs before publishing, unless auto-publish is enabled and the row passes all safety gates.'],
+      ['1. Work only in the Integration Update Template sheet.'],
+      ['2. Each row is prefilled from the current Navigate Wealth policy database for this provider/product type.'],
+      ['3. Hidden _NW columns keep the stable policy metadata used for safe matching during upload. Do not delete those columns.'],
+      ['4. Leaving a mapped cell blank normally does not clear the database value unless that field is explicitly configured to clear on blank.'],
+      ['5. Upload the workbook in Product Configuration > Integrations to stage a sync run, then review and publish the proposed diffs.'],
+      [],
+      ['Upload Rules'],
+      ['Auto-map future uploads', settings.autoMap ? 'Yes' : 'No'],
+      ['Ignore unmatched columns', settings.ignoreUnmatched ? 'Yes' : 'No'],
+      ['Strict mode', settings.strictMode ? 'Yes' : 'No'],
+      ['Auto-publish safe rows', settings.autoPublish ? 'Yes' : 'No'],
     ];
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(instructions), 'Instructions');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(instructions), TEMPLATE_INSTRUCTIONS_SHEET_NAME);
+
+    const templateRows: Record<string, unknown>[] = [];
+    const sortablePolicies = await Promise.all(providerPolicies.map(async (policy) => {
+      const policyNumber = await getPolicyNumberForPolicy(policy, fields, schemaCache);
+      return { policy, policyNumber };
+    }));
+
+    sortablePolicies.sort((a, b) =>
+      a.policyNumber.localeCompare(b.policyNumber) ||
+      a.policy.clientId.localeCompare(b.policy.clientId) ||
+      a.policy.id.localeCompare(b.policy.id),
+    );
+
+    for (const { policy, policyNumber } of sortablePolicies) {
+      const visibleRow = Object.fromEntries(
+        templateBindings.map((binding) => [
+          binding.columnName,
+          serialiseTemplateCellValue(policy.data?.[binding.targetFieldId]),
+        ]),
+      );
+      templateRows.push(applyTemplateRowMetadata(visibleRow, {
+        templateVersion,
+        policyId: policy.id,
+        clientId: policy.clientId,
+        providerId: policy.providerId,
+        categoryId: policy.categoryId,
+        normalizedPolicyNumber: normalisePolicyNumber(policyNumber),
+      }));
+    }
+
+    const templateSheet = templateRows.length > 0
+      ? XLSX.utils.json_to_sheet(templateRows, { header: allHeaders })
+      : XLSX.utils.aoa_to_sheet([allHeaders]);
+    templateSheet['!cols'] = allHeaders.map((header) => ({
+      wch: isTemplateMetadataColumn(header) ? 22 : Math.max(16, Math.min(32, header.length + 4)),
+      hidden: isTemplateMetadataColumn(header),
+    }));
+    templateSheet['!autofilter'] = {
+      ref: XLSX.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: Math.max(templateRows.length, 0), c: allHeaders.length - 1 },
+      }),
+    };
+    XLSX.utils.book_append_sheet(workbook, templateSheet, CANONICAL_TEMPLATE_SHEET_NAME);
 
     const mappingRows = [
-      ['System Field ID', 'System Field Name', 'Type', 'Required', 'Dropdown Options', 'Spreadsheet Header Source', 'Overwrite Rule', 'Notes'],
-      ...(schema.fields || []).map((field) => [
-        field.id,
-        field.name || field.id,
-        field.type || 'text',
-        field.required ? 'yes' : 'no',
-        Array.isArray(field.options) ? field.options.join('|') : '',
-        sourceByTarget.get(field.id) || '',
-        'stage_before_publish',
-        field.id === findPolicyNumberField(schema.fields || [])?.id ? 'Primary match key' : '',
+      ['Spreadsheet Column', 'Navigate Wealth Field ID', 'Navigate Wealth Field', 'Type', 'Required', 'Portal Labels', 'Selector Override', 'Blank Behavior', 'Dropdown Options', 'Notes'],
+      ...templateBindings.map((binding) => [
+        binding.columnName,
+        binding.targetFieldId,
+        binding.targetFieldName || binding.targetFieldId,
+        binding.fieldType || 'text',
+        binding.required ? 'yes' : 'no',
+        normaliseIntegrationLabelList(binding.portalLabels).join(' | '),
+        binding.portalSelector || '',
+        normaliseIntegrationBlankBehavior(binding.blankBehavior),
+        Array.isArray(fieldById.get(binding.targetFieldId)?.options)
+          ? (fieldById.get(binding.targetFieldId)?.options as string[]).join('|')
+          : '',
+        binding.targetFieldId === findPolicyNumberField(fields)?.id
+          ? 'Primary match field. Hidden _NW metadata is preferred when present.'
+          : normaliseIntegrationBlankBehavior(binding.blankBehavior) === 'clear'
+            ? 'Blank uploads for this field are treated as approved clears.'
+            : normaliseIntegrationBlankBehavior(binding.blankBehavior) === 'error'
+              ? 'Blank uploads for this field are held as validation errors.'
+              : 'Only populated changed cells are staged for approval.',
       ]),
     ];
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(mappingRows), 'Field Mapping');
-
-    const providerHeaders = (schema.fields || []).map((field) => sourceByTarget.get(field.id) || field.name || field.id);
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([providerHeaders]), 'Provider Data');
-
-    const rules = [
-      ['Rule', 'Value'],
-      ['auto_map_future_uploads', settings.autoMap ? 'yes' : 'no'],
-      ['ignore_unmatched_columns', settings.ignoreUnmatched ? 'yes' : 'no'],
-      ['strict_mode', settings.strictMode ? 'yes' : 'no'],
-      ['auto_publish_safe_rows', settings.autoPublish ? 'yes' : 'no'],
-      ['match_key', 'normalized_policy_number + provider_id + category_id'],
-      ['missing_policy_default', 'hold_for_admin_review'],
-      ['duplicate_policy_default', 'hold_for_admin_review'],
-      ['locked_fields_default', 'do_not_overwrite'],
-    ];
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rules), 'Approval Rules');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(mappingRows), TEMPLATE_DICTIONARY_SHEET_NAME);
 
     const bytes = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
-    const safeProviderName = String(provider.name || providerId).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+    const fileName = buildTemplateFileName(provider.name || providerId, categoryId);
 
     return new Response(bytes, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="${safeProviderName}-${categoryId}-mapping-template.xlsx"`,
+        'Content-Disposition': `attachment; filename="${fileName}"`,
       },
     });
   } catch (e) {
     log.error("Template generation error:", e);
-    return c.json({ error: "Failed to generate mapping template" }, 500);
+    return c.json({ error: "Failed to generate integration template" }, 500);
   }
 });
 
@@ -2481,7 +2897,27 @@ app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
       return c.json({ error: "Invalid provider ID" }, 400);
     }
     const flow = await getPortalFlow(provider, job.providerId);
-    const config = (await kv.get(`config:mapping:${job.providerId}:${job.categoryId}`)) as IntegrationConfig | null;
+    const schema = await getSchemaForCategory(job.categoryId);
+    const storedConfig = (await kv.get(`config:mapping:${job.providerId}:${job.categoryId}`)) as IntegrationConfig | null;
+    const config = storedConfig
+      ? normaliseIntegrationConfig({
+          ...storedConfig,
+          providerId: job.providerId,
+          categoryId: job.categoryId,
+        }, schema.fields || [])
+      : null;
+    const flowForJobCategory = config
+      ? {
+          ...flow,
+          extraction: {
+            ...flow.extraction,
+            fields: buildPortalExtractionFieldsForBindings(
+              getTemplateFieldBindings(config, schema.fields || []),
+              Array.isArray(flow.extraction?.fields) ? flow.extraction.fields : [],
+            ),
+          },
+        }
+      : flow;
     const items = await loadPortalJobItems(jobId);
     const brainConfig = getPortalBrainConfig();
     const brainMemory = await loadPortalBrainMemory(job.providerId, job.categoryId);
@@ -2492,7 +2928,7 @@ app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
     return c.json({
       success: true,
       job,
-      flow,
+      flow: flowForJobCategory,
       config: config ? { ...config, settings: normaliseSettings(config.settings) } : null,
       items,
       credentials: {
@@ -2501,12 +2937,12 @@ app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
       },
       brain: {
         available: brainConfig.available,
-        configured: brainConfig.available && flow.search?.brain?.enabled === true,
+        configured: brainConfig.available && flowForJobCategory.search?.brain?.enabled === true,
         model: brainConfig.model,
         memory: brainMemory,
         summary: summarisePortalBrainMemory(brainMemory, {
           available: brainConfig.available,
-          configured: brainConfig.available && flow.search?.brain?.enabled === true,
+          configured: brainConfig.available && flowForJobCategory.search?.brain?.enabled === true,
           model: brainConfig.model,
         }),
       },
@@ -3041,7 +3477,13 @@ app.post("/portal-worker/jobs/:jobId/stage-items", async (c) => {
     const items = await loadPortalJobItems(jobId);
     const rawRows = items
       .filter((item) => item.status === 'completed' && item.rawData && Object.keys(item.rawData).length > 0)
-      .map((item) => item.rawData as Record<string, unknown>);
+      .map((item) => applyTemplateRowMetadata(item.rawData as Record<string, unknown>, {
+        policyId: item.policyId,
+        clientId: item.clientId,
+        providerId: item.providerId,
+        categoryId: item.categoryId,
+        normalizedPolicyNumber: item.normalizedPolicyNumber,
+      }));
 
     if (rawRows.length === 0) {
       return c.json({ error: "No completed policy items have extracted data to stage" }, 400);
@@ -3118,40 +3560,70 @@ app.post("/upload", requireAuth, async (c) => {
     }
 
     const configKey = `config:mapping:${providerId}:${categoryId}`;
-    const config = (await kv.get(configKey)) as IntegrationConfig | null;
+    const storedConfig = (await kv.get(configKey)) as IntegrationConfig | null;
 
-    if (!config && mode === 'commit') {
+    if (!storedConfig && mode === 'commit') {
       return c.json({ error: "No mapping configuration found. Please configure mappings first." }, 400);
     }
-    
-    const fieldMapping = config?.fieldMapping || {};
-    const settings = normaliseSettings(config?.settings);
+
+    const schema = await getSchemaForCategory(categoryId);
+    const config = normaliseIntegrationConfig(storedConfig ? {
+      ...storedConfig,
+      providerId,
+      categoryId,
+    } : {
+      providerId,
+      categoryId,
+      fieldMapping: {},
+      fieldBindings: [],
+      settings: getDefaultIntegrationSettings(),
+    }, schema.fields || []);
+
+    const templateBindings = getTemplateFieldBindings(config, schema.fields || []);
+    const fieldMapping = fieldBindingsToMapping(templateBindings, config.fieldMapping || {});
+    const settings = normaliseSettings(config.settings);
 
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(new Uint8Array(buffer), { type: "array" });
-    const dataSheetName = workbook.SheetNames.includes('Provider Data') ? 'Provider Data' : workbook.SheetNames[0];
+    const dataSheetName = workbook.SheetNames.includes(CANONICAL_TEMPLATE_SHEET_NAME)
+      ? CANONICAL_TEMPLATE_SHEET_NAME
+      : workbook.SheetNames.includes('Provider Data')
+        ? 'Provider Data'
+        : workbook.SheetNames[0];
     const sheet = workbook.Sheets[dataSheetName];
     
-    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
+    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][];
     
     if (jsonData.length === 0) {
        return c.json({ error: "File is empty" }, 400);
     }
 
-    const headers = (jsonData[0] || []) as string[];
-    const rawRows = XLSX.utils.sheet_to_json(sheet) as Record<string, unknown>[];
-    const rows = jsonData.slice(1);
+    const headers = ((jsonData[0] || []) as unknown[])
+      .map((header) => String(header || '').trim())
+      .filter(Boolean);
 
     if (!headers || headers.length === 0) {
       return c.json({ error: "File has no headers in the first row" }, 400);
     }
 
+    const visibleHeaders = headers.filter((header) => !isTemplateMetadataColumn(header));
+    if (visibleHeaders.length === 0) {
+      return c.json({ error: "File does not contain any mapped spreadsheet columns" }, 400);
+    }
+
+    const rawRows = (XLSX.utils.sheet_to_json(sheet, { defval: '' }) as Record<string, unknown>[])
+      .filter((row) => hasVisibleRowData(row, headers));
+    const previewRows = rawRows.map((row) => stripTemplateMetadataColumns(row));
+
+    if (rawRows.length === 0) {
+      return c.json({ error: "File does not contain any policy rows to stage" }, 400);
+    }
+
     const mappedColumns: string[] = [];
     const unmappedColumns: string[] = [];
     const validationErrors: string[] = [];
-    const validRows: Record<string, unknown>[] = [];
 
-    headers.forEach(header => {
+    visibleHeaders.forEach((header) => {
       if (fieldMapping[header]) {
         mappedColumns.push(header);
       } else {
@@ -3163,36 +3635,12 @@ app.post("/upload", requireAuth, async (c) => {
         validationErrors.push(`Unmapped columns detected: ${unmappedColumns.join(', ')}`);
     }
 
-    let processedRowCount = 0;
-    let errorRowCount = 0;
-
-    rows.forEach((row, rowIndex) => {
-        const rowData: Record<string, unknown> = {};
-        let rowHasError = false;
-
-        headers.forEach((header, colIndex) => {
-            const targetField = fieldMapping[header];
-            const cellValue = row[colIndex];
-
-            if (targetField) {
-                rowData[targetField] = cellValue;
-            }
-        });
-
-        if (rowHasError) {
-            errorRowCount++;
-        } else {
-            validRows.push(rowData);
-            processedRowCount++;
-        }
-    });
-
     if (settings.strictMode && (unmappedColumns.length > 0 && !settings.ignoreUnmatched)) {
          return c.json({ 
             success: false, 
             error: "Strict Mode Violation: Unmapped columns found.",
             preview: {
-                totalRows: rows.length,
+                totalRows: rawRows.length,
                 mappedColumns,
                 unmappedColumns,
                 validationErrors
@@ -3204,11 +3652,11 @@ app.post("/upload", requireAuth, async (c) => {
         return c.json({
             success: true,
             preview: {
-                totalRows: rows.length,
+                totalRows: rawRows.length,
                 mappedColumns,
                 unmappedColumns,
                 validationErrors,
-                sampleData: rawRows.slice(0, 5)
+                sampleData: previewRows.slice(0, 5)
             }
         });
     }
@@ -3221,7 +3669,9 @@ app.post("/upload", requireAuth, async (c) => {
             fileName: file.name,
             rawRows,
             fieldMapping,
+            fieldBindings: templateBindings,
             settings,
+            ignoreBlankValues: true,
         });
 
         const finalRun = settings.autoPublish

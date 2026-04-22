@@ -73,6 +73,27 @@ export function UploadTab({
     );
   };
 
+  const getMatchMethodCopy = (row: IntegrationSyncRun['rows'][number]) => {
+    if (row.matchMethod === 'template_metadata') {
+      return row.matchStatus === 'invalid'
+        ? 'Template metadata was supplied but did not validate'
+        : 'Matched via hidden template metadata';
+    }
+    if (row.matchMethod === 'policy_number') {
+      return row.matchStatus === 'duplicate'
+        ? 'Policy number matched multiple existing policies'
+        : row.matchStatus === 'unmatched'
+          ? 'No existing policy matched this policy number'
+          : 'Matched via policy number fallback';
+    }
+    return 'No stable match key supplied';
+  };
+
+  const reviewHeading = stagedRun?.source === 'portal' ? 'Integration Review' : 'Spreadsheet Upload';
+  const reviewDescription = stagedRun?.source === 'portal'
+    ? 'Portal runs and spreadsheet uploads now stage through the same canonical integration template format.'
+    : 'Upload the downloaded Integration Template or any spreadsheet that matches its configured columns.';
+
   const renderStagedRun = () => (
     <Card>
       <CardContent className="p-6">
@@ -87,8 +108,8 @@ export function UploadTab({
               </h4>
               <p className="text-sm text-gray-500">
                 {stagedRun?.source === 'portal'
-                  ? 'Portal extraction staged from the Playwright worker'
-                  : 'Sync run staged for review'}
+                  ? 'Portal extraction staged into the canonical integration template format'
+                  : 'Spreadsheet staged against the canonical integration template format'}
               </p>
             </div>
           </div>
@@ -126,9 +147,14 @@ export function UploadTab({
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5" />
             <div>
-              <h5 className="font-medium text-blue-900">Policy Sync Staged</h5>
+              <h5 className="font-medium text-blue-900">Canonical Policy Sync Staged</h5>
               <p className="text-sm text-blue-700 mt-1">
-                Rows were matched by policy number, provider, and product category. Review the changes before publishing to client policies.
+                {stagedRun?.source === 'portal'
+                  ? 'The Playwright worker staged these rows into the same row-and-column contract used by the downloadable Integration Template.'
+                  : 'This spreadsheet was staged using the same canonical contract as the downloadable Integration Template.'}
+              </p>
+              <p className="text-sm text-blue-700 mt-2">
+                Hidden template metadata is used when present, policy number matching is used as fallback, and only populated changed cells are publishable.
               </p>
             </div>
           </div>
@@ -150,24 +176,40 @@ export function UploadTab({
                   <TableRow key={row.id}>
                     <TableCell className="text-xs">{row.rowNumber}</TableCell>
                     <TableCell className="text-xs font-medium">{row.policyNumber || '-'}</TableCell>
-                    <TableCell>{getStatusBadge(row.matchStatus)}</TableCell>
+                    <TableCell className="text-xs">
+                      <div className="space-y-1">
+                        {getStatusBadge(row.matchStatus)}
+                        <p className="text-[11px] text-gray-500">{getMatchMethodCopy(row)}</p>
+                      </div>
+                    </TableCell>
                     <TableCell>{getStatusBadge(row.publishStatus)}</TableCell>
                     <TableCell className="text-xs">
                       {row.diffs.length > 0 ? (
                         <div className="space-y-1">
+                          <div className="font-medium text-gray-900">
+                            {row.diffs.length} changed cell{row.diffs.length === 1 ? '' : 's'}
+                          </div>
                           {row.diffs.slice(0, 3).map((diff) => (
                             <div key={diff.fieldId}>
-                              <span className="font-medium">{diff.fieldName}:</span> {String(diff.oldValue ?? '-')} to {String(diff.newValue ?? '-')}
+                              <span className="font-medium">{diff.fieldName}:</span> {String(diff.oldValue ?? '-')} {' -> '} {String(diff.newValue ?? '-')}
                             </div>
                           ))}
                           {row.diffs.length > 3 && <span className="text-gray-400">+{row.diffs.length - 3} more</span>}
                         </div>
                       ) : (
-                        <span className="text-gray-400">No changes</span>
+                        <span className="text-gray-400">No publishable cell changes</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-amber-700">
-                      {[...row.validationErrors, ...row.warnings].slice(0, 2).join('; ') || '-'}
+                    <TableCell className="text-xs">
+                      {[...row.validationErrors, ...row.warnings].length > 0 ? (
+                        <div className="space-y-1 text-amber-700">
+                          {[...row.validationErrors, ...row.warnings].slice(0, 2).map((message, index) => (
+                            <p key={`${row.id}-warning-${index}`}>{message}</p>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">No warnings</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -249,7 +291,7 @@ export function UploadTab({
               <div>
                 <h5 className="font-medium text-blue-900">File Processed Successfully</h5>
                 <p className="text-sm text-blue-700 mt-1">
-                  The file matched {matchedColumnsCount} configured columns for {categoryName}. Review the preview below before confirming the import.
+                  The file matched {matchedColumnsCount} configured columns for {categoryName}. The preview below shows only business columns; hidden template metadata, when present, will still be used for safe matching during staging.
                 </p>
               </div>
             </div>
@@ -350,7 +392,10 @@ export function UploadTab({
 
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-semibold text-gray-900">Spreadsheet Upload</h3>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">{reviewHeading}</h3>
+            <p className="text-sm text-gray-500 mt-1">{reviewDescription}</p>
+          </div>
         </div>
 
         {stagedRun ? (
@@ -366,7 +411,7 @@ export function UploadTab({
             </div>
             <h4 className="font-medium text-gray-900 mb-1">Drag and drop your file here</h4>
             <p className="text-sm text-gray-500 mb-6">
-              Using saved mapping for <span className="font-semibold text-blue-600">{categoryName}</span>
+              Use the Integration Template or a matching spreadsheet for <span className="font-semibold text-blue-600">{categoryName}</span>
             </p>
             <Button
               onClick={onManualUpload}

@@ -13,6 +13,17 @@ export const SaveConfigSchema = z.object({
   providerId: z.string().min(1, 'Provider ID is required'),
   categoryId: z.string().min(1, 'Category ID is required'),
   fieldMapping: z.record(z.string(), z.unknown()),
+  fieldBindings: z.array(z.object({
+    targetFieldId: z.string().min(1),
+    targetFieldName: z.string().optional(),
+    columnName: z.string().min(1),
+    required: z.boolean().optional(),
+    fieldType: z.string().optional(),
+    portalLabels: z.array(z.string()).optional(),
+    portalSelector: z.string().optional(),
+    blankBehavior: z.enum(['ignore', 'clear', 'error']).optional(),
+    transform: z.string().optional(),
+  }).passthrough()).optional(),
   settings: z.record(z.string(), z.unknown()),
 });
 

@@ -1,3 +1,5 @@
+import type { IntegrationBlankBehavior } from '@/shared/integrations/binding-utils';
+
 export type ProductCategoryId = 
   | 'risk_planning' 
   | 'medical_aid' 
@@ -163,7 +165,20 @@ export interface IntegrationConfig {
   updatedAt?: string;
   updatedBy?: string;
   fieldMapping: Record<string, string>;
+  fieldBindings?: IntegrationFieldBinding[];
   settings: IntegrationMappingConfig;
+}
+
+export interface IntegrationFieldBinding {
+  targetFieldId: string;
+  targetFieldName?: string;
+  columnName: string;
+  required?: boolean;
+  fieldType?: string;
+  portalLabels?: string[];
+  portalSelector?: string;
+  blankBehavior?: IntegrationBlankBehavior;
+  transform?: 'trim' | 'number' | 'date' | string;
 }
 
 export interface IntegrationMappingConfig {
@@ -193,6 +208,7 @@ export interface IntegrationSyncRow {
   mappedData: Record<string, unknown>;
   policyNumber: string;
   normalizedPolicyNumber: string;
+  matchMethod: 'template_metadata' | 'policy_number' | 'none';
   matchStatus: 'matched' | 'unmatched' | 'duplicate' | 'invalid';
   publishStatus: 'pending' | 'auto_eligible' | 'held' | 'published' | 'skipped' | 'failed';
   autoPublishEligible: boolean;
@@ -257,6 +273,9 @@ export interface PortalCredentialStatus {
 
 export interface PortalFlowField {
   sourceHeader: string;
+  columnName?: string;
+  targetFieldId?: string;
+  targetFieldName?: string;
   selector: string;
   labels?: string[];
   attribute?: 'text' | 'value' | 'href' | string;

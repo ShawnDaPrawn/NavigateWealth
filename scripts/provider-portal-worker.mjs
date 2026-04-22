@@ -1,6 +1,14 @@
 import { readFile, unlink } from 'node:fs/promises';
 
 const DEFAULT_API_BASE = 'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/integrations';
+const TEMPLATE_METADATA_COLUMNS = {
+  templateVersion: '_NW Template Version',
+  policyId: '_NW Policy ID',
+  clientId: '_NW Client ID',
+  providerId: '_NW Provider ID',
+  categoryId: '_NW Category ID',
+  normalizedPolicyNumber: '_NW Normalized Policy Number',
+};
 
 function parseArgs(argv) {
   const args = {};
@@ -1374,43 +1382,87 @@ async function extractByLabels(page, fields) {
         }
       }
 
-      result[field.sourceHeader] = { value, sourceLabel };
+      const fieldKey = String(field.columnName || field.sourceHeader || '').trim();
+      result[fieldKey] = { value, sourceLabel };
     }
     return result;
   }, fields);
 }
 
+function getFieldColumnName(field) {
+  return String(field?.columnName || field?.sourceHeader || '').trim();
+}
+
+function getFieldDisplayName(field) {
+  return String(field?.targetFieldName || field?.columnName || field?.sourceHeader || field?.targetFieldId || 'Field').trim();
+}
+
+function isPolicyNumberField(field) {
+  const signature = [
+    field?.targetFieldId,
+    field?.targetFieldName,
+    field?.columnName,
+    field?.sourceHeader,
+  ].filter(Boolean).join(' ');
+  return /policy\s*(number|no)|reference/i.test(signature);
+}
+
+function applyTemplateMetadata(rawData, item) {
+  return {
+    ...rawData,
+    [TEMPLATE_METADATA_COLUMNS.templateVersion]: '',
+    [TEMPLATE_METADATA_COLUMNS.policyId]: String(item?.policyId || '').trim(),
+    [TEMPLATE_METADATA_COLUMNS.clientId]: String(item?.clientId || '').trim(),
+    [TEMPLATE_METADATA_COLUMNS.providerId]: String(item?.providerId || '').trim(),
+    [TEMPLATE_METADATA_COLUMNS.categoryId]: String(item?.categoryId || '').trim(),
+    [TEMPLATE_METADATA_COLUMNS.normalizedPolicyNumber]: String(item?.normalizedPolicyNumber || '').trim(),
+  };
+}
+
+function countVisibleValues(rawData) {
+  return Object.entries(rawData || {})
+    .filter(([key]) => !Object.values(TEMPLATE_METADATA_COLUMNS).includes(key))
+    .filter(([, value]) => String(value || '').trim())
+    .length;
+}
+
 async function extractPolicyRecord(page, flow, config, item) {
   const mappingHeaders = Object.keys(config?.fieldMapping || {});
   const configuredFields = Array.isArray(flow.extraction?.fields) ? flow.extraction.fields : [];
-  const fieldByHeader = new Map(configuredFields.map((field) => [field.sourceHeader, field]));
-  const fields = (mappingHeaders.length ? mappingHeaders : configuredFields.map((field) => field.sourceHeader))
-    .map((sourceHeader) => fieldByHeader.get(sourceHeader) || { sourceHeader, labels: [sourceHeader], selector: '' });
+  const fieldByHeader = new Map(configuredFields.map((field) => [getFieldColumnName(field), field]));
+  const fields = (mappingHeaders.length ? mappingHeaders : configuredFields.map((field) => getFieldColumnName(field)))
+    .filter(Boolean)
+    .map((columnName) => {
+      const existing = fieldByHeader.get(columnName);
+      return existing || { sourceHeader: columnName, columnName, labels: [columnName], selector: '' };
+    });
 
   const extracted = await extractByLabels(page, fields);
   const rawData = {};
 
   for (const field of fields) {
-    const sourceHeader = field.sourceHeader;
-    const labelValue = extracted[sourceHeader]?.value || '';
-    rawData[sourceHeader] = labelValue;
+    const columnName = getFieldColumnName(field);
+    const labelValue = extracted[columnName]?.value || '';
+    rawData[columnName] = labelValue;
 
-    if (!rawData[sourceHeader] && field.selector) {
+    if (!rawData[columnName] && field.selector) {
       const selectorValue = await readField(page, field).catch(() => '');
-      rawData[sourceHeader] = selectorValue;
+      rawData[columnName] = selectorValue;
     }
 
-    if (/policy\s*(number|no)|reference/i.test(sourceHeader)) {
-      rawData[sourceHeader] = item.policyNumber;
+    if (isPolicyNumberField(field)) {
+      rawData[columnName] = item.policyNumber;
     }
   }
 
-  if (!Object.keys(rawData).some((key) => /policy\s*(number|no)|reference/i.test(key))) {
+  if (!fields.some((field) => isPolicyNumberField(field))) {
     rawData['Policy Number'] = item.policyNumber;
   }
 
+  const rawDataWithMetadata = applyTemplateMetadata(rawData, item);
+
   return {
-    rawData,
+    rawData: rawDataWithMetadata,
     extractedData: Object.fromEntries(Object.entries(extracted).map(([key, data]) => [key, data.value])),
   };
 }
@@ -1531,7 +1583,7 @@ async function captureDiscoveryReport(page, flow, options = {}) {
 async function readField(row, field) {
   const locator = row.locator(field.selector).first();
   if (!(await locator.count())) {
-    if (field.required) throw new Error(`Required field selector not found: ${field.sourceHeader}`);
+    if (field.required) throw new Error(`Required field selector not found: ${getFieldDisplayName(field)}`);
     return '';
   }
 
@@ -1567,7 +1619,7 @@ async function extractRows(page, flow) {
       const row = policyRows.nth(index);
       const record = {};
       for (const field of extraction.fields) {
-        record[field.sourceHeader] = await readField(row, field);
+        record[getFieldColumnName(field)] = await readField(row, field);
       }
       if (Object.values(record).some((value) => String(value || '').trim())) {
         rows.push(record);
@@ -1648,7 +1700,7 @@ async function processPolicyQueue(page, flow, config, jobMode, brain) {
       await updatePolicyItem(item.id, 'completed', {
         currentStep: 'completed',
         message: [
-          `Extracted ${Object.values(rawData).filter((value) => String(value || '').trim()).length} mapped value(s).`,
+          `Extracted ${countVisibleValues(rawData)} mapped value(s).`,
           documentResult ? `Policy schedule PDF replaced (${documentResult.fileName}).` : '',
           documentWarning,
         ].filter(Boolean).join(' '),

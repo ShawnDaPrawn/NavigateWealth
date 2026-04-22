@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { IntegrationProvider, IntegrationConfig, PreviewData, IntegrationSyncRun, PortalBrainMemorySummary, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from './types';
+import { IntegrationProvider, IntegrationConfig, IntegrationFieldBinding, PreviewData, IntegrationSyncRun, PortalBrainMemorySummary, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob, ProductCategoryId } from './types';
 import { productManagementApi } from './api';
 import { ProviderList } from './integrations/ProviderList';
 import { IntegrationHeader } from './integrations/IntegrationHeader';
@@ -11,6 +11,8 @@ import { toast } from 'sonner@2.0.3';
 import { Inbox, LayoutList } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { integrationsKeys } from '../../../../utils/queryKeys';
+import { useProductSchema } from './hooks/useProductSchema';
+import { buildIntegrationBindingsForFields, buildLegacyFieldMappingFromBindings } from '@/shared/integrations/binding-utils';
 
 const terminalPortalJobStatuses: PortalSyncJob['status'][] = [
   'staged',
@@ -41,7 +43,7 @@ export function IntegrationsTab() {
   const [selectedPortalCredentialProfileId, setSelectedPortalCredentialProfileId] = useState('');
   
   // Mapping Configuration State (Local Mutable)
-  const [configMapping, setConfigMapping] = useState<{source: string, target: string}[]>([]);
+  const [configBindings, setConfigBindings] = useState<IntegrationFieldBinding[]>([]);
   const [configSettings, setConfigSettings] = useState({ autoMap: true, ignoreUnmatched: false, strictMode: false, autoPublish: false });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,6 +77,8 @@ export function IntegrationsTab() {
         setPreviewData(null);
         setStagedRun(null);
         setPortalJob(null);
+        setConfigBindings([]);
+        setConfigSettings({ autoMap: true, ignoreUnmatched: false, strictMode: false, autoPublish: false });
         setActiveTab('upload');
     }
   }, [selectedProviderId, providers, selectedProvider]);
@@ -93,6 +97,9 @@ export function IntegrationsTab() {
     enabled: !!selectedProviderId && !!selectedCategoryId,
     queryFn: () => productManagementApi.fetchIntegrationConfig(selectedProviderId!, selectedCategoryId)
   });
+
+  const { currentFields: categoryFields, isLoading: isLoadingCategoryFields } = useProductSchema((selectedCategoryId || '') as ProductCategoryId | '');
+  const mappingBindings: IntegrationFieldBinding[] = configBindings;
 
   const { data: portalFlow, isLoading: isLoadingPortalFlow } = useQuery({
     queryKey: integrationsKeys.portalFlow(selectedProviderId),
@@ -185,27 +192,26 @@ export function IntegrationsTab() {
 
   // Sync server config to local state
   useEffect(() => {
-    if (serverConfig) {
-        if (serverConfig.fieldMapping) {
-            const mappingArray = Object.entries(serverConfig.fieldMapping).map(([source, target]) => ({
-                 source,
-                 target: target as string
-             }));
-             setConfigMapping(mappingArray.length > 0 ? mappingArray : [{ source: '', target: '' }]);
-        } else {
-            setConfigMapping([{ source: '', target: '' }]);
-        }
-        
-        if (serverConfig.settings) {
-            setConfigSettings({
-                autoMap: !!serverConfig.settings.autoMap,
-                ignoreUnmatched: !!serverConfig.settings.ignoreUnmatched,
-                strictMode: !!serverConfig.settings.strictMode,
-                autoPublish: !!serverConfig.settings.autoPublish
-            });
-        }
+    if (!serverConfig) {
+      if (!selectedCategoryId) {
+        setConfigBindings([]);
+      }
+      return;
     }
-  }, [serverConfig]);
+    setConfigBindings(
+      buildIntegrationBindingsForFields(
+        categoryFields,
+        serverConfig.fieldBindings || [],
+        serverConfig.fieldMapping || {},
+      ) as IntegrationFieldBinding[],
+    );
+    setConfigSettings({
+      autoMap: !!serverConfig.settings?.autoMap,
+      ignoreUnmatched: !!serverConfig.settings?.ignoreUnmatched,
+      strictMode: !!serverConfig.settings?.strictMode,
+      autoPublish: !!serverConfig.settings?.autoPublish,
+    });
+  }, [categoryFields, selectedCategoryId, serverConfig]);
 
 
   // --- Mutations ---
@@ -295,7 +301,7 @@ export function IntegrationsTab() {
         return productManagementApi.downloadIntegrationTemplate(selectedProviderId, selectedCategoryId);
     },
     onSuccess: () => {
-        toast.success("Mapping template downloaded");
+        toast.success("Integration template downloaded");
     },
     onError: (err: Error) => {
         toast.error(err.message || "Failed to download template");
@@ -432,16 +438,15 @@ export function IntegrationsTab() {
   const saveConfigMutation = useMutation({
     mutationFn: async () => {
         if (!selectedProviderId || !selectedCategoryId) throw new Error("Missing selection");
-        
-        const newMappingObj: Record<string, string> = {};
-        configMapping.forEach(row => {
-            if (row.source && row.target) {
-                newMappingObj[row.source] = row.target;
-            }
-        });
+        const fieldBindings = buildIntegrationBindingsForFields(
+          categoryFields,
+          configBindings,
+          buildLegacyFieldMappingFromBindings(configBindings),
+        ).filter((binding) => binding.columnName && binding.targetFieldId) as IntegrationFieldBinding[];
         
         const config: IntegrationConfig = {
-            fieldMapping: newMappingObj,
+            fieldBindings,
+            fieldMapping: buildLegacyFieldMappingFromBindings(fieldBindings),
             settings: configSettings
         };
 
@@ -499,16 +504,29 @@ export function IntegrationsTab() {
      );
   };
 
-  const handleUpdateMapping = (targetId: string, sourceValue: string) => {
-    const existingIndex = configMapping.findIndex(m => m.target === targetId);
-    let newMapping = [...configMapping];
-    if (existingIndex >= 0) {
-        if (sourceValue.trim() === '') newMapping.splice(existingIndex, 1);
-        else newMapping[existingIndex] = { ...newMapping[existingIndex], source: sourceValue };
-    } else {
-        if (sourceValue.trim() !== '') newMapping.push({ source: sourceValue, target: targetId });
-    }
-    setConfigMapping(newMapping);
+  const handleUpdateBinding = (targetFieldId: string, patch: Partial<IntegrationFieldBinding>) => {
+    setConfigBindings((currentBindings) => {
+      const nextBindings = currentBindings.map((binding) =>
+        binding.targetFieldId === targetFieldId
+          ? { ...binding, ...patch, targetFieldId }
+          : binding,
+      );
+
+      if (nextBindings.some((binding) => binding.targetFieldId === targetFieldId)) {
+        return nextBindings;
+      }
+
+      return [
+        ...nextBindings,
+        {
+          targetFieldId,
+          targetFieldName: targetFieldId,
+          columnName: '',
+          blankBehavior: 'ignore',
+          ...patch,
+        },
+      ];
+    });
   };
   
   const handleSettingChange = (key: keyof typeof configSettings, value: boolean) => {
@@ -519,11 +537,10 @@ export function IntegrationsTab() {
       saveConfigMutation.mutate();
   };
 
-  const isColumnMapped = (colName: string) => {
-    return configMapping.some(m => m.source === colName && m.target !== '');
-  };
+  const isColumnMapped = (colName: string) =>
+    configBindings.some((binding) => binding.columnName === colName && binding.targetFieldId !== '');
 
-  const matchedColumnsCount = configMapping.filter(m => m.target !== '').length;
+  const matchedColumnsCount = configBindings.filter((binding) => binding.targetFieldId && binding.columnName).length;
 
 
   return (
@@ -581,13 +598,15 @@ export function IntegrationsTab() {
               <MappingTab 
                 provider={selectedProvider}
                 selectedCategoryId={selectedCategoryId}
-                configMapping={configMapping}
+                categoryFields={categoryFields}
+                configBindings={configBindings}
                 configSettings={configSettings}
-                onUpdateMapping={handleUpdateMapping}
+                onUpdateBinding={handleUpdateBinding}
                 onUpdateSetting={handleSettingChange}
                 onSave={handleSaveConfiguration}
                 onDownloadTemplate={() => downloadTemplateMutation.mutate()}
                 isDownloadingTemplate={downloadTemplateMutation.isPending}
+                isLoadingFields={isLoadingCategoryFields}
               />
             </TabsContent>
 
@@ -606,7 +625,7 @@ export function IntegrationsTab() {
                 isLoadingJobItems={isLoadingPortalJobItems}
                 isCreatingJob={createPortalJobMutation.isPending}
                 credentialStatus={portalCredentialStatus}
-                  mappingSourceHeaders={Object.keys(serverConfig?.fieldMapping || {})}
+                  mappingBindings={mappingBindings}
                   brainMemory={portalBrainMemory}
                   selectedCredentialProfileId={selectedPortalCredentialProfileId}
                 onCredentialProfileChange={setSelectedPortalCredentialProfileId}
@@ -622,6 +641,7 @@ export function IntegrationsTab() {
                 onRetryItem={(item) => retryPortalJobItemMutation.mutate(item)}
                 onApplyFlow={(patch) => applyPortalFlowMutation.mutate(patch)}
                 onOpenUploadTab={() => setActiveTab('upload')}
+                onOpenMappingTab={() => setActiveTab('mapping')}
                 isApplyingFlow={applyPortalFlowMutation.isPending}
               />
             </TabsContent>

@@ -10,8 +10,9 @@ import { Separator } from '../../../../ui/separator';
 import { Switch } from '../../../../ui/switch';
 import { Textarea } from '../../../../ui/textarea';
 import { AlertCircle, Bot, CheckCircle2, Clock, FileText, KeyRound, ListChecks, Loader2, Play, RefreshCw, RotateCcw, Search, Settings2 } from 'lucide-react';
-import { IntegrationProvider, IntegrationSyncRun, PortalBrainMemorySummary, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from '../types';
+import { IntegrationFieldBinding, IntegrationProvider, IntegrationSyncRun, PortalBrainMemorySummary, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from '../types';
 import { cn } from '../../../../ui/utils';
+import { buildPortalFieldsFromBindings, normaliseIntegrationLabelList } from '@/shared/integrations/binding-utils';
 
 interface PortalAutomationTabProps {
   provider: IntegrationProvider;
@@ -27,7 +28,7 @@ interface PortalAutomationTabProps {
   isLoadingJobItems: boolean;
   isCreatingJob: boolean;
   credentialStatus?: PortalCredentialStatus;
-  mappingSourceHeaders: string[];
+  mappingBindings: IntegrationFieldBinding[];
   selectedCredentialProfileId: string;
   onCredentialProfileChange: (profileId: string) => void;
   isSavingCredentials: boolean;
@@ -42,6 +43,7 @@ interface PortalAutomationTabProps {
   onRetryItem: (item: PortalJobPolicyItem) => void;
   onApplyFlow: (patch: { policyRowSelector?: string; fields: PortalFlowField[] }) => void;
   onOpenUploadTab: () => void;
+  onOpenMappingTab: () => void;
   isApplyingFlow: boolean;
 }
 
@@ -85,6 +87,18 @@ const latestPortalWarning = (value?: string, warnings?: string[]) => {
   return value || '';
 };
 
+const getPortalFieldColumnName = (field: Partial<PortalFlowField>) =>
+  String(field.columnName || field.sourceHeader || '').trim();
+
+const getPortalFieldTitle = (field: Partial<PortalFlowField>) =>
+  String(field.targetFieldName || field.columnName || field.sourceHeader || field.targetFieldId || 'Field').trim();
+
+const getPortalFieldKey = (field: Partial<PortalFlowField>) =>
+  String(field.targetFieldId || getPortalFieldColumnName(field) || field.targetFieldName || '').trim();
+
+const getBindingKey = (binding: Partial<IntegrationFieldBinding>) =>
+  String(binding.targetFieldId || binding.columnName || '').trim();
+
 export function PortalAutomationTab({
   provider,
   selectedCategoryId,
@@ -99,7 +113,7 @@ export function PortalAutomationTab({
   isLoadingJobItems,
   isCreatingJob,
   credentialStatus,
-  mappingSourceHeaders,
+  mappingBindings,
   selectedCredentialProfileId,
   onCredentialProfileChange,
   isSavingCredentials,
@@ -114,6 +128,7 @@ export function PortalAutomationTab({
   onRetryItem,
   onApplyFlow,
   onOpenUploadTab,
+  onOpenMappingTab,
   isApplyingFlow,
 }: PortalAutomationTabProps) {
   const [runMode, setRunMode] = useState<PortalJobRunMode>('run');
@@ -176,24 +191,15 @@ export function PortalAutomationTab({
   }, [flow]);
 
   useEffect(() => {
-    if (mappingSourceHeaders.length === 0) return;
+    if (mappingBindings.length === 0) return;
     setFieldSelectors((currentFields) => {
-      const byHeader = new Map(currentFields.map((field) => [field.sourceHeader, field]));
-      const merged = mappingSourceHeaders.map((sourceHeader) => (
-        byHeader.get(sourceHeader) || {
-          sourceHeader,
-          selector: '',
-          labels: [sourceHeader],
-          attribute: 'text',
-          transform: 'trim',
-          required: /policy\s*(number|no)|reference/i.test(sourceHeader),
-        }
-      ));
+      const merged = buildPortalFieldsFromBindings(mappingBindings, currentFields) as PortalFlowField[];
+
       const unchanged = merged.length === currentFields.length &&
-        merged.every((field, index) => field === currentFields[index]);
+        merged.every((field, index) => JSON.stringify(field) === JSON.stringify(currentFields[index]));
       return unchanged ? currentFields : merged;
     });
-  }, [mappingSourceHeaders]);
+  }, [mappingBindings]);
 
   const selectedProfile = flow?.credentialProfiles.find((profile) => profile.id === selectedCredentialProfileId);
   const policyRowCandidates = discoveryReport?.selectorCandidates.filter(candidate => candidate.purpose === 'policy_row') || [];
@@ -240,6 +246,11 @@ export function PortalAutomationTab({
   const stagedPreviewRow = stagedChangedRows.find((row) =>
     jobItems.some((item) => item.policyNumber === row.policyNumber)
   ) || stagedChangedRows[0];
+  const stagedPreviewMatchCopy = stagedPreviewRow?.matchMethod === 'template_metadata'
+    ? 'Matched via hidden template metadata'
+    : stagedPreviewRow?.matchMethod === 'policy_number'
+      ? 'Matched via policy number fallback'
+      : 'No stable match key supplied';
   const setupWarnings = [
     postLoginUrl.trim() && !hasPostLoginFallback
       ? 'A post-login page URL is set, but there is no click-step or search fallback if that page cannot be opened.'
@@ -259,12 +270,45 @@ export function PortalAutomationTab({
     )));
   };
 
-  const updateFieldLabels = (index: number, labelsText: string) => {
-    const labels = splitPortalLines(labelsText);
-    setFieldSelectors(prev => prev.map((field, currentIndex) => (
-      currentIndex === index ? { ...field, labels } : field
-    )));
+  const buildProviderFallbackFields = () => {
+    const existingByKey = new Map((flow?.extraction?.fields || []).map((field) => [getPortalFieldKey(field), field]));
+    const existingByColumn = new Map((flow?.extraction?.fields || []).map((field) => [getPortalFieldColumnName(field), field]));
+    const bindingByKey = new Map(mappingBindings.map((binding) => [binding.targetFieldId || binding.columnName, binding]));
+    const bindingByColumn = new Map(mappingBindings.map((binding) => [String(binding.columnName || '').trim(), binding]));
+
+    return fieldSelectors
+      .map((field) => {
+        const key = getPortalFieldKey(field);
+        const columnName = getPortalFieldColumnName(field);
+        const existing = existingByKey.get(key) || existingByColumn.get(columnName);
+        const binding = bindingByKey.get(key) || bindingByColumn.get(columnName);
+        const inheritedSelector = String(binding?.portalSelector || existing?.selector || '').trim();
+        const nextSelector = field.selector.trim() === inheritedSelector
+          ? String(existing?.selector || '').trim()
+          : field.selector.trim();
+
+        return {
+          sourceHeader: columnName,
+          columnName,
+          targetFieldId: field.targetFieldId,
+          targetFieldName: field.targetFieldName,
+          selector: nextSelector,
+          labels: Array.isArray(existing?.labels) && existing.labels.length > 0
+            ? existing.labels
+            : [],
+          attribute: existing?.attribute || field.attribute || 'text',
+          required: field.required === true,
+          transform: field.transform || existing?.transform || 'trim',
+        };
+      })
+      .filter((field) => field.columnName);
   };
+
+  const getBindingForPortalField = (field: PortalFlowField) =>
+    mappingBindings.find((binding) =>
+      getBindingKey(binding) === getPortalFieldKey(field) ||
+      String(binding.columnName || '').trim() === getPortalFieldColumnName(field),
+    );
 
   useEffect(() => {
     if (!selectedCredentialProfileId) {
@@ -329,7 +373,7 @@ export function PortalAutomationTab({
       extraction: {
         ...flow.extraction,
         policyRowSelector: policyRowSelector.trim(),
-        fields: fieldSelectors,
+        fields: buildProviderFallbackFields(),
       },
       policySchedule: {
         ...(flow.policySchedule || {}),
@@ -595,34 +639,50 @@ export function PortalAutomationTab({
                 </div>
 
                 <div className="space-y-3">
-                  <div>
-                    <h5 className="font-medium text-gray-900">Values To Extract</h5>
-                    <p className="text-sm text-gray-500">These come from your mapping configuration. Add the words Allan Gray uses beside each value.</p>
+                    <div>
+                      <h5 className="font-medium text-gray-900">Values To Extract</h5>
+                    <p className="text-sm text-gray-500">These now come directly from Mapping Configuration. The spreadsheet column name stays fixed there, along with the provider wording and any category-specific selector override.</p>
                   </div>
-                  {mappingSourceHeaders.length === 0 ? (
+                  {mappingBindings.length === 0 ? (
                     <Alert className="bg-amber-50 border-amber-200 text-amber-900">
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Mapping needed first</AlertTitle>
                       <AlertDescription>
-                        Save your column mappings first. The portal worker uses those mapped source headers to know which provider values to extract.
+                        Save your column mappings first. The portal worker uses those mapped columns as the canonical update format, and the labels here tell it what to look for on the provider page.
                       </AlertDescription>
                     </Alert>
                   ) : (
                     <div className="space-y-3">
-                      {fieldSelectors.map((field, index) => (
-                        <div key={`${field.sourceHeader}-${index}`} className="grid grid-cols-1 gap-2 rounded-md border bg-gray-50 p-3 md:grid-cols-[180px_1fr] md:items-start">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{field.sourceHeader}</p>
-                            {field.required && <p className="text-xs text-red-600">Required</p>}
+                      {fieldSelectors.map((field, index) => {
+                        const binding = getBindingForPortalField(field);
+                        const bindingLabels = normaliseIntegrationLabelList(binding?.portalLabels);
+                        return (
+                          <div key={`${getPortalFieldKey(field)}-${index}`} className="grid grid-cols-1 gap-2 rounded-md border bg-gray-50 p-3 md:grid-cols-[180px_1fr] md:items-start">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{getPortalFieldTitle(field)}</p>
+                              <p className="text-xs text-gray-500">Spreadsheet column: {getPortalFieldColumnName(field)}</p>
+                              {field.required && <p className="text-xs text-red-600">Required</p>}
+                            </div>
+                            <div className="space-y-2 rounded-md border bg-white px-3 py-2 text-sm text-gray-700">
+                              <p>
+                                <span className="font-medium text-gray-900">Provider labels:</span>{' '}
+                                {bindingLabels.length > 0
+                                  ? bindingLabels.join(', ')
+                                  : 'No explicit provider labels configured yet'}
+                              </p>
+                              <p>
+                                <span className="font-medium text-gray-900">Selector override:</span>{' '}
+                                {binding?.portalSelector || 'None configured in Mapping Configuration'}
+                              </p>
+                            </div>
                           </div>
-                          <Textarea
-                            value={(field.labels || []).join(', ')}
-                            onChange={(event) => updateFieldLabels(index, event.target.value)}
-                            className="min-h-10 bg-white"
-                            placeholder={`Provider labels for ${field.sourceHeader}`}
-                          />
-                        </div>
-                      ))}
+                        );
+                      })}
+                      <div className="flex justify-end">
+                        <Button type="button" variant="outline" onClick={onOpenMappingTab}>
+                          Edit In Mapping Configuration
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -743,9 +803,15 @@ export function PortalAutomationTab({
                     {fieldSelectors.length > 0 && (
                       <div className="space-y-3">
                         <Label>Advanced field selectors</Label>
+                        <p className="text-xs text-gray-500">
+                          These are provider-level fallback selectors for discovery and dry-run refinement. Category-specific labels and selector overrides live in Mapping Configuration and are merged in at runtime.
+                        </p>
                         {fieldSelectors.map((field, index) => (
-                          <div key={`${field.sourceHeader}-selector-${index}`} className="grid grid-cols-1 gap-2 md:grid-cols-[180px_1fr] md:items-center">
-                            <span className="text-sm font-medium text-gray-700">{field.sourceHeader}</span>
+                          <div key={`${getPortalFieldKey(field)}-selector-${index}`} className="grid grid-cols-1 gap-2 md:grid-cols-[180px_1fr] md:items-center">
+                            <div className="space-y-1">
+                              <span className="text-sm font-medium text-gray-700">{getPortalFieldTitle(field)}</span>
+                              <p className="text-xs text-gray-500">{getPortalFieldColumnName(field)}</p>
+                            </div>
                             <Input
                               value={field.selector}
                               onChange={(event) => updateFieldSelector(index, event.target.value)}
@@ -918,8 +984,8 @@ export function PortalAutomationTab({
                 <AlertDescription className="space-y-3">
                   <p>
                     {stagedRun
-                      ? `This run extracted ${stagedRun.summary.totalRows} row${stagedRun.summary.totalRows === 1 ? '' : 's'}. Published rows: ${stagedRun.summary.publishedRows}.`
-                      : 'The worker extracted policy data and created a staged sync run.'}
+                      ? `This run extracted ${stagedRun.summary.totalRows} row${stagedRun.summary.totalRows === 1 ? '' : 's'} and staged them into the same canonical integration template format used by manual spreadsheet uploads. Published rows: ${stagedRun.summary.publishedRows}.`
+                      : 'The worker extracted policy data and created a staged sync run in the canonical integration template format.'}
                     {stagedRun && stagedRowsAwaitingPublish > 0
                       ? ` ${stagedRowsAwaitingPublish} row${stagedRowsAwaitingPublish === 1 ? '' : 's'} still need to be published before the live policy records change.`
                       : ''}
@@ -929,6 +995,7 @@ export function PortalAutomationTab({
                       <p className="text-xs font-medium uppercase tracking-wide text-blue-700">
                         Staged changes for {stagedPreviewRow.policyNumber}
                       </p>
+                      <p className="mt-1 text-xs text-slate-500">{stagedPreviewMatchCopy}</p>
                       <div className="mt-2 space-y-1 text-sm text-slate-700">
                         {stagedPreviewRow.diffs.slice(0, 4).map((diff) => (
                           <div key={`${stagedPreviewRow.id}-${diff.fieldId}`} className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
@@ -1151,8 +1218,11 @@ export function PortalAutomationTab({
                       <div className="space-y-3">
                         <Label>Field Selectors</Label>
                         {fieldSelectors.map((field, index) => (
-                          <div key={`${field.sourceHeader}-${index}`} className="grid grid-cols-1 gap-2 md:grid-cols-[180px_1fr] md:items-center">
-                            <span className="text-sm font-medium text-gray-700">{field.sourceHeader}</span>
+                          <div key={`${getPortalFieldKey(field)}-${index}`} className="grid grid-cols-1 gap-2 md:grid-cols-[180px_1fr] md:items-center">
+                            <div className="space-y-1">
+                              <span className="text-sm font-medium text-gray-700">{getPortalFieldTitle(field)}</span>
+                              <p className="text-xs text-gray-500">{getPortalFieldColumnName(field)}</p>
+                            </div>
                             <Input
                               value={field.selector}
                               onChange={(event) => updateFieldSelector(index, event.target.value)}
@@ -1165,7 +1235,7 @@ export function PortalAutomationTab({
 
                     <div className="flex justify-end">
                       <Button
-                        onClick={() => onApplyFlow({ policyRowSelector: policyRowSelector.trim(), fields: fieldSelectors })}
+                        onClick={() => onApplyFlow({ policyRowSelector: policyRowSelector.trim(), fields: buildProviderFallbackFields() })}
                         disabled={isApplyingFlow || !policyRowSelector.trim()}
                         className="bg-purple-600 hover:bg-purple-700"
                       >
