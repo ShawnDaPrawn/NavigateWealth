@@ -372,6 +372,71 @@ function splitLabels(value) {
     .filter(Boolean);
 }
 
+function normaliseFieldSignature(field) {
+  return [
+    field?.targetFieldId,
+    field?.targetFieldName,
+    field?.columnName,
+    field?.sourceHeader,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function getFieldSemanticKind(field) {
+  const signature = normaliseFieldSignature(field);
+  if (/(policy\s*(number|no)|account\s*number|investment\s*number|reference)/i.test(signature)) return 'policy_number';
+  if (/(date\s*of\s*inception|inception\s*date|start\s*date|investment\s*start\s*date)/i.test(signature)) return 'date_of_inception';
+  if (/(current\s*value|fund\s*value|market\s*value|closing\s*balance)/i.test(signature)) return 'current_value';
+  if (/(product\s*type|product\s*name|investment\s*type|retirement\s*annuity\s*fund)/i.test(signature)) return 'product_type';
+  return 'generic';
+}
+
+function isLikelyDateValue(value) {
+  const text = sampleText(value, 120);
+  if (!text) return false;
+  if (/\b(selected period|since inception|bank details|statement|download)\b/i.test(text)) return false;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return true;
+  if (/^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/.test(text)) return true;
+  if (/^\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4}$/.test(text)) return true;
+  return !Number.isNaN(Date.parse(text));
+}
+
+function isLikelyCurrencyValue(value) {
+  const text = sampleText(value, 120);
+  if (!text) return false;
+  if (!/\d/.test(text)) return false;
+  if (/\b(selected period|since inception|bank details|statement|download)\b/i.test(text)) return false;
+  return /(?:R\s*)?[-+]?\d[\d\s,.]*$/.test(text);
+}
+
+function isLikelyProductTypeValue(value) {
+  const text = sampleText(value, 160);
+  if (!text) return false;
+  if (/\b(selected period|since inception|bank details|statement|download|search|filter|details)\b/i.test(text)) return false;
+  if (text.length < 3 || text.length > 120) return false;
+  return /[A-Za-z]/.test(text);
+}
+
+function isPlausibleValueForField(field, value, item) {
+  const text = sampleText(value, 160);
+  if (!text) return false;
+
+  switch (getFieldSemanticKind(field)) {
+    case 'policy_number':
+      return normalisePolicyNumber(text).includes(normalisePolicyNumber(item?.policyNumber || text));
+    case 'date_of_inception':
+      return isLikelyDateValue(text);
+    case 'current_value':
+      return isLikelyCurrencyValue(text);
+    case 'product_type':
+      return isLikelyProductTypeValue(text);
+    default:
+      return text.length <= 220;
+  }
+}
+
 function candidateSearchText(candidate) {
   return [
     candidate?.text,
@@ -1307,9 +1372,15 @@ async function searchPolicyByNumber(page, flow, item, brain) {
 async function extractByLabels(page, fields) {
   return evaluateWithNavigationRetry(page, (fieldDefs) => {
     const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+    const normaliseLabel = (value) => normalise(value).toLowerCase().replace(/\s*:\s*$/, '');
     const isUseful = (value) => {
       const text = normalise(value);
       return text && text.length <= 220;
+    };
+    const matchesLabel = (value, label) => {
+      const text = normaliseLabel(value);
+      const expected = normaliseLabel(label);
+      return Boolean(text && expected) && text === expected;
     };
     const readControl = (el) => {
       if (!el) return '';
@@ -1335,14 +1406,13 @@ async function extractByLabels(page, fields) {
       let sourceLabel = '';
 
       for (const label of labels) {
-        const labelLower = label.toLowerCase();
-        const labelElement = elements.find((el) => normalise(el.textContent).toLowerCase().includes(labelLower));
+        const labelElement = elements.find((el) => matchesLabel(el.textContent, label));
         if (!labelElement) continue;
 
         const row = labelElement.closest('tr');
         if (row) {
           const cells = Array.from(row.querySelectorAll('th,td'));
-          const labelCellIndex = cells.findIndex((cell) => normalise(cell.textContent).toLowerCase().includes(labelLower));
+          const labelCellIndex = cells.findIndex((cell) => matchesLabel(cell.textContent, label));
           if (labelCellIndex >= 0) {
             const nextCell = cells[labelCellIndex + 1];
             if (isUseful(nextCell?.textContent)) {
@@ -1350,6 +1420,15 @@ async function extractByLabels(page, fields) {
               sourceLabel = label;
               break;
             }
+          }
+        }
+
+        if (labelElement.tagName?.toLowerCase() === 'dt') {
+          const detailValue = labelElement.parentElement?.querySelector('dd');
+          if (isUseful(readControl(detailValue))) {
+            value = cleanValue(readControl(detailValue), label);
+            sourceLabel = label;
+            break;
           }
         }
 
@@ -1372,13 +1451,6 @@ async function extractByLabels(page, fields) {
             }
           }
           if (value) break;
-
-          const parentText = cleanValue(parent.textContent, label);
-          if (isUseful(parentText) && parentText.toLowerCase() !== labelLower) {
-            value = parentText;
-            sourceLabel = label;
-            break;
-          }
         }
       }
 
@@ -1437,33 +1509,42 @@ async function extractPolicyRecord(page, flow, config, item) {
       return existing || { sourceHeader: columnName, columnName, labels: [columnName], selector: '' };
     });
 
-  const extracted = await extractByLabels(page, fields);
+  const labelExtracted = await extractByLabels(page, fields);
   const rawData = {};
+  const extractedData = {};
 
   for (const field of fields) {
     const columnName = getFieldColumnName(field);
-    const labelValue = extracted[columnName]?.value || '';
-    rawData[columnName] = labelValue;
-
-    if (!rawData[columnName] && field.selector) {
-      const selectorValue = await readField(page, field).catch(() => '');
-      rawData[columnName] = selectorValue;
+    let selectedValue = '';
+    const selectorValue = field.selector ? await readField(page, field).catch(() => '') : '';
+    if (isPlausibleValueForField(field, selectorValue, item)) {
+      selectedValue = selectorValue;
+    } else {
+      const labelValue = labelExtracted[columnName]?.value || '';
+      if (isPlausibleValueForField(field, labelValue, item)) {
+        selectedValue = labelValue;
+      }
     }
+
+    rawData[columnName] = selectedValue;
+    extractedData[columnName] = selectedValue;
 
     if (isPolicyNumberField(field)) {
       rawData[columnName] = item.policyNumber;
+      extractedData[columnName] = item.policyNumber;
     }
   }
 
   if (!fields.some((field) => isPolicyNumberField(field))) {
     rawData['Policy Number'] = item.policyNumber;
+    extractedData['Policy Number'] = item.policyNumber;
   }
 
   const rawDataWithMetadata = applyTemplateMetadata(rawData, item);
 
   return {
     rawData: rawDataWithMetadata,
-    extractedData: Object.fromEntries(Object.entries(extracted).map(([key, data]) => [key, data.value])),
+    extractedData,
   };
 }
 

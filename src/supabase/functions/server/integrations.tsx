@@ -1419,10 +1419,10 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
       extraction: {
         policyRowSelector: '[data-testid*="policy" i], table tbody tr',
         fields: [
-          { sourceHeader: 'Policy Number', columnName: 'Policy Number', targetFieldName: 'Policy Number', selector: '[data-field="policyNumber"], [data-testid*="policy-number" i], td:nth-child(1)', labels: ['Policy number', 'Account number', 'Investment number'], attribute: 'text', required: true, transform: 'trim' },
-          { sourceHeader: 'Product Type', columnName: 'Product Type', targetFieldName: 'Product Type', selector: '[data-field="productType"], [data-testid*="product" i], td:nth-child(2)', labels: ['Product type', 'Product name', 'Investment type'], attribute: 'text', transform: 'trim' },
-          { sourceHeader: 'Date of Inception', columnName: 'Date of Inception', targetFieldName: 'Date of Inception', selector: '[data-field="inceptionDate"], [data-testid*="inception" i], td:nth-child(3)', labels: ['Date of inception', 'Start date', 'Investment start date'], attribute: 'text', transform: 'trim' },
-          { sourceHeader: 'Fund Value', columnName: 'Fund Value', targetFieldName: 'Fund Value', selector: '[data-field="fundValue"], [data-testid*="value" i], td:nth-child(4)', labels: ['Fund value', 'Market value', 'Current value'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Policy Number', columnName: 'Policy Number', targetFieldName: 'Policy Number', selector: '[data-field="policyNumber"], [data-testid*="policy-number" i], [data-testid*="account-number" i], [data-testid*="investment-number" i]', labels: ['Policy number', 'Account number', 'Investment number'], attribute: 'text', required: true, transform: 'trim' },
+          { sourceHeader: 'Product Type', columnName: 'Product Type', targetFieldName: 'Product Type', selector: '[data-field="productType"], [data-testid*="product-type" i], [data-testid*="product-name" i], [data-testid*="investment-type" i]', labels: ['Retirement annuity fund', 'Product type'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Date of Inception', columnName: 'Date of Inception', targetFieldName: 'Date of Inception', selector: '[data-field="inceptionDate"], [data-testid*="inception" i], [data-testid*="start-date" i]', labels: ['Inception date', 'Date of inception'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Current Value', columnName: 'Current Value', targetFieldName: 'Current Value', selector: '[data-field="fundValue"], [data-testid*="closing-balance" i], [data-testid*="fund-value" i], [data-testid*="market-value" i], [data-testid*="current-value" i]', labels: ['Closing balance'], attribute: 'text', transform: 'trim' },
         ],
       },
       policySchedule: {
@@ -1506,6 +1506,9 @@ async function getPortalFlow(provider: KvProvider, providerId: string): Promise<
   const defaultFlow = getDefaultPortalFlow(provider, providerId);
   if (!configured) return defaultFlow;
 
+  const defaultExtractionFields = normaliseExtractionFields(defaultFlow.extraction?.fields, []);
+  const configuredExtractionFields = normaliseExtractionFields(configured.extraction?.fields, []);
+
   return {
     ...defaultFlow,
     ...configured,
@@ -1520,7 +1523,10 @@ async function getPortalFlow(provider: KvProvider, providerId: string): Promise<
     extraction: {
       ...(defaultFlow.extraction || {}),
       ...(configured.extraction || {}),
-      fields: normaliseExtractionFields(configured.extraction?.fields, defaultFlow.extraction?.fields || []),
+      fields: normaliseExtractionFields(
+        buildPortalFieldsFromBindings(configuredExtractionFields, defaultExtractionFields),
+        defaultExtractionFields,
+      ),
     },
     policySchedule: normalisePolicyScheduleConfig(configured.policySchedule, defaultFlow.policySchedule),
   };
