@@ -415,6 +415,8 @@ function isLikelyProductTypeValue(value) {
   const text = sampleText(value, 160);
   if (!text) return false;
   if (/\b(selected period|since inception|bank details|statement|download|search|filter|details)\b/i.test(text)) return false;
+  if (isLikelyDateValue(text)) return false;
+  if (isLikelyCurrencyValue(text)) return false;
   if (text.length < 3 || text.length > 120) return false;
   return /[A-Za-z]/.test(text);
 }
