@@ -29,6 +29,10 @@ import {
   InviteEmailSchema,
   SubmissionListQuerySchema,
 } from './submissions-validation.ts';
+import {
+  getBlockedEmailDomain,
+  getBlockedEmailDomainWarning,
+} from '../../../shared/submissions/blockedEmailDomains.ts';
 
 const log = createModuleLogger('submissions-routes');
 const app = new Hono();
@@ -156,6 +160,20 @@ app.post('/', asyncHandler(async (c) => {
       success: true,
       data: { id: `sub_${Date.now()}_honeypot`, type, status: 'new', submittedAt: new Date().toISOString() },
     }, 201);
+  }
+
+  const blockedDomain = submitterEmail ? getBlockedEmailDomain(submitterEmail) : null;
+  if (blockedDomain) {
+    log.warn('Blocked public submission from scam domain', { type, submitterEmail, blockedDomain });
+    return c.json(
+      {
+        success: false,
+        error: getBlockedEmailDomainWarning(blockedDomain),
+        warning: true,
+        blockedDomain,
+      },
+      403,
+    );
   }
 
   // --- Rate limit: max 5 submissions per email per hour -------------------------

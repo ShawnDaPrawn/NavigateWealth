@@ -27,6 +27,10 @@ import { QuoteRequestSubmitSchema } from './contact-form-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { submissionsService } from './submissions-service.ts';
 import { asyncHandler } from './error.middleware.ts';
+import {
+  getBlockedEmailDomain,
+  getBlockedEmailDomainWarning,
+} from '../../../shared/submissions/blockedEmailDomains.ts';
 
 const app = new Hono();
 const log = createModuleLogger('quote-request');
@@ -90,6 +94,19 @@ app.post('/submit', asyncHandler(async (c) => {
         message: 'Your quote request has been received. We will be in touch within 24 hours.',
         emailsSent: { admin: true, acknowledgment: true },
       }, 200);
+    }
+
+    const blockedDomain = getBlockedEmailDomain(email);
+    if (blockedDomain) {
+      log.warn('Blocked quote request from scam domain', { email, blockedDomain, stage, service });
+      return c.json(
+        {
+          error: getBlockedEmailDomainWarning(blockedDomain),
+          warning: true,
+          blockedDomain,
+        },
+        403,
+      );
     }
 
     // --- Rate limit: max 5 submissions per email per hour -------------------------

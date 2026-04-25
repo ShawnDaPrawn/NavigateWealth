@@ -43,6 +43,10 @@ import { format, startOfDay, addDays, isBefore } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { cn } from '../ui/utils';
+import {
+  getBlockedEmailDomain,
+  getBlockedEmailDomainWarning,
+} from '@/shared/submissions/blockedEmailDomains';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -223,6 +227,12 @@ export function ConsultationModal({
       return;
     }
 
+    const blockedDomain = getBlockedEmailDomain(formData.email);
+    if (blockedDomain) {
+      toast.error(getBlockedEmailDomainWarning(blockedDomain));
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -251,9 +261,13 @@ export function ConsultationModal({
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         console.error('Consultation request error:', errorData);
-        toast.error('Failed to book consultation. Please try again or contact us directly.');
+        toast.error(
+          typeof errorData?.error === 'string'
+            ? errorData.error
+            : 'Failed to book consultation. Please try again or contact us directly.',
+        );
         setIsSubmitting(false);
         return;
       }

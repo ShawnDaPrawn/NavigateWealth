@@ -36,6 +36,10 @@ import {
 import { toast } from 'sonner@2.0.3';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { useAuth } from '../auth/AuthContext';
+import {
+  getBlockedEmailDomain,
+  getBlockedEmailDomainWarning,
+} from '@/shared/submissions/blockedEmailDomains';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
 
@@ -104,6 +108,12 @@ export function ServiceRequestModal({
       return;
     }
 
+    const blockedDomain = getBlockedEmailDomain(user?.email || '');
+    if (blockedDomain) {
+      toast.error(getBlockedEmailDomainWarning(blockedDomain));
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -135,16 +145,24 @@ export function ServiceRequestModal({
       });
 
       if (!response.ok) {
-        const errorBody = await response.text().catch(() => '');
+        const errorBody = await response.json().catch(() => null);
         console.error('Service request submission failed:', response.status, errorBody);
-        throw new Error('Submission failed');
+        throw new Error(
+          typeof errorBody?.error === 'string'
+            ? errorBody.error
+            : 'Unable to submit your request. Please try again or contact your adviser directly.',
+        );
       }
 
       setIsSubmitted(true);
       toast.success('Request submitted successfully. Your adviser will be in touch.');
     } catch (error) {
       console.error('Error submitting service request:', error);
-      toast.error('Unable to submit your request. Please try again or contact your adviser directly.');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Unable to submit your request. Please try again or contact your adviser directly.',
+      );
     } finally {
       setIsSubmitting(false);
     }

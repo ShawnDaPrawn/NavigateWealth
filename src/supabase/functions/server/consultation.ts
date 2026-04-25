@@ -25,6 +25,10 @@ import { submissionsService } from './submissions-service.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { ConsultationRequestSchema } from './consultation-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import {
+  getBlockedEmailDomain,
+  getBlockedEmailDomainWarning,
+} from '../../../shared/submissions/blockedEmailDomains.ts';
 
 const app = new Hono();
 const log = createModuleLogger('consultation');
@@ -151,6 +155,19 @@ app.post('/request', asyncHandler(async (c) => {
       consultationId: crypto.randomUUID(),
       message: 'Consultation request received successfully',
     }, 200);
+  }
+
+  const blockedDomain = getBlockedEmailDomain(email);
+  if (blockedDomain) {
+    log.warn('Blocked consultation request from scam domain', { email, blockedDomain });
+    return c.json(
+      {
+        error: getBlockedEmailDomainWarning(blockedDomain),
+        warning: true,
+        blockedDomain,
+      },
+      403,
+    );
   }
 
   // --- Rate limit: max 5 submissions per email per hour -------------------------
