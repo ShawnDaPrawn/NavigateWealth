@@ -17,7 +17,8 @@ import {
   PenTool,
   Inbox,
   StickyNote,
-  Bot
+  Bot,
+  ShieldAlert
 } from 'lucide-react';
 import { AdminModule, ModuleConfigItem, ModuleGroup } from './types';
 
@@ -40,6 +41,7 @@ export const moduleConfig: Record<AdminModule, ModuleConfigItem> = {
   marketing: { label: 'Social & Marketing', icon: Share2 },
   reporting: { label: 'Reporting', icon: BarChart3 },
   calendar: { label: 'Calendar & Reminders', icon: Calendar },
+  issues: { label: 'Issue Manager', icon: ShieldAlert },
   'ai-management': { label: 'AI Management', icon: Bot }
 };
 
@@ -58,7 +60,7 @@ export const moduleGroups: ModuleGroup[] = [
   },
   {
     label: 'Risk & Compliance',
-    modules: ['compliance', 'reporting']
+    modules: ['compliance', 'reporting', 'issues']
   },
   {
     label: 'Growth',

@@ -50,6 +50,7 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/calendar-digest',      () => import('./calendar-digest-routes.ts'));
   lazy(app, '/kv-cleanup',           () => import('./kv-cleanup-routes.ts'));
   lazy(app, '/admin-audit',          () => import('./admin-audit-routes.ts'));
+  lazy(app, '/quality-issues',       () => import('./quality-issues-routes.ts'));
   lazy(app, '/linktree',             () => import('./linktree-routes.ts'));
   lazy(app, '/linkedin',             () => import('./linkedin-routes.ts'));
   lazy(app, '/net-worth-snapshots',  () => import('./net-worth-snapshot-routes.ts'));

@@ -19,6 +19,7 @@ export type AdminModule =
   | 'reporting' 
   | 'calendar'
   | 'esign'
+  | 'issues'
   | 'ai-management';
 
 export interface ModuleConfigItem {

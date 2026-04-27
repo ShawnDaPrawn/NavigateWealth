@@ -229,6 +229,7 @@ export function AppRoutes() {
         
         {/* Admin */}
         <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+        <Route path="/admin/issues" element={<AdminRoute><Navigate to="/admin?module=issues" replace /></AdminRoute>} />
         <Route path="/admin/legal-pdf-qa" element={<AdminRoute><LegalPdfQaPage /></AdminRoute>} />
         
         

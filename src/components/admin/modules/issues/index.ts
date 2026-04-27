@@ -1,0 +1,1 @@
+export { IssuesModule } from './IssuesModule';

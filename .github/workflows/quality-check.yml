@@ -1,0 +1,66 @@
+name: Quality Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run production build
+        shell: bash
+        run: |
+          set +e
+          npm run build 2>&1 | tee quality-build.log
+          echo "${PIPESTATUS[0]}" > quality-build.exit
+          exit 0
+
+      - name: Run Vitest
+        shell: bash
+        run: |
+          set +e
+          npm test -- --reporter=json --outputFile=quality-vitest-report.json 2>&1 | tee quality-test.log
+          echo "${PIPESTATUS[0]}" > quality-test.exit
+          exit 0
+
+      - name: Run dependency audit
+        shell: bash
+        run: npm audit --json > quality-npm-audit-report.json || true
+
+      - name: Publish quality issue snapshot
+        shell: bash
+        env:
+          QUALITY_ISSUES_INGEST_URL: ${{ secrets.QUALITY_ISSUES_INGEST_URL }}
+          QUALITY_ISSUES_INGEST_TOKEN: ${{ secrets.QUALITY_ISSUES_INGEST_TOKEN }}
+        run: node scripts/publish-quality-report.mjs
+
+      - name: Upload quality reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-reports
+          path: |
+            quality-build.log
+            quality-build.exit
+            quality-test.log
+            quality-test.exit
+            quality-vitest-report.json
+            quality-npm-audit-report.json
+            quality-issues-payload.json
