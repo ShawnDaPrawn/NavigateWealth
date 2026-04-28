@@ -41,7 +41,7 @@ function IssueLocation({ issue }: { issue: QualityIssue }) {
   ].filter(Boolean).join(':');
 
   return (
-    <code className="text-xs text-slate-700 break-all">
+    <code className="text-xs text-gray-700 break-all">
       {issue.filePath}{suffix ? `:${suffix}` : ''}
     </code>
   );
@@ -85,29 +85,34 @@ export function IssuesModule() {
   const summary = snapshot?.summary;
 
   return (
-    <div className="p-6 space-y-6 bg-slate-50 min-h-full">
+    <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <ShieldCheck className="h-7 w-7 text-slate-800" />
-            <h1 className="text-2xl font-semibold text-slate-950">Issue Manager</h1>
+            <ShieldCheck className="h-6 w-6 text-purple-600" />
+            <h1 className="text-3xl font-bold text-gray-900">Issue Manager</h1>
           </div>
-          <p className="mt-2 text-sm text-slate-600 max-w-3xl">
+          <p className="mt-2 text-sm text-muted-foreground max-w-3xl">
             Internal build, test, audit, accessibility, and runtime issue tracking. No Sentry or third-party telemetry service is required.
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-muted-foreground">
             Latest report: {formatDate(snapshot?.generatedAt)}
             {snapshot?.branch ? ` on ${snapshot.branch}` : ''}
           </p>
         </div>
-        <Button onClick={() => void loadIssues()} disabled={isLoading} variant="outline">
+        <Button
+          onClick={() => void loadIssues()}
+          disabled={isLoading}
+          variant="outline"
+          className="h-10 border-gray-200 hover:bg-white hover:text-gray-700 hover:border-gray-300 shadow-sm"
+        >
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
 
       {error ? (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-red-200 bg-red-50 rounded-xl shadow-sm">
           <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
         </Card>
       ) : null}
@@ -119,12 +124,12 @@ export function IssuesModule() {
         <SummaryCard label="Total Tracked" value={summary?.total ?? 0} tone="text-slate-700" />
       </div>
 
-      <Card>
+      <Card className="rounded-xl border border-gray-100 shadow-sm">
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <CardTitle className="text-lg">Latest Findings</CardTitle>
+          <CardTitle className="text-xl font-semibold text-gray-900">Latest Findings</CardTitle>
           <div className="flex flex-col sm:flex-row gap-3">
             <Select value={sourceFilter} onValueChange={(value) => setSourceFilter(value as 'all' | QualityIssueSource)}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 h-10 border-gray-200">
                 <SelectValue placeholder="Source" />
               </SelectTrigger>
               <SelectContent>
@@ -135,7 +140,7 @@ export function IssuesModule() {
               </SelectContent>
             </Select>
             <Select value={severityFilter} onValueChange={(value) => setSeverityFilter(value as 'all' | QualityIssueSeverity)}>
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="w-full sm:w-40 h-10 border-gray-200">
                 <SelectValue placeholder="Severity" />
               </SelectTrigger>
               <SelectContent>
@@ -151,8 +156,8 @@ export function IssuesModule() {
           {filteredIssues.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <CheckCircle2 className="h-10 w-10 text-emerald-600" />
-              <h2 className="mt-4 text-base font-semibold text-slate-950">No issues in this view</h2>
-              <p className="mt-1 text-sm text-slate-600">
+              <h2 className="mt-4 text-base font-semibold text-gray-900">No issues in this view</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
                 The CI publisher has not reported matching findings yet.
               </p>
             </div>
@@ -160,7 +165,7 @@ export function IssuesModule() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="border-b text-left text-xs uppercase tracking-wide text-gray-500">
                     <th className="py-3 pr-4 font-medium">Severity</th>
                     <th className="py-3 pr-4 font-medium">Source</th>
                     <th className="py-3 pr-4 font-medium">Issue</th>
@@ -176,16 +181,16 @@ export function IssuesModule() {
                           {issue.severity}
                         </Badge>
                       </td>
-                      <td className="py-4 pr-4 text-slate-700">{sourceLabels[issue.source]}</td>
+                      <td className="py-4 pr-4 text-gray-700">{sourceLabels[issue.source]}</td>
                       <td className="py-4 pr-4 min-w-80">
-                        <div className="font-medium text-slate-950">{issue.title}</div>
-                        <div className="mt-1 text-slate-600">{issue.message}</div>
-                        {issue.ruleId ? <div className="mt-2 text-xs text-slate-500">{issue.ruleId}</div> : null}
+                        <div className="font-medium text-gray-900">{issue.title}</div>
+                        <div className="mt-1 text-gray-600">{issue.message}</div>
+                        {issue.ruleId ? <div className="mt-2 text-xs text-gray-500">{issue.ruleId}</div> : null}
                       </td>
                       <td className="py-4 pr-4 min-w-48">
                         <IssueLocation issue={issue} />
                       </td>
-                      <td className="py-4 pr-4 whitespace-nowrap text-slate-600">
+                      <td className="py-4 pr-4 whitespace-nowrap text-gray-600">
                         {formatDate(issue.lastSeenAt)}
                       </td>
                     </tr>
@@ -202,11 +207,11 @@ export function IssuesModule() {
 
 function SummaryCard({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
-    <Card>
+    <Card className="rounded-xl border border-gray-100 shadow-sm">
       <CardContent className="p-5">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-600">{label}</p>
-          <AlertCircle className="h-4 w-4 text-slate-400" />
+          <p className="text-sm text-gray-600">{label}</p>
+          <AlertCircle className="h-4 w-4 text-gray-400" />
         </div>
         <p className={`mt-3 text-3xl font-semibold ${tone}`}>{value}</p>
       </CardContent>

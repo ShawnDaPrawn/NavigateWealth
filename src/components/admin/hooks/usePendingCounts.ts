@@ -7,9 +7,10 @@ import { getIncompleteCount } from '../modules/applications/utils';
 
 // All admin modules — stable list used for initialisation
 const ALL_MODULES: AdminModule[] = [
-  'dashboard', 'clients', 'personnel', 'advice-engine', 'compliance',
-  'tasks', 'applications', 'quotes', 'submissions', 'communication', 'marketing',
-  'reporting', 'calendar',
+  'dashboard', 'clients', 'personnel', 'advice-engine', 'product-management',
+  'resources', 'publications', 'compliance', 'tasks', 'notes', 'applications',
+  'quotes', 'submissions', 'communication', 'marketing', 'reporting', 'calendar',
+  'esign', 'issues', 'ai-management',
 ];
 
 /** Build a zeroed-out counts record — used as placeholder and fallback */
@@ -26,6 +27,10 @@ const EMPTY_COUNTS = buildEmptyCounts();
 
 /** Base URL for server requests */
 const SERVER_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+
+function safeCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
 
 // Fetch pending counts from various sources
 async function fetchPendingCounts(): Promise<Record<AdminModule, { count: number }>> {
@@ -93,6 +98,21 @@ async function fetchPendingCounts(): Promise<Record<AdminModule, { count: number
     // Silently handle errors - submissions module may not be initialized
   }
 
+  // Fetch open issue count for Issue Manager
+  let issuesOpen = 0;
+  try {
+    const issuesResponse = await fetch(
+      `${SERVER_BASE}/quality-issues`,
+      { headers }
+    );
+    if (issuesResponse.ok) {
+      const issuesData = await issuesResponse.json();
+      issuesOpen = safeCount(issuesData?.snapshot?.summary?.open);
+    }
+  } catch (error) {
+    // Silently handle errors - quality issues module may be unavailable
+  }
+
   // Initialize all modules with 0 count
   const result = buildEmptyCounts();
 
@@ -102,6 +122,7 @@ async function fetchPendingCounts(): Promise<Record<AdminModule, { count: number
   result.quotes = { count: requestsPending };
   result.submissions = { count: submissionsNew };
   result.calendar = { count: 0 }; // TODO: Implement calendar counting
+  result.issues = { count: issuesOpen };
 
   return result;
 }

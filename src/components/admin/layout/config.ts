@@ -68,4 +68,5 @@ export const moduleGroups: ModuleGroup[] = [
   }
 ];
 
-export const operationsModules: AdminModule[] = ['applications', 'submissions', 'tasks', 'notes', 'calendar'];
+// Modules that display numeric sidebar counters.
+export const operationsModules: AdminModule[] = ['applications', 'submissions', 'tasks', 'notes', 'calendar', 'issues'];
