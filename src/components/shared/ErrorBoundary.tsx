@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { logger } from '../../utils/logger';
 import { AppError } from '../../shared/types/logger';
+import { reportRuntimeClientIssue } from '../../utils/quality/runtimeIssueReporter';
 
 interface Props {
   children: ReactNode;
@@ -47,6 +48,15 @@ export class ErrorBoundary extends Component<Props, State> {
     // Log using unified logger
     logger.error('ErrorBoundary caught an error', error, {
       componentStack: errorInfo.componentStack,
+    });
+
+    void reportRuntimeClientIssue({
+      kind: 'react-error-boundary',
+      title: error.name || 'React render error',
+      message: error.message || 'React render error',
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      filePath: window.location.pathname,
     });
     
     this.setState({

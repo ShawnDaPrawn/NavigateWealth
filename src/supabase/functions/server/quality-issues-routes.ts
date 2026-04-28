@@ -1,7 +1,7 @@
 import { Hono } from 'npm:hono';
 import type { Context } from 'npm:hono';
 import * as kv from './kv_store.tsx';
-import { requireAdmin } from './auth-mw.ts';
+import { requireAdmin, requireAuth } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
@@ -17,6 +17,8 @@ import {
 const app = new Hono();
 const log = createModuleLogger('quality-issues');
 const LATEST_SNAPSHOT_KEY = 'quality_issues:latest_snapshot';
+const RUNTIME_CLIENT_ISSUES_KEY = 'quality_issues:runtime_client';
+const MAX_RUNTIME_ISSUES = 100;
 
 function isValidSource(source: unknown): source is QualityIssueSource {
   return [
@@ -94,6 +96,40 @@ function normalizeSnapshot(rawSnapshot: Record<string, unknown>): QualityIssueSn
   };
 }
 
+function issueId(parts: unknown[]): string {
+  return parts
+    .filter(Boolean)
+    .join(':')
+    .toLowerCase()
+    .replace(/[^a-z0-9:_./-]+/g, '-')
+    .slice(0, 180);
+}
+
+function asTrimmedString(value: unknown, fallback = '', maxLength = 1600): string {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+  return trimmed.slice(0, maxLength);
+}
+
+function asOptionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function combineSnapshots(
+  ciSnapshot: QualityIssueSnapshot,
+  runtimeIssues: QualityIssue[],
+): QualityIssueSnapshot {
+  const issues = [...ciSnapshot.issues, ...runtimeIssues];
+
+  return {
+    ...ciSnapshot,
+    generatedAt: new Date().toISOString(),
+    issues,
+    summary: summarizeQualityIssues(issues),
+  };
+}
+
 function hasValidIngestToken(c: Context): boolean {
   const expectedToken = Deno.env.get('QUALITY_ISSUES_INGEST_TOKEN');
   if (!expectedToken) {
@@ -107,9 +143,14 @@ function hasValidIngestToken(c: Context): boolean {
 
 app.get('/', requireAdmin, asyncHandler(async (c) => {
   const snapshot = await kv.get(LATEST_SNAPSHOT_KEY) as QualityIssueSnapshot | null;
+  const runtimeIssues = await kv.get(RUNTIME_CLIENT_ISSUES_KEY) as QualityIssue[] | null;
+
   return c.json({
     success: true,
-    snapshot: snapshot || createEmptyQualityIssueSnapshot(),
+    snapshot: combineSnapshots(
+      snapshot || createEmptyQualityIssueSnapshot(),
+      Array.isArray(runtimeIssues) ? runtimeIssues : [],
+    ),
   });
 }));
 
@@ -130,6 +171,68 @@ app.post('/ingest-ci-report', asyncHandler(async (c) => {
   });
 
   return c.json({ success: true, snapshot });
+}));
+
+app.post('/runtime-client', requireAuth, asyncHandler(async (c) => {
+  const now = new Date().toISOString();
+  const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+  const kind = asTrimmedString(body.kind, 'window-error', 80);
+  const message = asTrimmedString(body.message, 'Client runtime error');
+  const filePath = asTrimmedString(body.filePath, 'browser', 240);
+  const line = asOptionalNumber(body.line);
+  const column = asOptionalNumber(body.column);
+  const title = asTrimmedString(body.title, 'Client runtime error', 240);
+  const stack = asTrimmedString(body.stack, '', 3000);
+  const componentStack = asTrimmedString(body.componentStack, '', 3000);
+  const href = asTrimmedString(body.href, '', 500);
+  const userAgent = asTrimmedString(body.userAgent, '', 500);
+  const user = c.get('user') as { id?: string; email?: string } | undefined;
+  const userEmail = user?.email ? `\nUser: ${user.email}` : '';
+  const context = [
+    href ? `URL: ${href}` : '',
+    userAgent ? `User-Agent: ${userAgent}` : '',
+    componentStack ? `Component stack:\n${componentStack}` : '',
+    stack ? `Stack:\n${stack}` : '',
+  ].filter(Boolean).join('\n\n');
+  const id = issueId(['runtime-client', kind, message, filePath, line, column]);
+  const currentIssues = await kv.get(RUNTIME_CLIENT_ISSUES_KEY) as QualityIssue[] | null;
+  const issues = Array.isArray(currentIssues) ? currentIssues : [];
+  const existingIndex = issues.findIndex((issue) => issue.id === id);
+
+  const nextIssue: QualityIssue = {
+    id,
+    source: 'runtime-client',
+    severity: 'error',
+    status: 'open',
+    title,
+    message: `${message}${userEmail}${context ? `\n\n${context}` : ''}`.slice(0, 5000),
+    filePath,
+    line,
+    column,
+    ruleId: kind,
+    firstSeenAt: existingIndex >= 0 ? issues[existingIndex].firstSeenAt : now,
+    lastSeenAt: now,
+    occurrences: existingIndex >= 0 ? issues[existingIndex].occurrences + 1 : 1,
+  };
+
+  const nextIssues = existingIndex >= 0
+    ? issues.map((issue, index) => index === existingIndex ? nextIssue : issue)
+    : [nextIssue, ...issues];
+
+  const trimmedIssues = nextIssues
+    .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt))
+    .slice(0, MAX_RUNTIME_ISSUES);
+
+  await kv.set(RUNTIME_CLIENT_ISSUES_KEY, trimmedIssues);
+
+  log.warn('Runtime client issue ingested', {
+    id,
+    title,
+    userId: user?.id,
+    occurrences: nextIssue.occurrences,
+  });
+
+  return c.json({ success: true, issue: nextIssue });
 }));
 
 export default app;

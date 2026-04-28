@@ -5,6 +5,10 @@ import { AppProviders } from "./components/providers/AppProviders";
 import { AppRoutes } from "./AppRoutes";
 import { SkipToContent } from "./components/shared/AccessibilityHelpers";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary";
+import {
+  reportRuntimeClientIssue,
+  runtimeIssueFromUnknown,
+} from "./utils/quality/runtimeIssueReporter";
 
 export default function App() {
   const appIconVersion = "20260325b";
@@ -44,6 +48,16 @@ export default function App() {
         );
         return true;
       }
+
+      void reportRuntimeClientIssue({
+        kind: "window-error",
+        title: event.error instanceof Error ? event.error.name : "Window error",
+        message: event.message || "Unhandled window error",
+        stack: event.error instanceof Error ? event.error.stack : undefined,
+        filePath: event.filename,
+        line: event.lineno,
+        column: event.colno,
+      });
     };
     window.addEventListener("error", handleWindowError);
 
@@ -63,6 +77,10 @@ export default function App() {
           "[TradingView] Suppressed non-fatal iframe promise rejection in preview environment.",
         );
       }
+
+      void reportRuntimeClientIssue(
+        runtimeIssueFromUnknown("unhandled-rejection", event.reason),
+      );
     };
     window.addEventListener(
       "unhandledrejection",
