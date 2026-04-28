@@ -1,8 +1,33 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const now = new Date().toISOString();
-const endpoint = process.env.QUALITY_ISSUES_INGEST_URL;
+const DEFAULT_INGEST_URL = 'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/quality-issues/ingest-ci-report';
 const token = process.env.QUALITY_ISSUES_INGEST_TOKEN;
+const isCi = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+
+function normalizeIngestUrl(value) {
+  const rawValue = typeof value === 'string' ? value.trim() : '';
+  if (!rawValue) return DEFAULT_INGEST_URL;
+
+  let parsed;
+  try {
+    parsed = new URL(rawValue);
+  } catch {
+    throw new Error(
+      `QUALITY_ISSUES_INGEST_URL is not a valid URL: ${rawValue}`,
+    );
+  }
+
+  if (parsed.pathname.endsWith('/quality-issues')) {
+    parsed.pathname = `${parsed.pathname}/ingest-ci-report`;
+  } else if (parsed.pathname.endsWith('/quality-issues/')) {
+    parsed.pathname = `${parsed.pathname}ingest-ci-report`;
+  }
+
+  return parsed.toString();
+}
+
+const endpoint = normalizeIngestUrl(process.env.QUALITY_ISSUES_INGEST_URL);
 
 function readText(path) {
   return existsSync(path) ? readFileSync(path, 'utf8') : '';
@@ -147,10 +172,20 @@ const payload = {
 
 writeFileSync('quality-issues-payload.json', JSON.stringify(payload, null, 2));
 
-if (!endpoint || !token) {
-  console.log('QUALITY_ISSUES_INGEST_URL or QUALITY_ISSUES_INGEST_TOKEN is not set; wrote quality-issues-payload.json only.');
+if (!token) {
+  if (isCi) {
+    throw new Error(
+      'QUALITY_ISSUES_INGEST_TOKEN is not set in CI. Configure it in GitHub Actions secrets.',
+    );
+  }
+
+  console.log(
+    `QUALITY_ISSUES_INGEST_TOKEN is not set; wrote quality-issues-payload.json only. Expected ingest URL: ${endpoint}`,
+  );
   process.exit(0);
 }
+
+console.log(`Publishing quality issue snapshot to ${endpoint}`);
 
 const response = await fetch(endpoint, {
   method: 'POST',
@@ -163,7 +198,9 @@ const response = await fetch(endpoint, {
 
 if (!response.ok) {
   const body = await response.text();
-  throw new Error(`Failed to publish quality issues: ${response.status} ${response.statusText}\n${body}`);
+  throw new Error(
+    `Failed to publish quality issues to ${endpoint}: ${response.status} ${response.statusText}\n${body.slice(0, 1600)}`,
+  );
 }
 
 console.log(`Published ${issues.length} quality issue(s).`);

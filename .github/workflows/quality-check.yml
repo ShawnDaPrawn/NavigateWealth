@@ -47,7 +47,7 @@ jobs:
       - name: Publish quality issue snapshot
         shell: bash
         env:
-          QUALITY_ISSUES_INGEST_URL: ${{ secrets.QUALITY_ISSUES_INGEST_URL }}
+          QUALITY_ISSUES_INGEST_URL: https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/quality-issues/ingest-ci-report
           QUALITY_ISSUES_INGEST_TOKEN: ${{ secrets.QUALITY_ISSUES_INGEST_TOKEN }}
         run: node scripts/publish-quality-report.mjs
 
