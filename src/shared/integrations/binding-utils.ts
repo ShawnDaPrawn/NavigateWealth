@@ -15,6 +15,8 @@ export interface IntegrationFieldBindingLike {
   fieldType?: string;
   portalLabels?: unknown;
   portalSelector?: string;
+  labels?: unknown;
+  selector?: string;
   blankBehavior?: unknown;
   transform?: string;
 }
@@ -51,6 +53,22 @@ export function normaliseIntegrationLabelList(value: unknown, max = 12): string[
 
 export function normaliseIntegrationBlankBehavior(value: unknown): IntegrationBlankBehavior {
   return value === 'clear' || value === 'error' ? value : 'ignore';
+}
+
+function normalisePortalFieldMeaning(value: unknown): string {
+  const normalised = normaliseIntegrationColumnName(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+  if (!normalised) return '';
+  if (/(policy\s*(number|no)|account\s*number|investment\s*number|reference)/.test(normalised)) return 'policy number';
+  if (/(date\s*of\s*inception|inception\s*date|start\s*date|investment\s*start\s*date)/.test(normalised)) return 'date of inception';
+  if (/(product\s*type|product\s*name|investment\s*type|retirement\s*annuity\s*fund)/.test(normalised)) return 'product type';
+  if (/(current\s*value|fund\s*value|market\s*value|closing\s*balance)/.test(normalised)) return 'current value';
+  if (/(est\s*maturity\s*value|estimated\s*maturity\s*value)/.test(normalised)) return 'est maturity value';
+
+  return normalised;
 }
 
 export function buildIntegrationBindingsForFields<TField extends BindingFieldLike, TBinding extends IntegrationFieldBindingLike>(
@@ -142,16 +160,21 @@ export function mergeBindingIntoPortalField<TBinding extends IntegrationFieldBin
   const columnName = normaliseIntegrationColumnName(binding.columnName || existing?.columnName || existing?.sourceHeader);
   const targetFieldId = String(binding.targetFieldId || existing?.targetFieldId || '').trim();
   const targetFieldName = String(binding.targetFieldName || existing?.targetFieldName || targetFieldId || columnName || 'Field').trim();
-  const bindingLabels = normaliseIntegrationLabelList(binding.portalLabels);
+  const bindingLabels = normaliseIntegrationLabelList(binding.portalLabels ?? binding.labels);
   const fallbackLabels = normaliseIntegrationLabelList(existing?.labels);
+  const mergedLabels = Array.from(new Set([
+    ...bindingLabels,
+    ...fallbackLabels,
+  ])).slice(0, 12);
+  const generatedLabels = normaliseIntegrationLabelList([targetFieldName, columnName]);
 
   return {
     sourceHeader: columnName,
     columnName,
     targetFieldId: targetFieldId || undefined,
     targetFieldName,
-    selector: String(binding.portalSelector || existing?.selector || '').trim().slice(0, 500),
-    labels: bindingLabels.length > 0 ? bindingLabels : fallbackLabels,
+    selector: String(binding.portalSelector || binding.selector || existing?.selector || '').trim().slice(0, 500),
+    labels: mergedLabels.length > 0 ? mergedLabels : generatedLabels,
     attribute: String(existing?.attribute || 'text').trim().slice(0, 40) || 'text',
     required: binding.required === true || existing?.required === true,
     transform: String(binding.transform || existing?.transform || 'trim').trim().slice(0, 40) || 'trim',
@@ -184,12 +207,18 @@ export function buildPortalFieldsFromBindings<TBinding extends IntegrationFieldB
       .map((field) => [normaliseIntegrationColumnName(field.columnName || field.sourceHeader), field] as const)
       .filter(([columnName]) => columnName),
   );
+  const currentByMeaning = new Map(
+    existingFields
+      .map((field) => [normalisePortalFieldMeaning(field.targetFieldName || field.columnName || field.sourceHeader), field] as const)
+      .filter(([meaning]) => meaning),
+  );
 
   return bindings
     .map((binding) => {
       const targetFieldId = String(binding.targetFieldId || '').trim();
       const columnName = normaliseIntegrationColumnName(binding.columnName);
-      const existing = currentByTarget.get(targetFieldId) || currentByColumn.get(columnName);
+      const meaning = normalisePortalFieldMeaning(binding.targetFieldName || binding.columnName);
+      const existing = currentByTarget.get(targetFieldId) || currentByColumn.get(columnName) || currentByMeaning.get(meaning);
       return mergeBindingIntoPortalField(binding, existing);
     })
     .filter((field) => normaliseIntegrationColumnName(field.columnName || field.sourceHeader));

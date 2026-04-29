@@ -17,6 +17,9 @@ import { getClientProfileQueryOptions } from '../api';
 import { NotesAPI } from '../../notes/api';
 import { NOTES_STALE_TIME } from '../../notes/constants';
 import { noteKeys } from '../../../../../utils/queryKeys';
+import { esignApi } from '../../esign/api';
+import { QUERY_GC_TIME, QUERY_STALE_TIME } from '../../esign/constants';
+import { esignKeys } from '../../esign/hooks/useEnvelopesQuery';
 
 const loadClientProfileViewerFull = () =>
   import('../../../ClientProfileViewerFull').then((m) => ({ default: m.ClientProfileViewerFull }));
@@ -81,6 +84,19 @@ function TabPanelFallback() {
   );
 }
 
+type DrawerTab =
+  | 'overview'
+  | 'personal'
+  | 'policies'
+  | 'security'
+  | 'documents'
+  | 'esign'
+  | 'compliance'
+  | 'communication'
+  | 'notes';
+
+const DEFAULT_PERSISTED_TABS: DrawerTab[] = ['overview'];
+
 /**
  * Inner component for the client drawer workspace.
  *
@@ -102,9 +118,28 @@ function TabPanelFallback() {
 function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: ClientDrawerInnerProps) {
   const queryClient = useQueryClient();
   const [sanctionsScreeningRunning, setSanctionsScreeningRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState<DrawerTab>('overview');
+  const [persistedTabs, setPersistedTabs] = useState<Set<DrawerTab>>(() => new Set(DEFAULT_PERSISTED_TABS));
   // Hardcoded for now as in original file
   const lastSanctionsCheck = '2024-01-15 14:30:00';
+
+  const persistTab = (tab: DrawerTab) => {
+    setPersistedTabs((previous) => {
+      if (previous.has(tab)) {
+        return previous;
+      }
+
+      const next = new Set(previous);
+      next.add(tab);
+      return next;
+    });
+  };
+
+  const handleTabChange = (value: string) => {
+    const nextTab = value as DrawerTab;
+    setActiveTab(nextTab);
+    persistTab(nextTab);
+  };
 
   const handleSanctionsScreening = () => {
     setSanctionsScreeningRunning(true);
@@ -125,8 +160,11 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
   useEffect(() => {
     if (!open) {
       setActiveTab('overview');
+      setPersistedTabs(new Set(DEFAULT_PERSISTED_TABS));
       return;
     }
+
+    setPersistedTabs(new Set(DEFAULT_PERSISTED_TABS));
 
     let cancelled = false;
     const wait = (ms: number) => new Promise<void>((resolve) => {
@@ -136,8 +174,14 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
     const preloadSequence: Array<() => Promise<unknown>> = [
       () => queryClient.prefetchQuery(getClientProfileQueryOptions(client.id)),
       () => loadClientProfileViewerFull(),
-      () => loadDocumentsTab(),
-      () => loadPolicyDetailsSection(),
+      async () => {
+        await loadPolicyDetailsSection();
+        persistTab('policies');
+      },
+      async () => {
+        await loadDocumentsTab();
+        persistTab('documents');
+      },
       () => queryClient.prefetchQuery({
         queryKey: noteKeys.clientNotes(client.id),
         queryFn: () => NotesAPI.getClientNotes(client.id),
@@ -151,7 +195,19 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
       }),
       () => loadCommunicationTab(),
       () => loadSecurityTab(),
-      () => loadEsignTab(),
+      async () => {
+        await queryClient.prefetchQuery({
+          queryKey: esignKeys.clientEnvelopes(client.id),
+          queryFn: async () => {
+            const response = await esignApi.getClientEnvelopes(client.id, client.email);
+            return response.envelopes || [];
+          },
+          staleTime: QUERY_STALE_TIME,
+          gcTime: QUERY_GC_TIME,
+        });
+        await loadEsignTab();
+        persistTab('esign');
+      },
       () => loadComplianceTab(),
     ];
 
@@ -176,7 +232,7 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
     return () => {
       cancelled = true;
     };
-  }, [client.id, open, queryClient]);
+  }, [client.email, client.id, open, queryClient]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
@@ -212,7 +268,7 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
         {/* MAIN TABS - Level 1: Primary Navigation
             Uses ShadCN Tabs component with rounded, filled style
             See: /components/admin/TAB_DESIGN_STANDARDS.md */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6">
           <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="personal">Personal Details</TabsTrigger>
@@ -238,49 +294,49 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
           </TabsList>
 
           {/* 0. Overview — Client-side dashboard view */}
-          <TabsContent value="overview" className="space-y-4">
+          <TabsContent value="overview" forceMount={persistedTabs.has('overview')} className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <ClientOverviewTab client={client} />
             </Suspense>
           </TabsContent>
 
           {/* 1. Personal Details Section */}
-          <TabsContent value="personal" className="space-y-4 h-[calc(100vh-300px)]">
+          <TabsContent value="personal" forceMount={persistedTabs.has('personal')} className="space-y-4 h-[calc(100vh-300px)]">
             <Suspense fallback={<TabPanelFallback />}>
               <ClientProfileViewerFull clientData={client} />
             </Suspense>
           </TabsContent>
 
           {/* 2. Policy Details Section */}
-          <TabsContent value="policies" className="space-y-4">
+          <TabsContent value="policies" forceMount={persistedTabs.has('policies')} className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <PolicyDetailsSection selectedClient={client} />
             </Suspense>
           </TabsContent>
 
           {/* 3. Security Section */}
-          <TabsContent value="security" className="space-y-4">
+          <TabsContent value="security" forceMount={persistedTabs.has('security')} className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <SecurityTab selectedClient={client} />
             </Suspense>
           </TabsContent>
 
           {/* 4. Documents Section */}
-          <TabsContent value="documents" className="space-y-4">
+          <TabsContent value="documents" forceMount={persistedTabs.has('documents')} className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <DocumentsTab selectedClient={client} />
             </Suspense>
           </TabsContent>
 
           {/* 5. E-Sign Section */}
-          <TabsContent value="esign" className="space-y-4">
+          <TabsContent value="esign" forceMount={persistedTabs.has('esign')} className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <EsignTab selectedClient={client} />
             </Suspense>
           </TabsContent>
 
           {/* 6. Compliance Section */}
-          <TabsContent value="compliance" className="space-y-4">
+          <TabsContent value="compliance" forceMount={persistedTabs.has('compliance')} className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <ComplianceTab 
                 selectedClient={client}
@@ -292,14 +348,14 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
           </TabsContent>
 
           {/* 7. Communication Section */}
-          <TabsContent value="communication" className="space-y-4">
+          <TabsContent value="communication" forceMount={persistedTabs.has('communication')} className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <CommunicationTab client={client} />
             </Suspense>
           </TabsContent>
 
           {/* 8. Notes Section */}
-          <TabsContent value="notes" className="space-y-4">
+          <TabsContent value="notes" forceMount={persistedTabs.has('notes')} className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <ClientNotesTab selectedClient={client} />
             </Suspense>

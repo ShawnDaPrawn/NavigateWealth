@@ -104,10 +104,46 @@ describe('buildPortalFieldsFromBindings', () => {
         targetFieldId: 'fundValue',
         targetFieldName: 'Fund Value',
         selector: '[data-field="fundValue"]',
-        labels: ['Fund value', 'Current value'],
+        labels: ['Fund value', 'Current value', 'Value'],
         attribute: 'text',
         required: false,
         transform: 'number',
+      },
+    ]);
+  });
+
+  it('matches fallback portal fields by semantic target meaning when column names differ', () => {
+    const fields = buildPortalFieldsFromBindings(
+      [
+        {
+          columnName: 'Closing balance',
+          targetFieldName: 'Current Value',
+        },
+      ],
+      [
+        {
+          sourceHeader: 'Fund Value',
+          columnName: 'Fund Value',
+          targetFieldName: 'Current Value',
+          selector: 'td:nth-child(4)',
+          labels: ['Fund value', 'Market value', 'Current value'],
+          attribute: 'text',
+          transform: 'trim',
+        },
+      ],
+    );
+
+    expect(fields).toEqual([
+      {
+        sourceHeader: 'Closing balance',
+        columnName: 'Closing balance',
+        targetFieldId: undefined,
+        targetFieldName: 'Current Value',
+        selector: 'td:nth-child(4)',
+        labels: ['Fund value', 'Market value', 'Current value'],
+        attribute: 'text',
+        required: false,
+        transform: 'trim',
       },
     ]);
   });

@@ -656,6 +656,10 @@ export function PortalAutomationTab({
                       {fieldSelectors.map((field, index) => {
                         const binding = getBindingForPortalField(field);
                         const bindingLabels = normaliseIntegrationLabelList(binding?.portalLabels);
+                        const effectiveLabels = bindingLabels.length > 0
+                          ? bindingLabels
+                          : normaliseIntegrationLabelList(field.labels);
+                        const effectiveSelector = String(binding?.portalSelector || field.selector || '').trim();
                         return (
                           <div key={`${getPortalFieldKey(field)}-${index}`} className="grid grid-cols-1 gap-2 rounded-md border bg-gray-50 p-3 md:grid-cols-[180px_1fr] md:items-start">
                             <div>
@@ -666,13 +670,13 @@ export function PortalAutomationTab({
                             <div className="space-y-2 rounded-md border bg-white px-3 py-2 text-sm text-gray-700">
                               <p>
                                 <span className="font-medium text-gray-900">Provider labels:</span>{' '}
-                                {bindingLabels.length > 0
-                                  ? bindingLabels.join(', ')
-                                  : 'No explicit provider labels configured yet'}
+                                {effectiveLabels.length > 0
+                                  ? effectiveLabels.join(', ')
+                                  : 'No labels are available for this field yet'}
                               </p>
                               <p>
                                 <span className="font-medium text-gray-900">Selector override:</span>{' '}
-                                {binding?.portalSelector || 'None configured in Mapping Configuration'}
+                                {effectiveSelector || 'No selector fallback is available for this field yet'}
                               </p>
                             </div>
                           </div>
