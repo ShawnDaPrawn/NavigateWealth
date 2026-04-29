@@ -404,7 +404,8 @@ export function ClientManagementModule() {
       </Tabs>
 
       <Suspense fallback={<LazyFallback />}>
-        <ClientDrawer 
+        <ClientDrawer
+          key={selectedClient?.id ?? 'drawer-closed'}
           client={selectedClient}
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
