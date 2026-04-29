@@ -9,6 +9,12 @@ import { logAuthEvent } from "./authLogger.ts";
 import { validatePassword, validateEmail, validatePhoneNumber, sanitizeInput } from "./passwordValidator.ts";
 import { createModuleLogger } from "./stderr-logger.ts";
 import { SUPER_ADMIN_EMAIL } from "./constants.ts";
+import type { Context } from 'npm:hono';
+import {
+  extractClientIp,
+  getBlockedIpAddress,
+  getBlockedIpAddressWarning,
+} from '../../../shared/submissions/blockedIpAddresses.ts';
 
 const authRoutes = new Hono();
 const log = createModuleLogger('auth-routes');
@@ -19,13 +25,9 @@ const getSupabase = () => createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
-import type { Context } from 'npm:hono';
-
 // Helper function to get client IP
 function getClientIP(c: Context): string {
-  return c.req.header('X-Forwarded-For')?.split(',')[0]?.trim() || 
-         c.req.header('X-Real-IP') || 
-         'unknown';
+  return extractClientIp((headerName) => c.req.header(headerName)) || 'unknown';
 }
 
 // Helper function to get user agent
@@ -41,6 +43,22 @@ function getUserAgent(c: Context): string {
 authRoutes.post("/signup-validate", async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
+  const blockedIpAddress = getBlockedIpAddress(ip);
+
+  if (blockedIpAddress) {
+    await logAuthEvent('signup_attempt', undefined, false, {
+      ip,
+      userAgent,
+      errorMessage: getBlockedIpAddressWarning(blockedIpAddress),
+    });
+
+    return c.json({
+      error: getBlockedIpAddressWarning(blockedIpAddress),
+      blocked: true,
+      warning: true,
+      blockedIpAddress,
+    }, 403);
+  }
   
   try {
     const { email, password, firstName, surname, phoneNumber, countryCode } = await c.req.json();
@@ -162,6 +180,22 @@ authRoutes.post("/signup-validate", async (c) => {
 authRoutes.post("/signup", async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
+  const blockedIpAddress = getBlockedIpAddress(ip);
+
+  if (blockedIpAddress) {
+    await logAuthEvent('signup_attempt', undefined, false, {
+      ip,
+      userAgent,
+      errorMessage: getBlockedIpAddressWarning(blockedIpAddress),
+    });
+
+    return c.json({
+      error: getBlockedIpAddressWarning(blockedIpAddress),
+      blocked: true,
+      warning: true,
+      blockedIpAddress,
+    }, 403);
+  }
 
   try {
     const { email, password, metadata } = await c.req.json();

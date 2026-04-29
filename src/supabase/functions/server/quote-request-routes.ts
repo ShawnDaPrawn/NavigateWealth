@@ -31,6 +31,10 @@ import {
   getBlockedEmailDomain,
   getBlockedEmailDomainWarning,
 } from '../../../shared/submissions/blockedEmailDomains.ts';
+import {
+  getBlockedClientIp,
+  getBlockedIpAddressWarning,
+} from '../../../shared/submissions/blockedIpAddresses.ts';
 
 const app = new Hono();
 const log = createModuleLogger('quote-request');
@@ -61,6 +65,19 @@ app.get('/', (c) => c.json({ service: 'quote-request', status: 'active' }));
  * Accepts both initial (gateway) and full (product-specific) submissions.
  */
 app.post('/submit', asyncHandler(async (c) => {
+  const blockedIpAddress = getBlockedClientIp((headerName) => c.req.header(headerName));
+  if (blockedIpAddress) {
+    log.warn('Blocked quote request from abusive IP address', { blockedIpAddress });
+    return c.json(
+      {
+        error: getBlockedIpAddressWarning(blockedIpAddress),
+        warning: true,
+        blockedIpAddress,
+      },
+      403,
+    );
+  }
+
   const body = await c.req.json();
 
     // --- Validate required fields via Zod schema --------------------------------

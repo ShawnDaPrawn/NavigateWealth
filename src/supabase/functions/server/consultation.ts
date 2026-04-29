@@ -29,6 +29,10 @@ import {
   getBlockedEmailDomain,
   getBlockedEmailDomainWarning,
 } from '../../../shared/submissions/blockedEmailDomains.ts';
+import {
+  getBlockedClientIp,
+  getBlockedIpAddressWarning,
+} from '../../../shared/submissions/blockedIpAddresses.ts';
 
 const app = new Hono();
 const log = createModuleLogger('consultation');
@@ -131,6 +135,19 @@ app.get('', (c) => c.json({ service: 'consultation', status: 'active' }));
 
 // Consultation request endpoint
 app.post('/request', asyncHandler(async (c) => {
+  const blockedIpAddress = getBlockedClientIp((headerName) => c.req.header(headerName));
+  if (blockedIpAddress) {
+    log.warn('Blocked consultation request from abusive IP address', { blockedIpAddress });
+    return c.json(
+      {
+        error: getBlockedIpAddressWarning(blockedIpAddress),
+        warning: true,
+        blockedIpAddress,
+      },
+      403,
+    );
+  }
+
   const body = await c.req.json();
 
   // --- Validate via Zod schema --------------------------------------------------

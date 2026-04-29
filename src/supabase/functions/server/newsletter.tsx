@@ -29,6 +29,11 @@ import { formatZodError } from './shared-validation-utils.ts';
 import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import {
+  extractClientIp,
+  getBlockedIpAddress,
+  getBlockedIpAddressWarning,
+} from '../../../shared/submissions/blockedIpAddresses.ts';
 
 // Service layer (§4.2)
 import {
@@ -59,6 +64,17 @@ app.get('', (c) => c.json({ service: 'newsletter', status: 'active' }));
 
 // Newsletter subscription endpoint - Double Opt-In
 app.post("/subscribe", asyncHandler(async (c) => {
+  const ip = extractClientIp((headerName) => c.req.header(headerName)) || 'Unknown';
+  const blockedIpAddress = getBlockedIpAddress(ip);
+  if (blockedIpAddress) {
+    log.warn('Blocked newsletter subscription from abusive IP address', { blockedIpAddress });
+    return c.json({
+      error: getBlockedIpAddressWarning(blockedIpAddress),
+      warning: true,
+      blockedIpAddress,
+    }, 403);
+  }
+
   const body = await c.req.json();
   
   // Validate email via Zod schema
@@ -85,8 +101,6 @@ app.post("/subscribe", asyncHandler(async (c) => {
   
   // Get user agent and IP for logging
   const userAgent = c.req.header('User-Agent') || 'Unknown';
-  const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP') || 'Unknown';
-  
   // Store pending subscription in KV store
   await kv.set(subscriptionKey, {
     email,

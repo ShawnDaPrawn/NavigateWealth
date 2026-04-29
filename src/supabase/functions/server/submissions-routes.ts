@@ -33,6 +33,10 @@ import {
   getBlockedEmailDomain,
   getBlockedEmailDomainWarning,
 } from '../../../shared/submissions/blockedEmailDomains.ts';
+import {
+  getBlockedClientIp,
+  getBlockedIpAddressWarning,
+} from '../../../shared/submissions/blockedIpAddresses.ts';
 
 const log = createModuleLogger('submissions-routes');
 const app = new Hono();
@@ -143,6 +147,20 @@ app.get('/:id', requireAuth, asyncHandler(async (c) => {
 //   - Honeypot field (silent rejection for bots)
 //   - Email-based rate limiting (5 per hour per email)
 app.post('/', asyncHandler(async (c) => {
+  const blockedIpAddress = getBlockedClientIp((headerName) => c.req.header(headerName));
+  if (blockedIpAddress) {
+    log.warn('Blocked public submission from abusive IP address', { blockedIpAddress });
+    return c.json(
+      {
+        success: false,
+        error: getBlockedIpAddressWarning(blockedIpAddress),
+        warning: true,
+        blockedIpAddress,
+      },
+      403,
+    );
+  }
+
   const body = await c.req.json();
 
   // --- Validate via Zod schema --------------------------------------------------

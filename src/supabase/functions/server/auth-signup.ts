@@ -11,6 +11,10 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { recalculateAllGroupMemberships } from './communication-repo.ts';
 import { generateApplicationNumber } from './application-number-utils.ts';
 import { submissionsService } from './submissions-service.ts';
+import {
+  getBlockedClientIp,
+  getBlockedIpAddressWarning,
+} from '../../../shared/submissions/blockedIpAddresses.ts';
 
 const app = new Hono();
 const log = createModuleLogger('auth-signup');
@@ -28,6 +32,16 @@ const getSupabaseClient = () => {
  * Create user account and automatically generate application
  */
 app.post('/signup', async (c) => {
+  const blockedIpAddress = getBlockedClientIp((headerName) => c.req.header(headerName));
+  if (blockedIpAddress) {
+    log.warn('Blocked auth signup from abusive IP address', { blockedIpAddress });
+    return c.json({
+      error: getBlockedIpAddressWarning(blockedIpAddress),
+      warning: true,
+      blockedIpAddress,
+    }, 403);
+  }
+
   try {
     log.info('🔐 User signup request received');
     
