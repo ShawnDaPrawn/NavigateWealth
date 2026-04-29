@@ -168,4 +168,5 @@ export const ENDPOINTS = {
   DUPLICATE: (id: string) => `/tasks/${id}/duplicate`,
   ARCHIVE: (id: string) => `/tasks/${id}/archive`,
   UNARCHIVE: (id: string) => `/tasks/${id}/unarchive`,
+  CHECKLIST: (id: string) => `/task-checklists/${id}`,
 } as const;

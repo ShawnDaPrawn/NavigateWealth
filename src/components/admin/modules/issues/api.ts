@@ -14,6 +14,7 @@ import {
   inferQualityIssuePriority,
   summarizeQualityIssues,
 } from '../../../../shared/quality/qualityIssues';
+import { buildQualityIssueTaskPlan } from '../../../../shared/quality/qualityIssueTasks';
 
 function normalizeSnapshotForClient(snapshot: QualityIssueSnapshot): QualityIssueSnapshot {
   const issues = (snapshot.issues || []).map((issue) => {
@@ -76,33 +77,35 @@ export async function runQualityIssueAutomation(): Promise<{
 }
 
 function buildIssueTaskPayload(issue: QualityIssue) {
-  const prefix = issue.category === 'security' ? 'Patch' : issue.category === 'runtime' ? 'Investigate' : 'Resolve';
-  const location = issue.filePath ? `\nLocation: ${issue.filePath}` : '';
-  const metadata = [
-    issue.ruleId ? `Rule: ${issue.ruleId}` : '',
-    issue.packageName ? `Package: ${issue.packageName}${issue.packageVersion ? `@${issue.packageVersion}` : ''}` : '',
-    issue.referenceUrl ? `Reference: ${issue.referenceUrl}` : '',
-    `Fingerprint: ${issue.fingerprint}`,
-  ].filter(Boolean).join('\n');
+  const plan = buildQualityIssueTaskPlan(issue);
 
   return {
-    title: `${prefix}: ${issue.title}`.slice(0, 500),
-    description: `${issue.message}${location}${metadata ? `\n\n${metadata}` : ''}`.slice(0, 5000),
+    title: plan.title,
+    description: plan.description,
     priority: issue.priority,
     category: 'internal' as const,
-    tags: ['issue-manager', issue.category, issue.source],
+    tags: plan.tags,
   };
 }
 
 export async function createQualityIssueRemediationTask(issue: QualityIssue) {
+  const taskPlan = buildQualityIssueTaskPlan(issue);
   const task = await TasksAPI.createTask(buildIssueTaskPayload(issue));
+  await TasksAPI.saveChecklist(
+    task.id,
+    taskPlan.checklist.map((text, index) => ({
+      id: `${task.id}-issue-step-${index + 1}`,
+      text,
+      completed: false,
+    })),
+  );
   const workflow = await updateQualityIssueWorkflow({
     fingerprint: issue.fingerprint,
     linkedTaskId: task.id,
     linkedTaskTitle: task.title,
     status: issue.status === 'open' ? 'acknowledged' : issue.status,
     ownerName: issue.ownerName || undefined,
-    statusNote: issue.statusNote || undefined,
+    statusNote: issue.statusNote || taskPlan.statusNote,
     resolutionEvidence: issue.resolutionEvidence || undefined,
   });
 

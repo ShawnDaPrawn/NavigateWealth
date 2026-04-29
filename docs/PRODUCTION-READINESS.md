@@ -27,8 +27,9 @@ Landed since the 2026-04-20 CORS restore:
 - Issue Manager is now shipped and operational on `main`, including GitHub
   quality snapshot ingestion, workflow state, automation, security intake, and
   runtime-client issue capture.
-- Latest Phase 10 commit on `main`:
-  `080b4eda fix: pin production Supabase config`.
+- Latest Phase 10 commits on `main`:
+  `080b4eda fix: pin production Supabase config` and
+  `013131d1 fix: stabilize phase 10 verification`.
 - Supabase Edge Function deploy workflow has succeeded from GitHub Actions for
   `080b4eda`:
   `Deploy Supabase Edge Function` run `25119424230`.
@@ -50,16 +51,18 @@ Landed since the 2026-04-20 CORS restore:
   hardcoded values only as bootstrapping fallbacks.
 - `npm test` currently exits 0: 12 test files, 136 tests.
 - `npm run build` passes on the Phase 10 tree.
-- Issue Manager snapshot after Phase 10 triage has 9 total issues and 4 open
-  issues. The 5 stale runtime-client entries were marked resolved; the open
-  issues are current dependency-audit items for Quill/react-quill-new and xlsx.
+- Phase 11 task-quality hardening makes Issue Manager remediation tasks
+  descriptive enough to work from: security tasks now include affected package,
+  installed version, vulnerable range, fix/advisory context, required
+  remediation, verification evidence, and an 8-step checklist.
+- Phase 11 dependency audit burn-down removes the current npm audit findings:
+  `react-quill-new` is held on `3.7.0`, transitive `quill` is overridden to
+  `2.0.2`, and `xlsx` is aliased to `@e965/xlsx@0.20.3`.
+- `npm audit --json` currently reports 0 vulnerabilities after the Phase 11
+  dependency changes.
 
 Remaining production-readiness blockers are now mainly:
 
-- Decide whether to replace Quill/react-quill-new or accept the current
-  sanitized-editor mitigation until upstream fixes exist.
-- Decide whether to replace `xlsx` or keep the current file-size, row-count,
-  and unsafe-key mitigations until a maintained import parser is selected.
 - Continue architecture work, especially the incremental `integrations.tsx`
   split.
 - Review Claude's broad stash only on a separate branch, in slices.

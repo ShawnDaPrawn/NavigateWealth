@@ -12,6 +12,7 @@ import { api } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
 import type {
   Task,
+  TaskChecklistItem,
   CreateTaskInput,
   UpdateTaskInput,
   TaskStats,
@@ -102,6 +103,23 @@ export const TasksAPI = {
       return data;
     } catch (error) {
       handleError(error, 'createTask');
+    }
+  },
+
+  /**
+   * Replace the checklist for a task.
+   */
+  async saveChecklist(taskId: string, checklist: TaskChecklistItem[]): Promise<TaskChecklistItem[]> {
+    logger.debug(`[TasksAPI] Saving checklist for task ${taskId}...`);
+
+    try {
+      const data = await api.post<{ success: boolean; checklist: TaskChecklistItem[] }>(
+        ENDPOINTS.CHECKLIST(taskId),
+        { checklist },
+      );
+      return data.checklist || [];
+    } catch (error) {
+      handleError(error, `saveChecklist(${taskId})`);
     }
   },
 

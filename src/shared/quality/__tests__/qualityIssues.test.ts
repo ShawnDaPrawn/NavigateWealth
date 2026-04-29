@@ -11,6 +11,7 @@ import {
   summarizeQualityIssues,
   type QualityIssue,
 } from '../qualityIssues';
+import { buildQualityIssueTaskPlan } from '../qualityIssueTasks';
 
 function issue(overrides: Partial<QualityIssue>): QualityIssue {
   const base: QualityIssue = {
@@ -193,5 +194,38 @@ describe('quality issue model', () => {
     expect(actions.some((action) => action.includes('Assign an owner'))).toBe(true);
     expect(actions.some((action) => action.includes('upgrade minimist to 1.2.8'))).toBe(true);
     expect(actions.some((action) => action.includes('Create a linked task'))).toBe(true);
+  });
+
+  it('builds descriptive security remediation task plans', () => {
+    const plan = buildQualityIssueTaskPlan(issue({
+      source: 'audit',
+      category: 'security',
+      priority: 'critical',
+      title: 'Prototype pollution in xlsx',
+      message: 'xlsx is vulnerable when parsing crafted workbook files.',
+      packageName: 'xlsx',
+      packageVersion: '0.18.5',
+      vulnerableRange: '<=0.18.5',
+      fixVersion: '0.20.0',
+      cve: 'CVE-2026-1234',
+      advisoryId: 'GHSA-test',
+      cvssScore: 9.1,
+      referenceUrl: 'https://github.com/advisories/GHSA-test',
+      runUrl: 'https://github.com/ShawnDaPrawn/NavigateWealth/actions/runs/1',
+      fingerprint: 'audit:security:xlsx:prototype-pollution',
+    }));
+
+    expect(plan.title).toContain('[Security] Upgrade xlsx to 0.20.0');
+    expect(plan.description).toContain('Affected Dependency');
+    expect(plan.description).toContain('Package: xlsx@0.18.5');
+    expect(plan.description).toContain('Vulnerable range: <=0.18.5');
+    expect(plan.description).toContain('CVE: CVE-2026-1234');
+    expect(plan.description).toContain('Required Remediation');
+    expect(plan.description).toContain('Rerun the Issue Manager security intake');
+    expect(plan.checklist).toEqual(expect.arrayContaining([
+      'Run npm audit and capture the fresh result.',
+      'Run npm test.',
+      'Run npm run build.',
+    ]));
   });
 });

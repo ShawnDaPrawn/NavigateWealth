@@ -5,7 +5,7 @@
     "zod": "npm:zod@3.24.1",
     "@supabase/supabase-js": "jsr:@supabase/supabase-js@2.49.8",
     "pdf-lib": "npm:pdf-lib@1.17.1",
-    "xlsx": "npm:xlsx@0.18.5",
+    "xlsx": "npm:@e965/xlsx@0.20.3",
     "@/": "./",
     "@shared/": "./shared-lib/"
   },

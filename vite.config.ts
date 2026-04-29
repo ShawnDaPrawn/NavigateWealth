@@ -107,7 +107,7 @@ function getManualChunk(id: string): string | undefined {
     return 'vendor-docx';
   }
 
-  if (id.includes('/xlsx/')) {
+  if (id.includes('/xlsx/') || id.includes('/@e965/xlsx/')) {
     return 'vendor-xlsx';
   }
 

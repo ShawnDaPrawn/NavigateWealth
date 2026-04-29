@@ -1,5 +1,5 @@
 import { Hono } from 'npm:hono';
-import * as XLSX from 'npm:xlsx';
+import * as XLSX from 'npm:@e965/xlsx@0.20.3';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { DEFAULT_SCHEMAS } from './default-schemas.ts';

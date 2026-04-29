@@ -25,6 +25,7 @@ import {
   type QualityIssueWorkflowState,
   type QualityIssueWorkflowUpdate,
 } from '../../../shared/quality/qualityIssues.ts';
+import { buildQualityIssueTaskPlan } from '../../../shared/quality/qualityIssueTasks.ts';
 import type { KvTask } from './tasks-types.ts';
 
 const app = new Hono();
@@ -423,6 +424,10 @@ function taskKey(id: string): string {
   return `task:${id}`;
 }
 
+function taskChecklistKey(id: string): string {
+  return `task_checklist:${id}`;
+}
+
 async function getNextTaskSortOrder(status = 'new'): Promise<number> {
   try {
     const allRaw = await kv.getByPrefix('task:') as Array<Record<string, unknown>> | null;
@@ -434,6 +439,24 @@ async function getNextTaskSortOrder(status = 'new'): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+function buildTaskChecklist(taskId: string, checklist: string[]) {
+  return checklist.map((text, index) => ({
+    id: `${taskId}-issue-step-${index + 1}`,
+    text,
+    completed: false,
+  }));
+}
+
+function isIssueManagerTask(task: Record<string, unknown>): boolean {
+  const tags = Array.isArray(task.tags) ? task.tags.map(String) : [];
+  return (
+    tags.includes('issue-manager')
+    || task.created_by === 'issue-manager-automation'
+    || String(task.title || '').startsWith('[Issue Manager]')
+    || String(task.title || '').startsWith('[Security]')
+  );
 }
 
 function getAutomationTaskDueDate(issue: QualityIssue, now: Date): string {
@@ -455,23 +478,12 @@ function buildAutomationTask(
 ): KvTask {
   const id = crypto.randomUUID();
   const timestamp = now.toISOString();
-  const metadata = [
-    `Issue alert: ${alert.title}`,
-    `Action: ${alert.actionLabel}`,
-    `Priority: ${issue.priority}`,
-    `Source: ${issue.source}`,
-    `Category: ${issue.category}`,
-    issue.packageName ? `Package: ${issue.packageName}${issue.packageVersion ? `@${issue.packageVersion}` : ''}` : '',
-    issue.fixVersion ? `Fix version: ${issue.fixVersion}` : '',
-    issue.referenceUrl ? `Reference: ${issue.referenceUrl}` : '',
-    issue.filePath ? `Location: ${issue.filePath}${typeof issue.line === 'number' ? `:${issue.line}` : ''}` : '',
-    `Fingerprint: ${issue.fingerprint}`,
-  ].filter(Boolean).join('\n');
+  const plan = buildQualityIssueTaskPlan(issue, alert);
 
   return {
     id,
-    title: `[Issue Manager] ${alert.title}: ${issue.title}`.slice(0, 500),
-    description: `${issue.message}\n\n${metadata}`.slice(0, 5000),
+    title: plan.title,
+    description: plan.description,
     status: 'new',
     priority: issue.priority,
     due_date: getAutomationTaskDueDate(issue, now),
@@ -485,9 +497,45 @@ function buildAutomationTask(
     sort_order: sortOrder,
     reminder_frequency: issue.priority === 'critical' || issue.priority === 'high' ? 'daily' : null,
     last_reminder_sent: null,
-    tags: ['issue-manager', 'automated-alert', issue.category, issue.source],
+    tags: [...new Set([...plan.tags, 'automated-alert'])],
     category: 'internal',
   };
+}
+
+async function saveIssueTaskChecklist(taskId: string, issue: QualityIssue, alert: QualityIssueAlert): Promise<void> {
+  const plan = buildQualityIssueTaskPlan(issue, alert);
+  await kv.set(taskChecklistKey(taskId), buildTaskChecklist(taskId, plan.checklist));
+}
+
+async function refreshLinkedIssueTask(
+  taskId: string,
+  issue: QualityIssue,
+  alert: QualityIssueAlert,
+  now: Date,
+): Promise<{ changed: boolean; title?: string }> {
+  const existing = await kv.get(taskKey(taskId)) as Record<string, unknown> | null;
+  if (!existing || !isIssueManagerTask(existing)) {
+    return { changed: false };
+  }
+
+  const plan = buildQualityIssueTaskPlan(issue, alert);
+  const updated = {
+    ...existing,
+    title: plan.title,
+    description: plan.description,
+    priority: issue.priority,
+    due_date: existing.due_date ?? getAutomationTaskDueDate(issue, now),
+    reminder_frequency: existing.reminder_frequency ?? (
+      issue.priority === 'critical' || issue.priority === 'high' ? 'daily' : null
+    ),
+    tags: [...new Set([...(Array.isArray(existing.tags) ? existing.tags.map(String) : []), ...plan.tags, 'automated-alert'])],
+    category: existing.category ?? 'internal',
+    updated_at: now.toISOString(),
+  };
+
+  await kv.set(taskKey(taskId), updated);
+  await kv.set(taskChecklistKey(taskId), buildTaskChecklist(taskId, plan.checklist));
+  return { changed: true, title: plan.title };
 }
 
 async function runIssueAutomation(
@@ -512,18 +560,35 @@ async function runIssueAutomation(
     if (issueAlerts.length === 0) continue;
 
     const existingWorkflow = nextWorkflowState[issue.fingerprint];
-    if (issue.linkedTaskId || existingWorkflow?.linkedTaskId) {
+    const primaryAlert = [...issueAlerts].sort((a, b) => (
+      Number(b.severity === 'critical') - Number(a.severity === 'critical')
+    ))[0];
+
+    const linkedTaskId = issue.linkedTaskId || existingWorkflow?.linkedTaskId;
+    if (linkedTaskId) {
+      const refreshedTask = await refreshLinkedIssueTask(linkedTaskId, issue, primaryAlert, now);
+      if (refreshedTask.changed) {
+        changed = true;
+        nextWorkflowState[issue.fingerprint] = mergeWorkflowState(existingWorkflow, {
+          fingerprint: issue.fingerprint,
+          linkedTaskId,
+          linkedTaskTitle: refreshedTask.title || issue.linkedTaskTitle || existingWorkflow?.linkedTaskTitle,
+          status: existingWorkflow?.status || issue.status,
+          statusNote: existingWorkflow?.statusNote
+            ? undefined
+            : buildQualityIssueTaskPlan(issue, primaryAlert).statusNote,
+        }, actorLabel);
+      }
       tasksLinked += 1;
       continue;
     }
 
-    const primaryAlert = [...issueAlerts].sort((a, b) => (
-      Number(b.severity === 'critical') - Number(a.severity === 'critical')
-    ))[0];
+    const taskPlan = buildQualityIssueTaskPlan(issue, primaryAlert);
     const task = buildAutomationTask(issue, primaryAlert, now, nextSortOrder);
     nextSortOrder += 1;
 
     await kv.set(taskKey(task.id), task);
+    await saveIssueTaskChecklist(task.id, issue, primaryAlert);
     tasksCreated += 1;
     tasksLinked += 1;
     changed = true;
@@ -535,7 +600,7 @@ async function runIssueAutomation(
       status: existingWorkflow?.status || issue.status,
       statusNote: existingWorkflow?.statusNote
         ? undefined
-        : `Automation opened a remediation task because: ${primaryAlert.message}`,
+        : taskPlan.statusNote,
     }, actorLabel);
   }
 
