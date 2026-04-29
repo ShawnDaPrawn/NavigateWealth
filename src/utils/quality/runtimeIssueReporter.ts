@@ -1,7 +1,7 @@
-import { projectId } from '../supabase/info';
+import { supabaseUrl } from '../supabase/info';
 import { createClient } from '../supabase/client';
 
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+const API_BASE = `${supabaseUrl}/functions/v1/make-server-91ed8379`;
 const REPORT_ENDPOINT = `${API_BASE}/quality-issues/runtime-client`;
 const MAX_FIELD_LENGTH = 1600;
 const SEND_DEBOUNCE_MS = 10000;

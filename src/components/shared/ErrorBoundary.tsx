@@ -83,6 +83,15 @@ export class ErrorBoundary extends Component<Props, State> {
     window.location.href = '/';
   };
 
+  handleReload = () => {
+    window.location.reload();
+  };
+
+  private isDynamicImportError(error: Error | null): boolean {
+    const message = `${error?.name || ''} ${error?.message || ''}`;
+    return /failed to fetch dynamically imported module|loading chunk|chunkloaderror/i.test(message);
+  }
+
   private isDevelopment(): boolean {
     // @ts-ignore
     return import.meta.env?.DEV || false;
@@ -94,6 +103,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
     if (hasError) {
       const showTechDetails = this.isDevelopment() || showDetails;
+      const isDynamicImportError = this.isDynamicImportError(error);
+      const message = isDynamicImportError
+        ? 'A new version is available. Refresh the page to load the latest application files.'
+        : fallbackMessage || error?.message || 'An unexpected error occurred. Please try again.';
 
       // Inline variant: renders within a layout's content area, preserving nav/footer
       if (inline) {
@@ -115,7 +128,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Error Detected</AlertTitle>
                   <AlertDescription>
-                    {fallbackMessage || error?.message || 'An unexpected error occurred. Please try again.'}
+                    {message}
                   </AlertDescription>
                 </Alert>
 
@@ -129,7 +142,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 )}
 
                 <div className="text-sm text-muted-foreground">
-                  <p>You can try refreshing this section. The rest of the site remains available.</p>
+                  <p>{isDynamicImportError ? 'Your session is still intact.' : 'You can try refreshing this section. The rest of the site remains available.'}</p>
                 </div>
               </CardContent>
 
@@ -138,9 +151,9 @@ export class ErrorBoundary extends Component<Props, State> {
                   <Home className="h-4 w-4" />
                   Return Home
                 </Button>
-                <Button onClick={this.handleReset} variant="default" size="sm" className="gap-2">
+                <Button onClick={isDynamicImportError ? this.handleReload : this.handleReset} variant="default" size="sm" className="gap-2">
                   <RefreshCw className="h-4 w-4" />
-                  Try Again
+                  {isDynamicImportError ? 'Refresh Page' : 'Try Again'}
                 </Button>
               </CardFooter>
             </Card>
@@ -167,7 +180,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Error Detected</AlertTitle>
                 <AlertDescription>
-                  {fallbackMessage || error?.message || 'An unexpected error occurred. Our team has been notified.'}
+                  {isDynamicImportError ? message : fallbackMessage || error?.message || 'An unexpected error occurred. Our team has been notified.'}
                 </AlertDescription>
               </Alert>
 
@@ -187,7 +200,7 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
 
               <div className="text-sm text-muted-foreground">
-                <p>Please try refreshing the page. If the problem persists, contact support.</p>
+                <p>{isDynamicImportError ? 'Your browser may have an older application shell after a deployment.' : 'Please try refreshing the page. If the problem persists, contact support.'}</p>
               </div>
             </CardContent>
 
@@ -196,9 +209,9 @@ export class ErrorBoundary extends Component<Props, State> {
                 <Home className="h-4 w-4" />
                 Return Home
               </Button>
-              <Button onClick={this.handleReset} variant="default" className="gap-2">
+              <Button onClick={isDynamicImportError ? this.handleReload : this.handleReset} variant="default" className="gap-2">
                 <RefreshCw className="h-4 w-4" />
-                Try Again
+                {isDynamicImportError ? 'Refresh Page' : 'Try Again'}
               </Button>
             </CardFooter>
           </Card>

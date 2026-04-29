@@ -5,9 +5,7 @@
  */
 
 import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js@2.39.3';
-import { projectId, publicAnonKey } from './info';
-
-const supabaseUrl = `https://${projectId}.supabase.co`;
+import { publicAnonKey, supabaseUrl } from './info';
 
 // Create a singleton instance to avoid creating multiple clients
 let supabaseInstance: SupabaseClient | null = null;

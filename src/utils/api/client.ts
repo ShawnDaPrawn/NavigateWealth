@@ -8,7 +8,7 @@
  * - Request/response interceptors
  */
 
-import { projectId, publicAnonKey } from '../supabase/info';
+import { publicAnonKey, supabaseUrl } from '../supabase/info';
 import { createClient } from '../supabase/client';
 
 /**
@@ -50,7 +50,7 @@ export class APIError extends Error {
 }
 
 class APIClient {
-  private baseURL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+  private baseURL = `${supabaseUrl}/functions/v1/make-server-91ed8379`;
 
   // Mutex for session refresh: prevents concurrent refreshSession() calls from
   // racing each other when multiple queries fire simultaneously with an expired token.

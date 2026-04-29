@@ -13,8 +13,8 @@
  *
  * Security posture (Guidelines §12.4):
  *   - CORS origin is locked down to NW_ALLOWED_ORIGINS (comma-separated).
- *     Local-dev fallback is `http://localhost:3000` only when the env var is
- *     unset.
+ *     If the env var is unset, startup logs a warning and reflects browser
+ *     origins so production cannot be bricked by missing configuration.
  *   - Health endpoints are the ONLY routes that can be reached without a
  *     bearer token; every other sub-router applies `requireAuth` (or a stricter
  *     equivalent) at sub-router scope.
@@ -35,7 +35,7 @@ const app = new Hono();
 // ── CORS ──────────────────────────────────────────────────────────────────
 // Allow-list from environment (Guidelines §12.4 / Phase 0.3).
 // Set `NW_ALLOWED_ORIGINS` in Supabase as a comma-separated list, e.g.
-//   NW_ALLOWED_ORIGINS="https://navigatewealth.co,https://staging.navigatewealth.co"
+//   NW_ALLOWED_ORIGINS="https://www.navigatewealth.co,https://navigatewealth.co"
 //
 // IMPORTANT — fail-OPEN fallback (deliberately):
 //   When `NW_ALLOWED_ORIGINS` is unset we reflect any origin and log a
