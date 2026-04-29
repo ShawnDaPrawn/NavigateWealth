@@ -162,6 +162,8 @@ interface EnvelopeDetailsDialogProps {
   envelope: EsignEnvelope | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Hides reminders, void, and signing/reminder administrator controls — client portal */
+  readOnly?: boolean;
   onSendReminder?: (envelopeId: string) => void;
   onVoidEnvelope?: (envelopeId: string, reason: string) => void;
   onDownloadDocument?: (envelopeId: string) => void;
@@ -173,6 +175,7 @@ export function EnvelopeDetailsDialog({
   envelope,
   open,
   onOpenChange,
+  readOnly = false,
   onSendReminder,
   onVoidEnvelope,
   onDownloadDocument,
@@ -385,7 +388,7 @@ export function EnvelopeDetailsDialog({
                 )}
                 Preview Document
               </Button>
-              {isPending && (
+              {isPending && !readOnly && (
                 <div className="contents">
                   <Button onClick={handleSendReminder} variant="outline" size="sm" className="h-8">
                     <Send className="h-3.5 w-3.5 mr-1.5" />
@@ -490,7 +493,7 @@ export function EnvelopeDetailsDialog({
                 )}
 
                 {/* Signing Mode & Reminders (for active envelopes) */}
-                {isPending && (
+                {isPending && !readOnly && (
                   <div className="grid grid-cols-2 gap-4">
                     <SigningModeSelector
                       envelopeId={envelope.id}
@@ -587,12 +590,14 @@ export function EnvelopeDetailsDialog({
         </DialogContent>
       </Dialog>
 
-      <VoidEnvelopeDialog
-        open={voidDialogOpen}
-        onOpenChange={setVoidDialogOpen}
-        onConfirm={handleVoidConfirm}
-        title={envelope.title}
-      />
+      {!readOnly && (
+        <VoidEnvelopeDialog
+          open={voidDialogOpen}
+          onOpenChange={setVoidDialogOpen}
+          onConfirm={handleVoidConfirm}
+          title={envelope.title}
+        />
+      )}
     </div>
   );
 }

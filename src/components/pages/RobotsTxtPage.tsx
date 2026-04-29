@@ -28,6 +28,7 @@ Disallow: /profile
 Disallow: /security
 Disallow: /history
 Disallow: /communication
+Disallow: /e-signatures
 Disallow: /transactions-documents
 Disallow: /my-adviser
 Disallow: /ai-advisor

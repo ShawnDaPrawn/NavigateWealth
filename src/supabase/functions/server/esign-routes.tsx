@@ -2394,6 +2394,12 @@ esignRoutes.get('/clients/:clientId/envelopes', async (c) => {
     const clientId = c.req.param('clientId');
     const clientEmail = c.req.query('email') || undefined;
 
+    // Portal clients may only fetch their own CRM id (aligns with client-portal-routes.ts).
+    // Staff/adviser/admin callers continue to use this route for arbitrary client envelopes.
+    if (ctx.role === 'client' && ctx.userId !== clientId) {
+      return c.json({ error: 'Forbidden: You may only view your own envelopes' }, 403);
+    }
+
     const envelopes = await getClientEnvelopes(clientId, clientEmail);
 
     // P6.9 — a client can legitimately span firms on a multi-tenant

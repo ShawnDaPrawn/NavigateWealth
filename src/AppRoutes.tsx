@@ -79,6 +79,7 @@ const AIAdvisorPage = React.lazy(() => import('./components/pages/AIAdvisorPage'
 const HistoryPage = React.lazy(() => import('./components/pages/HistoryPage').then(m => ({ default: m.HistoryPage })));
 const ProductsServicesPage = React.lazy(() => import('./components/pages/ProductsServicesPage').then(m => ({ default: m.ProductsServicesPage })));
 const CommunicationPage = React.lazy(() => import('./components/client/communication/CommunicationPage').then(m => ({ default: m.CommunicationPage })));
+const ClientEsignHistoryPage = React.lazy(() => import('./components/client/e-sign/ClientEsignHistoryPage').then(m => ({ default: m.ClientEsignHistoryPage })));
 const TransactionsDocumentsPage = React.lazy(() => import('./components/pages/TransactionsDocumentsPage').then(m => ({ default: m.TransactionsDocumentsPage })));
 const ProfilePage = React.lazy(() => import('./components/pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const SecuritySettingsPage = React.lazy(() => import('./components/pages/SecuritySettingsPage').then(m => ({ default: m.SecuritySettingsPage })));
@@ -199,6 +200,7 @@ export function AppRoutes() {
         <Route path="/history" element={<DashboardRoute><AppLayout><HistoryPage /></AppLayout></DashboardRoute>} />
         <Route path="/products-services" element={<DashboardRoute><AppLayout><ProductsServicesPage /></AppLayout></DashboardRoute>} />
         <Route path="/communication" element={<DashboardRoute><AppLayout><CommunicationPage /></AppLayout></DashboardRoute>} />
+        <Route path="/e-signatures" element={<DashboardRoute><AppLayout><ClientEsignHistoryPage /></AppLayout></DashboardRoute>} />
         <Route path="/transactions-documents" element={<DashboardRoute><AppLayout><TransactionsDocumentsPage /></AppLayout></DashboardRoute>} />
         <Route path="/profile" element={<DashboardRoute><AppLayout><ProfilePage /></AppLayout></DashboardRoute>} />
         <Route path="/security" element={<DashboardRoute><AppLayout><SecuritySettingsPage /></AppLayout></DashboardRoute>} />

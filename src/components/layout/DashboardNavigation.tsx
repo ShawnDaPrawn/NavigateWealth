@@ -5,6 +5,7 @@ import {
   Package,
   Bot,
   MessageSquare,
+  PenLine,
   History,
   Briefcase,
   TrendingUp,
@@ -47,6 +48,11 @@ export function DashboardNavigation() {
       path: '/communication', 
       label: 'Communication', 
       icon: MessageSquare 
+    },
+    { 
+      path: '/e-signatures', 
+      label: 'E‑Signatures', 
+      icon: PenLine 
     },
     { 
       path: '/history', 
