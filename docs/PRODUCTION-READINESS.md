@@ -17,6 +17,55 @@ those proposed files exist on `main`.
 
 ---
 
+## Section 0 - Current Addendum As Of 2026-04-29
+
+This addendum supersedes the older clean-`main` snapshot below where the two
+conflict. The older sections are preserved for incident history and context.
+
+Landed since the 2026-04-20 CORS restore:
+
+- Issue Manager is now shipped and operational on `main`, including GitHub
+  quality snapshot ingestion, workflow state, automation, security intake, and
+  runtime-client issue capture.
+- Latest Phase 10 commit on `main`:
+  `080b4eda fix: pin production Supabase config`.
+- Supabase Edge Function deploy workflow has succeeded from GitHub Actions for
+  `080b4eda`:
+  `Deploy Supabase Edge Function` run `25119424230`.
+- Quality Check has succeeded from GitHub Actions for `080b4eda`:
+  run `25119424245`.
+- `NW_ALLOWED_ORIGINS` is now set in Supabase secrets for production plus
+  local verification origins:
+  `https://www.navigatewealth.co`, `https://navigatewealth.co`,
+  `http://localhost:3000`, `http://127.0.0.1:3000`,
+  `http://localhost:4173`, and `http://127.0.0.1:4173`.
+- Live CORS preflight verification after deploy:
+  `https://www.navigatewealth.co`, `https://navigatewealth.co`,
+  `http://localhost:3000`, and `http://127.0.0.1:4173` return a matching
+  `Access-Control-Allow-Origin`; `https://example.com` does not.
+- Vercel production env vars are now set for `navigate-wealth`:
+  `VITE_SUPABASE_URL`, `VITE_SUPABASE_PROJECT_ID`, and
+  `VITE_SUPABASE_ANON_KEY`.
+- `src/utils/supabase/info.tsx` now prefers those Vite env vars and keeps the
+  hardcoded values only as bootstrapping fallbacks.
+- `npm test` currently exits 0: 12 test files, 136 tests.
+- `npm run build` passes on the Phase 10 tree.
+- Issue Manager snapshot after Phase 10 triage has 9 total issues and 4 open
+  issues. The 5 stale runtime-client entries were marked resolved; the open
+  issues are current dependency-audit items for Quill/react-quill-new and xlsx.
+
+Remaining production-readiness blockers are now mainly:
+
+- Decide whether to replace Quill/react-quill-new or accept the current
+  sanitized-editor mitigation until upstream fixes exist.
+- Decide whether to replace `xlsx` or keep the current file-size, row-count,
+  and unsafe-key mitigations until a maintained import parser is selected.
+- Continue architecture work, especially the incremental `integrations.tsx`
+  split.
+- Review Claude's broad stash only on a separate branch, in slices.
+
+---
+
 ## Section 1 - Current State As Of 2026-04-20
 
 ### Section 1.1 Clean `main` Snapshot
@@ -103,13 +152,13 @@ must be reviewed before they can count.
 
 - [x] Emergency CORS restore deployed to the current Supabase project.
 - [x] Current clean `main` builds with `npm run build`.
-- [ ] Current test suite exits 0 without relying on custom assertion logging.
-- [ ] `NW_ALLOWED_ORIGINS` is set explicitly in Supabase secrets for every real
-  browser origin, including `https://www.navigatewealth.co`,
-  `https://navigatewealth.co`, and any active Vercel production/preview domain.
-- [ ] Vercel has explicit `VITE_SUPABASE_URL`,
+- [x] Current test suite exits 0 without relying on custom assertion logging.
+- [x] `NW_ALLOWED_ORIGINS` is set explicitly in Supabase secrets for production
+  browser origins and the local dev/test origins used to verify this remote
+  Edge Function from `localhost` and `127.0.0.1`.
+- [x] Vercel has explicit `VITE_SUPABASE_URL`,
   `VITE_SUPABASE_PROJECT_ID`, and `VITE_SUPABASE_ANON_KEY` values.
-- [ ] Edge Function deploy workflow is configured with
+- [x] Edge Function deploy workflow is configured with
   `SUPABASE_ACCESS_TOKEN` and has succeeded from GitHub Actions.
 - [ ] Broad tooling update has been reviewed on a separate branch before any
   ESLint/Husky/CI requirements are enabled.
@@ -170,11 +219,14 @@ Before setting the secret, list every origin that can serve the SPA:
 - `https://navigatewealth.co`
 - current Vercel production domain, if users access it directly
 - any preview/staging domain that should be allowed
+- local dev/test origins that intentionally call the remote Edge Function:
+  `http://localhost:3000`, `http://127.0.0.1:3000`,
+  `http://localhost:4173`, and `http://127.0.0.1:4173`
 
 Then set the secret:
 
 ```powershell
-npx supabase secrets set "NW_ALLOWED_ORIGINS=https://www.navigatewealth.co,https://navigatewealth.co,<your-vercel-production-domain>" --project-ref vpjmdsltwrnpefzcgdmz
+npx supabase secrets set "NW_ALLOWED_ORIGINS=https://www.navigatewealth.co,https://navigatewealth.co,http://localhost:3000,http://127.0.0.1:3000,http://localhost:4173,http://127.0.0.1:4173,<your-vercel-production-domain-if-used>" --project-ref vpjmdsltwrnpefzcgdmz
 npx supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir .
 ```
 

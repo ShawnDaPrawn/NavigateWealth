@@ -407,8 +407,11 @@ function AutomationPanel({
 
         {previewAlerts.length > 0 ? (
           <div className="space-y-3">
-            {previewAlerts.map((alert) => (
-              <div key={alert.id} className="rounded-lg border border-gray-100 bg-white p-4">
+            {previewAlerts.map((alert, index) => (
+              <div
+                key={`${alert.id}:${alert.createdAt}:${index}`}
+                className="rounded-lg border border-gray-100 bg-white p-4"
+              >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="font-medium text-gray-900">{alert.title}</p>
