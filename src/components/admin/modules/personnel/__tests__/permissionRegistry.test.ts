@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AdminModule } from '../../../layout/types';
-import { moduleGroups, operationsModules } from '../../../layout/config';
+import { alwaysShowCounterModules, moduleGroups, operationsModules } from '../../../layout/config';
 import {
   ALWAYS_ACCESSIBLE_MODULES,
   MODULE_CAPABILITIES,
@@ -31,6 +31,11 @@ describe('personnel permission registry', () => {
     for (const module of operationsModules) {
       expect(adminVisibleModules.has(module), `${module} is missing from admin-visible modules`).toBe(true);
     }
+  });
+
+  it('keeps Issue Manager visible as a zero-state counter', () => {
+    expect(alwaysShowCounterModules).toContain('issues');
+    expect(operationsModules).toContain('issues');
   });
 
   it('keeps permissioned modules represented in the capabilities registry', () => {

@@ -70,3 +70,6 @@ export const moduleGroups: ModuleGroup[] = [
 
 // Modules that display numeric sidebar counters.
 export const operationsModules: AdminModule[] = ['applications', 'submissions', 'tasks', 'notes', 'calendar', 'issues'];
+
+// Modules whose counters are status indicators and should remain visible at zero.
+export const alwaysShowCounterModules: AdminModule[] = ['issues'];

@@ -21,7 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../
 import { cn } from '../../ui/utils';
 import { Logo } from '../../layout/Logo';
 import { AdminModule, PendingCounts } from './types';
-import { moduleConfig, moduleGroups, operationsModules } from './config';
+import { alwaysShowCounterModules, moduleConfig, moduleGroups, operationsModules } from './config';
 import { useAuth } from '../../auth/AuthContext';
 import { useCurrentUserPermissions } from '../modules/personnel/hooks/usePermissions';
 import { useNavigate } from 'react-router';
@@ -171,7 +171,7 @@ function SidebarContent({
 
   const shouldShowBadge = (module: AdminModule): boolean => {
     const count = pendingCounts[module]?.count || 0;
-    return operationsModules.includes(module) && count > 0;
+    return operationsModules.includes(module) && (count > 0 || alwaysShowCounterModules.includes(module));
   };
 
   return (
@@ -253,7 +253,7 @@ function SidebarContent({
                       aria-current={isActive ? 'page' : undefined}
                       aria-label={collapsed && !isMobile ? config.label : undefined}
                       className={cn(
-                        'transition-all duration-200',
+                        'relative transition-all duration-200',
                         collapsed && !isMobile ? 'w-10 h-10 p-0 justify-center' : 'w-full justify-start gap-3',
                         isActive 
                           ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground' 
