@@ -133,10 +133,12 @@ export const PERMISSIONED_MODULES: AdminModule[] = [
   'tasks',
   'applications',
   'quotes',
+  'submissions',
   'communication',
   'marketing',
   'reporting',
   'calendar',
+  'issues',
   'ai-management',
 ];
 
@@ -187,6 +189,7 @@ export const ROLE_MODULE_PRESETS: Record<string, AdminModule[]> = {
   compliance: [
     'compliance',
     'reporting',
+    'issues',
     'clients',
     'calendar',
   ],
@@ -293,6 +296,11 @@ export const MODULE_CAPABILITIES: Record<AdminModule, CapabilityMeta[]> = {
     { key: 'create', label: 'Create', description: 'Create new report definitions' },
     { key: 'edit',   label: 'Edit',   description: 'Modify report configurations' },
     { key: 'export', label: 'Export', description: 'Run and export reports' },
+  ],
+  issues: [
+    { key: 'edit',    label: 'Update',   description: 'Update issue workflow status and ownership' },
+    { key: 'approve', label: 'Resolve',  description: 'Mark issues as verified or resolved' },
+    { key: 'export',  label: 'Export',   description: 'Export quality issue evidence and summaries' },
   ],
 
   // ── Growth ───────────────────────────────────────────────────
