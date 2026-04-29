@@ -11,6 +11,44 @@ import {
   runtimeIssueFromUnknown,
 } from "./utils/quality/runtimeIssueReporter";
 
+const CHUNK_LOAD_RELOAD_KEY = "navigate-wealth:chunk-load-reload-at";
+const CHUNK_LOAD_RELOAD_WINDOW_MS = 60_000;
+
+function isDynamicImportLoadFailure(value: unknown): boolean {
+  const message =
+    value instanceof Error
+      ? value.message
+      : typeof value === "string"
+        ? value
+        : String(value ?? "");
+
+  return (
+    message.includes("Failed to fetch dynamically imported module") ||
+    message.includes("Importing a module script failed") ||
+    message.includes("ChunkLoadError")
+  );
+}
+
+function reloadOnceForChunkLoadFailure(): boolean {
+  try {
+    const now = Date.now();
+    const lastReload = Number(
+      window.sessionStorage.getItem(CHUNK_LOAD_RELOAD_KEY) || "0",
+    );
+
+    if (Number.isFinite(lastReload) && now - lastReload < CHUNK_LOAD_RELOAD_WINDOW_MS) {
+      return false;
+    }
+
+    window.sessionStorage.setItem(CHUNK_LOAD_RELOAD_KEY, String(now));
+    window.location.reload();
+    return true;
+  } catch {
+    window.location.reload();
+    return true;
+  }
+}
+
 export default function App() {
   const appIconVersion = "20260325b";
   const appIcon192 = `/favicon-192x192.png?v=${appIconVersion}`;
@@ -37,6 +75,14 @@ export default function App() {
     // cross-origin iframes, which is unavailable in sandboxed contexts (e.g. preview iframes).
     // This is non-fatal — widgets may still render correctly in production.
     const handleWindowError = (event: ErrorEvent) => {
+      if (
+        isDynamicImportLoadFailure(event.message) ||
+        isDynamicImportLoadFailure(event.error)
+      ) {
+        event.preventDefault();
+        return reloadOnceForChunkLoadFailure();
+      }
+
       if (
         event.message?.includes("contentWindow") ||
         event.message?.includes(
@@ -67,6 +113,12 @@ export default function App() {
       event: PromiseRejectionEvent,
     ) => {
       const reason = String(event.reason ?? "");
+      if (isDynamicImportLoadFailure(event.reason) || isDynamicImportLoadFailure(reason)) {
+        event.preventDefault();
+        reloadOnceForChunkLoadFailure();
+        return;
+      }
+
       if (
         reason.includes("contentWindow") ||
         reason.includes(
@@ -87,6 +139,11 @@ export default function App() {
       "unhandledrejection",
       handleUnhandledRejection,
     );
+    const handleVitePreloadError = (event: Event) => {
+      event.preventDefault();
+      reloadOnceForChunkLoadFailure();
+    };
+    window.addEventListener("vite:preloadError", handleVitePreloadError);
 
     // Create and append Google Analytics script
     const script1 = document.createElement("script");
@@ -209,6 +266,7 @@ export default function App() {
         "unhandledrejection",
         handleUnhandledRejection,
       );
+      window.removeEventListener("vite:preloadError", handleVitePreloadError);
       if (script1.parentNode)
         document.head.removeChild(script1);
       if (script2.parentNode)

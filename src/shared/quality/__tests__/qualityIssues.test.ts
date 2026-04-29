@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyQualityIssueWorkflow,
+  coalesceQualityIssuesByFingerprint,
   createQualityIssueFingerprint,
   getQualityIssueAutomationAlerts,
   hasQualityIssueRecurredAfterResolution,
@@ -74,6 +75,33 @@ describe('quality issue model', () => {
     expect(summary.byPriority.critical).toBe(1);
     expect(summary.byPriority.high).toBe(1);
     expect(summary.warnings).toBe(1);
+  });
+
+  it('coalesces repeated issue fingerprints into one queue item', () => {
+    const issues = coalesceQualityIssuesByFingerprint([
+      issue({
+        id: 'runtime-1',
+        fingerprint: 'runtime-client:runtime:react-error-boundary:/admin:typeerror',
+        firstSeenAt: '2026-04-29T07:35:02.581Z',
+        lastSeenAt: '2026-04-29T07:35:02.581Z',
+        occurrences: 1,
+      }),
+      issue({
+        id: 'runtime-2',
+        fingerprint: 'runtime-client:runtime:react-error-boundary:/admin:typeerror',
+        message: 'Latest stack trace',
+        firstSeenAt: '2026-04-29T18:53:25.455Z',
+        lastSeenAt: '2026-04-29T18:53:25.455Z',
+        occurrences: 2,
+      }),
+    ]);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0].id).toBe('runtime-2');
+    expect(issues[0].firstSeenAt).toBe('2026-04-29T07:35:02.581Z');
+    expect(issues[0].lastSeenAt).toBe('2026-04-29T18:53:25.455Z');
+    expect(issues[0].occurrences).toBe(3);
+    expect(issues[0].message).toBe('Latest stack trace');
   });
 
   it('creates stable fingerprints from normalized issue identity fields', () => {

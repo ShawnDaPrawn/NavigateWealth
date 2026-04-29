@@ -1,5 +1,4 @@
 import { Hono } from 'npm:hono';
-import * as XLSX from 'npm:@e965/xlsx@0.20.3';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { DEFAULT_SCHEMAS } from './default-schemas.ts';
@@ -52,6 +51,29 @@ import {
   normaliseIntegrationLabelList,
   type IntegrationBlankBehavior,
 } from '../../../shared/integrations/binding-utils.ts';
+import {
+  CANONICAL_TEMPLATE_SHEET_NAME,
+  MAX_INTEGRATION_UPLOAD_BYTES,
+  TEMPLATE_DICTIONARY_SHEET_NAME,
+  TEMPLATE_INSTRUCTIONS_SHEET_NAME,
+  TEMPLATE_METADATA_COLUMNS,
+  appendSpreadsheetRowsSheet,
+  appendSpreadsheetSheet,
+  applyTemplateRowMetadata,
+  buildTemplateFileName,
+  createSpreadsheetWorkbook,
+  encodeSpreadsheetRange,
+  getTemplateRowMetadata,
+  isTemplateMetadataColumn,
+  jsonRowsToSpreadsheetSheet,
+  normalisePolicyNumber,
+  parseSpreadsheetDateSerial,
+  readSpreadsheetUpload,
+  rowsToSpreadsheetSheet,
+  serialiseTemplateCellValue,
+  writeSpreadsheetWorkbook,
+  type IntegrationTemplateRowMetadata,
+} from './integrations-spreadsheet.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations');
@@ -183,30 +205,6 @@ interface IntegrationSyncRun {
     heldRows: number;
   };
   rows: IntegrationSyncRow[];
-}
-
-const CANONICAL_TEMPLATE_SHEET_NAME = 'Integration Update Template';
-const TEMPLATE_DICTIONARY_SHEET_NAME = 'Field Dictionary';
-const TEMPLATE_INSTRUCTIONS_SHEET_NAME = 'Instructions';
-const TEMPLATE_METADATA_COLUMNS = {
-  templateVersion: '_NW Template Version',
-  policyId: '_NW Policy ID',
-  clientId: '_NW Client ID',
-  providerId: '_NW Provider ID',
-  categoryId: '_NW Category ID',
-  normalizedPolicyNumber: '_NW Normalized Policy Number',
-} as const;
-const MAX_INTEGRATION_UPLOAD_ROWS = 1000;
-const MAX_INTEGRATION_UPLOAD_BYTES = 5 * 1024 * 1024;
-const UNSAFE_SPREADSHEET_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
-
-interface IntegrationTemplateRowMetadata {
-  templateVersion?: string;
-  policyId?: string;
-  clientId?: string;
-  providerId?: string;
-  categoryId?: string;
-  normalizedPolicyNumber?: string;
 }
 
 type PortalJobStatus = 'queued' | 'running' | 'waiting_for_otp' | 'discovering' | 'discovery_ready' | 'extracting' | 'dry_run_ready' | 'staging' | 'staged' | 'failed' | 'cancelled';
@@ -582,10 +580,6 @@ function getCategoryLabel(categoryId: string): string {
   return POLICY_CATEGORY_LABELS[categoryId] || categoryId;
 }
 
-function normaliseTemplateMetadataValue(value: unknown): string {
-  return String(value || '').trim().slice(0, 240);
-}
-
 function getTemplateFieldBindings(config: IntegrationConfig, fields: SchemaField[]): IntegrationFieldBinding[] {
   const configured = Array.isArray(config.fieldBindings) ? config.fieldBindings : [];
   const bindingsByTarget = new Map(configured.map((binding) => [binding.targetFieldId, binding]));
@@ -639,81 +633,6 @@ function buildPortalExtractionFieldsForBindings(
     required: field.required === true,
     transform: typeof field.transform === 'string' ? field.transform : 'trim',
   }));
-}
-
-function isTemplateMetadataColumn(header: unknown): boolean {
-  const value = String(header || '').trim();
-  return Object.values(TEMPLATE_METADATA_COLUMNS).includes(value as typeof TEMPLATE_METADATA_COLUMNS[keyof typeof TEMPLATE_METADATA_COLUMNS]);
-}
-
-function getTemplateRowMetadata(rawData: Record<string, unknown>): IntegrationTemplateRowMetadata {
-  return {
-    templateVersion: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.templateVersion]),
-    policyId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.policyId]),
-    clientId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.clientId]),
-    providerId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.providerId]),
-    categoryId: normaliseTemplateMetadataValue(rawData[TEMPLATE_METADATA_COLUMNS.categoryId]),
-    normalizedPolicyNumber: normalisePolicyNumber(rawData[TEMPLATE_METADATA_COLUMNS.normalizedPolicyNumber]),
-  };
-}
-
-function applyTemplateRowMetadata(rawData: Record<string, unknown>, metadata: Partial<IntegrationTemplateRowMetadata>): Record<string, unknown> {
-  return {
-    ...rawData,
-    [TEMPLATE_METADATA_COLUMNS.templateVersion]: normaliseTemplateMetadataValue(metadata.templateVersion),
-    [TEMPLATE_METADATA_COLUMNS.policyId]: normaliseTemplateMetadataValue(metadata.policyId),
-    [TEMPLATE_METADATA_COLUMNS.clientId]: normaliseTemplateMetadataValue(metadata.clientId),
-    [TEMPLATE_METADATA_COLUMNS.providerId]: normaliseTemplateMetadataValue(metadata.providerId),
-    [TEMPLATE_METADATA_COLUMNS.categoryId]: normaliseTemplateMetadataValue(metadata.categoryId),
-    [TEMPLATE_METADATA_COLUMNS.normalizedPolicyNumber]: normalisePolicyNumber(metadata.normalizedPolicyNumber),
-  };
-}
-
-function stripTemplateMetadataColumns(rawData: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(rawData || {}).filter(([key]) => !isTemplateMetadataColumn(key) && !UNSAFE_SPREADSHEET_KEYS.has(key.trim().toLowerCase())),
-  );
-}
-
-function stripUnsafeSpreadsheetKeys(rawData: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(rawData || {}).filter(([key]) => !UNSAFE_SPREADSHEET_KEYS.has(key.trim().toLowerCase())),
-  );
-}
-
-function hasVisibleRowData(rawData: Record<string, unknown>, headers: string[]): boolean {
-  const visibleHeaders = headers.filter((header) => !isTemplateMetadataColumn(header));
-  if (visibleHeaders.some((header) => !isBlank(rawData[header]))) return true;
-  const metadata = getTemplateRowMetadata(rawData);
-  return Boolean(metadata.policyId || metadata.clientId || metadata.normalizedPolicyNumber);
-}
-
-function serialiseTemplateCellValue(value: unknown): unknown {
-  if (value === undefined || value === null) return '';
-  if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
-    }
-  }
-  return value;
-}
-
-function buildTemplateFileName(providerName: string, categoryId: string): string {
-  const categoryLabel = getCategoryLabel(categoryId);
-  const parts = [providerName || 'Provider', categoryLabel, 'Integration Template']
-    .map((part) => String(part || '').replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim())
-    .filter(Boolean);
-  return `${parts.join(' - ')}.xlsx`;
-}
-
-function normalisePolicyNumber(value: unknown): string {
-  return String(value ?? '')
-    .trim()
-    .toUpperCase()
-    .replace(/[\s\u200B-\u200D\uFEFF]/g, '')
-    .replace(/[-_/]/g, '');
 }
 
 function isBlank(value: unknown): boolean {
@@ -1617,7 +1536,7 @@ function coerceFieldValue(field: SchemaField, value: unknown): { value: unknown;
 
   if (fieldType === 'date') {
     if (typeof raw === 'number') {
-      const parsed = XLSX.SSF.parse_date_code(raw);
+      const parsed = parseSpreadsheetDateSerial(raw);
       if (parsed) {
         return { value: `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}` };
       }
@@ -2178,7 +2097,7 @@ app.get("/template", requireAuth, async (c) => {
     const fieldById = new Map(fields.map((field) => [field.id, field]));
     const providerPolicies = await listPoliciesForProviderCategory(providerId, categoryId);
 
-    const workbook = XLSX.utils.book_new();
+    const workbook = createSpreadsheetWorkbook();
     const categoryLabel = getCategoryLabel(categoryId);
     const visibleHeaders = templateBindings.map((binding) => binding.columnName);
     const allHeaders = [...visibleHeaders, ...Object.values(TEMPLATE_METADATA_COLUMNS)];
@@ -2202,7 +2121,7 @@ app.get("/template", requireAuth, async (c) => {
       ['Strict mode', settings.strictMode ? 'Yes' : 'No'],
       ['Auto-publish safe rows', settings.autoPublish ? 'Yes' : 'No'],
     ];
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(instructions), TEMPLATE_INSTRUCTIONS_SHEET_NAME);
+    appendSpreadsheetRowsSheet(workbook, instructions, TEMPLATE_INSTRUCTIONS_SHEET_NAME);
 
     const templateRows: Record<string, unknown>[] = [];
     const sortablePolicies = await Promise.all(providerPolicies.map(async (policy) => {
@@ -2234,19 +2153,19 @@ app.get("/template", requireAuth, async (c) => {
     }
 
     const templateSheet = templateRows.length > 0
-      ? XLSX.utils.json_to_sheet(templateRows, { header: allHeaders })
-      : XLSX.utils.aoa_to_sheet([allHeaders]);
+      ? jsonRowsToSpreadsheetSheet(templateRows, { header: allHeaders })
+      : rowsToSpreadsheetSheet([allHeaders]);
     templateSheet['!cols'] = allHeaders.map((header) => ({
       wch: isTemplateMetadataColumn(header) ? 22 : Math.max(16, Math.min(32, header.length + 4)),
       hidden: isTemplateMetadataColumn(header),
     }));
     templateSheet['!autofilter'] = {
-      ref: XLSX.utils.encode_range({
+      ref: encodeSpreadsheetRange({
         s: { r: 0, c: 0 },
         e: { r: Math.max(templateRows.length, 0), c: allHeaders.length - 1 },
       }),
     };
-    XLSX.utils.book_append_sheet(workbook, templateSheet, CANONICAL_TEMPLATE_SHEET_NAME);
+    appendSpreadsheetSheet(workbook, templateSheet, CANONICAL_TEMPLATE_SHEET_NAME);
 
     const mappingRows = [
       ['Spreadsheet Column', 'Navigate Wealth Field ID', 'Navigate Wealth Field', 'Type', 'Required', 'Portal Labels', 'Selector Override', 'Blank Behavior', 'Dropdown Options', 'Notes'],
@@ -2271,10 +2190,10 @@ app.get("/template", requireAuth, async (c) => {
               : 'Only populated changed cells are staged for approval.',
       ]),
     ];
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(mappingRows), TEMPLATE_DICTIONARY_SHEET_NAME);
+    appendSpreadsheetRowsSheet(workbook, mappingRows, TEMPLATE_DICTIONARY_SHEET_NAME);
 
-    const bytes = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
-    const fileName = buildTemplateFileName(provider.name || providerId, categoryId);
+    const bytes = writeSpreadsheetWorkbook(workbook);
+    const fileName = buildTemplateFileName(provider.name || providerId, categoryLabel);
 
     return new Response(bytes, {
       headers: {
@@ -3603,27 +3522,13 @@ app.post("/upload", requireAuth, async (c) => {
     }
 
     const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(new Uint8Array(buffer), { type: "array", sheetRows: MAX_INTEGRATION_UPLOAD_ROWS + 2 });
-    const dataSheetName = workbook.SheetNames.includes(CANONICAL_TEMPLATE_SHEET_NAME)
-      ? CANONICAL_TEMPLATE_SHEET_NAME
-      : workbook.SheetNames.includes('Provider Data')
-        ? 'Provider Data'
-        : workbook.SheetNames[0];
-    const sheet = workbook.Sheets[dataSheetName];
-    
-    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][];
-    
-    if (jsonData.length === 0) {
-       return c.json({ error: "File is empty" }, 400);
+    let spreadsheetRows: ReturnType<typeof readSpreadsheetUpload>;
+    try {
+      spreadsheetRows = readSpreadsheetUpload(buffer);
+    } catch (spreadsheetErr) {
+      return c.json({ error: getErrMsg(spreadsheetErr) }, 400);
     }
-
-    if (jsonData.length > MAX_INTEGRATION_UPLOAD_ROWS + 1) {
-      return c.json({ error: `Spreadsheet has too many rows. Maximum ${MAX_INTEGRATION_UPLOAD_ROWS} policy rows are allowed per upload.` }, 400);
-    }
-
-    const headers = ((jsonData[0] || []) as unknown[])
-      .map((header) => String(header || '').trim())
-      .filter((header) => header && !UNSAFE_SPREADSHEET_KEYS.has(header.toLowerCase()));
+    const { headers, rawRows, previewRows } = spreadsheetRows;
 
     if (!headers || headers.length === 0) {
       return c.json({ error: "File has no headers in the first row" }, 400);
@@ -3633,11 +3538,6 @@ app.post("/upload", requireAuth, async (c) => {
     if (visibleHeaders.length === 0) {
       return c.json({ error: "File does not contain any mapped spreadsheet columns" }, 400);
     }
-
-    const rawRows = (XLSX.utils.sheet_to_json(sheet, { defval: '' }) as Record<string, unknown>[])
-      .map((row) => stripUnsafeSpreadsheetKeys(row))
-      .filter((row) => hasVisibleRowData(row, headers));
-    const previewRows = rawRows.map((row) => stripTemplateMetadataColumns(row));
 
     if (rawRows.length === 0) {
       return c.json({ error: "File does not contain any policy rows to stage" }, 400);

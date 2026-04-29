@@ -6,6 +6,7 @@ import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
   applyQualityIssueWorkflow,
+  coalesceQualityIssuesByFingerprint,
   createEmptyQualityIssueSnapshot,
   createQualityIssueFingerprint,
   getQualityIssueAutomationAlerts,
@@ -720,7 +721,7 @@ function combineSnapshots(
   const normalizedSecurityIssues = securityFeedIssues.map((issue, index) =>
     normalizeIssue(issue as unknown as Record<string, unknown>, index, now)
   );
-  const issues = [...ciIssues, ...normalizedRuntimeIssues, ...normalizedSecurityIssues]
+  const issues = coalesceQualityIssuesByFingerprint([...ciIssues, ...normalizedRuntimeIssues, ...normalizedSecurityIssues])
     .map((issue) => applyQualityIssueWorkflow(issue, workflowState[issue.fingerprint]));
 
   return {
@@ -878,24 +879,25 @@ app.post('/runtime-client', requireAuth, asyncHandler(async (c) => {
     severity: 'error',
     category,
   });
+  const fingerprint = createQualityIssueFingerprint({
+    source: 'runtime-client',
+    category,
+    ruleId: kind,
+    title,
+    filePath,
+    line,
+    column,
+  });
   const currentIssues = await kv.get(RUNTIME_CLIENT_ISSUES_KEY) as QualityIssue[] | null;
   const issues = Array.isArray(currentIssues) ? currentIssues : [];
-  const existingIndex = issues.findIndex((issue) => issue.id === id);
+  const existingIndex = issues.findIndex((issue) => issue.fingerprint === fingerprint || issue.id === id);
 
   const nextIssue: QualityIssue = {
     id,
     source: 'runtime-client',
     category,
     priority,
-    fingerprint: createQualityIssueFingerprint({
-      source: 'runtime-client',
-      category,
-      ruleId: kind,
-      title,
-      filePath,
-      line,
-      column,
-    }),
+    fingerprint,
     severity: 'error',
     status: 'open',
     title,

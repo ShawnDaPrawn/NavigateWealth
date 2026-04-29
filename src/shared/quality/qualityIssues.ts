@@ -297,6 +297,48 @@ export function summarizeQualityIssues(issues: QualityIssue[]): QualityIssueSumm
   }, createEmptyQualityIssueSummary());
 }
 
+function issueTime(value: string): number {
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+function earliestIssueTime(left: string, right: string): string {
+  return issueTime(left) <= issueTime(right) ? left : right;
+}
+
+function latestIssueTime(left: string, right: string): string {
+  return issueTime(left) >= issueTime(right) ? left : right;
+}
+
+export function coalesceQualityIssuesByFingerprint(issues: QualityIssue[]): QualityIssue[] {
+  const byFingerprint = new Map<string, QualityIssue>();
+
+  for (const issue of issues) {
+    const key = issue.fingerprint || issue.id;
+    const existing = byFingerprint.get(key);
+
+    if (!existing) {
+      byFingerprint.set(key, issue);
+      continue;
+    }
+
+    const latestIssue = issueTime(issue.lastSeenAt) >= issueTime(existing.lastSeenAt)
+      ? issue
+      : existing;
+
+    byFingerprint.set(key, {
+      ...latestIssue,
+      fingerprint: key,
+      firstSeenAt: earliestIssueTime(existing.firstSeenAt, issue.firstSeenAt),
+      lastSeenAt: latestIssueTime(existing.lastSeenAt, issue.lastSeenAt),
+      occurrences: Math.max(1, existing.occurrences || 1) + Math.max(1, issue.occurrences || 1),
+      status: existing.status === 'open' || issue.status === 'open' ? 'open' : latestIssue.status,
+    });
+  }
+
+  return [...byFingerprint.values()].sort((a, b) => issueTime(b.lastSeenAt) - issueTime(a.lastSeenAt));
+}
+
 export function applyQualityIssueWorkflow(
   issue: QualityIssue,
   workflow?: QualityIssueWorkflowState | null,
