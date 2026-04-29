@@ -173,7 +173,9 @@ interface IntegrationSyncRow {
   publishStatus: SyncPublishStatus;
   autoPublishEligible: boolean;
   validationErrors: string[];
+  validationErrorFieldIds?: string[];
   warnings: string[];
+  warningFieldIds?: string[];
   diffs: SyncDiff[];
   clientId?: string;
   policyId?: string;
@@ -275,6 +277,7 @@ interface PortalPolicyScheduleConfig {
   enabled?: boolean;
   downloadSelector?: string;
   downloadLabels?: string[];
+  downloadMenuLabels?: string[];
   documentType?: 'policy_schedule' | 'amendment' | 'statement' | 'benefit_summary' | 'other';
   required?: boolean;
   waitForDownloadMs?: number;
@@ -1267,6 +1270,7 @@ function normalisePolicyScheduleConfig(value: unknown, fallback?: PortalPolicySc
     enabled: entry.enabled === true || fallback?.enabled === true,
     downloadSelector: typeof entry.downloadSelector === 'string' ? entry.downloadSelector.trim().slice(0, 500) : fallback?.downloadSelector,
     downloadLabels: normaliseStringList(entry.downloadLabels, fallback?.downloadLabels || ['Policy schedule', 'Download', 'PDF', 'Statement'], 20),
+    downloadMenuLabels: normaliseStringList(entry.downloadMenuLabels, fallback?.downloadMenuLabels || ['Download PDF with company logo', 'Download PDF without company logo'], 20),
     documentType,
     required: typeof entry.required === 'boolean' ? entry.required : fallback?.required ?? true,
     waitForDownloadMs: Number.isFinite(waitForDownloadMs) ? Math.min(Math.max(waitForDownloadMs, 5000), 120000) : 30000,
@@ -1350,12 +1354,13 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
           { sourceHeader: 'Policy Number', columnName: 'Policy Number', targetFieldName: 'Policy Number', selector: '[data-field="policyNumber"], [data-testid*="policy-number" i], [data-testid*="account-number" i], [data-testid*="investment-number" i]', labels: ['Policy number', 'Account number', 'Investment number'], attribute: 'text', required: true, transform: 'trim' },
           { sourceHeader: 'Product Type', columnName: 'Product Type', targetFieldName: 'Product Type', selector: '[data-field="productType"], [data-testid*="retirement-annuity" i], [data-testid*="product-type" i]', labels: ['Retirement annuity fund'], attribute: 'text', transform: 'trim' },
           { sourceHeader: 'Date of Inception', columnName: 'Date of Inception', targetFieldName: 'Date of Inception', selector: '[data-field="inceptionDate"], [data-testid*="inception" i], [data-testid*="start-date" i]', labels: ['Inception date', 'Date of inception'], attribute: 'text', transform: 'trim' },
-          { sourceHeader: 'Current Value', columnName: 'Current Value', targetFieldName: 'Current Value', selector: '[data-field="fundValue"], [data-testid*="closing-balance" i], [data-testid*="fund-value" i], [data-testid*="market-value" i], [data-testid*="current-value" i]', labels: ['Closing balance'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Current Value', columnName: 'Current Value', targetFieldName: 'Current Value', selector: '[data-field="fundValue"], [data-testid*="closing-balance" i], [data-testid*="fund-value" i], [data-testid*="market-value" i], [data-testid*="current-value" i]', labels: ['Total value', 'Closing balance', 'Value'], attribute: 'text', transform: 'trim' },
         ],
       },
       policySchedule: {
         enabled: false,
-        downloadLabels: ['Policy schedule', 'Download policy schedule', 'Download PDF', 'Statement'],
+        downloadLabels: ['Policy schedule', 'Download policy schedule', 'Download PDF', 'Statement', 'Download'],
+        downloadMenuLabels: ['Download PDF with company logo', 'Download PDF without company logo'],
         documentType: 'policy_schedule',
         required: true,
         waitForDownloadMs: 45000,
@@ -1643,8 +1648,11 @@ async function buildSyncRun(params: {
 
   for (const [index, rawData] of params.rawRows.entries()) {
     const mappedData: Record<string, unknown> = {};
-    const validationErrors: string[] = [];
+    const rowBlockingErrors: string[] = [];
+    const fieldValidationErrors: string[] = [];
+    const validationErrorFieldIds = new Set<string>();
     const warnings: string[] = [];
+    const warningFieldIds = new Set<string>();
     const rowMetadata = getTemplateRowMetadata(rawData);
     const hasStableMetadata = Boolean(
       rowMetadata.policyId ||
@@ -1654,22 +1662,22 @@ async function buildSyncRun(params: {
     );
 
     if (rowMetadata.providerId && rowMetadata.providerId !== params.providerId) {
-      validationErrors.push('This row belongs to a different provider template');
+      rowBlockingErrors.push('This row belongs to a different provider template');
     }
     if (rowMetadata.categoryId && !categoryMatches(params.categoryId, rowMetadata.categoryId)) {
-      validationErrors.push('This row belongs to a different product template');
+      rowBlockingErrors.push('This row belongs to a different product template');
     }
 
     let matchedPolicy: KvPolicy | undefined;
-    if (validationErrors.length === 0 && hasStableMetadata) {
+    if (rowBlockingErrors.length === 0 && hasStableMetadata) {
       if (!rowMetadata.policyId || !rowMetadata.clientId) {
-        validationErrors.push('Template row metadata is incomplete');
+        rowBlockingErrors.push('Template row metadata is incomplete');
       } else {
         const metadataPolicy = policyIdIndex.get(rowMetadata.policyId);
         if (!metadataPolicy) {
-          validationErrors.push('Template row no longer matches an existing policy');
+          rowBlockingErrors.push('Template row no longer matches an existing policy');
         } else if (metadataPolicy.clientId !== rowMetadata.clientId) {
-          validationErrors.push('Template row metadata does not match the current policy owner');
+          rowBlockingErrors.push('Template row metadata does not match the current policy owner');
         } else {
           matchedPolicy = metadataPolicy;
         }
@@ -1687,7 +1695,13 @@ async function buildSyncRun(params: {
       const binding = bindingByColumnName.get(normaliseColumnName(sourceHeader));
       const blankBehavior = normaliseIntegrationBlankBehavior(binding?.blankBehavior);
       if (isBlank(rawValue) && blankBehavior === 'error') {
-        validationErrors.push(`${field.name} cannot be blank for this integration`);
+        const message = `${field.name} cannot be blank for this integration`;
+        if (policyNumberField?.id === field.id) {
+          rowBlockingErrors.push(message);
+        } else {
+          fieldValidationErrors.push(message);
+          validationErrorFieldIds.add(field.id);
+        }
         continue;
       }
       if (params.ignoreBlankValues && isBlank(rawValue) && blankBehavior !== 'clear') {
@@ -1695,26 +1709,34 @@ async function buildSyncRun(params: {
       }
 
       const { value, error } = coerceFieldValue(field, rawValue);
+      if (error) {
+        if (policyNumberField?.id === field.id) {
+          rowBlockingErrors.push(error);
+        } else {
+          fieldValidationErrors.push(error);
+          validationErrorFieldIds.add(field.id);
+        }
+        continue;
+      }
       mappedData[targetFieldId] = value;
-      if (error) validationErrors.push(error);
     }
 
     let policyNumber = policyNumberField ? String(mappedData[policyNumberField.id] ?? '').trim() : '';
     let normalisedPolicyNumber = rowMetadata.normalizedPolicyNumber || normalisePolicyNumber(policyNumber);
 
-    if (!matchedPolicy && validationErrors.length === 0) {
+    if (!matchedPolicy && rowBlockingErrors.length === 0) {
       if (!policyNumberField) {
-        validationErrors.push('No policy number field exists in this product structure');
+        rowBlockingErrors.push('No policy number field exists in this product structure');
       } else if (!normalisedPolicyNumber) {
-        validationErrors.push('Policy number is required for matching');
+        rowBlockingErrors.push('Policy number is required for matching');
       }
     }
 
-    const candidateMatches = !matchedPolicy && validationErrors.length === 0 && normalisedPolicyNumber
+    const candidateMatches = !matchedPolicy && rowBlockingErrors.length === 0 && normalisedPolicyNumber
       ? (policyNumberIndex.get(normalisedPolicyNumber) || [])
       : [];
 
-    if (!matchedPolicy && candidateMatches.length === 1 && validationErrors.length === 0) {
+    if (!matchedPolicy && candidateMatches.length === 1 && rowBlockingErrors.length === 0) {
       matchedPolicy = candidateMatches[0];
     }
 
@@ -1730,17 +1752,19 @@ async function buildSyncRun(params: {
         : 'none';
 
     let matchStatus: SyncMatchStatus = 'unmatched';
-    if (validationErrors.length > 0) matchStatus = 'invalid';
+    if (rowBlockingErrors.length > 0) matchStatus = 'invalid';
     else if (matchedPolicy) matchStatus = 'matched';
     else if (candidateMatches.length > 1) matchStatus = 'duplicate';
 
     const diffs: SyncDiff[] = [];
     const lockedFields = new Set(matchedPolicy?.lockedFields || []);
+    const shouldRespectLockedFields = (params.source || 'spreadsheet') !== 'portal';
 
     if (matchedPolicy) {
       for (const [fieldId, newValue] of Object.entries(mappedData)) {
-        if (lockedFields.has(fieldId) && valuesDiffer(matchedPolicy.data?.[fieldId], newValue)) {
+        if (shouldRespectLockedFields && lockedFields.has(fieldId) && valuesDiffer(matchedPolicy.data?.[fieldId], newValue)) {
           warnings.push(`${fieldById.get(fieldId)?.name || fieldId} is locked and will not be overwritten`);
+          warningFieldIds.add(fieldId);
           continue;
         }
         if (valuesDiffer(matchedPolicy.data?.[fieldId], newValue)) {
@@ -1754,10 +1778,11 @@ async function buildSyncRun(params: {
       }
     }
 
+    const validationErrors = [...rowBlockingErrors, ...fieldValidationErrors];
     let publishStatus: SyncPublishStatus = 'held';
-    if (matchStatus === 'matched' && diffs.length === 0) publishStatus = 'skipped';
-    else if (matchStatus === 'matched' && validationErrors.length === 0 && warnings.length === 0 && params.settings.autoPublish) publishStatus = 'auto_eligible';
-    else if (matchStatus === 'matched' && validationErrors.length === 0) publishStatus = 'pending';
+    if (matchStatus === 'matched' && diffs.length === 0 && validationErrors.length === 0) publishStatus = 'skipped';
+    else if (matchStatus === 'matched' && diffs.length > 0 && params.settings.autoPublish) publishStatus = 'auto_eligible';
+    else if (matchStatus === 'matched' && diffs.length > 0) publishStatus = 'pending';
 
     rows.push({
       id: crypto.randomUUID(),
@@ -1771,7 +1796,9 @@ async function buildSyncRun(params: {
       publishStatus,
       autoPublishEligible: publishStatus === 'auto_eligible',
       validationErrors,
+      validationErrorFieldIds: Array.from(validationErrorFieldIds),
       warnings,
+      warningFieldIds: Array.from(warningFieldIds),
       diffs,
       clientId: matchedPolicy?.clientId,
       policyId: matchedPolicy?.id,
@@ -1828,11 +1855,12 @@ async function publishSyncRun(run: IntegrationSyncRun, options?: { autoOnly?: bo
 
       const policy = policies[policyIndex];
       const lockedSet = new Set(policy.lockedFields || []);
+      const shouldRespectLockedFields = run.source !== 'portal';
       const updatedData = { ...policy.data };
       const appliedFields: string[] = [];
 
       for (const diff of row.diffs) {
-        if (lockedSet.has(diff.fieldId)) continue;
+        if (shouldRespectLockedFields && lockedSet.has(diff.fieldId)) continue;
         updatedData[diff.fieldId] = diff.newValue;
         appliedFields.push(diff.fieldId);
       }

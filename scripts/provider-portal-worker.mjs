@@ -992,12 +992,22 @@ function safeDownloadedPdfName(item, suggestedFilename) {
 async function downloadPolicySchedule(page, flow, item) {
   const policySchedule = flow.policySchedule || {};
   const labels = splitLabels(policySchedule.downloadLabels || ['Policy schedule', 'Download', 'PDF', 'Statement']);
+  const menuLabels = splitLabels(policySchedule.downloadMenuLabels || ['Download PDF with company logo', 'Download PDF without company logo']);
   const timeout = Number(policySchedule.waitForDownloadMs || 30000);
   const action = await findClickableByIntent(page, policySchedule.downloadSelector, labels);
 
-  const downloadPromise = page.waitForEvent('download', { timeout });
-  await action.click();
-  const download = await downloadPromise;
+  let download;
+  try {
+    const directDownloadPromise = page.waitForEvent('download', { timeout: Math.min(timeout, 5000) });
+    await action.click();
+    download = await directDownloadPromise;
+  } catch {
+    const menuAction = await findClickableByIntent(page, '', menuLabels);
+    const menuDownloadPromise = page.waitForEvent('download', { timeout });
+    await menuAction.click();
+    download = await menuDownloadPromise;
+  }
+
   const failure = await download.failure();
   if (failure) throw new Error(`Provider PDF download failed: ${failure}`);
 
@@ -1393,6 +1403,14 @@ async function extractByLabels(page, fields) {
       .replace(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '')
       .replace(/^[:\-\s]+/, '')
       .trim();
+    const extractInlineCurrency = (value, label) => {
+      const text = normalise(value);
+      const expected = normaliseLabel(label);
+      if (!text || !expected || !normaliseLabel(text).startsWith(expected)) return '';
+      const valueText = cleanValue(text, label);
+      const money = valueText.match(/R\s*[\d\s,]+(?:\.\d{1,2})?/i);
+      return money ? money[0].trim() : '';
+    };
     const elements = Array.from(document.querySelectorAll('body *'))
       .filter((el) => {
         const style = window.getComputedStyle(el);
@@ -1408,6 +1426,13 @@ async function extractByLabels(page, fields) {
       let sourceLabel = '';
 
       for (const label of labels) {
+        const inlineValueElement = elements.find((el) => extractInlineCurrency(el.textContent, label));
+        if (inlineValueElement) {
+          value = extractInlineCurrency(inlineValueElement.textContent, label);
+          sourceLabel = label;
+          break;
+        }
+
         const labelElement = elements.find((el) => matchesLabel(el.textContent, label));
         if (!labelElement) continue;
 

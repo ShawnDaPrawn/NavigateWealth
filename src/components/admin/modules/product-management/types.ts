@@ -213,7 +213,9 @@ export interface IntegrationSyncRow {
   publishStatus: 'pending' | 'auto_eligible' | 'held' | 'published' | 'skipped' | 'failed';
   autoPublishEligible: boolean;
   validationErrors: string[];
+  validationErrorFieldIds?: string[];
   warnings: string[];
+  warningFieldIds?: string[];
   diffs: IntegrationSyncDiff[];
   clientId?: string;
   policyId?: string;
@@ -305,6 +307,7 @@ export interface PortalPolicyScheduleConfig {
   enabled?: boolean;
   downloadSelector?: string;
   downloadLabels?: string[];
+  downloadMenuLabels?: string[];
   documentType?: 'policy_schedule' | 'amendment' | 'statement' | 'benefit_summary' | 'other';
   required?: boolean;
   waitForDownloadMs?: number;

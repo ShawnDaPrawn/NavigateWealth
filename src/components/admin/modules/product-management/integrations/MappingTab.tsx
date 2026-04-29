@@ -188,7 +188,7 @@ export function MappingTab({
                       <Info className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Automatically publish exact, clean matches with no warnings and no locked-field conflicts.</p>
+                      <p className="max-w-xs">Automatically publish clean matched portal fields. Document-extraction locks do not block provider portal updates.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

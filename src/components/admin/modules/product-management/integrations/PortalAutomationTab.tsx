@@ -380,6 +380,7 @@ export function PortalAutomationTab({
         enabled: policyScheduleEnabled,
         downloadLabels: splitPortalLines(policyScheduleLabelsText),
         downloadSelector: policyScheduleSelector.trim() || undefined,
+        downloadMenuLabels: flow.policySchedule?.downloadMenuLabels || ['Download PDF with company logo', 'Download PDF without company logo'],
         documentType: flow.policySchedule?.documentType || 'policy_schedule',
         required: true,
         waitForDownloadMs: flow.policySchedule?.waitForDownloadMs || 45000,
