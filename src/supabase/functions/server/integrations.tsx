@@ -196,6 +196,9 @@ const TEMPLATE_METADATA_COLUMNS = {
   categoryId: '_NW Category ID',
   normalizedPolicyNumber: '_NW Normalized Policy Number',
 } as const;
+const MAX_INTEGRATION_UPLOAD_ROWS = 1000;
+const MAX_INTEGRATION_UPLOAD_BYTES = 5 * 1024 * 1024;
+const UNSAFE_SPREADSHEET_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 
 interface IntegrationTemplateRowMetadata {
   templateVersion?: string;
@@ -668,7 +671,13 @@ function applyTemplateRowMetadata(rawData: Record<string, unknown>, metadata: Pa
 
 function stripTemplateMetadataColumns(rawData: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(rawData || {}).filter(([key]) => !isTemplateMetadataColumn(key)),
+    Object.entries(rawData || {}).filter(([key]) => !isTemplateMetadataColumn(key) && !UNSAFE_SPREADSHEET_KEYS.has(key.trim().toLowerCase())),
+  );
+}
+
+function stripUnsafeSpreadsheetKeys(rawData: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(rawData || {}).filter(([key]) => !UNSAFE_SPREADSHEET_KEYS.has(key.trim().toLowerCase())),
   );
 }
 
@@ -3589,8 +3598,12 @@ app.post("/upload", requireAuth, async (c) => {
     const fieldMapping = fieldBindingsToMapping(templateBindings, config.fieldMapping || {});
     const settings = normaliseSettings(config.settings);
 
+    if (file.size > MAX_INTEGRATION_UPLOAD_BYTES) {
+      return c.json({ error: "Spreadsheet is too large. Please upload a file smaller than 5 MB." }, 400);
+    }
+
     const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(new Uint8Array(buffer), { type: "array" });
+    const workbook = XLSX.read(new Uint8Array(buffer), { type: "array", sheetRows: MAX_INTEGRATION_UPLOAD_ROWS + 2 });
     const dataSheetName = workbook.SheetNames.includes(CANONICAL_TEMPLATE_SHEET_NAME)
       ? CANONICAL_TEMPLATE_SHEET_NAME
       : workbook.SheetNames.includes('Provider Data')
@@ -3604,9 +3617,13 @@ app.post("/upload", requireAuth, async (c) => {
        return c.json({ error: "File is empty" }, 400);
     }
 
+    if (jsonData.length > MAX_INTEGRATION_UPLOAD_ROWS + 1) {
+      return c.json({ error: `Spreadsheet has too many rows. Maximum ${MAX_INTEGRATION_UPLOAD_ROWS} policy rows are allowed per upload.` }, 400);
+    }
+
     const headers = ((jsonData[0] || []) as unknown[])
       .map((header) => String(header || '').trim())
-      .filter(Boolean);
+      .filter((header) => header && !UNSAFE_SPREADSHEET_KEYS.has(header.toLowerCase()));
 
     if (!headers || headers.length === 0) {
       return c.json({ error: "File has no headers in the first row" }, 400);
@@ -3618,6 +3635,7 @@ app.post("/upload", requireAuth, async (c) => {
     }
 
     const rawRows = (XLSX.utils.sheet_to_json(sheet, { defval: '' }) as Record<string, unknown>[])
+      .map((row) => stripUnsafeSpreadsheetKeys(row))
       .filter((row) => hasVisibleRowData(row, headers));
     const previewRows = rawRows.map((row) => stripTemplateMetadataColumns(row));
 

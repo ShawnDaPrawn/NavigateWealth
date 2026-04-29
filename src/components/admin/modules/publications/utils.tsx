@@ -27,6 +27,9 @@ import type {
 import type { Subscriber, SubscriberStatus, UnsubTimeRange } from './types';
 import { UNSUB_TIME_RANGE_DAYS } from './constants';
 
+const MAX_SUBSCRIBER_IMPORT_ROWS = 500;
+const MAX_SUBSCRIBER_IMPORT_BYTES = 1024 * 1024;
+
 // ============================================================================
 // SLUG UTILITIES
 // ============================================================================
@@ -1009,30 +1012,36 @@ export function parseSubscriberFile(
   file: File,
   onParsed: (rows: { email: string; firstName: string; surname: string }[]) => void,
 ): void {
+  if (file.size > MAX_SUBSCRIBER_IMPORT_BYTES) {
+    onParsed([]);
+    return;
+  }
+
   const reader = new FileReader();
 
   reader.onload = (ev) => {
     try {
       import('xlsx').then((XLSX) => {
         const data = new Uint8Array(ev.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: 'array' });
+        const wb = XLSX.read(data, { type: 'array', sheetRows: MAX_SUBSCRIBER_IMPORT_ROWS + 2 });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: Record<string, string>[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as unknown[][];
 
-        if (rows.length === 0) {
+        if (rawRows.length < 2 || rawRows.length > MAX_SUBSCRIBER_IMPORT_ROWS + 1) {
           onParsed([]);
           return;
         }
 
         const normalise = (key: string) => key.trim().toLowerCase().replace(/[^a-z]/g, '');
+        const headers = rawRows[0].map((key) => normalise(String(key || '')));
 
         const results: { email: string; firstName: string; surname: string }[] = [];
 
-        for (const row of rows) {
+        for (const row of rawRows.slice(1)) {
           const mapped: Record<string, string> = {};
-          for (const [key, val] of Object.entries(row)) {
-            mapped[normalise(key)] = String(val).trim();
-          }
+          headers.forEach((header, index) => {
+            if (header) mapped[header] = String(row[index] ?? '').trim();
+          });
 
           const email = mapped['email'] || mapped['emailaddress'] || '';
           const firstName = mapped['firstnames'] || mapped['firstname'] || mapped['name'] || '';

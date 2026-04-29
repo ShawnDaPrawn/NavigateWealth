@@ -62,6 +62,9 @@ const TEMPLATE_COLUMNS = [
   { header: 'Existing Products', field: 'existingProducts', required: false, hint: 'Comma-separated' },
 ];
 
+const MAX_BULK_IMPORT_ROWS = 50;
+const MAX_BULK_IMPORT_BYTES = 1024 * 1024;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -157,11 +160,16 @@ function downloadTemplate() {
 
 function parseExcel(file: File): Promise<ParsedRow[]> {
   return new Promise((resolve, reject) => {
+    if (file.size > MAX_BULK_IMPORT_BYTES) {
+      reject(new Error('The spreadsheet is too large. Please upload a file smaller than 1 MB.'));
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target!.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: 'array' });
+        const wb = XLSX.read(data, { type: 'array', sheetRows: MAX_BULK_IMPORT_ROWS + 2 });
 
         const sheetName = wb.SheetNames[0];
         const ws = wb.Sheets[sheetName];
@@ -169,6 +177,11 @@ function parseExcel(file: File): Promise<ParsedRow[]> {
 
         if (raw.length < 2) {
           reject(new Error('The spreadsheet has no data rows. Please add client data below the header row.'));
+          return;
+        }
+
+        if (raw.length > MAX_BULK_IMPORT_ROWS + 1) {
+          reject(new Error(`Maximum ${MAX_BULK_IMPORT_ROWS} clients per import. Please split your file.`));
           return;
         }
 
@@ -275,7 +288,7 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
   const handleImport = async () => {
     const validRows = parsedRows.filter(r => r.valid);
     if (validRows.length === 0) { toast.error('No valid rows to import'); return; }
-    if (validRows.length > 50) { toast.error('Maximum 50 clients per import. Please split your file.'); return; }
+    if (validRows.length > MAX_BULK_IMPORT_ROWS) { toast.error(`Maximum ${MAX_BULK_IMPORT_ROWS} clients per import. Please split your file.`); return; }
 
     setIsImporting(true);
     setImportProgress(10);

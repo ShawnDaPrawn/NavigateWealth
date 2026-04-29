@@ -40,6 +40,10 @@ const MERGE_FIELDS = [
   { key: '{{policy_count}}', label: 'Policy Count', example: '3' },
 ];
 
+function sanitizeComposerHtml(html: string): string {
+  return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+}
+
 export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const quillRef = useRef<ReactQuill>(null);
@@ -180,7 +184,7 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
                   ref={quillRef}
                   theme="snow"
                   value={draft.bodyHtml}
-                  onChange={(content) => updateDraft({ bodyHtml: content })}
+                  onChange={(content) => updateDraft({ bodyHtml: sanitizeComposerHtml(content) })}
                   modules={modules}
                   formats={formats}
                   placeholder="Write your message here..."
@@ -315,7 +319,7 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
                       <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6', textAlign: 'left' }}>
                         {draft.bodyHtml ? (
                           <div dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(resolvePreviewMergeFields(draft.bodyHtml))
+                            __html: sanitizeComposerHtml(resolvePreviewMergeFields(draft.bodyHtml))
                           }} />
                         ) : (
                           <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>No content yet...</p>
