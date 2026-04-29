@@ -57,6 +57,120 @@ function issueId(parts) {
     .slice(0, 180);
 }
 
+function normalizeKeyPart(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9:_./-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function inferCategory(source, ruleId = '') {
+  if (source === 'audit') return 'security';
+  if (source === 'accessibility') return 'accessibility';
+  if (source === 'runtime-client' || source === 'runtime-server') return 'runtime';
+  if (source === 'test') return 'test';
+  if (source === 'build') {
+    const normalizedRule = normalizeKeyPart(ruleId);
+    if (normalizedRule.includes('env') || normalizedRule.includes('config')) {
+      return 'configuration';
+    }
+    return 'build';
+  }
+
+  return 'unknown';
+}
+
+function inferPriority({ source, severity, category, cvssScore }) {
+  if (category === 'security' && typeof cvssScore === 'number') {
+    if (cvssScore >= 9) return 'critical';
+    if (cvssScore >= 7) return 'high';
+    if (cvssScore >= 4) return 'medium';
+    return 'low';
+  }
+  if (severity === 'info') return 'low';
+  if (category === 'security' && severity === 'error') return 'critical';
+  if (severity === 'error') return 'high';
+  if (category === 'security' || source === 'runtime-server') return 'high';
+  return 'medium';
+}
+
+function createFingerprint(issue) {
+  return [
+    issue.source,
+    issue.category,
+    issue.packageName,
+    issue.advisoryId,
+    issue.cve,
+    issue.ruleId,
+    issue.filePath,
+    issue.line,
+    issue.column,
+    issue.title,
+  ]
+    .map(normalizeKeyPart)
+    .filter(Boolean)
+    .filter((part, index, values) => values.indexOf(part) === index)
+    .join(':')
+    .slice(0, 220);
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function toOptionalString(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function toOptionalNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function severityFromAuditSeverity(value) {
+  return ['critical', 'high'].includes(String(value)) ? 'error' : 'warning';
+}
+
+function extractIdentifierFromUrl(url) {
+  const value = toOptionalString(url);
+  if (!value) return undefined;
+
+  const ghsaMatch = value.match(/GHSA-[a-z0-9-]+/i);
+  if (ghsaMatch) return ghsaMatch[0].toUpperCase();
+
+  const cveMatch = value.match(/CVE-\d{4}-\d+/i);
+  if (cveMatch) return cveMatch[0].toUpperCase();
+
+  return undefined;
+}
+
+function extractCveFromUrl(url) {
+  const value = toOptionalString(url);
+  if (!value) return undefined;
+
+  const cveMatch = value.match(/CVE-\d{4}-\d+/i);
+  return cveMatch ? cveMatch[0].toUpperCase() : undefined;
+}
+
+function normalizeFixAvailable(fixAvailable) {
+  if (fixAvailable === true) {
+    return { fixAvailable: true, fixVersion: undefined };
+  }
+
+  if (!fixAvailable || typeof fixAvailable !== 'object') {
+    return { fixAvailable: false, fixVersion: undefined };
+  }
+
+  return {
+    fixAvailable: true,
+    fixVersion: toOptionalString(fixAvailable.version),
+  };
+}
+
+function getPackageVersion(report, packageName) {
+  return toOptionalString(report?.dependencies?.[packageName]?.version);
+}
+
 function excerptLog(log) {
   const lines = log.split(/\r?\n/).filter(Boolean);
   const errorIndex = lines.findIndex((line) => /error|failed|✗/i.test(line));
@@ -65,8 +179,17 @@ function excerptLog(log) {
 }
 
 function createIssue(input) {
-  return {
+  const category = input.category || inferCategory(input.source, input.ruleId);
+  const priority = input.priority || inferPriority({
+    source: input.source,
+    severity: input.severity,
+    category,
+    cvssScore: input.cvssScore,
+  });
+  const issue = {
     status: 'open',
+    category,
+    priority,
     firstSeenAt: now,
     lastSeenAt: now,
     occurrences: 1,
@@ -74,6 +197,11 @@ function createIssue(input) {
       ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
       : undefined,
     ...input,
+  };
+
+  return {
+    ...issue,
+    fingerprint: input.fingerprint || createFingerprint(issue),
   };
 }
 
@@ -87,6 +215,8 @@ function collectBuildIssues() {
       id: issueId(['build', 'npm-run-build']),
       source: 'build',
       severity: 'error',
+      component: 'frontend',
+      environment: process.env.GITHUB_REF_NAME || 'local',
       title: 'Production build failed',
       message: excerptLog(log) || 'npm run build exited with a non-zero status.',
       ruleId: 'npm run build',
@@ -108,6 +238,8 @@ function collectTestIssues() {
         id: issueId(['test', testResult.name, assertion.fullName || assertion.title]),
         source: 'test',
         severity: 'error',
+        component: 'test-suite',
+        environment: process.env.GITHUB_REF_NAME || 'local',
         title: assertion.fullName || assertion.title || 'Test failed',
         message: (assertion.failureMessages || []).join('\n').slice(0, 1600) || 'Vitest reported a failing assertion.',
         filePath: testResult.name,
@@ -123,6 +255,8 @@ function collectTestIssues() {
       id: issueId(['test', 'vitest']),
       source: 'test',
       severity: 'error',
+      component: 'test-suite',
+      environment: process.env.GITHUB_REF_NAME || 'local',
       title: 'Test run failed',
       message: excerptLog(readText('quality-test.log')) || 'npm test exited with a non-zero status.',
       ruleId: 'vitest',
@@ -135,20 +269,63 @@ function collectAuditIssues() {
   const vulnerabilities = report?.vulnerabilities;
   if (!vulnerabilities || typeof vulnerabilities !== 'object') return [];
 
-  return Object.entries(vulnerabilities).map(([name, vulnerability]) => {
-    const severity = ['critical', 'high'].includes(vulnerability.severity) ? 'error' : 'warning';
-    const via = Array.isArray(vulnerability.via)
-      ? vulnerability.via.map((entry) => typeof entry === 'string' ? entry : entry.title).filter(Boolean).join('; ')
-      : '';
+  return Object.entries(vulnerabilities).flatMap(([name, vulnerability]) => {
+    const packageVersion = getPackageVersion(report, name);
+    const fix = normalizeFixAvailable(vulnerability.fixAvailable);
+    const advisoryEntries = toArray(vulnerability.via).filter((entry) => entry && typeof entry === 'object');
+    const stringEntries = toArray(vulnerability.via).filter((entry) => typeof entry === 'string');
 
-    return createIssue({
-      id: issueId(['audit', name, vulnerability.severity]),
-      source: 'audit',
-      severity,
-      title: `${name} has ${vulnerability.severity} vulnerability risk`,
-      message: via || `npm audit reported ${vulnerability.severity} risk for ${name}.`,
-      filePath: 'package-lock.json',
-      ruleId: name,
+    if (advisoryEntries.length === 0) {
+      return [createIssue({
+        id: issueId(['audit', name, vulnerability.severity]),
+        source: 'audit',
+        severity: severityFromAuditSeverity(vulnerability.severity),
+        component: 'dependencies',
+        environment: process.env.GITHUB_REF_NAME || 'local',
+        detectedBy: 'npm-audit',
+        packageName: name,
+        packageVersion,
+        vulnerableRange: toOptionalString(vulnerability.range),
+        fixVersion: fix.fixVersion,
+        fixAvailable: fix.fixAvailable,
+        title: `${name} has ${vulnerability.severity} vulnerability risk`,
+        message: stringEntries.join('; ') || `npm audit reported ${vulnerability.severity} risk for ${name}.`,
+        filePath: 'package-lock.json',
+        ruleId: name,
+      })];
+    }
+
+    return advisoryEntries.map((advisory, index) => {
+      const advisoryId = toOptionalString(advisory.source) || extractIdentifierFromUrl(advisory.url);
+      const cve = toOptionalString(toArray(advisory.cves)[0]) || extractCveFromUrl(advisory.url);
+      const cvssScore = toOptionalNumber(advisory.cvss?.score);
+      const advisorySeverity = advisory.severity || vulnerability.severity;
+      const range = toOptionalString(advisory.range) || toOptionalString(vulnerability.range);
+      const title = toOptionalString(advisory.title)
+        || `${name} vulnerability advisory`;
+      const referenceUrl = toOptionalString(advisory.url);
+
+      return createIssue({
+        id: issueId(['audit', name, advisoryId || cve || advisorySeverity, index]),
+        source: 'audit',
+        severity: severityFromAuditSeverity(advisorySeverity),
+        component: 'dependencies',
+        environment: process.env.GITHUB_REF_NAME || 'local',
+        detectedBy: 'npm-audit',
+        packageName: name,
+        packageVersion,
+        vulnerableRange: range,
+        fixVersion: fix.fixVersion,
+        fixAvailable: fix.fixAvailable,
+        advisoryId,
+        cve,
+        cvssScore,
+        referenceUrl,
+        title,
+        message: stringEntries.join('; ') || `Affected range: ${range || 'unknown'}${fix.fixVersion ? `; fix version: ${fix.fixVersion}` : ''}`,
+        filePath: 'package-lock.json',
+        ruleId: advisoryId || cve || name,
+      });
     });
   });
 }
