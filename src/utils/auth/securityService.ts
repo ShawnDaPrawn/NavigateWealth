@@ -134,25 +134,19 @@ export async function validateLoginAttempt(email: string): Promise<{
  */
 export async function logLoginSuccess(email: string, userId: string): Promise<void> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-    
-    const response = await fetch(`${API_BASE}/login-success`, {
+    await fetch(`${API_BASE}/login-success`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${publicAnonKey}`,
       },
       body: JSON.stringify({ email, userId }),
-      signal: controller.signal,
+      keepalive: true,
     });
-    
-    clearTimeout(timeoutId);
   } catch (error) {
     // Don't throw - logging failure shouldn't break login
-    // Silently ignore AbortError as it's expected on timeout
-    if (error instanceof Error && error.name !== 'AbortError') {
-      console.error('Failed to log login success:', error);
+    if (error instanceof Error && import.meta.env.DEV) {
+      console.debug('Login success log skipped:', error.message);
     }
   }
 }
