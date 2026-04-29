@@ -575,17 +575,18 @@ async function loadQualityIssueState(): Promise<{
 }
 
 async function buildCurrentSnapshot(
-  state = await loadQualityIssueState(),
+  state?: Awaited<ReturnType<typeof loadQualityIssueState>>,
 ): Promise<{
   snapshot: QualityIssueSnapshot;
   workflowState: Record<string, QualityIssueWorkflowState>;
   state: Awaited<ReturnType<typeof loadQualityIssueState>>;
 }> {
-  let workflowState = state.workflowState;
+  const loadedState = state || await loadQualityIssueState();
+  let workflowState = loadedState.workflowState;
   let combinedSnapshot = combineSnapshots(
-    state.baseSnapshot,
-    state.baseRuntimeIssues,
-    state.baseSecurityFeedIssues,
+    loadedState.baseSnapshot,
+    loadedState.baseRuntimeIssues,
+    loadedState.baseSecurityFeedIssues,
     workflowState,
   );
   const recurrence = reopenRecurringWorkflows(combinedSnapshot.issues, workflowState);
@@ -594,9 +595,9 @@ async function buildCurrentSnapshot(
     workflowState = recurrence.workflowState;
     await kv.set(ISSUE_WORKFLOW_KEY, workflowState);
     combinedSnapshot = combineSnapshots(
-      state.baseSnapshot,
-      state.baseRuntimeIssues,
-      state.baseSecurityFeedIssues,
+      loadedState.baseSnapshot,
+      loadedState.baseRuntimeIssues,
+      loadedState.baseSecurityFeedIssues,
       workflowState,
     );
 
@@ -606,11 +607,11 @@ async function buildCurrentSnapshot(
   }
 
   return {
-    snapshot: state.automation
-      ? { ...combinedSnapshot, automation: state.automation }
+    snapshot: loadedState.automation
+      ? { ...combinedSnapshot, automation: loadedState.automation }
       : combinedSnapshot,
     workflowState,
-    state,
+    state: loadedState,
   };
 }
 
