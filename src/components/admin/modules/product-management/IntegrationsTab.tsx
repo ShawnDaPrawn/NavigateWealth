@@ -591,6 +591,7 @@ export function IntegrationsTab() {
                 isColumnMapped={isColumnMapped}
                 previewData={previewData}
                 stagedRun={stagedRun}
+                portalJobItems={portalJobItemsData?.items || []}
                 stats={integrationStats}
                 matchedColumnsCount={matchedColumnsCount}
               />

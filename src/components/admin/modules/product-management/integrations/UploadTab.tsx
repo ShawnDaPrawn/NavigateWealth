@@ -4,9 +4,9 @@ import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../ui/table';
-import { CheckCircle2, AlertCircle, FileSpreadsheet, X, RefreshCw, FileAxis3D, UploadCloud } from 'lucide-react';
+import { CheckCircle2, AlertCircle, FileSpreadsheet, X, RefreshCw, FileAxis3D, UploadCloud, FileText } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
-import { IntegrationProvider, PRODUCT_CATEGORIES, PreviewData, IntegrationStats, IntegrationSyncRun } from '../types';
+import { IntegrationProvider, PRODUCT_CATEGORIES, PreviewData, IntegrationStats, IntegrationSyncRun, PortalJobPolicyItem } from '../types';
 
 interface UploadTabProps {
   provider: IntegrationProvider;
@@ -24,6 +24,7 @@ interface UploadTabProps {
   isColumnMapped: (col: string) => boolean;
   previewData?: PreviewData | null;
   stagedRun?: IntegrationSyncRun | null;
+  portalJobItems?: PortalJobPolicyItem[];
   stats: IntegrationStats;
   matchedColumnsCount: number;
 }
@@ -63,6 +64,7 @@ export function UploadTab({
   isColumnMapped,
   previewData,
   stagedRun,
+  portalJobItems = [],
   stats,
   matchedColumnsCount,
 }: UploadTabProps) {
@@ -112,6 +114,20 @@ export function UploadTab({
   const reviewDescription = stagedRun?.source === 'portal'
     ? 'Portal runs and spreadsheet uploads now stage through the same canonical integration template format.'
     : 'Upload the downloaded Integration Template or any spreadsheet that matches its configured columns.';
+  const attachedPortalDocuments = portalJobItems
+    .filter((item) => item.documentAttached || item.artifactStatuses?.some((status) => status.status === 'attached'))
+    .map((item) => {
+      const attached = item.artifactStatuses?.find((status) => status.status === 'attached');
+      return {
+        item,
+        fileName: attached?.fileName || item.documentFileName || 'Policy document',
+        label: attached?.label || 'Policy schedule',
+      };
+    });
+  const failedPortalDocuments = portalJobItems
+    .flatMap((item) => (item.artifactStatuses || [])
+      .filter((status) => status.status === 'failed')
+      .map((status) => ({ item, status })));
 
   const renderStagedRun = () => (
     <Card>
@@ -175,8 +191,39 @@ export function UploadTab({
               <p className="text-sm text-blue-700 mt-2">
                 Hidden template metadata is used when present, policy number matching is used as fallback, and only populated changed cells are publishable.
               </p>
+              {stagedRun?.source === 'portal' && (
+                <p className="text-sm text-blue-700 mt-2">
+                  Portal PDFs are attached directly to the matched client policy by the worker; field publishing below only applies to changed field values.
+                </p>
+              )}
             </div>
           </div>
+
+          {stagedRun?.source === 'portal' && (attachedPortalDocuments.length > 0 || failedPortalDocuments.length > 0) && (
+            <div className="rounded-lg border bg-white p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-green-600" />
+                <h5 className="font-medium text-gray-900">Portal Documents</h5>
+              </div>
+              <div className="space-y-2 text-sm">
+                {attachedPortalDocuments.map(({ item, fileName, label }) => (
+                  <div key={`${item.id}-${fileName}`} className="flex flex-col gap-1 rounded-md border border-green-100 bg-green-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium text-green-900">{label} attached</p>
+                      <p className="text-xs text-green-700">{item.clientName} / {item.policyNumber}</p>
+                    </div>
+                    <p className="max-w-sm truncate text-xs text-green-700" title={fileName}>{fileName}</p>
+                  </div>
+                ))}
+                {failedPortalDocuments.map(({ item, status }) => (
+                  <div key={`${item.id}-${status.id}`} className="rounded-md border border-red-100 bg-red-50 px-3 py-2">
+                    <p className="font-medium text-red-900">{status.label} failed</p>
+                    <p className="text-xs text-red-700">{item.clientName} / {item.policyNumber}: {status.error || 'No failure reason supplied'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="border rounded-lg overflow-x-auto bg-white">
             <Table>
