@@ -1595,8 +1595,7 @@ function isPolicyNumberField(field) {
   return /policy\s*(number|no)|reference/i.test(signature);
 }
 
-function isRequiredPortalField(field) {
-  if (field?.required === true) return true;
+function isPortalRunBlockingField(field) {
   return getFieldSemanticKind(field) === 'current_value';
 }
 
@@ -1638,7 +1637,7 @@ async function extractPolicyRecord(page, flow, config, item) {
   const labelExtracted = await extractByLabels(page, fields);
   const rawData = {};
   const extractedData = {};
-  const missingRequiredFields = [];
+  const missingRunBlockingFields = [];
   let businessValueCount = 0;
 
   for (const field of fields) {
@@ -1663,9 +1662,9 @@ async function extractPolicyRecord(page, flow, config, item) {
     } else {
       if (shouldCountAsExtractedBusinessValue(field, selectedValue)) {
         businessValueCount += 1;
-      } else if (isRequiredPortalField(field)) {
+      } else if (isPortalRunBlockingField(field)) {
         const labels = Array.isArray(field.labels) ? field.labels.filter(Boolean).join(', ') : columnName;
-        missingRequiredFields.push(`${getFieldDisplayName(field)} (${labels || columnName})`);
+        missingRunBlockingFields.push(`${getFieldDisplayName(field)} (${labels || columnName})`);
       }
     }
   }
@@ -1675,9 +1674,9 @@ async function extractPolicyRecord(page, flow, config, item) {
     extractedData['Policy Number'] = item.policyNumber;
   }
 
-  if (missingRequiredFields.length > 0 || businessValueCount === 0) {
-    const missing = missingRequiredFields.length > 0
-      ? `Missing required field(s): ${missingRequiredFields.join('; ')}.`
+  if (missingRunBlockingFields.length > 0 || businessValueCount === 0) {
+    const missing = missingRunBlockingFields.length > 0
+      ? `Missing portal value field(s): ${missingRunBlockingFields.join('; ')}.`
       : 'No business values were extracted from the confirmed policy page.';
     throw new Error(
       `${missing} URL: ${page.url()}. `
