@@ -1096,6 +1096,9 @@ async function findClickableByIntent(page, selector, labels = []) {
 }
 
 async function findAllanGrayDownloadAction(page) {
+  await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })).catch(() => undefined);
+  await page.waitForTimeout(500);
+
   const inferredSelector = await evaluateWithNavigationRetry(page, () => {
     const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
     const isVisible = (el) => {
@@ -1107,36 +1110,49 @@ async function findAllanGrayDownloadAction(page) {
         && rect.width >= 20
         && rect.height >= 20;
     };
-    const clickables = Array.from(document.querySelectorAll('a, button, [role="link"], [role="button"], [tabindex]'))
+    const iconText = (el) => normalise([
+      el.textContent,
+      el.getAttribute('aria-label'),
+      el.getAttribute('title'),
+      el.getAttribute('download'),
+      el.getAttribute('data-testid'),
+      el.getAttribute('mattooltip'),
+      el.getAttribute('ng-reflect-message'),
+      el.getAttribute('class'),
+      ...Array.from(el.querySelectorAll('mat-icon, svg, use, i, span')).map((icon) => [
+        icon.textContent,
+        icon.getAttribute('aria-label'),
+        icon.getAttribute('title'),
+        icon.getAttribute('data-icon'),
+        icon.getAttribute('href'),
+        icon.getAttribute('xlink:href'),
+        icon.getAttribute('class'),
+      ].filter(Boolean).join(' ')),
+    ].filter(Boolean).join(' '));
+    const clickables = Array.from(document.querySelectorAll('a, button, [role="link"], [role="button"], [role="menuitem"], [tabindex], [onclick], .mat-icon-button, .mat-mdc-icon-button'))
       .filter(isVisible)
       .map((el) => {
         const rect = el.getBoundingClientRect();
-        const text = normalise([
-          el.textContent,
-          el.getAttribute('aria-label'),
-          el.getAttribute('title'),
-          el.getAttribute('download'),
-          el.getAttribute('data-testid'),
-          ...Array.from(el.querySelectorAll('mat-icon, svg, use, i')).map((icon) => [
-            icon.textContent,
-            icon.getAttribute('aria-label'),
-            icon.getAttribute('title'),
-            icon.getAttribute('data-icon'),
-            icon.getAttribute('href'),
-            icon.getAttribute('xlink:href'),
-            icon.getAttribute('class'),
-          ].filter(Boolean).join(' ')),
-        ].filter(Boolean).join(' '));
+        const text = iconText(el);
         const toolbarPosition = rect.top >= 90
-          && rect.top <= 260
-          && rect.left >= window.innerWidth * 0.72;
-        const iconLike = Boolean(el.querySelector('svg, mat-icon, i')) || /download|file_download|picture_as_pdf|pdf/i.test(text);
-        const excluded = /zar|last\s+1\s+year|agra\d|account|client|user|profile|logout/i.test(text);
+          && rect.top <= 285
+          && rect.left >= window.innerWidth * 0.68;
+        const accountToolbarDownloadZone = rect.top >= 145
+          && rect.top <= 245
+          && rect.left >= window.innerWidth * 0.82
+          && rect.width >= 24
+          && rect.width <= 80
+          && rect.height >= 24
+          && rect.height <= 80;
+        const iconLike = Boolean(el.querySelector('svg, mat-icon, i, .material-icons, .mat-icon, [class*="icon" i]'))
+          || /download|file_download|cloud_download|picture_as_pdf|pdf/i.test(text);
+        const excluded = /zar|last\s+1\s+year|agra\d|account|client|user|profile|logout|south africa/i.test(text);
         return {
           el,
           text,
           rect,
-          score: (toolbarPosition ? 100 : 0)
+          score: (accountToolbarDownloadZone ? 160 : 0)
+            + (toolbarPosition ? 80 : 0)
             + (/download|file_download|cloud_download|picture_as_pdf|pdf/i.test(text) ? 60 : 0)
             + (iconLike ? 30 : 0)
             + Math.round(rect.left / Math.max(window.innerWidth, 1) * 10)
