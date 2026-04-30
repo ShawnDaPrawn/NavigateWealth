@@ -436,3 +436,5 @@ export function QuoteServiceContactPage() {
     </div>
   );
 }
+
+export default QuoteServiceContactPage;

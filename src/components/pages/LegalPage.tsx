@@ -742,3 +742,5 @@ export function LegalPage() {
     </div>
   );
 }
+
+export default LegalPage;

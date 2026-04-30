@@ -140,3 +140,5 @@ export function VerifyEmailPage() {
     </div>
   );
 }
+
+export default VerifyEmailPage;

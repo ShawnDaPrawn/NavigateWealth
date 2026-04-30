@@ -256,3 +256,5 @@ export function EstatePlanningPage() {
     />
   );
 }
+
+export default EstatePlanningPage;

@@ -643,3 +643,5 @@ export function ProductQuotePage() {
     </div>
   );
 }
+
+export default ProductQuotePage;

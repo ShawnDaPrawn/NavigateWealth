@@ -341,3 +341,5 @@ export function ClientEsignHistoryPage() {
     </div>
   );
 }
+
+export default ClientEsignHistoryPage;

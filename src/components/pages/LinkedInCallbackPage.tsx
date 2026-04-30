@@ -127,3 +127,5 @@ export function LinkedInCallbackPage() {
     </div>
   );
 }
+
+export default LinkedInCallbackPage;

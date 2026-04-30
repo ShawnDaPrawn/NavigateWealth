@@ -358,3 +358,5 @@ export function RequestCompletionPage() {
     </div>
   );
 }
+
+export default RequestCompletionPage;

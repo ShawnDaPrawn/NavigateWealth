@@ -183,3 +183,5 @@ export function EstatePlanningDashboardPage() {
     </div>
   );
 }
+
+export default EstatePlanningDashboardPage;

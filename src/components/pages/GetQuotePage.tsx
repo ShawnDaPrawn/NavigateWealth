@@ -138,3 +138,5 @@ export function GetQuotePage() {
     </div>
   );
 }
+
+export default GetQuotePage;

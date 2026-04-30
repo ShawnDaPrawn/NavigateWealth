@@ -523,3 +523,5 @@ export function ResourcesPage() {
     </div>
   );
 }
+
+export default ResourcesPage;

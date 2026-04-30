@@ -322,3 +322,5 @@ export function AdminDashboardPage() {
     </ErrorBoundary>
   );
 }
+
+export default AdminDashboardPage;

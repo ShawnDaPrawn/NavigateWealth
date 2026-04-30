@@ -393,3 +393,5 @@ export function LinktreePage() {
     </>
   );
 }
+
+export default LinktreePage;

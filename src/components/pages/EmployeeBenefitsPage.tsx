@@ -328,3 +328,5 @@ export function EmployeeBenefitsPage() {
     />
   );
 }
+
+export default EmployeeBenefitsPage;

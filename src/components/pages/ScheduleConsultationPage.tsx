@@ -171,3 +171,5 @@ export function ScheduleConsultationPage() {
     </div>
   );
 }
+
+export default ScheduleConsultationPage;

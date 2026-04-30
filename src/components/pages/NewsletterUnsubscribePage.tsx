@@ -147,3 +147,5 @@ export function NewsletterUnsubscribePage() {
     </>
   );
 }
+
+export default NewsletterUnsubscribePage;

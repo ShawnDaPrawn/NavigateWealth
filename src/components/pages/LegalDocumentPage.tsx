@@ -449,3 +449,5 @@ export function LegalDocumentPage() {
     </div>
   );
 }
+
+export default LegalDocumentPage;

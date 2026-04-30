@@ -453,3 +453,5 @@ export function ResetPasswordPage() {
     </div>
   );
 }
+
+export default ResetPasswordPage;

@@ -195,3 +195,5 @@ export function RetirementPlanningDashboardPage() {
     </div>
   );
 }
+
+export default RetirementPlanningDashboardPage;

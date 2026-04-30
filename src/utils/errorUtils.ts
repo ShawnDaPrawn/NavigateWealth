@@ -62,6 +62,22 @@ export function isAbortError(error: unknown): boolean {
 }
 
 /**
+ * Web Locks: when {@link navigator.locks.request} is invoked with `{ steal: true }`,
+ * the previous holder's lock promise rejects with AbortError whose message mentions
+ * "steal". This is expected cross-tab coordination, not an application bug.
+ */
+export function isWebLockStealAbort(reason: unknown): boolean {
+  if (typeof reason !== 'object' || reason === null) return false;
+  const r = reason as { name?: unknown; message?: unknown };
+  if (r.name !== 'AbortError') return false;
+  const msg = typeof r.message === 'string' ? r.message : '';
+  return (
+    msg.includes('Lock broken by another request') &&
+    msg.includes('steal')
+  );
+}
+
+/**
  * Safely extract error message from unknown error type
  */
 export function getErrorMessage(error: unknown): string {

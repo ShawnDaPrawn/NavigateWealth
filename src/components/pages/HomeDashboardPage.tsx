@@ -265,3 +265,5 @@ export function HomeDashboardPage() {
     </div>
   );
 }
+
+export default HomeDashboardPage;

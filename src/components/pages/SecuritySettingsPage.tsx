@@ -582,3 +582,5 @@ export function SecuritySettingsPage() {
     </div>
   );
 }
+
+export default SecuritySettingsPage;

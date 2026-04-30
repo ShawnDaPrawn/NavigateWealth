@@ -385,3 +385,5 @@ export function SignerLandingPage() {
 
   return null;
 }
+
+export default SignerLandingPage;

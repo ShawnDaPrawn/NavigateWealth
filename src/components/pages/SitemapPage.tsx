@@ -596,3 +596,5 @@ export function SitemapPage() {
     </div>
   );
 }
+
+export default SitemapPage;

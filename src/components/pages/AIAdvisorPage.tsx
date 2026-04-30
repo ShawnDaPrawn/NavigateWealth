@@ -578,3 +578,5 @@ export function AIAdvisorPage() {
     </div>
   );
 }
+
+export default AIAdvisorPage;

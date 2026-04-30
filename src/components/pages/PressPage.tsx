@@ -510,3 +510,5 @@ export function PressPage() {
     </div>
   );
 }
+
+export default PressPage;

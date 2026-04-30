@@ -375,3 +375,5 @@ export function MedicalAidPage() {
     />
   );
 }
+
+export default MedicalAidPage;

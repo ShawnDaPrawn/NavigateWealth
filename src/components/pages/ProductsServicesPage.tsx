@@ -385,3 +385,5 @@ export function ProductsServicesPage() {
     </div>
   );
 }
+
+export default ProductsServicesPage;

@@ -240,3 +240,5 @@ export function DeclinedApplicationPage() {
     </div>
   );
 }
+
+export default DeclinedApplicationPage;

@@ -110,3 +110,5 @@ export function EmployeeBenefitsDashboardPage() {
     </div>
   );
 }
+
+export default EmployeeBenefitsDashboardPage;

@@ -353,3 +353,5 @@ export function InvestmentManagementPage() {
     />
   );
 }
+
+export default InvestmentManagementPage;

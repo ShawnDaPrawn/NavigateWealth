@@ -180,3 +180,5 @@ export function TaxPlanningDashboardPage() {
     </div>
   );
 }
+
+export default TaxPlanningDashboardPage;

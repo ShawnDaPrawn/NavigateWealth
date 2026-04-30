@@ -501,3 +501,5 @@ export function ApplicationPage() {
     </div>
   );
 }
+
+export default ApplicationPage;

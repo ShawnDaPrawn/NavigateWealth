@@ -346,3 +346,5 @@ export function RetirementPlanningPage() {
     />
   );
 }
+
+export default RetirementPlanningPage;

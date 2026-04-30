@@ -206,3 +206,5 @@ export function RiskManagementDashboardPage() {
     </div>
   );
 }
+
+export default RiskManagementDashboardPage;

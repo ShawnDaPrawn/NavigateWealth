@@ -205,3 +205,5 @@ export function InvestmentManagementDashboardPage() {
     </div>
   );
 }
+
+export default InvestmentManagementDashboardPage;

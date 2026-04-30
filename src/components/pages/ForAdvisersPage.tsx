@@ -433,3 +433,5 @@ export function ForAdvisersPage() {
     </div>
   );
 }
+
+export default ForAdvisersPage;

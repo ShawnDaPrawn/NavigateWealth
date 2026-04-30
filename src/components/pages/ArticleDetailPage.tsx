@@ -1548,3 +1548,5 @@ export function ArticleDetailPage() {
     </div>
   );
 }
+
+export default ArticleDetailPage;

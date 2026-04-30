@@ -443,3 +443,5 @@ export function FinancialPlanningPage() {
     />
   );
 }
+
+export default FinancialPlanningPage;

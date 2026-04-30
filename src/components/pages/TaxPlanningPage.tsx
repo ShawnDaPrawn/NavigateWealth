@@ -311,3 +311,5 @@ export function TaxPlanningPage() {
     />
   );
 }
+
+export default TaxPlanningPage;

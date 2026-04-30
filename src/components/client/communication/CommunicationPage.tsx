@@ -140,3 +140,5 @@ export function CommunicationPage() {
     </div>
   );
 }
+
+export default CommunicationPage;

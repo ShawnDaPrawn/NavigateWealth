@@ -868,3 +868,5 @@ export function MyAdviserPage() {
     </div>
   );
 }
+
+export default MyAdviserPage;

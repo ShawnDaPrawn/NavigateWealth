@@ -438,3 +438,5 @@ export function ForIndividualsPage() {
     </div>
   );
 }
+
+export default ForIndividualsPage;

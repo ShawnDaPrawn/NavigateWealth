@@ -605,3 +605,5 @@ export function WhyUsPage() {
     </div>
   );
 }
+
+export default WhyUsPage;

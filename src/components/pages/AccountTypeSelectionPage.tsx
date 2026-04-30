@@ -357,3 +357,5 @@ export function AccountTypeSelectionPage() {
     </div>
   );
 }
+
+export default AccountTypeSelectionPage;

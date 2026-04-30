@@ -139,3 +139,5 @@ export function NewsletterConfirmPage() {
     </>
   );
 }
+
+export default NewsletterConfirmPage;

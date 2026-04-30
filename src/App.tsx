@@ -10,6 +10,7 @@ import {
   reportRuntimeClientIssue,
   runtimeIssueFromUnknown,
 } from "./utils/quality/runtimeIssueReporter";
+import { isWebLockStealAbort } from "./utils/errorUtils";
 
 const CHUNK_LOAD_RELOAD_KEY = "navigate-wealth:chunk-load-reload-at";
 const CHUNK_LOAD_RELOAD_WINDOW_MS = 60_000;
@@ -112,6 +113,11 @@ export default function App() {
     const handleUnhandledRejection = (
       event: PromiseRejectionEvent,
     ) => {
+      if (isWebLockStealAbort(event.reason)) {
+        event.preventDefault();
+        return;
+      }
+
       const reason = String(event.reason ?? "");
       if (isDynamicImportLoadFailure(event.reason) || isDynamicImportLoadFailure(reason)) {
         event.preventDefault();

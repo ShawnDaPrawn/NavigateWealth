@@ -695,3 +695,5 @@ export function OGImageGeneratorPage() {
     </div>
   );
 }
+
+export default OGImageGeneratorPage;

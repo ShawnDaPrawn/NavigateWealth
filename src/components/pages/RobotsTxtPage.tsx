@@ -59,3 +59,5 @@ Sitemap: ${SITE_ORIGIN}/sitemap.xml
 
   return null;
 }
+
+export default RobotsTxtPage;
