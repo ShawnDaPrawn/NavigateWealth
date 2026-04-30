@@ -979,6 +979,56 @@ async function findClickableByIntent(page, selector, labels = []) {
     }
   }
 
+  const inferredSelector = await evaluateWithNavigationRetry(page, (labelList) => {
+    const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+    const isVisible = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const labelsText = normalise((labelList || []).join(' '));
+    const wantsDownload = /download|pdf|statement|schedule/i.test(labelsText);
+    if (!wantsDownload) return '';
+
+    const clickables = Array.from(document.querySelectorAll('a, button, [role="link"], [role="button"]'))
+      .filter(isVisible);
+    const candidate = clickables.find((el) => {
+      const text = [
+        el.textContent,
+        el.getAttribute('aria-label'),
+        el.getAttribute('title'),
+        el.getAttribute('download'),
+        el.getAttribute('data-testid'),
+        el.getAttribute('mattooltip'),
+        el.getAttribute('ng-reflect-message'),
+        ...Array.from(el.querySelectorAll('mat-icon, svg, use, i')).map((icon) => [
+          icon.textContent,
+          icon.getAttribute('aria-label'),
+          icon.getAttribute('title'),
+          icon.getAttribute('data-icon'),
+          icon.getAttribute('href'),
+          icon.getAttribute('xlink:href'),
+          icon.getAttribute('class'),
+        ].filter(Boolean).join(' ')),
+      ].filter(Boolean).join(' ');
+      return /download|file_download|cloud_download|picture_as_pdf|pdf|statement/i.test(text);
+    });
+    if (!candidate) return '';
+
+    const id = `nw-download-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    candidate.setAttribute('data-nw-worker-clickable', id);
+    return `[data-nw-worker-clickable="${id}"]`;
+  }, labels).catch(() => '');
+
+  if (inferredSelector) {
+    const locator = page.locator(inferredSelector).first();
+    if (await locator.isVisible({ timeout: 800 }).catch(() => false)) return locator;
+  }
+
   throw new Error('Could not confidently find the policy schedule download action.');
 }
 
@@ -1384,7 +1434,7 @@ async function searchPolicyByNumber(page, flow, item, brain) {
 async function extractByLabels(page, fields) {
   return evaluateWithNavigationRetry(page, (fieldDefs) => {
     const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
-    const normaliseLabel = (value) => normalise(value).toLowerCase().replace(/\s*:\s*$/, '');
+    const normaliseLabel = (value) => normalise(value).toLowerCase().replace(/\s*[:?]\s*$/, '');
     const isUseful = (value) => {
       const text = normalise(value);
       return text && text.length <= 220;
@@ -1392,7 +1442,11 @@ async function extractByLabels(page, fields) {
     const matchesLabel = (value, label) => {
       const text = normaliseLabel(value);
       const expected = normaliseLabel(label);
-      return Boolean(text && expected) && text === expected;
+      return Boolean(text && expected) && (
+        text === expected
+        || text.replace(/\s+[?]\s*$/, '') === expected
+        || text.startsWith(`${expected} ?`)
+      );
     };
     const readControl = (el) => {
       if (!el) return '';
@@ -1406,10 +1460,38 @@ async function extractByLabels(page, fields) {
     const extractInlineCurrency = (value, label) => {
       const text = normalise(value);
       const expected = normaliseLabel(label);
-      if (!text || !expected || !normaliseLabel(text).startsWith(expected)) return '';
-      const valueText = cleanValue(text, label);
+      if (!text || !expected) return '';
+      const normalisedText = normaliseLabel(text);
+      const labelIndex = normalisedText.indexOf(expected);
+      if (labelIndex < 0) return '';
+      const startsWithLabel = normalisedText.startsWith(expected);
+      const isCompactLabelValue = text.length <= 180 && labelIndex >= 0;
+      if (!startsWithLabel && !isCompactLabelValue) return '';
+      const valueText = startsWithLabel
+        ? cleanValue(text, label)
+        : text.slice(Math.max(0, labelIndex + expected.length));
       const money = valueText.match(/R\s*[\d\s,]+(?:\.\d{1,2})?/i);
       return money ? money[0].trim() : '';
+    };
+    const findCurrencyNearLabel = (labelElement, label) => {
+      const labelRect = labelElement.getBoundingClientRect();
+      const moneyElements = elements
+        .map((el) => ({ el, text: normalise(el.textContent), rect: el.getBoundingClientRect() }))
+        .filter((entry) => /R\s*[\d\s,]+(?:\.\d{1,2})?/i.test(entry.text))
+        .filter((entry) => entry.rect.width > 0 && entry.rect.height > 0)
+        .map((entry) => ({
+          ...entry,
+          distance: Math.abs(entry.rect.top - labelRect.top) + Math.max(0, entry.rect.left - labelRect.right),
+        }))
+        .sort((a, b) => a.distance - b.distance);
+      const sameLine = moneyElements.find((entry) =>
+        Math.abs(entry.rect.top - labelRect.top) <= Math.max(24, labelRect.height * 1.5)
+        && entry.rect.left >= labelRect.left,
+      );
+      const nearby = sameLine || moneyElements[0];
+      if (!nearby || nearby.distance > 600) return '';
+      const match = nearby.text.match(/R\s*[\d\s,]+(?:\.\d{1,2})?/i);
+      return match ? match[0].trim() : '';
     };
     const elements = Array.from(document.querySelectorAll('body *'))
       .filter((el) => {
@@ -1435,6 +1517,13 @@ async function extractByLabels(page, fields) {
 
         const labelElement = elements.find((el) => matchesLabel(el.textContent, label));
         if (!labelElement) continue;
+
+        const nearbyCurrency = findCurrencyNearLabel(labelElement, label);
+        if (nearbyCurrency) {
+          value = nearbyCurrency;
+          sourceLabel = label;
+          break;
+        }
 
         const row = labelElement.closest('tr');
         if (row) {
@@ -1506,6 +1595,16 @@ function isPolicyNumberField(field) {
   return /policy\s*(number|no)|reference/i.test(signature);
 }
 
+function isRequiredPortalField(field) {
+  if (field?.required === true) return true;
+  return getFieldSemanticKind(field) === 'current_value';
+}
+
+function shouldCountAsExtractedBusinessValue(field, value) {
+  if (isPolicyNumberField(field)) return false;
+  return Boolean(String(value || '').trim());
+}
+
 function applyTemplateMetadata(rawData, item) {
   return {
     ...rawData,
@@ -1539,6 +1638,8 @@ async function extractPolicyRecord(page, flow, config, item) {
   const labelExtracted = await extractByLabels(page, fields);
   const rawData = {};
   const extractedData = {};
+  const missingRequiredFields = [];
+  let businessValueCount = 0;
 
   for (const field of fields) {
     const columnName = getFieldColumnName(field);
@@ -1559,12 +1660,29 @@ async function extractPolicyRecord(page, flow, config, item) {
     if (isPolicyNumberField(field)) {
       rawData[columnName] = item.policyNumber;
       extractedData[columnName] = item.policyNumber;
+    } else {
+      if (shouldCountAsExtractedBusinessValue(field, selectedValue)) {
+        businessValueCount += 1;
+      } else if (isRequiredPortalField(field)) {
+        const labels = Array.isArray(field.labels) ? field.labels.filter(Boolean).join(', ') : columnName;
+        missingRequiredFields.push(`${getFieldDisplayName(field)} (${labels || columnName})`);
+      }
     }
   }
 
   if (!fields.some((field) => isPolicyNumberField(field))) {
     rawData['Policy Number'] = item.policyNumber;
     extractedData['Policy Number'] = item.policyNumber;
+  }
+
+  if (missingRequiredFields.length > 0 || businessValueCount === 0) {
+    const missing = missingRequiredFields.length > 0
+      ? `Missing required field(s): ${missingRequiredFields.join('; ')}.`
+      : 'No business values were extracted from the confirmed policy page.';
+    throw new Error(
+      `${missing} URL: ${page.url()}. `
+      + 'The worker will not stage a completed row without an extracted policy value.',
+    );
   }
 
   const rawDataWithMetadata = applyTemplateMetadata(rawData, item);
