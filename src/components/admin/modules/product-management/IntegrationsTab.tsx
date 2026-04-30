@@ -309,9 +309,12 @@ export function IntegrationsTab() {
   });
 
   const createPortalJobMutation = useMutation({
-    mutationFn: async (params: { credentialProfileId: string; runMode: PortalJobRunMode }) => {
+    mutationFn: async (params: { credentialProfileId: string; runMode: PortalJobRunMode; policySchedule?: PortalProviderFlow['policySchedule']; documentArtifacts?: PortalProviderFlow['documentArtifacts'] }) => {
         if (!selectedProviderId || !selectedCategoryId) throw new Error("Missing provider or category");
-        return productManagementApi.createPortalJob(selectedProviderId, selectedCategoryId, params.credentialProfileId, params.runMode);
+        return productManagementApi.createPortalJob(selectedProviderId, selectedCategoryId, params.credentialProfileId, params.runMode, {
+          policySchedule: params.policySchedule,
+          documentArtifacts: params.documentArtifacts,
+        });
     },
     onSuccess: ({ job }) => {
         setPortalJob(job);
@@ -633,7 +636,7 @@ export function IntegrationsTab() {
                 isSavingFlow={savePortalFlowMutation.isPending}
                 isSubmittingOtp={submitPortalOtpMutation.isPending}
                 isRefreshingJob={refreshPortalJobMutation.isPending}
-                onCreateJob={(credentialProfileId, runMode) => createPortalJobMutation.mutate({ credentialProfileId, runMode })}
+                onCreateJob={(credentialProfileId, runMode, options) => createPortalJobMutation.mutate({ credentialProfileId, runMode, ...options })}
                 onSaveCredentials={(profileId, credentials) => savePortalCredentialsMutation.mutate({ profileId, ...credentials })}
                 onSaveFlow={(flow) => savePortalFlowMutation.mutate(flow)}
                 onSubmitOtp={(otp) => submitPortalOtpMutation.mutate(otp)}

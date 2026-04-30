@@ -350,12 +350,20 @@ export const productManagementApi = {
     return response.status;
   },
 
-  createPortalJob: async (providerId: string, categoryId: string, credentialProfileId: string, runMode: PortalJobRunMode): Promise<{ job: PortalSyncJob; flow: PortalProviderFlow }> => {
+  createPortalJob: async (
+    providerId: string,
+    categoryId: string,
+    credentialProfileId: string,
+    runMode: PortalJobRunMode,
+    options: Pick<PortalProviderFlow, 'policySchedule' | 'documentArtifacts'> = {},
+  ): Promise<{ job: PortalSyncJob; flow: PortalProviderFlow }> => {
     return api.post<{ success: boolean; job: PortalSyncJob; flow: PortalProviderFlow }>('integrations/portal-jobs', {
       providerId,
       categoryId,
       credentialProfileId,
       runMode,
+      policySchedule: options.policySchedule,
+      documentArtifacts: options.documentArtifacts,
     });
   },
 

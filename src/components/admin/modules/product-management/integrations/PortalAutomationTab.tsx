@@ -35,7 +35,7 @@ interface PortalAutomationTabProps {
   isSavingFlow: boolean;
   isSubmittingOtp: boolean;
   isRefreshingJob: boolean;
-  onCreateJob: (credentialProfileId: string, runMode: PortalJobRunMode) => void;
+  onCreateJob: (credentialProfileId: string, runMode: PortalJobRunMode, options?: Pick<PortalProviderFlow, 'policySchedule' | 'documentArtifacts'>) => void;
   onSaveCredentials: (profileId: string, credentials: { username: string; password?: string }) => void;
   onSaveFlow: (flow: PortalProviderFlow) => void;
   onSubmitOtp: (otp: string) => void;
@@ -298,6 +298,11 @@ export function PortalAutomationTab({
       : '',
   ].filter(Boolean);
   const currentJobWarning = latestPortalWarning(job?.warning, job?.warnings);
+  const currentJobRequestedDocument = Boolean(
+    job?.policySchedule?.enabled ||
+    job?.documentArtifacts?.some((artifact) => artifact.enabled !== false) ||
+    flow?.policySchedule?.enabled
+  );
 
   const updateFieldSelector = (index: number, selector: string) => {
     setFieldSelectors(prev => prev.map((field, currentIndex) => (
@@ -361,6 +366,17 @@ export function PortalAutomationTab({
     }
   }, [credentialsSaved, hasCredentialDraft, isAwaitingCredentialSave, isSavingCredentials, selectedCredentialProfileId]);
 
+  const buildPolicyScheduleDraft = (): PortalProviderFlow['policySchedule'] => ({
+    ...(flow?.policySchedule || {}),
+    enabled: policyScheduleEnabled,
+    downloadLabels: splitPortalLines(policyScheduleLabelsText),
+    downloadSelector: policyScheduleSelector.trim() || undefined,
+    downloadMenuLabels: flow?.policySchedule?.downloadMenuLabels || ['Download PDF with company logo', 'Download PDF without company logo'],
+    documentType: flow?.policySchedule?.documentType || 'policy_schedule',
+    required: false,
+    waitForDownloadMs: flow?.policySchedule?.waitForDownloadMs || 45000,
+  });
+
   const saveFlowConfiguration = () => {
     if (!flow) return;
     let policyListSteps = flow.navigation.policyListSteps || [];
@@ -410,16 +426,7 @@ export function PortalAutomationTab({
         policyRowSelector: policyRowSelector.trim(),
         fields: buildProviderFallbackFields(),
       },
-      policySchedule: {
-        ...(flow.policySchedule || {}),
-        enabled: policyScheduleEnabled,
-        downloadLabels: splitPortalLines(policyScheduleLabelsText),
-        downloadSelector: policyScheduleSelector.trim() || undefined,
-        downloadMenuLabels: flow.policySchedule?.downloadMenuLabels || ['Download PDF with company logo', 'Download PDF without company logo'],
-        documentType: flow.policySchedule?.documentType || 'policy_schedule',
-        required: true,
-        waitForDownloadMs: flow.policySchedule?.waitForDownloadMs || 45000,
-      },
+      policySchedule: buildPolicyScheduleDraft(),
       needsDiscovery: false,
     });
   };
@@ -895,7 +902,10 @@ export function PortalAutomationTab({
 
               <div className="flex flex-wrap gap-3">
                 <Button
-                  onClick={() => onCreateJob(selectedCredentialProfileId, runMode)}
+                  onClick={() => onCreateJob(selectedCredentialProfileId, runMode, {
+                    policySchedule: buildPolicyScheduleDraft(),
+                    documentArtifacts: flow?.documentArtifacts || [],
+                  })}
                   disabled={!selectedCredentialProfileId || !credentialStatus?.hasUsername || !credentialStatus?.hasPassword || isCreatingJob}
                   className="bg-purple-600 hover:bg-purple-700"
                 >
@@ -1163,7 +1173,7 @@ export function PortalAutomationTab({
                               </Badge>
                             ) : item.documentAttached ? (
                               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Attached</Badge>
-                            ) : flow?.policySchedule?.enabled ? (
+                            ) : currentJobRequestedDocument ? (
                               <span className="text-xs text-amber-700">Not attached</span>
                             ) : (
                               <span className="text-xs text-gray-400">-</span>

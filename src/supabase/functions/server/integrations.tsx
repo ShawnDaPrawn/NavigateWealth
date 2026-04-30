@@ -393,6 +393,8 @@ interface PortalSyncJob {
   currentItemId?: string;
   currentClientName?: string;
   currentPolicyNumber?: string;
+  policySchedule?: PortalPolicyScheduleConfig;
+  documentArtifacts?: PortalDocumentArtifactConfig[];
   queueSummary?: PortalJobQueueSummary;
 }
 
@@ -2769,6 +2771,8 @@ app.post("/portal-jobs", requireAuth, async (c) => {
     }
 
     const runMode = normaliseRunMode(body?.runMode);
+    const requestedPolicySchedule = normalisePolicyScheduleConfig(body?.policySchedule, flow.policySchedule);
+    const requestedDocumentArtifacts = normaliseDocumentArtifactConfigs(body?.documentArtifacts, flow.documentArtifacts || []);
 
     const now = new Date().toISOString();
     const job: PortalSyncJob = {
@@ -2781,6 +2785,8 @@ app.post("/portal-jobs", requireAuth, async (c) => {
       automationHost: 'github_actions',
       flowId: flow.id,
       credentialProfileId,
+      policySchedule: requestedPolicySchedule,
+      documentArtifacts: requestedDocumentArtifacts,
       createdAt: now,
       updatedAt: now,
       currentStep: 'queued',
@@ -3203,18 +3209,23 @@ app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
           categoryId: job.categoryId,
         }, schema.fields || [])
       : null;
+    const flowForJobRequest: PortalProviderFlow = {
+      ...flow,
+      policySchedule: normalisePolicyScheduleConfig(job.policySchedule, flow.policySchedule),
+      documentArtifacts: normaliseDocumentArtifactConfigs(job.documentArtifacts, flow.documentArtifacts || []),
+    };
     const flowForJobCategory = config
       ? {
-          ...flow,
+          ...flowForJobRequest,
           extraction: {
-            ...flow.extraction,
+            ...flowForJobRequest.extraction,
             fields: buildPortalExtractionFieldsForBindings(
               getTemplateFieldBindings(config, schema.fields || []),
-              Array.isArray(flow.extraction?.fields) ? flow.extraction.fields : [],
+              Array.isArray(flowForJobRequest.extraction?.fields) ? flowForJobRequest.extraction.fields : [],
             ),
           },
         }
-      : flow;
+      : flowForJobRequest;
     const items = await loadPortalJobItems(jobId);
     const brainConfig = getPortalBrainConfig();
     const brainMemory = await loadPortalBrainMemory(job.providerId, job.categoryId);

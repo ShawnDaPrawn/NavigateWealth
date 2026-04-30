@@ -423,6 +423,8 @@ export interface PortalSyncJob {
   currentItemId?: string;
   currentClientName?: string;
   currentPolicyNumber?: string;
+  policySchedule?: PortalPolicyScheduleConfig;
+  documentArtifacts?: PortalDocumentArtifactConfig[];
   queueSummary?: PortalJobQueueSummary;
 }
 
