@@ -313,6 +313,37 @@ export interface PortalPolicyScheduleConfig {
   waitForDownloadMs?: number;
 }
 
+export interface PortalDocumentArtifactStep {
+  action: 'click' | 'click_menu_item' | 'wait_for_download';
+  target?: 'download_button' | 'menu_item' | string;
+  selector?: string;
+  labels?: string[];
+  text?: string;
+  timeoutMs?: number;
+  optional?: boolean;
+}
+
+export interface PortalDocumentArtifactConfig {
+  id: string;
+  label: string;
+  enabled?: boolean;
+  required?: boolean;
+  attachTo?: 'matched_policy';
+  documentType?: 'policy_schedule' | 'amendment' | 'statement' | 'benefit_summary' | 'other';
+  fileType?: 'pdf';
+  steps: PortalDocumentArtifactStep[];
+}
+
+export interface PortalDocumentArtifactStatus {
+  id: string;
+  label: string;
+  status: 'not_requested' | 'started' | 'downloaded' | 'validated' | 'attached' | 'failed' | 'skipped';
+  fileName?: string;
+  documentId?: string;
+  error?: string;
+  updatedAt: string;
+}
+
 export interface PortalProviderFlow {
   id: string;
   providerId: string;
@@ -357,6 +388,7 @@ export interface PortalProviderFlow {
     fields: PortalFlowField[];
   };
   policySchedule?: PortalPolicyScheduleConfig;
+  documentArtifacts?: PortalDocumentArtifactConfig[];
   notes: string[];
   needsDiscovery?: boolean;
   updatedAt: string;
@@ -427,6 +459,7 @@ export interface PortalJobPolicyItem {
   documentAttached?: boolean;
   documentFileName?: string;
   documentUpdatedAt?: string;
+  artifactStatuses?: PortalDocumentArtifactStatus[];
   createdAt: string;
   updatedAt: string;
   startedAt?: string;

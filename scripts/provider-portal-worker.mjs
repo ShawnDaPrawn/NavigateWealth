@@ -146,6 +146,20 @@ async function writeDebugArtifact(item, name, payload) {
   ).catch(() => undefined);
 }
 
+async function writeDebugScreenshot(page, item, name) {
+  if (!debugDir) return;
+  await mkdir(debugDir, { recursive: true }).catch(() => undefined);
+  const fileName = [
+    safeDebugFilePart(activeJobId),
+    safeDebugFilePart(item?.policyNumber || item?.id),
+    safeDebugFilePart(name),
+  ].join('-');
+  await page.screenshot({
+    path: `${debugDir}/${fileName}.png`,
+    fullPage: true,
+  }).catch(() => undefined);
+}
+
 function sanitiseWarning(value) {
   return String(value || '').trim().slice(0, 500);
 }
@@ -1144,31 +1158,163 @@ async function findAllanGrayDownloadAction(page) {
   return null;
 }
 
-function safeDownloadedPdfName(item, suggestedFilename) {
-  const baseName = String(suggestedFilename || `${item.policyNumber || item.id}-policy-schedule.pdf`)
+function safeDownloadedPdfName(item, suggestedFilename, artifactId = 'policy_schedule') {
+  const baseName = String(suggestedFilename || `${item.policyNumber || item.id}-${artifactId}.pdf`)
     .replace(/[^a-zA-Z0-9._-]/g, '_')
     .replace(/^_+|_+$/g, '');
   return baseName.toLowerCase().endsWith('.pdf') ? baseName : `${baseName || 'policy_schedule'}.pdf`;
 }
 
-async function downloadPolicySchedule(page, flow, item) {
-  const policySchedule = flow.policySchedule || {};
-  const labels = splitLabels(policySchedule.downloadLabels || ['Policy schedule', 'Download', 'PDF', 'Statement']);
-  const menuLabels = splitLabels(policySchedule.downloadMenuLabels || ['Download PDF with company logo', 'Download PDF without company logo']);
-  const timeout = Number(policySchedule.waitForDownloadMs || 30000);
-  const action = /allangray\.co\.za/i.test(page.url())
-    ? (await findAllanGrayDownloadAction(page)) || await findClickableByIntent(page, policySchedule.downloadSelector, labels)
-    : await findClickableByIntent(page, policySchedule.downloadSelector, labels);
+function normaliseArtifactStepLabels(step, fallback = []) {
+  return splitLabels(step?.labels || step?.text || fallback);
+}
 
-  let download;
+function buildDocumentArtifacts(flow) {
+  const configuredArtifacts = Array.isArray(flow.documentArtifacts)
+    ? flow.documentArtifacts.filter((artifact) => artifact && artifact.enabled !== false)
+    : [];
+  if (configuredArtifacts.length > 0) return configuredArtifacts;
+
+  const policySchedule = flow.policySchedule || {};
+  if (!policySchedule.enabled) return [];
+  const timeout = Number(policySchedule.waitForDownloadMs || 30000);
+  return [{
+    id: 'policy_schedule',
+    label: 'Policy schedule',
+    enabled: true,
+    required: policySchedule.required === true,
+    attachTo: 'matched_policy',
+    documentType: policySchedule.documentType || 'policy_schedule',
+    fileType: 'pdf',
+    steps: [
+      {
+        action: 'click',
+        target: 'download_button',
+        selector: policySchedule.downloadSelector,
+        labels: splitLabels(policySchedule.downloadLabels || ['Policy schedule', 'Download', 'PDF', 'Statement']),
+        timeoutMs: Math.min(timeout, 10000),
+      },
+      {
+        action: 'click_menu_item',
+        target: 'menu_item',
+        labels: splitLabels(policySchedule.downloadMenuLabels || ['Download PDF with company logo', 'Download PDF without company logo']),
+        timeoutMs: timeout,
+      },
+      {
+        action: 'wait_for_download',
+        timeoutMs: timeout,
+      },
+    ],
+  }];
+}
+
+function artifactStatus(artifact, status, patch = {}) {
+  return {
+    id: String(artifact.id || 'document'),
+    label: String(artifact.label || artifact.id || 'Document'),
+    status,
+    updatedAt: new Date().toISOString(),
+    ...patch,
+  };
+}
+
+function mergeArtifactStatus(statuses, nextStatus) {
+  return [
+    ...statuses.filter((status) => status.id !== nextStatus.id),
+    nextStatus,
+  ];
+}
+
+async function captureVisibleDocumentActions(page) {
+  return evaluateWithNavigationRetry(page, () => {
+    const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+    const isVisible = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    return Array.from(document.querySelectorAll('a, button, [role="link"], [role="button"], [role="menuitem"], [tabindex]'))
+      .filter(isVisible)
+      .slice(0, 80)
+      .map((el) => {
+        const rect = el.getBoundingClientRect();
+        return {
+          tag: el.tagName.toLowerCase(),
+          role: el.getAttribute('role') || '',
+          ariaLabel: el.getAttribute('aria-label') || '',
+          title: el.getAttribute('title') || '',
+          text: normalise(el.textContent || '').slice(0, 200),
+          className: String(el.getAttribute('class') || '').slice(0, 160),
+          rect: {
+            top: Math.round(rect.top),
+            left: Math.round(rect.left),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+          },
+        };
+      });
+  }).catch(() => []);
+}
+
+async function findDocumentClickTarget(page, artifact, step) {
+  const labels = normaliseArtifactStepLabels(step, ['Policy schedule', 'Download', 'PDF', 'Statement']);
+  if (step?.target === 'download_button' && /allangray\.co\.za/i.test(page.url())) {
+    const allanGrayAction = await findAllanGrayDownloadAction(page);
+    if (allanGrayAction) return allanGrayAction;
+  }
+  return findClickableByIntent(page, step?.selector || '', labels);
+}
+
+async function clickDocumentMenuItem(page, artifact, step, item) {
+  await page.waitForTimeout(600);
+  await writeDebugScreenshot(page, item, `${artifact.id}-menu-open`);
+  const labels = normaliseArtifactStepLabels(step, ['Download PDF with company logo', 'Download PDF']);
+  const menuAction = await findClickableByIntent(page, step?.selector || '', labels);
+  if (!menuAction) {
+    const visibleActions = await captureVisibleDocumentActions(page);
+    await writeDebugArtifact(item, `${artifact.id}-menu-candidates`, {
+      pageUrl: page.url(),
+      labels,
+      visibleActions,
+    });
+    throw new Error(`Could not find document menu item for ${artifact.label}. Expected one of: ${labels.join(', ')}`);
+  }
+  return menuAction.click();
+}
+
+async function runDocumentDownloadSteps(page, artifact, item) {
+  const steps = Array.isArray(artifact.steps) ? artifact.steps : [];
+  const clickStep = steps.find((step) => step.action === 'click') || {};
+  const menuStep = steps.find((step) => step.action === 'click_menu_item');
+  const downloadStep = steps.find((step) => step.action === 'wait_for_download') || {};
+  const timeout = Number(downloadStep.timeoutMs || menuStep?.timeoutMs || clickStep.timeoutMs || 30000);
+  const directTimeout = Math.min(Number(clickStep.timeoutMs || 5000), 10000);
+  const clickTarget = await findDocumentClickTarget(page, artifact, clickStep);
+  if (!clickTarget) {
+    const visibleActions = await captureVisibleDocumentActions(page);
+    await writeDebugArtifact(item, `${artifact.id}-download-action-candidates`, {
+      pageUrl: page.url(),
+      labels: normaliseArtifactStepLabels(clickStep),
+      visibleActions,
+    });
+    throw new Error(`Could not find document download action for ${artifact.label}.`);
+  }
+
+  let download = null;
   try {
-    const directDownloadPromise = page.waitForEvent('download', { timeout: Math.min(timeout, 5000) });
-    await action.click();
+    const directDownloadPromise = page.waitForEvent('download', { timeout: directTimeout });
+    await clickTarget.click();
     download = await directDownloadPromise;
   } catch {
-    const menuAction = await findClickableByIntent(page, '', menuLabels);
+    if (!menuStep) {
+      throw new Error(`${artifact.label} did not start a download after clicking the document action.`);
+    }
     const menuDownloadPromise = page.waitForEvent('download', { timeout });
-    await menuAction.click();
+    await clickDocumentMenuItem(page, artifact, menuStep, item);
     download = await menuDownloadPromise;
   }
 
@@ -1182,27 +1328,89 @@ async function downloadPolicySchedule(page, flow, item) {
 
   return {
     filePath,
-    fileName: safeDownloadedPdfName(item, download.suggestedFilename()),
+    fileName: safeDownloadedPdfName(item, download.suggestedFilename(), artifact.id),
   };
 }
 
-async function uploadPolicyScheduleDocument(item, downloaded, documentType = 'policy_schedule') {
+async function uploadPolicyDocumentArtifact(item, artifact, downloaded) {
   if (!workerSecret) {
-    throw new Error('Policy schedule attachment requires NW_PORTAL_WORKER_SECRET live worker mode.');
+    throw new Error('Policy document attachment requires NW_PORTAL_WORKER_SECRET live worker mode.');
   }
 
   const buffer = await readFile(downloaded.filePath);
   const signature = buffer.subarray(0, 5).toString('utf8');
   if (!signature.startsWith('%PDF-')) {
-    throw new Error('Downloaded policy schedule is not a valid PDF.');
+    throw new Error(`Downloaded ${artifact.label} is not a valid PDF.`);
   }
 
   const formData = new FormData();
   formData.append('file', new Blob([buffer], { type: 'application/pdf' }), downloaded.fileName);
   formData.append('fileName', downloaded.fileName);
-  formData.append('documentType', documentType);
+  formData.append('documentType', artifact.documentType || 'policy_schedule');
 
   return apiUpload(workerJobPath(`/items/${item.id}/policy-document`), formData);
+}
+
+async function processDocumentArtifacts(page, flow, item, jobMode) {
+  const artifacts = buildDocumentArtifacts(flow);
+  const statuses = artifacts.length > 0
+    ? artifacts.map((artifact) => artifactStatus(artifact, 'not_requested'))
+    : [];
+  const attachedDocuments = [];
+
+  for (const artifact of artifacts) {
+    let downloaded = null;
+    try {
+      const started = artifactStatus(artifact, 'started');
+      statuses.splice(0, statuses.length, ...mergeArtifactStatus(statuses, started));
+      await updatePolicyItem(item.id, 'in_progress', {
+        currentStep: jobMode === 'dry-run' ? `checking_${artifact.id}` : `attaching_${artifact.id}`,
+        message: jobMode === 'dry-run'
+          ? `Checking ${artifact.label} for ${item.clientName} / ${item.policyNumber}.`
+          : `Downloading and attaching ${artifact.label} for ${item.clientName} / ${item.policyNumber}.`,
+        artifactStatuses: statuses,
+      });
+
+      downloaded = await runDocumentDownloadSteps(page, artifact, item);
+      statuses.splice(0, statuses.length, ...mergeArtifactStatus(statuses, artifactStatus(artifact, 'downloaded', {
+        fileName: downloaded.fileName,
+      })));
+
+      if (jobMode === 'dry-run') {
+        statuses.splice(0, statuses.length, ...mergeArtifactStatus(statuses, artifactStatus(artifact, 'validated', {
+          fileName: downloaded.fileName,
+          error: 'Found during dry run; not attached.',
+        })));
+        continue;
+      }
+
+      const upload = await uploadPolicyDocumentArtifact(item, artifact, downloaded);
+      const document = upload.document || null;
+      statuses.splice(0, statuses.length, ...mergeArtifactStatus(statuses, artifactStatus(artifact, 'attached', {
+        fileName: document?.fileName || downloaded.fileName,
+        documentId: document?.id,
+      })));
+      if (document) attachedDocuments.push({ artifact, document });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      statuses.splice(0, statuses.length, ...mergeArtifactStatus(statuses, artifactStatus(artifact, 'failed', {
+        error: message,
+      })));
+      await writeDebugArtifact(item, `${artifact.id}-artifact-failure`, {
+        pageUrl: page.url(),
+        artifact,
+        error: message,
+        visibleActions: await captureVisibleDocumentActions(page),
+      });
+      await writeDebugScreenshot(page, item, `${artifact.id}-artifact-failure`);
+    } finally {
+      if (downloaded?.filePath) {
+        await unlink(downloaded.filePath).catch(() => undefined);
+      }
+    }
+  }
+
+  return { statuses, attachedDocuments };
 }
 
 async function findInputByIntent(page, selector, labels = [], rememberedSelectors = []) {
@@ -2268,60 +2476,35 @@ async function processPolicyQueue(page, flow, config, jobMode, brain) {
         pageUrl: page.url(),
         extractedFieldNames,
         rawData,
-        documentRequested: flow.policySchedule?.enabled === true,
+        documentRequested: buildDocumentArtifacts(flow).length > 0,
       });
-      let documentResult = null;
-      let documentWarning = '';
-
-      if (flow.policySchedule?.enabled) {
-        try {
-          await updatePolicyItem(item.id, 'in_progress', {
-            currentStep: jobMode === 'dry-run' ? 'checking_policy_schedule_pdf' : 'attaching_policy_schedule_pdf',
-            message: jobMode === 'dry-run'
-              ? `Checking policy schedule PDF for ${item.clientName} / ${item.policyNumber}.`
-              : `Downloading and replacing policy schedule PDF for ${item.clientName} / ${item.policyNumber}.`,
-          });
-
-          const downloaded = await downloadPolicySchedule(page, flow, item);
-          try {
-            if (jobMode === 'dry-run') {
-              documentWarning = `Policy schedule PDF found (${downloaded.fileName}); not attached during dry run.`;
-            } else {
-              const upload = await uploadPolicyScheduleDocument(item, downloaded, flow.policySchedule.documentType || 'policy_schedule');
-              documentResult = upload.document || null;
-            }
-          } finally {
-            await unlink(downloaded.filePath).catch(() => undefined);
-          }
-        } catch (error) {
-          if (flow.policySchedule.required === false) {
-            documentWarning = `Policy schedule PDF was not attached: ${error instanceof Error ? error.message : String(error)}`;
-            await writeDebugArtifact(item, 'policy-schedule-download-warning', {
-              pageUrl: page.url(),
-              warning: documentWarning,
-              configuredLabels: flow.policySchedule.downloadLabels,
-              configuredMenuLabels: flow.policySchedule.downloadMenuLabels,
-            });
-          } else {
-            throw error;
-          }
-        }
-      }
+      const artifactResult = await processDocumentArtifacts(page, flow, item, jobMode);
+      const attachedDocument = artifactResult.attachedDocuments[0]?.document || null;
+      const artifactFailures = artifactResult.statuses.filter((status) => status.status === 'failed');
+      const artifactMessages = artifactResult.statuses.map((status) => {
+        if (status.status === 'attached') return `${status.label} attached (${status.fileName}).`;
+        if (status.status === 'validated') return `${status.label} found (${status.fileName}); not attached during dry run.`;
+        if (status.status === 'failed') return `${status.label} failed: ${status.error}`;
+        return '';
+      }).filter(Boolean);
 
       await updatePolicyItem(item.id, 'completed', {
         currentStep: 'completed',
         message: [
           `Extracted ${countVisibleValues(rawData)} mapped value(s).`,
           extractedFieldNames?.length ? `Fields: ${extractedFieldNames.slice(0, 6).join(', ')}.` : '',
-          documentResult ? `Policy schedule PDF replaced (${documentResult.fileName}).` : '',
-          documentWarning,
+          ...artifactMessages,
         ].filter(Boolean).join(' '),
         rawData,
         extractedData,
         matchConfidence: 'high',
-        documentAttached: Boolean(documentResult),
-        documentFileName: documentResult?.fileName,
-        documentUpdatedAt: documentResult?.uploadDate,
+        documentAttached: artifactResult.statuses.some((status) => status.status === 'attached'),
+        documentFileName: attachedDocument?.fileName,
+        documentUpdatedAt: attachedDocument?.uploadDate,
+        artifactStatuses: artifactResult.statuses,
+        warning: artifactFailures.length > 0
+          ? artifactFailures.map((status) => `${status.label}: ${status.error}`).join(' ')
+          : undefined,
       });
       completed += 1;
     } catch (error) {

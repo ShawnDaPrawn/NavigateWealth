@@ -106,6 +106,21 @@ const getExtractedValues = (rawData?: Record<string, unknown>) =>
     .filter(([key, value]) => !isPortalMetadataColumn(key) && String(value ?? '').trim().length > 0)
     .slice(0, 8);
 
+const getPrimaryArtifactStatus = (item: PortalJobPolicyItem) =>
+  item.artifactStatuses?.find((status) => status.status === 'attached') ||
+  item.artifactStatuses?.find((status) => status.status === 'failed') ||
+  item.artifactStatuses?.[0];
+
+const artifactStatusClassNames: Record<string, string> = {
+  attached: 'bg-green-50 text-green-700 border-green-200',
+  downloaded: 'bg-blue-50 text-blue-700 border-blue-200',
+  validated: 'bg-blue-50 text-blue-700 border-blue-200',
+  started: 'bg-blue-50 text-blue-700 border-blue-200',
+  failed: 'bg-red-50 text-red-700 border-red-200',
+  skipped: 'bg-gray-50 text-gray-600 border-gray-200',
+  not_requested: 'bg-gray-50 text-gray-600 border-gray-200',
+};
+
 const getPortalFieldColumnName = (field: Partial<PortalFlowField>) =>
   String(field.columnName || field.sourceHeader || '').trim();
 
@@ -1131,6 +1146,7 @@ export function PortalAutomationTab({
                     <tbody>
                       {jobItems.map((item) => {
                         const extractedValues = getExtractedValues(item.rawData);
+                        const artifactStatus = getPrimaryArtifactStatus(item);
                         return (
                         <tr key={item.id} className="border-t align-top">
                           <td className="px-3 py-2">
@@ -1141,18 +1157,25 @@ export function PortalAutomationTab({
                           <td className="px-3 py-2 font-medium text-gray-900">{item.clientName}</td>
                           <td className="px-3 py-2 font-mono text-xs">{item.policyNumber}</td>
                           <td className="px-3 py-2">
-                            {item.documentAttached ? (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                Attached
+                            {artifactStatus ? (
+                              <Badge variant="outline" className={cn('capitalize', artifactStatusClassNames[artifactStatus.status] || 'bg-gray-50 text-gray-600 border-gray-200')}>
+                                {artifactStatus.status.replace('_', ' ')}
                               </Badge>
+                            ) : item.documentAttached ? (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Attached</Badge>
                             ) : flow?.policySchedule?.enabled ? (
                               <span className="text-xs text-amber-700">Not attached</span>
                             ) : (
                               <span className="text-xs text-gray-400">-</span>
                             )}
-                            {item.documentFileName && (
-                              <div className="mt-1 max-w-[160px] truncate text-xs text-gray-500" title={item.documentFileName}>
-                                {item.documentFileName}
+                            {(artifactStatus?.fileName || item.documentFileName) && (
+                              <div className="mt-1 max-w-[180px] truncate text-xs text-gray-500" title={artifactStatus?.fileName || item.documentFileName}>
+                                {artifactStatus?.fileName || item.documentFileName}
+                              </div>
+                            )}
+                            {artifactStatus?.error && (
+                              <div className="mt-1 max-w-[220px] text-xs text-red-700" title={artifactStatus.error}>
+                                {artifactStatus.error}
                               </div>
                             )}
                           </td>

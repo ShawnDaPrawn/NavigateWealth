@@ -283,6 +283,37 @@ interface PortalPolicyScheduleConfig {
   waitForDownloadMs?: number;
 }
 
+interface PortalDocumentArtifactStep {
+  action: 'click' | 'click_menu_item' | 'wait_for_download';
+  target?: 'download_button' | 'menu_item' | string;
+  selector?: string;
+  labels?: string[];
+  text?: string;
+  timeoutMs?: number;
+  optional?: boolean;
+}
+
+interface PortalDocumentArtifactConfig {
+  id: string;
+  label: string;
+  enabled?: boolean;
+  required?: boolean;
+  attachTo?: 'matched_policy';
+  documentType?: 'policy_schedule' | 'amendment' | 'statement' | 'benefit_summary' | 'other';
+  fileType?: 'pdf';
+  steps: PortalDocumentArtifactStep[];
+}
+
+interface PortalDocumentArtifactStatus {
+  id: string;
+  label: string;
+  status: 'not_requested' | 'started' | 'downloaded' | 'validated' | 'attached' | 'failed' | 'skipped';
+  fileName?: string;
+  documentId?: string;
+  error?: string;
+  updatedAt: string;
+}
+
 interface PortalProviderFlow {
   id: string;
   providerId: string;
@@ -327,6 +358,7 @@ interface PortalProviderFlow {
     fields: PortalFlowField[];
   };
   policySchedule?: PortalPolicyScheduleConfig;
+  documentArtifacts?: PortalDocumentArtifactConfig[];
   notes: string[];
   needsDiscovery?: boolean;
   updatedAt: string;
@@ -397,6 +429,7 @@ interface PortalJobPolicyItem {
   documentAttached?: boolean;
   documentFileName?: string;
   documentUpdatedAt?: string;
+  artifactStatuses?: PortalDocumentArtifactStatus[];
   createdAt: string;
   updatedAt: string;
   startedAt?: string;
@@ -1277,6 +1310,96 @@ function normalisePolicyScheduleConfig(value: unknown, fallback?: PortalPolicySc
   };
 }
 
+function normaliseDocumentArtifactSteps(value: unknown, fallback: PortalDocumentArtifactStep[] = []): PortalDocumentArtifactStep[] {
+  if (!Array.isArray(value)) return fallback;
+  return value.slice(0, 20).map((step) => {
+    const entry = (step || {}) as Record<string, unknown>;
+    const action = ['click', 'click_menu_item', 'wait_for_download'].includes(String(entry.action))
+      ? entry.action as PortalDocumentArtifactStep['action']
+      : 'click';
+    const timeoutMs = Number(entry.timeoutMs || 0);
+    return {
+      action,
+      target: typeof entry.target === 'string' ? entry.target.slice(0, 80) : undefined,
+      selector: typeof entry.selector === 'string' ? entry.selector.trim().slice(0, 500) : undefined,
+      labels: normaliseStringList(entry.labels ?? entry.text, [], 20),
+      text: typeof entry.text === 'string' ? entry.text.trim().slice(0, 160) : undefined,
+      timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? Math.min(Math.max(timeoutMs, 1000), 120000) : undefined,
+      optional: entry.optional === true,
+    };
+  });
+}
+
+function normaliseDocumentArtifactConfigs(value: unknown, fallback: PortalDocumentArtifactConfig[] = []): PortalDocumentArtifactConfig[] {
+  if (!Array.isArray(value)) return fallback;
+  return value.slice(0, 20).map((artifact, index) => {
+    const entry = (artifact || {}) as Record<string, unknown>;
+    const documentType = ['policy_schedule', 'amendment', 'statement', 'benefit_summary', 'other'].includes(String(entry.documentType))
+      ? entry.documentType as PortalDocumentArtifactConfig['documentType']
+      : 'policy_schedule';
+    return {
+      id: String(entry.id || `document_${index + 1}`).trim().replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || `document_${index + 1}`,
+      label: String(entry.label || entry.id || `Document ${index + 1}`).trim().slice(0, 120) || `Document ${index + 1}`,
+      enabled: entry.enabled !== false,
+      required: entry.required === true,
+      attachTo: 'matched_policy',
+      documentType,
+      fileType: 'pdf',
+      steps: normaliseDocumentArtifactSteps(entry.steps, []),
+    };
+  }).filter((artifact) => artifact.steps.length > 0);
+}
+
+function policyScheduleToDocumentArtifacts(policySchedule?: PortalPolicyScheduleConfig): PortalDocumentArtifactConfig[] {
+  if (!policySchedule?.enabled) return [];
+  return [{
+    id: 'policy_schedule',
+    label: 'Policy schedule',
+    enabled: true,
+    required: policySchedule.required === true,
+    attachTo: 'matched_policy',
+    documentType: policySchedule.documentType || 'policy_schedule',
+    fileType: 'pdf',
+    steps: [
+      {
+        action: 'click',
+        target: 'download_button',
+        selector: policySchedule.downloadSelector,
+        labels: policySchedule.downloadLabels || ['Policy schedule', 'Download', 'PDF', 'Statement'],
+        timeoutMs: Math.min(Number(policySchedule.waitForDownloadMs || 30000), 10000),
+      },
+      {
+        action: 'click_menu_item',
+        target: 'menu_item',
+        labels: policySchedule.downloadMenuLabels || ['Download PDF with company logo', 'Download PDF without company logo'],
+        timeoutMs: policySchedule.waitForDownloadMs || 30000,
+      },
+      {
+        action: 'wait_for_download',
+        timeoutMs: policySchedule.waitForDownloadMs || 30000,
+      },
+    ],
+  }];
+}
+
+function normaliseDocumentArtifactStatuses(value: unknown, fallback: PortalDocumentArtifactStatus[] = []): PortalDocumentArtifactStatus[] {
+  if (!Array.isArray(value)) return fallback;
+  const allowed = new Set(['not_requested', 'started', 'downloaded', 'validated', 'attached', 'failed', 'skipped']);
+  return value.slice(0, 20).map((status, index) => {
+    const entry = (status || {}) as Record<string, unknown>;
+    const state = allowed.has(String(entry.status)) ? String(entry.status) as PortalDocumentArtifactStatus['status'] : 'started';
+    return {
+      id: String(entry.id || `document_${index + 1}`).trim().replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || `document_${index + 1}`,
+      label: String(entry.label || entry.id || `Document ${index + 1}`).trim().slice(0, 120) || `Document ${index + 1}`,
+      status: state,
+      fileName: typeof entry.fileName === 'string' ? entry.fileName.slice(0, 240) : undefined,
+      documentId: typeof entry.documentId === 'string' ? entry.documentId.slice(0, 120) : undefined,
+      error: typeof entry.error === 'string' ? entry.error.slice(0, 500) : undefined,
+      updatedAt: typeof entry.updatedAt === 'string' ? entry.updatedAt : new Date().toISOString(),
+    };
+  });
+}
+
 function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalProviderFlow {
   const providerName = String(provider.name || providerId);
   const providerKey = providerName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -1362,9 +1485,10 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
         downloadLabels: ['Policy schedule', 'Download policy schedule', 'Download PDF', 'Statement', 'Download'],
         downloadMenuLabels: ['Download PDF with company logo', 'Download PDF without company logo'],
         documentType: 'policy_schedule',
-        required: true,
+        required: false,
         waitForDownloadMs: 45000,
       },
+      documentArtifacts: [],
       notes: [
         'The worker starts from Navigate Wealth policy numbers and searches Allan Gray one policy at a time.',
         'Credentials are stored server-side in Supabase and are never returned to the browser.',
@@ -1425,9 +1549,10 @@ function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalP
       enabled: false,
       downloadLabels: ['Policy schedule', 'Download', 'PDF', 'Statement'],
       documentType: 'policy_schedule',
-      required: true,
+      required: false,
       waitForDownloadMs: 30000,
     },
+    documentArtifacts: [],
     notes: ['Configure login, policy search, and field labels before running this provider in production.'],
     needsDiscovery: true,
     updatedAt: now,
@@ -1462,6 +1587,7 @@ async function getPortalFlow(provider: KvProvider, providerId: string): Promise<
       ),
     },
     policySchedule: normalisePolicyScheduleConfig(configured.policySchedule, defaultFlow.policySchedule),
+    documentArtifacts: normaliseDocumentArtifactConfigs(configured.documentArtifacts, defaultFlow.documentArtifacts || []),
   };
 }
 
@@ -2491,6 +2617,7 @@ app.put("/portal-flows/:providerId", requireAuth, async (c) => {
         fields: normaliseExtractionFields(body?.extraction?.fields, defaultFlow.extraction?.fields || []),
       },
       policySchedule: normalisePolicyScheduleConfig(body?.policySchedule, defaultFlow.policySchedule),
+      documentArtifacts: normaliseDocumentArtifactConfigs(body?.documentArtifacts, defaultFlow.documentArtifacts || []),
       updatedAt: new Date().toISOString(),
     };
 
@@ -3391,6 +3518,7 @@ app.post("/portal-worker/jobs/:jobId/items/:itemId/status", async (c) => {
       documentAttached: typeof body?.documentAttached === 'boolean' ? body.documentAttached : items[itemIndex].documentAttached,
       documentFileName: typeof body?.documentFileName === 'string' ? body.documentFileName.slice(0, 240) : items[itemIndex].documentFileName,
       documentUpdatedAt: typeof body?.documentUpdatedAt === 'string' ? body.documentUpdatedAt : items[itemIndex].documentUpdatedAt,
+      artifactStatuses: normaliseDocumentArtifactStatuses(body?.artifactStatuses, items[itemIndex].artifactStatuses),
       completedAt: ['completed', 'failed', 'skipped'].includes(status) ? now : items[itemIndex].completedAt,
       updatedAt: now,
     };
@@ -3474,6 +3602,17 @@ app.post("/portal-worker/jobs/:jobId/items/:itemId/policy-document", async (c) =
       documentAttached: true,
       documentFileName: document.fileName,
       documentUpdatedAt: document.uploadDate,
+      artifactStatuses: normaliseDocumentArtifactStatuses([
+        ...(item.artifactStatuses || []).filter((status) => status.id !== 'policy_schedule'),
+        {
+          id: 'policy_schedule',
+          label: 'Policy schedule',
+          status: 'attached',
+          fileName: document.fileName,
+          documentId: document.id,
+          updatedAt: document.uploadDate,
+        },
+      ]),
       message: "Policy schedule PDF replaced.",
       updatedAt: now,
     };
