@@ -1554,7 +1554,13 @@ function coerceFieldValue(field: SchemaField, value: unknown): { value: unknown;
   }
 
   if (fieldType === 'dropdown' && Array.isArray(field.options) && field.options.length > 0) {
-    const option = field.options.find((candidate) => String(candidate).toLowerCase() === String(raw).toLowerCase());
+    const simplifiedRaw = normaliseDropdownValue(raw);
+    const option = field.options.find((candidate) => {
+      const simplifiedCandidate = normaliseDropdownValue(candidate);
+      return simplifiedCandidate === simplifiedRaw ||
+        simplifiedRaw.includes(simplifiedCandidate) ||
+        simplifiedCandidate.includes(simplifiedRaw);
+    });
     if (!option) {
       return { value, error: `${field.name} must be one of: ${field.options.join(', ')}` };
     }
@@ -1562,6 +1568,85 @@ function coerceFieldValue(field: SchemaField, value: unknown): { value: unknown;
   }
 
   return { value: raw };
+}
+
+function normaliseDropdownValue(value: unknown): string {
+  return normaliseColumnName(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\bfund\b/g, '')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function normalisePortalColumnMeaning(value: unknown): string {
+  const normalised = normaliseColumnName(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+  if (!normalised) return '';
+  if (/(policy\s*(number|no)|account\s*(number|no)|investment\s*(number|no)|reference)/.test(normalised)) return 'policy number';
+  if (/(date\s*of\s*inception|inception\s*date|start\s*date|investment\s*start\s*date)/.test(normalised)) return 'date of inception';
+  if (/(product\s*type|product\s*name|investment\s*type|retirement\s*annuity\s*fund|pension\s*fund|provident\s*fund|preservation\s*fund|living\s*annuity)/.test(normalised)) return 'product type';
+  if (
+    !/(maturity|estimated|projected|guaranteed|premium|contribution)/.test(normalised) &&
+    /(current\s*value|total\s*value|fund\s*value|market\s*value|closing\s*balance|policy\s*value|account\s*value|retirement.*value|\bvalue\b)/.test(normalised)
+  ) return 'current value';
+  if (/(est\s*maturity\s*value|estimated\s*maturity\s*value|projected\s*maturity\s*value)/.test(normalised)) return 'est maturity value';
+  if (/(maturity\s*date|retirement\s*date)/.test(normalised)) return 'maturity date';
+  if (/(premium|contribution|monthly\s*contribution)/.test(normalised)) return 'premium';
+
+  return normalised;
+}
+
+function getFieldPortalMeaning(field: SchemaField, binding?: IntegrationFieldBinding, sourceHeader?: string): string {
+  const keyId = normalisePortalColumnMeaning((field as { keyId?: string }).keyId);
+  if (keyId.includes('value') && !keyId.includes('maturity')) return 'current value';
+  if (keyId.includes('fund type') || keyId.includes('product type')) return 'product type';
+  if (keyId.includes('date of inception')) return 'date of inception';
+  if (keyId.includes('maturity date')) return 'maturity date';
+  if (keyId.includes('maturity value')) return 'est maturity value';
+  if (keyId.includes('premium') || keyId.includes('contribution')) return 'premium';
+
+  return normalisePortalColumnMeaning(binding?.targetFieldName || field.name || sourceHeader);
+}
+
+function resolveRawPortalValue(params: {
+  rawData: Record<string, unknown>;
+  sourceHeader: string;
+  field: SchemaField;
+  binding?: IntegrationFieldBinding;
+  source?: 'spreadsheet' | 'portal';
+}): { key: string; value: unknown } {
+  if (Object.prototype.hasOwnProperty.call(params.rawData, params.sourceHeader)) {
+    return { key: params.sourceHeader, value: params.rawData[params.sourceHeader] };
+  }
+
+  const normalisedSourceHeader = normaliseColumnName(params.sourceHeader);
+  const exactNormalisedMatch = Object.entries(params.rawData).find(([key]) => normaliseColumnName(key) === normalisedSourceHeader);
+  if (exactNormalisedMatch) {
+    return { key: exactNormalisedMatch[0], value: exactNormalisedMatch[1] };
+  }
+
+  if (params.source !== 'portal') {
+    return { key: params.sourceHeader, value: undefined };
+  }
+
+  const targetMeaning = getFieldPortalMeaning(params.field, params.binding, params.sourceHeader);
+  if (!targetMeaning) {
+    return { key: params.sourceHeader, value: undefined };
+  }
+
+  const semanticMatch = Object.entries(params.rawData).find(([key, value]) =>
+    !isTemplateMetadataColumn(key) &&
+    !isBlank(value) &&
+    normalisePortalColumnMeaning(key) === targetMeaning
+  );
+
+  return semanticMatch
+    ? { key: semanticMatch[0], value: semanticMatch[1] }
+    : { key: params.sourceHeader, value: undefined };
 }
 
 async function listPoliciesForProviderCategory(providerId: string, categoryId: string): Promise<KvPolicy[]> {
@@ -1691,8 +1776,14 @@ async function buildSyncRun(params: {
         continue;
       }
 
-      const rawValue = rawData[sourceHeader];
       const binding = bindingByColumnName.get(normaliseColumnName(sourceHeader));
+      const { value: rawValue, key: resolvedSourceHeader } = resolveRawPortalValue({
+        rawData,
+        sourceHeader,
+        field,
+        binding,
+        source: params.source,
+      });
       const blankBehavior = normaliseIntegrationBlankBehavior(binding?.blankBehavior);
       if (isBlank(rawValue) && blankBehavior === 'error') {
         const message = `${field.name} cannot be blank for this integration`;
@@ -1719,6 +1810,10 @@ async function buildSyncRun(params: {
         continue;
       }
       mappedData[targetFieldId] = value;
+
+      if (params.source === 'portal' && resolvedSourceHeader !== sourceHeader) {
+        warnings.push(`${field.name} mapped from portal label "${resolvedSourceHeader}"`);
+      }
     }
 
     let policyNumber = policyNumberField ? String(mappedData[policyNumberField.id] ?? '').trim() : '';
