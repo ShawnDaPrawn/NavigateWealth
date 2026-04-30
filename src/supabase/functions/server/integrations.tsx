@@ -5336,6 +5336,13 @@ app.get('/policy-extraction/compare', requireAuth, async (c) => {
   }
 });
 
+function hasExtractedPolicyValue(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number') return Number.isFinite(value);
+  return true;
+}
+
 /**
  * POST /policy-extraction/apply
  * Apply selected extracted fields to the policy's data.
@@ -5364,11 +5371,16 @@ app.post('/policy-extraction/apply', requireAuth, async (c) => {
     const updatedData = { ...policy.data };
     const appliedFieldIds: string[] = [];
     const skippedLockedIds: string[] = [];
+    const skippedEmptyIds: string[] = [];
     const lockedSet = new Set(policy.lockedFields || []);
 
     for (const [fieldId, value] of Object.entries(fieldsToApply)) {
       if (lockedSet.has(fieldId)) {
         skippedLockedIds.push(fieldId);
+        continue;
+      }
+      if (!hasExtractedPolicyValue(value)) {
+        skippedEmptyIds.push(fieldId);
         continue;
       }
       updatedData[fieldId] = value;
@@ -5399,6 +5411,7 @@ app.post('/policy-extraction/apply', requireAuth, async (c) => {
       success: true,
       appliedFields: appliedFieldIds,
       skippedLockedFields: skippedLockedIds,
+      skippedEmptyFields: skippedEmptyIds,
       policy: (policies as KvPolicy[])[policyIndex],
     });
   } catch (e) {

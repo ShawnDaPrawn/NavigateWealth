@@ -154,7 +154,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
   const sections = [
     { id: 'personal', label: 'Personal Info', icon: User },
     { id: 'contact', label: 'Contact Details', icon: Mail },
-    { id: 'identity', label: 'Identity', icon: Shield },
+    { id: 'kyc', label: 'KYC', icon: Shield },
     { id: 'address', label: 'Address', icon: MapPin },
     { id: 'employment', label: 'Employment', icon: Briefcase },
     { id: 'health', label: 'Health Info', icon: Heart },
@@ -675,8 +675,8 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
           </Card>
         )}
 
-        {/* Identity Section */}
-        {activeSection === 'identity' && (
+        {/* KYC Section */}
+        {activeSection === 'kyc' && (
           <IdentitySection
             profileData={state.profileData}
             identityDocsInEditMode={state.identityDocsInEditMode}

@@ -371,7 +371,7 @@ export const filterClients = (clients: Client[], filters: ClientFilters): Client
         client.firstName.toLowerCase().includes(searchTerm) ||
         client.lastName.toLowerCase().includes(searchTerm) ||
         client.email.toLowerCase().includes(searchTerm) ||
-        (client.idNumber && client.idNumber.includes(searchTerm))
+        (client.idNumber && client.idNumber.toLowerCase().includes(searchTerm))
       );
     }
     return true;

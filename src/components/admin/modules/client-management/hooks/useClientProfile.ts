@@ -11,9 +11,10 @@ import {
   BankAccount, 
   Employer, 
   ChronicCondition, 
-  IdentityDocument 
+  IdentityDocument,
+  IdentityDocumentType,
 } from '../types';
-import { IdCard, FileText, CreditCard } from 'lucide-react';
+import { IdCard, FileText, CreditCard, Home, ReceiptText } from 'lucide-react';
 
 /**
  * Create a stable, comparable snapshot of profile data for dirty detection.
@@ -340,16 +341,19 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   // Identity Document Management Functions
-  const hasDocumentType = (type: 'national-id' | 'passport' | 'drivers-license') => {
+  const hasDocumentType = (type: IdentityDocumentType) => {
     return profileData.identityDocuments.some(doc => doc.type === type);
   };
 
-  const addIdentityDocument = (type: 'national-id' | 'passport' | 'drivers-license') => {
+  const addIdentityDocument = (type: IdentityDocumentType) => {
     if (hasDocumentType(type)) {
-      const typeNames = {
+      const typeNames: Record<IdentityDocumentType, string> = {
         'national-id': 'National ID',
         'passport': 'Passport',
-        'drivers-license': 'Driver\'s License'
+        'drivers-license': 'Driver\'s License',
+        'proof-of-residence': 'Proof of Residence',
+        'proof-primary-bank-account': 'Proof of Primary Bank Account',
+        'utility-bill': 'Utility Bill',
       };
       toast.error(`Client already has a ${typeNames[type]}. Only one document of each type is allowed.`);
       return;
@@ -444,6 +448,15 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
         return;
       }
     }
+
+    if (
+      doc &&
+      ['proof-of-residence', 'proof-primary-bank-account', 'utility-bill'].includes(doc.type) &&
+      !doc.fileName
+    ) {
+      toast.error('Please upload the document before saving');
+      return;
+    }
     
     setIdentityDocsInEditMode(prev => {
       const newSet = new Set(prev);
@@ -471,20 +484,26 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     setIdentityDocsInEditMode(prev => new Set([...prev, id]));
   };
 
-  const getDocumentTypeLabel = (type: 'national-id' | 'passport' | 'drivers-license') => {
+  const getDocumentTypeLabel = (type: IdentityDocumentType) => {
     switch (type) {
       case 'national-id':
-        return 'National ID Card';
+        return 'Identity';
       case 'passport':
         return 'Passport';
       case 'drivers-license':
         return 'Driver\'s License';
+      case 'proof-of-residence':
+        return 'Proof of Residence';
+      case 'proof-primary-bank-account':
+        return 'Proof of Primary Bank Account';
+      case 'utility-bill':
+        return 'Utility Bill';
       default:
         return type;
     }
   };
 
-  const getDocumentTypeIcon = (type: 'national-id' | 'passport' | 'drivers-license') => {
+  const getDocumentTypeIcon = (type: IdentityDocumentType) => {
     switch (type) {
       case 'national-id':
         return { icon: IdCard, color: 'purple' };
@@ -492,6 +511,12 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
         return { icon: FileText, color: 'blue' };
       case 'drivers-license':
         return { icon: CreditCard, color: 'amber' };
+      case 'proof-of-residence':
+        return { icon: Home, color: 'green' };
+      case 'proof-primary-bank-account':
+        return { icon: CreditCard, color: 'blue' };
+      case 'utility-bill':
+        return { icon: ReceiptText, color: 'amber' };
       default:
         return { icon: FileText, color: 'gray' };
     }

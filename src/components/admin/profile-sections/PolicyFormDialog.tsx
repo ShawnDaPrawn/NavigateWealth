@@ -87,6 +87,53 @@ function findFieldByKeyIds(structure: ProductField[], keyIds: string[]): Product
   return undefined;
 }
 
+const DEFAULT_FIELD_KEY_IDS = new Map<string, string>();
+for (const schema of Object.values(DEFAULT_SCHEMAS)) {
+  for (const field of schema.fields) {
+    if (field.keyId) {
+      DEFAULT_FIELD_KEY_IDS.set(field.id, field.keyId);
+    }
+  }
+}
+
+function hasPolicyValue(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number') return Number.isFinite(value);
+  return true;
+}
+
+function normalizePolicyDataForStructure(
+  data: Record<string, unknown>,
+  structure: ProductField[],
+  fallbackData: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const normalized = { ...fallbackData, ...data };
+
+  for (const field of structure) {
+    if (!field.keyId || hasPolicyValue(normalized[field.id])) continue;
+
+    for (const [sourceFieldId, sourceValue] of Object.entries(normalized)) {
+      if (
+        sourceFieldId !== field.id &&
+        DEFAULT_FIELD_KEY_IDS.get(sourceFieldId) === field.keyId &&
+        hasPolicyValue(sourceValue)
+      ) {
+        normalized[field.id] = sourceValue;
+        break;
+      }
+    }
+  }
+
+  return normalized;
+}
+
+function getApplyableExtractedFields(fields: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => hasPolicyValue(value)),
+  );
+}
+
 export function PolicyFormDialog({
   isOpen,
   onClose,
@@ -156,6 +203,18 @@ export function PolicyFormDialog({
       loadTableStructure();
     }
   }, [isOpen, activeCategoryId, step]);
+
+  useEffect(() => {
+    if (!isOpen || !editingPolicy || tableStructure.length === 0 || hasUnsavedEdits) return;
+
+    setFormData((prev) =>
+      normalizePolicyDataForStructure(
+        prev,
+        tableStructure,
+        (editingPolicy.data as Record<string, unknown> | undefined) || {},
+      ),
+    );
+  }, [isOpen, editingPolicy, tableStructure, hasUnsavedEdits]);
 
   const loadProviders = async () => {
     setIsLoading(true);
@@ -350,11 +409,11 @@ export function PolicyFormDialog({
     }
   };
 
-  const validateForm = (): boolean => {
+  const validateForm = (data: Record<string, unknown> = formData): boolean => {
     const newErrors: Record<string, string> = {};
 
     tableStructure.forEach((field) => {
-      if (field.required && !formData[field.id]) {
+      if (field.required && !hasPolicyValue(data[field.id])) {
         newErrors[field.id] = `${field.name} is required`;
       }
     });
@@ -364,7 +423,13 @@ export function PolicyFormDialog({
   };
 
   const handleSave = async () => {
-    if (!validateForm()) {
+    const normalizedData = normalizePolicyDataForStructure(
+      formData,
+      tableStructure,
+      (editingPolicy?.data as Record<string, unknown> | undefined) || {},
+    );
+
+    if (!validateForm(normalizedData)) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -378,7 +443,7 @@ export function PolicyFormDialog({
     const toastId = toast.loading(editingPolicy ? 'Updating policy...' : 'Saving policy...');
 
     try {
-      const finalData = recalcMaturityValues(formData);
+      const finalData = recalcMaturityValues(normalizedData);
 
       const policyData = {
         id: editingPolicy?.id || `policy_${Date.now()}`,
@@ -1058,9 +1123,18 @@ export function PolicyFormDialog({
                         }
                         onDocumentChange={onSave}
                         onApplyExtractedData={(fieldsToApply) => {
+                          const applyableFields = getApplyableExtractedFields(fieldsToApply);
+                          if (Object.keys(applyableFields).length === 0) return;
+
                           setHasUnsavedEdits(true);
                           setFormData((prev) =>
-                            recalcMaturityValues({ ...prev, ...fieldsToApply })
+                            recalcMaturityValues(
+                              normalizePolicyDataForStructure(
+                                { ...prev, ...applyableFields },
+                                tableStructure,
+                                (editingPolicy.data as Record<string, unknown> | undefined) || {},
+                              ),
+                            )
                           );
                         }}
                       />

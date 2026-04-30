@@ -186,6 +186,13 @@ function formatValue(value: unknown): string {
   return String(value);
 }
 
+function hasExtractedValue(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number') return Number.isFinite(value);
+  return true;
+}
+
 export function PolicyDocumentUpload({
   policyId,
   clientId,
@@ -466,9 +473,15 @@ export function PolicyDocumentUpload({
       const fieldsToApply: Record<string, unknown> = {};
 
       for (const mapping of fieldMappings) {
-        if (selectedFields.has(mapping.schemaFieldId)) {
+        if (selectedFields.has(mapping.schemaFieldId) && hasExtractedValue(mapping.value)) {
           fieldsToApply[mapping.schemaFieldId] = mapping.value;
         }
+      }
+
+      if (Object.keys(fieldsToApply).length === 0) {
+        toast.error('No extractable field values selected to apply', { id: toastId });
+        setIsApplying(false);
+        return;
       }
 
       const res = await fetch(`${API_BASE}/policy-extraction/apply`, {

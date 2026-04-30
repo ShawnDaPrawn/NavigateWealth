@@ -13,14 +13,23 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Alert, AlertDescription } from '../../ui/alert';
 import { 
   Shield, IdCard, FileText, CreditCard, Plus, Edit2, Trash2, 
-  Save, X, CheckCircle, AlertCircle, Calendar, Globe, Copy, Eye, Download
+  Save, X, CheckCircle, AlertCircle, Calendar, Globe, Copy, Eye, Download,
+  Home, ReceiptText
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { copyToClipboard } from '../../../utils/clipboard';
 
+type IdentityDocumentType =
+  | 'national-id'
+  | 'passport'
+  | 'drivers-license'
+  | 'proof-of-residence'
+  | 'proof-primary-bank-account'
+  | 'utility-bill';
+
 interface IdentityDocument {
   id: string;
-  type: 'national-id' | 'passport' | 'drivers-license';
+  type: IdentityDocumentType;
   number: string;
   countryOfIssue: string;
   expiryDate: string;
@@ -32,8 +41,8 @@ interface IdentityDocument {
 interface IdentitySectionProps {
   profileData: Record<string, unknown>;
   identityDocsInEditMode: Set<string>;
-  hasDocumentType: (type: 'national-id' | 'passport' | 'drivers-license') => boolean;
-  addIdentityDocument: (type: 'national-id' | 'passport' | 'drivers-license') => void;
+  hasDocumentType: (type: IdentityDocumentType) => boolean;
+  addIdentityDocument: (type: IdentityDocumentType) => void;
   handleDocumentUpload: (id: string, event: React.ChangeEvent<HTMLInputElement>) => void;
   updateIdentityDocument: (id: string, updates: Partial<IdentityDocument>) => void;
   confirmDeleteIdentityDocument: (id: string) => void;
@@ -41,21 +50,32 @@ interface IdentitySectionProps {
   saveIdentityDocument: (id: string) => void;
   cancelEditIdentityDocument: (id: string) => void;
   editIdentityDocument: (id: string) => void;
-  getDocumentTypeLabel: (type: 'national-id' | 'passport' | 'drivers-license') => string;
-  getDocumentTypeIcon: (type: 'national-id' | 'passport' | 'drivers-license') => { icon: React.ComponentType<{ className?: string }>, color: string };
+  getDocumentTypeLabel: (type: IdentityDocumentType) => string;
+  getDocumentTypeIcon: (type: IdentityDocumentType) => { icon: React.ComponentType<{ className?: string }>, color: string };
   identityDocToDelete: string | null;
   setIdentityDocToDelete: (id: string | null) => void;
   userId?: string;
 }
 
-const DOCUMENT_TYPES = {
+const DOCUMENT_TYPES: Record<IdentityDocumentType, {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  placeholder: string;
+  numberLabel: string;
+  showIdentityFields: boolean;
+}> = {
   'national-id': {
-    label: 'National ID',
+    label: 'Identity',
     icon: IdCard,
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-200',
-    placeholder: 'e.g., 1234567890123'
+    placeholder: 'e.g., 1234567890123 or A12345678',
+    numberLabel: 'ID / Passport Number',
+    showIdentityFields: true,
   },
   'passport': {
     label: 'Passport',
@@ -63,7 +83,9 @@ const DOCUMENT_TYPES = {
     color: 'text-green-600',
     bgColor: 'bg-green-50',
     borderColor: 'border-green-200',
-    placeholder: 'e.g., A12345678'
+    placeholder: 'e.g., A12345678',
+    numberLabel: 'Passport Number',
+    showIdentityFields: true,
   },
   'drivers-license': {
     label: "Driver's License",
@@ -71,9 +93,48 @@ const DOCUMENT_TYPES = {
     color: 'text-purple-600',
     bgColor: 'bg-purple-50',
     borderColor: 'border-purple-200',
-    placeholder: 'e.g., DL1234567'
+    placeholder: 'e.g., DL1234567',
+    numberLabel: 'License Number',
+    showIdentityFields: true,
+  },
+  'proof-of-residence': {
+    label: 'Proof of Residence',
+    icon: Home,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-200',
+    placeholder: 'Optional reference number',
+    numberLabel: 'Reference Number',
+    showIdentityFields: false,
+  },
+  'proof-primary-bank-account': {
+    label: 'Proof of Primary Bank Account',
+    icon: CreditCard,
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+    borderColor: 'border-indigo-200',
+    placeholder: 'Optional account reference',
+    numberLabel: 'Reference Number',
+    showIdentityFields: false,
+  },
+  'utility-bill': {
+    label: 'Utility Bill',
+    icon: ReceiptText,
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    placeholder: 'Optional bill reference',
+    numberLabel: 'Reference Number',
+    showIdentityFields: false,
   }
 };
+
+const KYC_UPLOAD_TYPES: IdentityDocumentType[] = [
+  'national-id',
+  'proof-of-residence',
+  'proof-primary-bank-account',
+  'utility-bill',
+];
 
 export function IdentitySection({
   profileData,
@@ -180,9 +241,9 @@ export function IdentitySection({
                 <Shield className="h-6 w-6 text-white" />
               </div>
               <div>
-                <CardTitle>Identity Documents</CardTitle>
+                <CardTitle>KYC Documents</CardTitle>
                 <CardDescription>
-                  {identityDocuments.length} {identityDocuments.length === 1 ? 'document' : 'documents'} on file
+                  {identityDocuments.length} {identityDocuments.length === 1 ? 'KYC document' : 'KYC documents'} on file
                 </CardDescription>
               </div>
             </div>
@@ -197,13 +258,14 @@ export function IdentitySection({
               {addMenuOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                   <div className="p-2 space-y-1">
-                    {Object.entries(DOCUMENT_TYPES).map(([type, config]) => {
+                    {KYC_UPLOAD_TYPES.map((type) => {
+                      const config = DOCUMENT_TYPES[type];
                       const Icon = config.icon;
                       return (
                         <button
                           key={type}
                           onClick={() => {
-                            addIdentityDocument(type as 'sa_id' | 'passport' | 'drivers_license');
+                            addIdentityDocument(type);
                             setAddMenuOpen(false);
                           }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-gray-50 transition-colors text-left"
@@ -233,7 +295,7 @@ export function IdentitySection({
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Yet</h3>
               <p className="text-sm text-gray-500 mb-4">
-                Add identity documents to verify the client's identity
+                Add KYC documents to support the client's compliance record
               </p>
             </div>
           </CardContent>
@@ -241,11 +303,12 @@ export function IdentitySection({
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {identityDocuments.map((doc: IdentityDocument) => {
-            const config = DOCUMENT_TYPES[doc.type];
+            const config = DOCUMENT_TYPES[doc.type] || DOCUMENT_TYPES['national-id'];
             const Icon = config.icon;
             const isEditing = identityDocsInEditMode.has(doc.id);
             const expired = isExpired(doc.expiryDate);
             const expiringSoon = isExpiringSoon(doc.expiryDate);
+            const showIdentityFields = config.showIdentityFields;
 
             return (
               <Card key={doc.id} className={`relative overflow-hidden ${expired ? 'border-red-300' : expiringSoon ? 'border-orange-300' : ''}`}>
@@ -320,7 +383,9 @@ export function IdentitySection({
                       <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor={`number-${doc.id}`}>Document Number *</Label>
+                            <Label htmlFor={`number-${doc.id}`}>
+                              {config.numberLabel}{showIdentityFields ? ' *' : ''}
+                            </Label>
                             <Input
                               id={`number-${doc.id}`}
                               value={doc.number}
@@ -329,27 +394,31 @@ export function IdentitySection({
                             />
                           </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor={`country-${doc.id}`}>Country of Issue *</Label>
-                            <Input
-                              id={`country-${doc.id}`}
-                              value={doc.countryOfIssue}
-                              onChange={(e) => updateIdentityDocument(doc.id, { countryOfIssue: e.target.value })}
-                              placeholder="e.g., South Africa"
-                            />
-                          </div>
+                          {showIdentityFields && (
+                            <div className="space-y-2">
+                              <Label htmlFor={`country-${doc.id}`}>Country of Issue *</Label>
+                              <Input
+                                id={`country-${doc.id}`}
+                                value={doc.countryOfIssue}
+                                onChange={(e) => updateIdentityDocument(doc.id, { countryOfIssue: e.target.value })}
+                                placeholder="e.g., South Africa"
+                              />
+                            </div>
+                          )}
 
-                          <div className="space-y-2">
-                            <Label htmlFor={`expiry-${doc.id}`}>Expiry Date</Label>
-                            <Input
-                              id={`expiry-${doc.id}`}
-                              type="date"
-                              value={doc.expiryDate}
-                              onChange={(e) => updateIdentityDocument(doc.id, { expiryDate: e.target.value })}
-                            />
-                          </div>
+                          {showIdentityFields && (
+                            <div className="space-y-2">
+                              <Label htmlFor={`expiry-${doc.id}`}>Expiry Date</Label>
+                              <Input
+                                id={`expiry-${doc.id}`}
+                                type="date"
+                                value={doc.expiryDate}
+                                onChange={(e) => updateIdentityDocument(doc.id, { expiryDate: e.target.value })}
+                              />
+                            </div>
+                          )}
 
-                          <div className="space-y-2">
+                          <div className={showIdentityFields ? 'space-y-2' : 'space-y-2 md:col-span-2'}>
                             <Label htmlFor={`file-${doc.id}`}>Upload Document</Label>
                             <div className="flex gap-2">
                               <Input
@@ -391,11 +460,12 @@ export function IdentitySection({
                       // View Mode
                       <div className="space-y-3">
                         {/* Document Fields */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div className="bg-white border border-gray-200 rounded-lg p-3">
+                        <div className={`grid grid-cols-1 ${showIdentityFields ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-3`}>
+                          {(showIdentityFields || doc.number) && (
+                            <div className="bg-white border border-gray-200 rounded-lg p-3">
                             <div className="flex items-center gap-2 mb-2">
                               <IdCard className="h-4 w-4 text-gray-400" />
-                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Document Number</span>
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{config.numberLabel}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <p className="text-sm font-medium text-gray-900 flex-1 break-all">
@@ -414,58 +484,63 @@ export function IdentitySection({
                               )}
                             </div>
                           </div>
+                          )}
 
-                          <div className="bg-white border border-gray-200 rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Globe className="h-4 w-4 text-gray-400" />
-                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Country of Issue</span>
+                          {showIdentityFields && (
+                            <div className="bg-white border border-gray-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Globe className="h-4 w-4 text-gray-400" />
+                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Country of Issue</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-gray-900 flex-1">
+                                  {doc.countryOfIssue || <span className="text-gray-400 italic">Not provided</span>}
+                                </p>
+                                {doc.countryOfIssue && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleCopyToClipboard(doc.countryOfIssue, 'Country of Issue')}
+                                    className="h-7 w-7 p-0 hover:bg-gray-50 flex-shrink-0"
+                                  >
+                                    <Copy className="h-3.5 w-3.5 text-gray-500" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium text-gray-900 flex-1">
-                                {doc.countryOfIssue || <span className="text-gray-400 italic">Not provided</span>}
-                              </p>
-                              {doc.countryOfIssue && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleCopyToClipboard(doc.countryOfIssue, 'Country of Issue')}
-                                  className="h-7 w-7 p-0 hover:bg-gray-50 flex-shrink-0"
-                                >
-                                  <Copy className="h-3.5 w-3.5 text-gray-500" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+                          )}
 
-                          <div className="bg-white border border-gray-200 rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Calendar className="h-4 w-4 text-gray-400" />
-                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Expiry Date</span>
+                          {showIdentityFields && (
+                            <div className="bg-white border border-gray-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Calendar className="h-4 w-4 text-gray-400" />
+                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Expiry Date</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <p className={`text-sm font-medium flex-1 ${
+                                  expired ? 'text-red-600' : expiringSoon ? 'text-orange-600' : 'text-gray-900'
+                                }`}>
+                                  {doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString('en-ZA', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  }) : <span className="text-gray-400 italic">Not provided</span>}
+                                </p>
+                                {doc.expiryDate && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleCopyToClipboard(doc.expiryDate, 'Expiry Date')}
+                                    className="h-7 w-7 p-0 hover:bg-gray-50 flex-shrink-0"
+                                  >
+                                    <Copy className="h-3.5 w-3.5 text-gray-500" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <p className={`text-sm font-medium flex-1 ${
-                                expired ? 'text-red-600' : expiringSoon ? 'text-orange-600' : 'text-gray-900'
-                              }`}>
-                                {doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString('en-ZA', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                }) : <span className="text-gray-400 italic">Not provided</span>}
-                              </p>
-                              {doc.expiryDate && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleCopyToClipboard(doc.expiryDate, 'Expiry Date')}
-                                  className="h-7 w-7 p-0 hover:bg-gray-50 flex-shrink-0"
-                                >
-                                  <Copy className="h-3.5 w-3.5 text-gray-500" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+                          )}
                         </div>
 
                         {/* Uploaded Document */}
@@ -517,7 +592,7 @@ export function IdentitySection({
                     )}
 
                     {/* Expiry Warning */}
-                    {!isEditing && expiringSoon && !expired && (
+                    {!isEditing && showIdentityFields && expiringSoon && !expired && (
                       <Alert className="bg-orange-50 border-orange-200">
                         <AlertCircle className="h-4 w-4 text-orange-600" />
                         <AlertDescription className="text-sm text-orange-800">
@@ -526,7 +601,7 @@ export function IdentitySection({
                       </Alert>
                     )}
 
-                    {!isEditing && expired && (
+                    {!isEditing && showIdentityFields && expired && (
                       <Alert className="bg-red-50 border-red-200">
                         <AlertCircle className="h-4 w-4 text-red-600" />
                         <AlertDescription className="text-sm text-red-800">
@@ -546,9 +621,9 @@ export function IdentitySection({
       <AlertDialog open={!!identityDocToDelete} onOpenChange={(open) => !open && setIdentityDocToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Identity Document?</AlertDialogTitle>
+            <AlertDialogTitle>Delete KYC Document?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the identity document from the system.
+              This action cannot be undone. This will permanently delete the KYC document from the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

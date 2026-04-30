@@ -34,6 +34,13 @@ const log = createModuleLogger('policy-extraction');
 
 const POLICY_DOC_BUCKET = 'make-91ed8379-policy-documents';
 
+function hasExtractedValue(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number') return Number.isFinite(value);
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // Supabase + OpenAI helpers
 // ---------------------------------------------------------------------------
@@ -400,7 +407,7 @@ async function mapToSchemaFields(
   ];
 
   for (const { canonicalKey, extracted: extractedField, fieldNameFallbacks } of topLevelMappings) {
-    if (!extractedField || extractedField.confidence === 0) continue;
+    if (!extractedField || extractedField.confidence === 0 || !hasExtractedValue(extractedField.value)) continue;
 
     // Try keyId match first (for premium/inception which may have keyIds)
     let matched = false;

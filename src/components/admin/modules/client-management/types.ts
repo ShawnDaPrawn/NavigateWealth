@@ -99,9 +99,17 @@ export interface Liability {
   customType?: string;
 }
 
+export type IdentityDocumentType =
+  | 'national-id'
+  | 'passport'
+  | 'drivers-license'
+  | 'proof-of-residence'
+  | 'proof-primary-bank-account'
+  | 'utility-bill';
+
 export interface IdentityDocument {
   id: string;
-  type: 'national-id' | 'passport' | 'drivers-license';
+  type: IdentityDocumentType;
   number: string;
   countryOfIssue: string;
   expiryDate: string;

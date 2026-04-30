@@ -40,6 +40,7 @@ function transformApiUser(user: ApiUser): Client {
   const normalizedProfile = normalizeProfile(user.profile);
   const pi = normalizedProfile?.personalInformation;
   const rawProfile = (user.profile ?? undefined) as Record<string, unknown> | undefined;
+  const personalIdentifier = pi?.idNumber?.trim() || pi?.passportNumber?.trim() || 'Not provided';
 
   const { firstName, lastName } = resolvePersonName({
     profileFirstName:
@@ -64,10 +65,7 @@ function transformApiUser(user: ApiUser): Client {
     lastName,
     preferredName: firstName,
     email: user.email,
-    idNumber:
-      pi?.idNumber ||
-      pi?.passportNumber ||
-      'Not provided',
+    idNumber: personalIdentifier,
     createdAt: user.created_at,
     applicationNumber: user.application_number,
     applicationStatus: user.application_status || 'unknown',
