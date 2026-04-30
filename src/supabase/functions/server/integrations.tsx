@@ -1990,6 +1990,16 @@ async function stagePortalRows(jobId: string, rawRows: Record<string, unknown>[]
   return { job: updatedJob, stagedRun: finalRun };
 }
 
+function portalRowHasBusinessValue(rawData: Record<string, unknown>): boolean {
+  const metadataColumns = new Set(Object.values(TEMPLATE_METADATA_COLUMNS));
+  return Object.entries(rawData || {}).some(([key, value]) => {
+    const normalisedKey = String(key || '').trim().toLowerCase();
+    if (!normalisedKey || metadataColumns.has(key)) return false;
+    if (/^policy\s*(number|no)$/i.test(normalisedKey)) return false;
+    return String(value ?? '').trim().length > 0;
+  });
+}
+
 // --- Endpoints ---
 
 // GET /providers - Legacy/Fallback support
@@ -3445,10 +3455,11 @@ app.post("/portal-worker/jobs/:jobId/stage-items", async (c) => {
         providerId: item.providerId,
         categoryId: item.categoryId,
         normalizedPolicyNumber: item.normalizedPolicyNumber,
-      }));
+      }))
+      .filter((row) => portalRowHasBusinessValue(row));
 
     if (rawRows.length === 0) {
-      return c.json({ error: "No completed policy items have extracted data to stage" }, 400);
+      return c.json({ error: "No completed policy items have extracted business values to stage" }, 400);
     }
 
     const { job, stagedRun } = await stagePortalRows(jobId, rawRows);
@@ -3478,7 +3489,12 @@ app.post("/portal-worker/jobs/:jobId/stage", async (c) => {
   try {
     const jobId = c.req.param("jobId");
     const body = await c.req.json();
-    const rawRows = Array.isArray(body?.rows) ? body.rows as Record<string, unknown>[] : [];
+    const rawRows = Array.isArray(body?.rows)
+      ? (body.rows as Record<string, unknown>[]).filter((row) => portalRowHasBusinessValue(row))
+      : [];
+    if (rawRows.length === 0) {
+      return c.json({ error: "No portal rows contained extracted business values to stage" }, 400);
+    }
     const { job, stagedRun } = await stagePortalRows(jobId, rawRows);
     return c.json({ success: true, job, stagedRun });
   } catch (e) {

@@ -393,6 +393,15 @@ function getFieldSemanticKind(field) {
   return 'generic';
 }
 
+function getFallbackValueForField(field, fallbackValues = {}) {
+  const kind = getFieldSemanticKind(field);
+  if (kind === 'policy_number') return fallbackValues.policyNumber || '';
+  if (kind === 'date_of_inception') return fallbackValues.dateOfInception || '';
+  if (kind === 'current_value') return fallbackValues.currentValue || '';
+  if (kind === 'product_type') return fallbackValues.productType || '';
+  return '';
+}
+
 function isLikelyDateValue(value) {
   const text = sampleText(value, 120);
   if (!text) return false;
@@ -1577,6 +1586,76 @@ async function extractByLabels(page, fields) {
   }, fields);
 }
 
+async function extractAllanGraySnapshot(page, item) {
+  return evaluateWithNavigationRetry(page, (policyNumber) => {
+    const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+    const extractMoney = (value) => {
+      const match = normalise(value).match(/R\s*[\d\s,]+(?:\.\d{1,2})?/i);
+      return match ? match[0].trim() : '';
+    };
+    const extractDate = (value) => {
+      const match = normalise(value).match(/\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/);
+      return match ? match[0].trim() : '';
+    };
+    const bodyText = normalise(document.body?.innerText || document.body?.textContent || '');
+    const result = {
+      policyNumber: normalise(policyNumber),
+      productType: '',
+      dateOfInception: '',
+      currentValue: '',
+      source: 'allan_gray_snapshot',
+    };
+
+    const labelledValue = (labelRegex, valueRegex) => {
+      const labelMatch = bodyText.match(labelRegex);
+      if (!labelMatch || typeof labelMatch.index !== 'number') return '';
+      const segment = bodyText.slice(labelMatch.index, Math.min(bodyText.length, labelMatch.index + 260));
+      const valueMatch = segment.match(valueRegex);
+      return valueMatch ? valueMatch[0].trim() : '';
+    };
+
+    result.currentValue = labelledValue(/\bTotal\s+value\s*\??\b/i, /R\s*[\d\s,]+(?:\.\d{1,2})?/i)
+      || labelledValue(/\bClosing\s+balance\b/i, /R\s*[\d\s,]+(?:\.\d{1,2})?/i);
+    result.dateOfInception = labelledValue(/\bInception\s+date\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i)
+      || labelledValue(/\bDate\s+of\s+inception\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i);
+
+    const rows = Array.from(document.querySelectorAll('tr')).map((row) =>
+      Array.from(row.querySelectorAll('th,td'))
+        .map((cell) => normalise(cell.innerText || cell.textContent || ''))
+        .filter(Boolean),
+    ).filter((cells) => cells.length > 0);
+    const policyRow = rows.find((cells) =>
+      cells.some((cell) => policyNumber && normalise(cell).includes(policyNumber))
+      || cells.some((cell) => /retirement\s+annuity/i.test(cell))
+      || cells.some((cell) => extractMoney(cell)),
+    );
+    if (policyRow) {
+      const productCell = policyRow.find((cell) =>
+        /retirement\s+annuity|pension|provident|preservation|living\s+annuity/i.test(cell)
+        && !extractMoney(cell)
+        && !extractDate(cell)
+        && !/account\s*(no|number)|value|date/i.test(cell)
+      );
+      const dateCell = policyRow.find((cell) => extractDate(cell));
+      const valueCell = [...policyRow].reverse().find((cell) => extractMoney(cell));
+      result.productType = productCell || result.productType;
+      result.dateOfInception = dateCell ? extractDate(dateCell) : result.dateOfInception;
+      result.currentValue = valueCell ? extractMoney(valueCell) : result.currentValue;
+    }
+
+    if (!result.productType) {
+      const productMatch = bodyText.match(/\bRetirement\s+Annuity\s+Fund\b/i);
+      result.productType = productMatch ? productMatch[0].trim() : '';
+    }
+    if (!result.currentValue) {
+      const allAmounts = Array.from(bodyText.matchAll(/R\s*[\d\s,]+(?:\.\d{1,2})?/gi)).map((match) => match[0].trim());
+      result.currentValue = allAmounts[0] || '';
+    }
+
+    return result;
+  }, String(item?.policyNumber || '')).catch(() => ({}));
+}
+
 function getFieldColumnName(field) {
   return String(field?.columnName || field?.sourceHeader || '').trim();
 }
@@ -1635,10 +1714,14 @@ async function extractPolicyRecord(page, flow, config, item) {
     });
 
   const labelExtracted = await extractByLabels(page, fields);
+  const providerFallback = /allangray\.co\.za/i.test(page.url())
+    ? await extractAllanGraySnapshot(page, item)
+    : {};
   const rawData = {};
   const extractedData = {};
   const missingRunBlockingFields = [];
   let businessValueCount = 0;
+  const extractedFieldNames = [];
 
   for (const field of fields) {
     const columnName = getFieldColumnName(field);
@@ -1650,6 +1733,11 @@ async function extractPolicyRecord(page, flow, config, item) {
       const labelValue = labelExtracted[columnName]?.value || '';
       if (isPlausibleValueForField(field, labelValue, item)) {
         selectedValue = labelValue;
+      } else {
+        const fallbackValue = getFallbackValueForField(field, providerFallback);
+        if (isPlausibleValueForField(field, fallbackValue, item)) {
+          selectedValue = fallbackValue;
+        }
       }
     }
 
@@ -1662,6 +1750,7 @@ async function extractPolicyRecord(page, flow, config, item) {
     } else {
       if (shouldCountAsExtractedBusinessValue(field, selectedValue)) {
         businessValueCount += 1;
+        extractedFieldNames.push(getFieldDisplayName(field));
       } else if (isPortalRunBlockingField(field)) {
         const labels = Array.isArray(field.labels) ? field.labels.filter(Boolean).join(', ') : columnName;
         missingRunBlockingFields.push(`${getFieldDisplayName(field)} (${labels || columnName})`);
@@ -1689,6 +1778,7 @@ async function extractPolicyRecord(page, flow, config, item) {
   return {
     rawData: rawDataWithMetadata,
     extractedData,
+    extractedFieldNames,
   };
 }
 
@@ -1889,7 +1979,7 @@ async function processPolicyQueue(page, flow, config, jobMode, brain) {
         message: `Extracting values for ${item.clientName} / ${item.policyNumber}.`,
       });
 
-      const { rawData, extractedData } = await extractPolicyRecord(page, flow, config, item);
+      const { rawData, extractedData, extractedFieldNames } = await extractPolicyRecord(page, flow, config, item);
       let documentResult = null;
       let documentWarning = '';
 
@@ -1926,6 +2016,7 @@ async function processPolicyQueue(page, flow, config, jobMode, brain) {
         currentStep: 'completed',
         message: [
           `Extracted ${countVisibleValues(rawData)} mapped value(s).`,
+          extractedFieldNames?.length ? `Fields: ${extractedFieldNames.slice(0, 6).join(', ')}.` : '',
           documentResult ? `Policy schedule PDF replaced (${documentResult.fileName}).` : '',
           documentWarning,
         ].filter(Boolean).join(' '),
