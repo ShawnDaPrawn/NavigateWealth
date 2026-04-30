@@ -1168,3 +1168,5 @@ export function IssuesModule() {
     </div>
   );
 }
+
+export default IssuesModule;

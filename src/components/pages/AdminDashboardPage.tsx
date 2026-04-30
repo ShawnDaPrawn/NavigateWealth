@@ -64,7 +64,7 @@ const EsignModule = React.lazy(() => import('../admin/modules/esign').then(m => 
 const SubmissionsModule = React.lazy(() => import('../admin/modules/submissions').then(m => ({ default: m.SubmissionsModule })));
 const NotesModule = React.lazy(() => import('../admin/modules/notes').then(m => ({ default: m.NotesModule })));
 const AIManagementModule = React.lazy(() => import('../admin/modules/ai-management').then(m => ({ default: m.AIManagementModule })));
-const IssuesModule = React.lazy(() => import('../admin/modules/issues').then(m => ({ default: m.IssuesModule })));
+const IssuesModule = React.lazy(() => import('../admin/modules/issues/IssuesModule'));
 
 export function AdminDashboardPage() {
   const [searchParams] = useSearchParams();
