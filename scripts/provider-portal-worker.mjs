@@ -1081,6 +1081,69 @@ async function findClickableByIntent(page, selector, labels = []) {
   throw new Error('Could not confidently find the policy schedule download action.');
 }
 
+async function findAllanGrayDownloadAction(page) {
+  const inferredSelector = await evaluateWithNavigationRetry(page, () => {
+    const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+    const isVisible = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && rect.width >= 20
+        && rect.height >= 20;
+    };
+    const clickables = Array.from(document.querySelectorAll('a, button, [role="link"], [role="button"], [tabindex]'))
+      .filter(isVisible)
+      .map((el) => {
+        const rect = el.getBoundingClientRect();
+        const text = normalise([
+          el.textContent,
+          el.getAttribute('aria-label'),
+          el.getAttribute('title'),
+          el.getAttribute('download'),
+          el.getAttribute('data-testid'),
+          ...Array.from(el.querySelectorAll('mat-icon, svg, use, i')).map((icon) => [
+            icon.textContent,
+            icon.getAttribute('aria-label'),
+            icon.getAttribute('title'),
+            icon.getAttribute('data-icon'),
+            icon.getAttribute('href'),
+            icon.getAttribute('xlink:href'),
+            icon.getAttribute('class'),
+          ].filter(Boolean).join(' ')),
+        ].filter(Boolean).join(' '));
+        const toolbarPosition = rect.top >= 90
+          && rect.top <= 260
+          && rect.left >= window.innerWidth * 0.72;
+        const iconLike = Boolean(el.querySelector('svg, mat-icon, i')) || /download|file_download|picture_as_pdf|pdf/i.test(text);
+        const excluded = /zar|last\s+1\s+year|agra\d|account|client|user|profile|logout/i.test(text);
+        return {
+          el,
+          text,
+          rect,
+          score: (toolbarPosition ? 100 : 0)
+            + (/download|file_download|cloud_download|picture_as_pdf|pdf/i.test(text) ? 60 : 0)
+            + (iconLike ? 30 : 0)
+            + Math.round(rect.left / Math.max(window.innerWidth, 1) * 10)
+            - (excluded ? 200 : 0),
+        };
+      })
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score);
+    const candidate = clickables[0]?.el;
+    if (!candidate) return '';
+    const id = `nw-allan-gray-download-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    candidate.setAttribute('data-nw-worker-clickable', id);
+    return `[data-nw-worker-clickable="${id}"]`;
+  }).catch(() => '');
+
+  if (!inferredSelector) return null;
+  const locator = page.locator(inferredSelector).first();
+  if (await locator.isVisible({ timeout: 1000 }).catch(() => false)) return locator;
+  return null;
+}
+
 function safeDownloadedPdfName(item, suggestedFilename) {
   const baseName = String(suggestedFilename || `${item.policyNumber || item.id}-policy-schedule.pdf`)
     .replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -1093,7 +1156,9 @@ async function downloadPolicySchedule(page, flow, item) {
   const labels = splitLabels(policySchedule.downloadLabels || ['Policy schedule', 'Download', 'PDF', 'Statement']);
   const menuLabels = splitLabels(policySchedule.downloadMenuLabels || ['Download PDF with company logo', 'Download PDF without company logo']);
   const timeout = Number(policySchedule.waitForDownloadMs || 30000);
-  const action = await findClickableByIntent(page, policySchedule.downloadSelector, labels);
+  const action = /allangray\.co\.za/i.test(page.url())
+    ? (await findAllanGrayDownloadAction(page)) || await findClickableByIntent(page, policySchedule.downloadSelector, labels)
+    : await findClickableByIntent(page, policySchedule.downloadSelector, labels);
 
   let download;
   try {
@@ -1637,7 +1702,12 @@ async function extractAllanGraySnapshot(page, item) {
       const match = normalise(value).match(/\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/);
       return match ? match[0].trim() : '';
     };
-    const bodyText = normalise(document.body?.innerText || document.body?.textContent || '');
+    const rawBodyText = document.body?.innerText || document.body?.textContent || '';
+    const bodyText = normalise(rawBodyText);
+    const bodyLines = String(rawBodyText)
+      .split(/\r?\n/)
+      .map((line) => normalise(line))
+      .filter(Boolean);
     const result = {
       policyNumber: normalise(policyNumber),
       productType: '',
@@ -1662,6 +1732,16 @@ async function extractAllanGraySnapshot(page, item) {
       const valueMatch = segment.match(valueRegex);
       result.diagnostics.textSnippets.push(segment.slice(0, 180));
       return valueMatch ? valueMatch[0].trim() : '';
+    };
+    const lineValueAfter = (labelRegex, valueRegex, label) => {
+      for (let index = 0; index < bodyLines.length; index += 1) {
+        if (!labelRegex.test(bodyLines[index])) continue;
+        const segment = bodyLines.slice(index, index + 5).join(' ');
+        const valueMatch = segment.match(valueRegex);
+        result.diagnostics.textSnippets.push(`${label || labelRegex}: ${segment}`.slice(0, 220));
+        if (valueMatch) return valueMatch[0].trim();
+      }
+      return '';
     };
 
     const ownText = (el) => Array.from(el.childNodes || [])
@@ -1734,7 +1814,8 @@ async function extractAllanGraySnapshot(page, item) {
     };
 
     const labelledMoney = (label, labelRegex) => {
-      const value = labelledValue(labelRegex, /R\s*[\d\s,]+(?:\.\d{1,2})?/i);
+      const value = lineValueAfter(labelRegex, /R\s*[\d\s,]+(?:\.\d{1,2})?/i, label)
+        || labelledValue(labelRegex, /R\s*[\d\s,]+(?:\.\d{1,2})?/i);
       return value ? addCandidate(value, label, 0, label) : '';
     };
 
@@ -1744,7 +1825,9 @@ async function extractAllanGraySnapshot(page, item) {
       || nearestMoneyAfterLabel(/\bClosing\s+balance\b/i)
       || nearestMoneyAfterLabel(/\bValue\b/i);
     result.currentValueSource = result.diagnostics.amountCandidates[0]?.source || '';
-    result.dateOfInception = labelledValue(/\bInception\s+date\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i)
+    result.dateOfInception = lineValueAfter(/\bInception\s+date\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i, 'Inception date')
+      || lineValueAfter(/\bDate\s+of\s+inception\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i, 'Date of inception')
+      || labelledValue(/\bInception\s+date\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i)
       || labelledValue(/\bDate\s+of\s+inception\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i);
 
     const rows = Array.from(document.querySelectorAll('tr')).map((row) =>
@@ -1878,18 +1961,25 @@ async function extractPolicyRecord(page, flow, config, item) {
   for (const field of fields) {
     const columnName = getFieldColumnName(field);
     let selectedValue = '';
-    const selectorValue = field.selector ? await readField(page, field).catch(() => '') : '';
-    if (isPlausibleValueForField(field, selectorValue, item)) {
+    const semanticKind = getFieldSemanticKind(field);
+    const fallbackValue = getFallbackValueForField(field, providerFallback);
+    if (
+      isAllanGrayProvider
+      && ['current_value', 'date_of_inception', 'product_type'].includes(semanticKind)
+      && isPlausibleValueForField(field, fallbackValue, item)
+    ) {
+      selectedValue = fallbackValue;
+    }
+
+    const selectorValue = !selectedValue && field.selector ? await readField(page, field).catch(() => '') : '';
+    if (!selectedValue && isPlausibleValueForField(field, selectorValue, item)) {
       selectedValue = selectorValue;
     } else {
       const labelValue = labelExtracted[columnName]?.value || '';
-      if (isPlausibleValueForField(field, labelValue, item)) {
+      if (!selectedValue && isPlausibleValueForField(field, labelValue, item)) {
         selectedValue = labelValue;
-      } else {
-        const fallbackValue = getFallbackValueForField(field, providerFallback);
-        if (isPlausibleValueForField(field, fallbackValue, item)) {
-          selectedValue = fallbackValue;
-        }
+      } else if (!selectedValue && isPlausibleValueForField(field, fallbackValue, item)) {
+        selectedValue = fallbackValue;
       }
     }
 
