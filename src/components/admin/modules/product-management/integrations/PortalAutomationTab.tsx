@@ -901,6 +901,19 @@ export function PortalAutomationTab({
               )}
 
               <div className="flex flex-wrap gap-3">
+                <div className="flex w-full items-center justify-between gap-3 rounded-md border bg-gray-50 px-3 py-2 text-sm sm:w-auto">
+                  <div>
+                    <p className="font-medium text-gray-900">PDF for this run</p>
+                    <p className={cn('text-xs', policyScheduleEnabled ? 'text-green-700' : 'text-gray-500')}>
+                      {policyScheduleEnabled ? 'Policy schedule will be requested' : 'Policy schedule will not be requested'}
+                    </p>
+                  </div>
+                  <Switch
+                    id="policy-schedule-run-enabled"
+                    checked={policyScheduleEnabled}
+                    onCheckedChange={setPolicyScheduleEnabled}
+                  />
+                </div>
                 <Button
                   onClick={() => onCreateJob(selectedCredentialProfileId, runMode, {
                     policySchedule: buildPolicyScheduleDraft(),
