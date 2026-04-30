@@ -1912,6 +1912,85 @@ async function publishSyncRun(run: IntegrationSyncRun, options?: { autoOnly?: bo
   return run;
 }
 
+async function buildPortalCategorySyncRun(params: {
+  job: PortalSyncJob;
+  provider: KvProvider;
+  categoryId: string;
+  rawRows: Record<string, unknown>[];
+  fallbackSettings?: IntegrationConfig['settings'];
+  runId: string;
+}): Promise<IntegrationSyncRun> {
+  const storedConfig = (await kv.get(`config:mapping:${params.job.providerId}:${params.categoryId}`)) as IntegrationConfig | null;
+  const schema = await getSchemaForCategory(params.categoryId);
+  const config = normaliseIntegrationConfig(storedConfig ? {
+    ...storedConfig,
+    providerId: params.job.providerId,
+    categoryId: params.categoryId,
+  } : {
+    providerId: params.job.providerId,
+    categoryId: params.categoryId,
+    fieldMapping: {},
+    fieldBindings: [],
+    settings: params.fallbackSettings || getDefaultIntegrationSettings(),
+  }, schema.fields || []);
+
+  const templateBindings = getTemplateFieldBindings(config, schema.fields || []);
+  const settings = normaliseSettings(config.settings);
+  const syncRun = await buildSyncRun({
+    provider: params.provider,
+    providerId: params.job.providerId,
+    categoryId: params.categoryId,
+    fileName: `${params.job.providerName} portal extraction ${new Date().toISOString()}`,
+    source: 'portal',
+    rawRows: params.rawRows,
+    fieldMapping: fieldBindingsToMapping(templateBindings, config.fieldMapping || {}),
+    fieldBindings: templateBindings,
+    settings,
+    ignoreBlankValues: true,
+  });
+
+  syncRun.id = params.runId;
+  return settings.autoPublish
+    ? await publishSyncRun(syncRun, { autoOnly: true })
+    : syncRun;
+}
+
+function combinePortalCategoryRuns(params: {
+  job: PortalSyncJob;
+  provider: KvProvider;
+  runId: string;
+  runs: IntegrationSyncRun[];
+}): IntegrationSyncRun {
+  const now = new Date().toISOString();
+  const rows = params.runs.flatMap((run) => run.rows);
+  rows.forEach((row, index) => {
+    row.rowNumber = index + 2;
+  });
+
+  const summary = summariseSyncRows(rows);
+  const status: SyncRunStatus = summary.publishedRows > 0 && summary.heldRows > 0
+    ? 'partially_published'
+    : summary.publishedRows > 0
+      ? 'published'
+      : 'staged';
+
+  return {
+    id: params.runId,
+    providerId: params.job.providerId,
+    providerName: params.provider.name || params.job.providerName || 'Unknown Provider',
+    categoryId: params.job.categoryId,
+    fileName: `${params.job.providerName} portal extraction ${now}`,
+    source: 'portal',
+    status,
+    createdAt: params.runs[0]?.createdAt || now,
+    updatedAt: now,
+    mappingVersion: `${params.job.providerId}:${params.job.categoryId}:${now}`,
+    autoPublish: params.runs.some((run) => run.autoPublish),
+    summary,
+    rows,
+  };
+}
+
 async function stagePortalRows(jobId: string, rawRows: Record<string, unknown>[]): Promise<{ job: PortalSyncJob; stagedRun: IntegrationSyncRun }> {
   const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
   if (!job) {
@@ -1926,35 +2005,40 @@ async function stagePortalRows(jobId: string, rawRows: Record<string, unknown>[]
     throw new Error("Invalid provider ID");
   }
 
-  const storedConfig = (await kv.get(`config:mapping:${job.providerId}:${job.categoryId}`)) as IntegrationConfig | null;
-  if (!storedConfig) {
-    throw new Error("No mapping configuration found. Please configure mappings first.");
+  const jobConfig = (await kv.get(`config:mapping:${job.providerId}:${job.categoryId}`)) as IntegrationConfig | null;
+  if (!jobConfig) {
+    throw new Error("No mapping configuration found for the selected product group. Please configure mappings first.");
   }
-  const schema = await getSchemaForCategory(job.categoryId);
-  const config = normaliseIntegrationConfig({
-    ...storedConfig,
-    providerId: job.providerId,
-    categoryId: job.categoryId,
-  }, schema.fields || []);
 
-  const templateBindings = getTemplateFieldBindings(config, schema.fields || []);
-  const settings = normaliseSettings(config.settings);
-  const syncRun = await buildSyncRun({
+  const fallbackSettings = normaliseSettings(jobConfig.settings);
+  const rowsByCategory = new Map<string, Record<string, unknown>[]>();
+  for (const row of rawRows) {
+    const rowMetadata = getTemplateRowMetadata(row);
+    const categoryId = rowMetadata.categoryId || job.categoryId;
+    const group = rowsByCategory.get(categoryId) || [];
+    group.push(row);
+    rowsByCategory.set(categoryId, group);
+  }
+
+  const finalRunId = crypto.randomUUID();
+  const categoryRuns: IntegrationSyncRun[] = [];
+  for (const [categoryId, categoryRows] of rowsByCategory.entries()) {
+    categoryRuns.push(await buildPortalCategorySyncRun({
+      job,
+      provider,
+      categoryId,
+      rawRows: categoryRows,
+      fallbackSettings,
+      runId: finalRunId,
+    }));
+  }
+
+  const finalRun = combinePortalCategoryRuns({
+    job,
     provider,
-    providerId: job.providerId,
-    categoryId: job.categoryId,
-    fileName: `${job.providerName} portal extraction ${new Date().toISOString()}`,
-    source: 'portal',
-    rawRows,
-    fieldMapping: fieldBindingsToMapping(templateBindings, config.fieldMapping || {}),
-    fieldBindings: templateBindings,
-    settings,
-    ignoreBlankValues: true,
+    runId: finalRunId,
+    runs: categoryRuns,
   });
-
-  const finalRun = settings.autoPublish
-    ? await publishSyncRun(syncRun, { autoOnly: true })
-    : syncRun;
 
   await kv.set(`sync-run:${finalRun.id}`, finalRun);
 

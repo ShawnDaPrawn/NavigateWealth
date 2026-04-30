@@ -28,6 +28,25 @@ interface UploadTabProps {
   matchedColumnsCount: number;
 }
 
+const isPortalMetadataColumn = (key: string) => key.trim().startsWith('_NW ');
+
+const formatExtractedValue = (value: unknown) => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+};
+
+const getExtractedValues = (row: IntegrationSyncRun['rows'][number]) =>
+  Object.entries(row.rawData || {})
+    .filter(([key, value]) => !isPortalMetadataColumn(key) && String(value ?? '').trim().length > 0)
+    .slice(0, 8);
+
 export function UploadTab({
   provider,
   selectedCategoryId,
@@ -167,52 +186,70 @@ export function UploadTab({
                   <TableHead>Policy Number</TableHead>
                   <TableHead>Match</TableHead>
                   <TableHead>Publish</TableHead>
+                  <TableHead>Extracted</TableHead>
                   <TableHead>Changes</TableHead>
                   <TableHead>Warnings</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {stagedRun?.rows.slice(0, 25).map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="text-xs">{row.rowNumber}</TableCell>
-                    <TableCell className="text-xs font-medium">{row.policyNumber || '-'}</TableCell>
-                    <TableCell className="text-xs">
-                      <div className="space-y-1">
-                        {getStatusBadge(row.matchStatus)}
-                        <p className="text-[11px] text-gray-500">{getMatchMethodCopy(row)}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(row.publishStatus)}</TableCell>
-                    <TableCell className="text-xs">
-                      {row.diffs.length > 0 ? (
+                {stagedRun?.rows.slice(0, 25).map((row) => {
+                  const extractedValues = getExtractedValues(row);
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell className="text-xs">{row.rowNumber}</TableCell>
+                      <TableCell className="text-xs font-medium">{row.policyNumber || '-'}</TableCell>
+                      <TableCell className="text-xs">
                         <div className="space-y-1">
-                          <div className="font-medium text-gray-900">
-                            {row.diffs.length} changed cell{row.diffs.length === 1 ? '' : 's'}
+                          {getStatusBadge(row.matchStatus)}
+                          <p className="text-[11px] text-gray-500">{getMatchMethodCopy(row)}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(row.publishStatus)}</TableCell>
+                      <TableCell className="min-w-[220px] text-xs">
+                        {extractedValues.length > 0 ? (
+                          <div className="space-y-1">
+                            {extractedValues.map(([key, value]) => (
+                              <div key={`${row.id}-raw-${key}`}>
+                                <span className="font-medium text-gray-900">{key}:</span>{' '}
+                                <span className="text-gray-700">{formatExtractedValue(value)}</span>
+                              </div>
+                            ))}
                           </div>
-                          {row.diffs.slice(0, 3).map((diff) => (
-                            <div key={diff.fieldId}>
-                              <span className="font-medium">{diff.fieldName}:</span> {String(diff.oldValue ?? '-')} {' -> '} {String(diff.newValue ?? '-')}
+                        ) : (
+                          <span className="text-gray-400">No extracted values</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {row.diffs.length > 0 ? (
+                          <div className="space-y-1">
+                            <div className="font-medium text-gray-900">
+                              {row.diffs.length} changed cell{row.diffs.length === 1 ? '' : 's'}
                             </div>
-                          ))}
-                          {row.diffs.length > 3 && <span className="text-gray-400">+{row.diffs.length - 3} more</span>}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">No publishable cell changes</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {[...row.validationErrors, ...row.warnings].length > 0 ? (
-                        <div className="space-y-1 text-amber-700">
-                          {[...row.validationErrors, ...row.warnings].slice(0, 2).map((message, index) => (
-                            <p key={`${row.id}-warning-${index}`}>{message}</p>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">No warnings</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                            {row.diffs.slice(0, 3).map((diff) => (
+                              <div key={diff.fieldId}>
+                                <span className="font-medium">{diff.fieldName}:</span> {String(diff.oldValue ?? '-')} {' -> '} {String(diff.newValue ?? '-')}
+                              </div>
+                            ))}
+                            {row.diffs.length > 3 && <span className="text-gray-400">+{row.diffs.length - 3} more</span>}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">No publishable cell changes</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {[...row.validationErrors, ...row.warnings].length > 0 ? (
+                          <div className="space-y-1 text-amber-700">
+                            {[...row.validationErrors, ...row.warnings].slice(0, 2).map((message, index) => (
+                              <p key={`${row.id}-warning-${index}`}>{message}</p>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">No warnings</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

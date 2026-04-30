@@ -87,6 +87,25 @@ const latestPortalWarning = (value?: string, warnings?: string[]) => {
   return value || '';
 };
 
+const isPortalMetadataColumn = (key: string) => key.trim().startsWith('_NW ');
+
+const formatExtractedValue = (value: unknown) => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+};
+
+const getExtractedValues = (rawData?: Record<string, unknown>) =>
+  Object.entries(rawData || {})
+    .filter(([key, value]) => !isPortalMetadataColumn(key) && String(value ?? '').trim().length > 0)
+    .slice(0, 8);
+
 const getPortalFieldColumnName = (field: Partial<PortalFlowField>) =>
   String(field.columnName || field.sourceHeader || '').trim();
 
@@ -242,15 +261,16 @@ export function PortalAutomationTab({
     row.publishStatus !== 'failed' &&
     row.publishStatus !== 'skipped'
   ).length || 0;
-  const stagedChangedRows = stagedRun?.rows.filter((row) => row.diffs.length > 0) || [];
-  const stagedPreviewRow = stagedChangedRows.find((row) =>
+  const stagedRows = stagedRun?.rows || [];
+  const stagedPreviewRow = stagedRows.find((row) =>
     jobItems.some((item) => item.policyNumber === row.policyNumber)
-  ) || stagedChangedRows[0];
+  ) || stagedRows[0];
   const stagedPreviewMatchCopy = stagedPreviewRow?.matchMethod === 'template_metadata'
     ? 'Matched via hidden template metadata'
     : stagedPreviewRow?.matchMethod === 'policy_number'
       ? 'Matched via policy number fallback'
       : 'No stable match key supplied';
+  const stagedPreviewExtractedValues = stagedPreviewRow ? getExtractedValues(stagedPreviewRow.rawData) : [];
   const setupWarnings = [
     postLoginUrl.trim() && !hasPostLoginFallback
       ? 'A post-login page URL is set, but there is no click-step or search fallback if that page cannot be opened.'
@@ -998,18 +1018,35 @@ export function PortalAutomationTab({
                   {stagedPreviewRow && (
                     <div className="rounded-md border border-blue-200 bg-white/80 p-3">
                       <p className="text-xs font-medium uppercase tracking-wide text-blue-700">
-                        Staged changes for {stagedPreviewRow.policyNumber}
+                        Extracted values for {stagedPreviewRow.policyNumber}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">{stagedPreviewMatchCopy}</p>
                       <div className="mt-2 space-y-1 text-sm text-slate-700">
-                        {stagedPreviewRow.diffs.slice(0, 4).map((diff) => (
-                          <div key={`${stagedPreviewRow.id}-${diff.fieldId}`} className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                            <span className="font-medium text-slate-900">{diff.fieldName}</span>
-                            <span className="text-slate-600 sm:text-right">
-                              {String(diff.oldValue ?? '-')} {' -> '} {String(diff.newValue ?? '-')}
-                            </span>
+                        {stagedPreviewExtractedValues.length > 0 ? (
+                          stagedPreviewExtractedValues.map(([key, value]) => (
+                            <div key={`${stagedPreviewRow.id}-raw-${key}`} className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                              <span className="font-medium text-slate-900">{key}</span>
+                              <span className="text-slate-600 sm:text-right">{formatExtractedValue(value)}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-slate-500">No extracted values were staged for this row.</p>
+                        )}
+                        {stagedPreviewRow.diffs.length > 0 && (
+                          <div className="pt-2">
+                            <p className="text-xs font-medium uppercase tracking-wide text-blue-700">Publish changes</p>
+                            <div className="mt-1 space-y-1">
+                              {stagedPreviewRow.diffs.slice(0, 4).map((diff) => (
+                                <div key={`${stagedPreviewRow.id}-${diff.fieldId}`} className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                                  <span className="font-medium text-slate-900">{diff.fieldName}</span>
+                                  <span className="text-slate-600 sm:text-right">
+                                    {String(diff.oldValue ?? '-')} {' -> '} {String(diff.newValue ?? '-')}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
                   )}
@@ -1092,7 +1129,9 @@ export function PortalAutomationTab({
                       </tr>
                     </thead>
                     <tbody>
-                      {jobItems.map((item) => (
+                      {jobItems.map((item) => {
+                        const extractedValues = getExtractedValues(item.rawData);
+                        return (
                         <tr key={item.id} className="border-t align-top">
                           <td className="px-3 py-2">
                             <Badge variant="outline" className={cn('capitalize', itemStatusClassNames[item.status])}>
@@ -1106,6 +1145,8 @@ export function PortalAutomationTab({
                               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                                 Attached
                               </Badge>
+                            ) : flow?.policySchedule?.enabled ? (
+                              <span className="text-xs text-amber-700">Not attached</span>
                             ) : (
                               <span className="text-xs text-gray-400">-</span>
                             )}
@@ -1118,6 +1159,18 @@ export function PortalAutomationTab({
                           <td className="px-3 py-2 text-gray-600">
                             <div>{item.currentStep || '-'}</div>
                             {item.message && <div className="mt-1 max-w-md text-xs text-gray-600">{item.message}</div>}
+                            {extractedValues.length > 0 && (
+                              <div className="mt-2 max-w-md rounded-md border border-gray-100 bg-gray-50 p-2 text-xs text-gray-700">
+                                <div className="font-medium text-gray-900">Extracted</div>
+                                <div className="mt-1 space-y-0.5">
+                                  {extractedValues.map(([key, value]) => (
+                                    <div key={`${item.id}-raw-${key}`}>
+                                      <span className="font-medium">{key}:</span> {formatExtractedValue(value)}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                             {latestPortalWarning(item.warning, item.warnings) && (
                               <div className="mt-1 max-w-md text-xs text-amber-700">{latestPortalWarning(item.warning, item.warnings)}</div>
                             )}
@@ -1134,7 +1187,8 @@ export function PortalAutomationTab({
                             )}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
