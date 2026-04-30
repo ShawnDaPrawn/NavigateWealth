@@ -1117,6 +1117,7 @@ export function PortalAutomationTab({
                           </td>
                           <td className="px-3 py-2 text-gray-600">
                             <div>{item.currentStep || '-'}</div>
+                            {item.message && <div className="mt-1 max-w-md text-xs text-gray-600">{item.message}</div>}
                             {latestPortalWarning(item.warning, item.warnings) && (
                               <div className="mt-1 max-w-md text-xs text-amber-700">{latestPortalWarning(item.warning, item.warnings)}</div>
                             )}

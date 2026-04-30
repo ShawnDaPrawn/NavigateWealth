@@ -43,6 +43,7 @@ jobs:
       NW_PORTAL_MODE: ${{ inputs.run_mode }}
       NW_PORTAL_WORKER_ID: github-actions-${{ github.run_id }}
       NW_PLAYWRIGHT_HEADED: "0"
+      NW_PORTAL_DEBUG_DIR: tmp/provider-portal-worker
       PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
     steps:
@@ -70,3 +71,12 @@ jobs:
 
       - name: Run provider portal worker
         run: npm run provider:sync -- --job-id "$NW_PORTAL_JOB_ID" --mode "$NW_PORTAL_MODE"
+
+      - name: Upload worker diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-portal-worker-${{ github.run_id }}
+          path: tmp/provider-portal-worker/**
+          if-no-files-found: ignore
+          retention-days: 7

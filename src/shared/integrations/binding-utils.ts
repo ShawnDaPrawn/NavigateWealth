@@ -65,7 +65,10 @@ function normalisePortalFieldMeaning(value: unknown): string {
   if (/(policy\s*(number|no)|account\s*number|investment\s*number|reference)/.test(normalised)) return 'policy number';
   if (/(date\s*of\s*inception|inception\s*date|start\s*date|investment\s*start\s*date)/.test(normalised)) return 'date of inception';
   if (/(product\s*type|product\s*name|investment\s*type|retirement\s*annuity\s*fund)/.test(normalised)) return 'product type';
-  if (/(current\s*value|fund\s*value|market\s*value|closing\s*balance)/.test(normalised)) return 'current value';
+  if (
+    !/(maturity|estimated|projected|guaranteed|premium|contribution)/.test(normalised)
+    && /(current\s*value|fund\s*value|market\s*value|closing\s*balance|policy\s*value|account\s*value|retirement.*value|\bvalue\b)/.test(normalised)
+  ) return 'current value';
   if (/(est\s*maturity\s*value|estimated\s*maturity\s*value)/.test(normalised)) return 'est maturity value';
 
   return normalised;

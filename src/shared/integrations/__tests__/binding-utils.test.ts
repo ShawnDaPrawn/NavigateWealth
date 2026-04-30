@@ -147,6 +147,42 @@ describe('buildPortalFieldsFromBindings', () => {
       },
     ]);
   });
+
+  it('treats provider-specific value labels as current value fields', () => {
+    const fields = buildPortalFieldsFromBindings(
+      [
+        {
+          columnName: 'Retirement Fund Value Total',
+          targetFieldName: 'Retirement Fund Value Total',
+        },
+      ],
+      [
+        {
+          sourceHeader: 'Current Value',
+          columnName: 'Current Value',
+          targetFieldName: 'Current Value',
+          selector: '[data-field="fundValue"]',
+          labels: ['Total value', 'Closing balance', 'Value'],
+          attribute: 'text',
+          transform: 'trim',
+        },
+      ],
+    );
+
+    expect(fields).toEqual([
+      {
+        sourceHeader: 'Retirement Fund Value Total',
+        columnName: 'Retirement Fund Value Total',
+        targetFieldId: undefined,
+        targetFieldName: 'Retirement Fund Value Total',
+        selector: '[data-field="fundValue"]',
+        labels: ['Total value', 'Closing balance', 'Value'],
+        attribute: 'text',
+        required: false,
+        transform: 'trim',
+      },
+    ]);
+  });
 });
 
 describe('normaliseIntegrationBlankBehavior', () => {

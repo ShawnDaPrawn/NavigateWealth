@@ -1,4 +1,4 @@
-import { readFile, unlink } from 'node:fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 
 const DEFAULT_API_BASE = 'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/integrations';
 const TEMPLATE_METADATA_COLUMNS = {
@@ -60,6 +60,7 @@ const mode = String(args.mode || process.env.NW_PORTAL_MODE || 'run');
 const forceStage = Boolean(args['force-stage'] || process.env.NW_PORTAL_FORCE_STAGE === '1');
 const poll = Boolean(args.poll || process.env.NW_PORTAL_POLL === '1');
 const workerId = String(args['worker-id'] || process.env.NW_PORTAL_WORKER_ID || `worker-${process.pid}`);
+const debugDir = String(args['debug-dir'] || process.env.NW_PORTAL_DEBUG_DIR || '').trim();
 
 if (!['run', 'discover', 'dry-run'].includes(mode)) {
   throw new Error('--mode must be run, discover, or dry-run.');
@@ -122,6 +123,28 @@ function workerJobPath(suffix = '') {
 
 const jobWarnings = [];
 const itemWarnings = new Map();
+
+function safeDebugFilePart(value) {
+  return String(value || 'debug')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 120) || 'debug';
+}
+
+async function writeDebugArtifact(item, name, payload) {
+  if (!debugDir) return;
+  await mkdir(debugDir, { recursive: true }).catch(() => undefined);
+  const fileName = [
+    safeDebugFilePart(activeJobId),
+    safeDebugFilePart(item?.policyNumber || item?.id),
+    safeDebugFilePart(name),
+  ].join('-');
+  await writeFile(
+    `${debugDir}/${fileName}.json`,
+    `${JSON.stringify(payload, null, 2)}\n`,
+    'utf8',
+  ).catch(() => undefined);
+}
 
 function sanitiseWarning(value) {
   return String(value || '').trim().slice(0, 500);
@@ -388,6 +411,9 @@ function getFieldSemanticKind(field) {
   const signature = normaliseFieldSignature(field);
   if (/(policy\s*(number|no)|account\s*number|investment\s*number|reference)/i.test(signature)) return 'policy_number';
   if (/(date\s*of\s*inception|inception\s*date|start\s*date|investment\s*start\s*date)/i.test(signature)) return 'date_of_inception';
+  if (
+    /(ret(_pre|_post)?_3|retirement_fund_value|invest_current_value|fundvalue|currentvalue)/i.test(signature)
+  ) return 'current_value';
   if (
     !/(maturity|estimated|projected|guaranteed|premium|contribution)/i.test(signature)
     && /(current\s*value|fund\s*value|market\s*value|closing\s*balance|policy\s*value|account\s*value|retirement\s*annuity\s*value|\bvalue\b)/i.test(signature)
@@ -1618,6 +1644,15 @@ async function extractAllanGraySnapshot(page, item) {
       dateOfInception: '',
       currentValue: '',
       source: 'allan_gray_snapshot',
+      currentValueSource: '',
+      diagnostics: {
+        url: window.location.href,
+        title: document.title,
+        hasPolicyNumber: Boolean(policyNumber && bodyText.includes(policyNumber)),
+        labelledCandidates: [],
+        amountCandidates: [],
+        textSnippets: [],
+      },
     };
 
     const labelledValue = (labelRegex, valueRegex) => {
@@ -1625,21 +1660,50 @@ async function extractAllanGraySnapshot(page, item) {
       if (!labelMatch || typeof labelMatch.index !== 'number') return '';
       const segment = bodyText.slice(labelMatch.index, Math.min(bodyText.length, labelMatch.index + 260));
       const valueMatch = segment.match(valueRegex);
+      result.diagnostics.textSnippets.push(segment.slice(0, 180));
       return valueMatch ? valueMatch[0].trim() : '';
     };
 
-    const visibleEntries = Array.from(document.querySelectorAll('body *')).map((el) => {
+    const ownText = (el) => Array.from(el.childNodes || [])
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent || '')
+      .join(' ');
+    const isVisibleElement = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
       const style = window.getComputedStyle(el);
       const rect = el.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const visibleEntries = Array.from(document.querySelectorAll('body *')).filter(isVisibleElement).map((el) => {
+      const rect = el.getBoundingClientRect();
+      const text = normalise(ownText(el) || el.getAttribute('aria-label') || el.getAttribute('title') || el.innerText || el.textContent || '');
       return {
-        text: normalise(el.innerText || el.textContent || ''),
-        rect,
-        visible: style.display !== 'none'
-          && style.visibility !== 'hidden'
-          && rect.width > 0
-          && rect.height > 0,
+        text,
+        rect: {
+          top: rect.top,
+          bottom: rect.bottom,
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          height: rect.height,
+        },
       };
-    }).filter((entry) => entry.visible && entry.text);
+    }).filter((entry) => entry.text);
+
+    const addCandidate = (value, source, score = 0, context = '') => {
+      if (!value) return '';
+      result.diagnostics.amountCandidates.push({
+        value,
+        source,
+        score,
+        context: normalise(context).slice(0, 180),
+      });
+      return value;
+    };
+
     const nearestMoneyAfterLabel = (labelRegex) => {
       const labels = visibleEntries.filter((entry) => labelRegex.test(entry.text) && !extractMoney(entry.text));
       const monies = visibleEntries
@@ -1648,26 +1712,38 @@ async function extractAllanGraySnapshot(page, item) {
       const candidates = [];
       for (const label of labels) {
         for (const money of monies) {
+          const sameLine = Math.abs(money.rect.top - label.rect.top) <= 36;
+          const justBelow = money.rect.top >= label.rect.top && money.rect.top - label.rect.bottom <= 90;
+          const toRight = money.rect.left >= label.rect.left;
           const verticalDistance = Math.abs(money.rect.top - label.rect.top);
           const horizontalDistance = Math.max(0, money.rect.left - label.rect.right);
           const belowDistance = Math.max(0, money.rect.top - label.rect.bottom);
-          if (verticalDistance <= 40 || belowDistance <= 90) {
+          if ((sameLine && toRight) || justBelow) {
             candidates.push({
               value: money.money,
+              label: label.text,
+              context: money.text,
               distance: verticalDistance + horizontalDistance + belowDistance,
             });
           }
         }
       }
       candidates.sort((a, b) => a.distance - b.distance);
-      return candidates[0]?.value || '';
+      const best = candidates[0];
+      return best ? addCandidate(best.value, `near ${best.label}`, best.distance, best.context) : '';
     };
 
-    result.currentValue = labelledValue(/\bTotal\s+value\s*\??/i, /R\s*[\d\s,]+(?:\.\d{1,2})?/i)
-      || labelledValue(/\bClosing\s+balance\b/i, /R\s*[\d\s,]+(?:\.\d{1,2})?/i)
+    const labelledMoney = (label, labelRegex) => {
+      const value = labelledValue(labelRegex, /R\s*[\d\s,]+(?:\.\d{1,2})?/i);
+      return value ? addCandidate(value, label, 0, label) : '';
+    };
+
+    result.currentValue = labelledMoney('Total value', /\bTotal\s+value\s*\??/i)
+      || labelledMoney('Closing balance', /\bClosing\s+balance\b/i)
       || nearestMoneyAfterLabel(/\bTotal\s+value\s*\??/i)
       || nearestMoneyAfterLabel(/\bClosing\s+balance\b/i)
       || nearestMoneyAfterLabel(/\bValue\b/i);
+    result.currentValueSource = result.diagnostics.amountCandidates[0]?.source || '';
     result.dateOfInception = labelledValue(/\bInception\s+date\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i)
       || labelledValue(/\bDate\s+of\s+inception\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i);
 
@@ -1692,7 +1768,10 @@ async function extractAllanGraySnapshot(page, item) {
       const valueCell = [...policyRow].reverse().find((cell) => extractMoney(cell));
       result.productType = productCell || result.productType;
       result.dateOfInception = dateCell ? extractDate(dateCell) : result.dateOfInception;
-      result.currentValue = valueCell ? extractMoney(valueCell) : result.currentValue;
+      if (valueCell && !result.currentValue) {
+        result.currentValue = addCandidate(extractMoney(valueCell), 'policy row', 20, policyRow.join(' | '));
+        result.currentValueSource = 'policy row';
+      }
     }
 
     if (!result.productType) {
@@ -1701,8 +1780,19 @@ async function extractAllanGraySnapshot(page, item) {
     }
     if (!result.currentValue) {
       const allAmounts = Array.from(bodyText.matchAll(/R\s*[\d\s,]+(?:\.\d{1,2})?/gi)).map((match) => match[0].trim());
-      result.currentValue = allAmounts[0] || '';
+      result.currentValue = addCandidate(allAmounts[0] || '', 'first page amount fallback', 100, bodyText.slice(0, 220));
+      result.currentValueSource = result.currentValue ? 'first page amount fallback' : '';
     }
+
+    result.diagnostics.labelledCandidates = visibleEntries
+      .filter((entry) => /\b(total\s+value|closing\s+balance|inception\s+date|retirement\s+annuity|value)\b/i.test(entry.text))
+      .slice(0, 30)
+      .map((entry) => ({
+        text: entry.text.slice(0, 180),
+        rect: entry.rect,
+        money: extractMoney(entry.text),
+        date: extractDate(entry.text),
+      }));
 
     return result;
   }, String(item?.policyNumber || '')).catch(() => ({}));
@@ -1728,6 +1818,14 @@ function isPolicyNumberField(field) {
 
 function isPortalRunBlockingField(field) {
   return getFieldSemanticKind(field) === 'current_value';
+}
+
+function isAllanGrayPortalPage(page) {
+  return /allangray\.co\.za/i.test(page.url());
+}
+
+function findCurrentValueField(fields = []) {
+  return fields.find((field) => getFieldSemanticKind(field) === 'current_value');
 }
 
 function shouldCountAsExtractedBusinessValue(field, value) {
@@ -1766,9 +1864,11 @@ async function extractPolicyRecord(page, flow, config, item) {
     });
 
   const labelExtracted = await extractByLabels(page, fields);
-  const providerFallback = /allangray\.co\.za/i.test(page.url())
+  const isAllanGrayProvider = isAllanGrayPortalPage(page);
+  const providerFallback = isAllanGrayProvider
     ? await extractAllanGraySnapshot(page, item)
     : {};
+  await writeDebugArtifact(item, 'allan-gray-snapshot', providerFallback);
   const rawData = {};
   const extractedData = {};
   const missingRunBlockingFields = [];
@@ -1810,14 +1910,55 @@ async function extractPolicyRecord(page, flow, config, item) {
     }
   }
 
+  const currentValueField = findCurrentValueField(fields);
+  const fallbackCurrentValue = providerFallback.currentValue || '';
+  if (
+    isAllanGrayProvider
+    && fallbackCurrentValue
+    && currentValueField
+    && !String(rawData[getFieldColumnName(currentValueField)] || '').trim()
+    && isPlausibleValueForField(currentValueField, fallbackCurrentValue, item)
+  ) {
+    const columnName = getFieldColumnName(currentValueField);
+    rawData[columnName] = fallbackCurrentValue;
+    extractedData[columnName] = fallbackCurrentValue;
+    businessValueCount += 1;
+    extractedFieldNames.push(getFieldDisplayName(currentValueField));
+  }
+
   if (!fields.some((field) => isPolicyNumberField(field))) {
     rawData['Policy Number'] = item.policyNumber;
     extractedData['Policy Number'] = item.policyNumber;
   }
 
-  if (missingRunBlockingFields.length > 0 || businessValueCount === 0) {
-    const missing = missingRunBlockingFields.length > 0
-      ? `Missing portal value field(s): ${missingRunBlockingFields.join('; ')}.`
+  const hasMappedCurrentValue = currentValueField
+    ? isLikelyCurrencyValue(rawData[getFieldColumnName(currentValueField)])
+    : false;
+  if (isAllanGrayProvider && !hasMappedCurrentValue) {
+    await writeDebugArtifact(item, 'allan-gray-current-value-missing', {
+      pageUrl: page.url(),
+      fieldNames: fields.map((field) => ({
+        columnName: getFieldColumnName(field),
+        displayName: getFieldDisplayName(field),
+        kind: getFieldSemanticKind(field),
+        valuePresent: Boolean(String(rawData[getFieldColumnName(field)] || '').trim()),
+      })),
+      fallback: providerFallback,
+    });
+    const configuredFields = fields.map((field) => getFieldDisplayName(field)).filter(Boolean).join(', ') || 'none';
+    throw new Error(
+      `Allan Gray policy page did not produce a mapped current value. `
+      + `Detected fallback value: ${fallbackCurrentValue ? 'yes' : 'no'}`
+      + `${providerFallback.currentValueSource ? ` (${providerFallback.currentValueSource})` : ''}. `
+      + `Configured mapped fields: ${configuredFields}. URL: ${page.url()}. `
+      + 'The worker will not mark this policy as extracted until the current value is captured into a mapped field.',
+    );
+  }
+
+  const effectiveMissingRunBlockingFields = hasMappedCurrentValue ? [] : missingRunBlockingFields;
+  if (effectiveMissingRunBlockingFields.length > 0 || businessValueCount === 0) {
+    const missing = effectiveMissingRunBlockingFields.length > 0
+      ? `Missing portal value field(s): ${effectiveMissingRunBlockingFields.join('; ')}.`
       : 'No business values were extracted from the confirmed policy page.';
     throw new Error(
       `${missing} URL: ${page.url()}. `
@@ -2032,6 +2173,13 @@ async function processPolicyQueue(page, flow, config, jobMode, brain) {
       });
 
       const { rawData, extractedData, extractedFieldNames } = await extractPolicyRecord(page, flow, config, item);
+      console.log(`Portal item extracted ${item.clientName} / ${item.policyNumber}: ${extractedFieldNames.length ? extractedFieldNames.join(', ') : 'no mapped field names'}`);
+      await writeDebugArtifact(item, 'extracted-row', {
+        pageUrl: page.url(),
+        extractedFieldNames,
+        rawData,
+        documentRequested: flow.policySchedule?.enabled === true,
+      });
       let documentResult = null;
       let documentWarning = '';
 
@@ -2058,6 +2206,12 @@ async function processPolicyQueue(page, flow, config, jobMode, brain) {
         } catch (error) {
           if (flow.policySchedule.required === false) {
             documentWarning = `Policy schedule PDF was not attached: ${error instanceof Error ? error.message : String(error)}`;
+            await writeDebugArtifact(item, 'policy-schedule-download-warning', {
+              pageUrl: page.url(),
+              warning: documentWarning,
+              configuredLabels: flow.policySchedule.downloadLabels,
+              configuredMenuLabels: flow.policySchedule.downloadMenuLabels,
+            });
           } else {
             throw error;
           }

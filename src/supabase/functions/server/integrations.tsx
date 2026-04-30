@@ -2000,6 +2000,25 @@ function portalRowHasBusinessValue(rawData: Record<string, unknown>): boolean {
   });
 }
 
+function portalRowHasMappedCurrentValue(rawData: Record<string, unknown>): boolean {
+  const metadataColumns = new Set(Object.values(TEMPLATE_METADATA_COLUMNS));
+  return Object.entries(rawData || {}).some(([key, value]) => {
+    const normalisedKey = String(key || '').trim().toLowerCase();
+    const rawValue = String(value ?? '').trim();
+    if (!normalisedKey || !rawValue || metadataColumns.has(key)) return false;
+    if (/(maturity|premium|contribution|inception|date|product\s*type)/i.test(normalisedKey)) return false;
+    if (!/(current\s*value|fund\s*value|market\s*value|closing\s*balance|policy\s*value|account\s*value|retirement.*value|\bvalue\b)/i.test(normalisedKey)) return false;
+    return /(?:R\s*)?[-+]?\d[\d\s,.]*$/.test(rawValue);
+  });
+}
+
+function portalItemHasStageableBusinessValue(item: PortalJobPolicyItem, rawData: Record<string, unknown>): boolean {
+  if (/allan\s*gray/i.test(String(item.providerName || item.providerId || ''))) {
+    return portalRowHasMappedCurrentValue(rawData);
+  }
+  return portalRowHasBusinessValue(rawData);
+}
+
 // --- Endpoints ---
 
 // GET /providers - Legacy/Fallback support
@@ -3449,17 +3468,21 @@ app.post("/portal-worker/jobs/:jobId/stage-items", async (c) => {
     const items = await loadPortalJobItems(jobId);
     const rawRows = items
       .filter((item) => item.status === 'completed' && item.rawData && Object.keys(item.rawData).length > 0)
-      .map((item) => applyTemplateRowMetadata(item.rawData as Record<string, unknown>, {
-        policyId: item.policyId,
-        clientId: item.clientId,
-        providerId: item.providerId,
-        categoryId: item.categoryId,
-        normalizedPolicyNumber: item.normalizedPolicyNumber,
+      .map((item) => ({
+        item,
+        row: applyTemplateRowMetadata(item.rawData as Record<string, unknown>, {
+          policyId: item.policyId,
+          clientId: item.clientId,
+          providerId: item.providerId,
+          categoryId: item.categoryId,
+          normalizedPolicyNumber: item.normalizedPolicyNumber,
+        }),
       }))
-      .filter((row) => portalRowHasBusinessValue(row));
+      .filter(({ item, row }) => portalItemHasStageableBusinessValue(item, row))
+      .map(({ row }) => row);
 
     if (rawRows.length === 0) {
-      return c.json({ error: "No completed policy items have extracted business values to stage" }, 400);
+      return c.json({ error: "No completed policy items have extracted stageable values. Allan Gray rows must include a mapped current value." }, 400);
     }
 
     const { job, stagedRun } = await stagePortalRows(jobId, rawRows);
