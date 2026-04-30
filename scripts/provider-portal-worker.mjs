@@ -388,7 +388,10 @@ function getFieldSemanticKind(field) {
   const signature = normaliseFieldSignature(field);
   if (/(policy\s*(number|no)|account\s*number|investment\s*number|reference)/i.test(signature)) return 'policy_number';
   if (/(date\s*of\s*inception|inception\s*date|start\s*date|investment\s*start\s*date)/i.test(signature)) return 'date_of_inception';
-  if (/(current\s*value|fund\s*value|market\s*value|closing\s*balance)/i.test(signature)) return 'current_value';
+  if (
+    !/(maturity|estimated|projected|guaranteed|premium|contribution)/i.test(signature)
+    && /(current\s*value|fund\s*value|market\s*value|closing\s*balance|policy\s*value|account\s*value|retirement\s*annuity\s*value|\bvalue\b)/i.test(signature)
+  ) return 'current_value';
   if (/(product\s*type|product\s*name|investment\s*type|retirement\s*annuity\s*fund)/i.test(signature)) return 'product_type';
   return 'generic';
 }
@@ -1025,7 +1028,18 @@ async function findClickableByIntent(page, selector, labels = []) {
         ].filter(Boolean).join(' ')),
       ].filter(Boolean).join(' ');
       return /download|file_download|cloud_download|picture_as_pdf|pdf|statement/i.test(text);
-    });
+    }) || clickables
+      .map((el) => ({ el, rect: el.getBoundingClientRect(), text: normalise(el.textContent) }))
+      .filter((entry) =>
+        entry.rect.top >= 80
+        && entry.rect.top <= 280
+        && entry.rect.left >= window.innerWidth * 0.75
+        && entry.rect.width >= 24
+        && entry.rect.height >= 24
+        && entry.el.querySelector('svg, mat-icon, i')
+        && !/zar|last\s+1\s+year|agra|account|client/i.test(entry.text)
+      )
+      .sort((a, b) => b.rect.left - a.rect.left)[0]?.el;
     if (!candidate) return '';
 
     const id = `nw-download-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -1614,8 +1628,46 @@ async function extractAllanGraySnapshot(page, item) {
       return valueMatch ? valueMatch[0].trim() : '';
     };
 
-    result.currentValue = labelledValue(/\bTotal\s+value\s*\??\b/i, /R\s*[\d\s,]+(?:\.\d{1,2})?/i)
-      || labelledValue(/\bClosing\s+balance\b/i, /R\s*[\d\s,]+(?:\.\d{1,2})?/i);
+    const visibleEntries = Array.from(document.querySelectorAll('body *')).map((el) => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return {
+        text: normalise(el.innerText || el.textContent || ''),
+        rect,
+        visible: style.display !== 'none'
+          && style.visibility !== 'hidden'
+          && rect.width > 0
+          && rect.height > 0,
+      };
+    }).filter((entry) => entry.visible && entry.text);
+    const nearestMoneyAfterLabel = (labelRegex) => {
+      const labels = visibleEntries.filter((entry) => labelRegex.test(entry.text) && !extractMoney(entry.text));
+      const monies = visibleEntries
+        .map((entry) => ({ ...entry, money: extractMoney(entry.text) }))
+        .filter((entry) => entry.money);
+      const candidates = [];
+      for (const label of labels) {
+        for (const money of monies) {
+          const verticalDistance = Math.abs(money.rect.top - label.rect.top);
+          const horizontalDistance = Math.max(0, money.rect.left - label.rect.right);
+          const belowDistance = Math.max(0, money.rect.top - label.rect.bottom);
+          if (verticalDistance <= 40 || belowDistance <= 90) {
+            candidates.push({
+              value: money.money,
+              distance: verticalDistance + horizontalDistance + belowDistance,
+            });
+          }
+        }
+      }
+      candidates.sort((a, b) => a.distance - b.distance);
+      return candidates[0]?.value || '';
+    };
+
+    result.currentValue = labelledValue(/\bTotal\s+value\s*\??/i, /R\s*[\d\s,]+(?:\.\d{1,2})?/i)
+      || labelledValue(/\bClosing\s+balance\b/i, /R\s*[\d\s,]+(?:\.\d{1,2})?/i)
+      || nearestMoneyAfterLabel(/\bTotal\s+value\s*\??/i)
+      || nearestMoneyAfterLabel(/\bClosing\s+balance\b/i)
+      || nearestMoneyAfterLabel(/\bValue\b/i);
     result.dateOfInception = labelledValue(/\bInception\s+date\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i)
       || labelledValue(/\bDate\s+of\s+inception\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i);
 
