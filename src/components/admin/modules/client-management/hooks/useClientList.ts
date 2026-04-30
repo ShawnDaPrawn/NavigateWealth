@@ -27,9 +27,17 @@ import { resolvePersonName } from '../../../../../utils/personName';
 function normalizeProfile(raw: unknown): ClientProfile | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const obj = raw as Record<string, unknown>;
-  // Already in ClientProfile format — has a personalInformation sub-object
+  // Merge flat profile fields with nested personalInformation. Some stored
+  // profiles contain root-level Personal Info values plus an empty nested object.
   if (obj.personalInformation && typeof obj.personalInformation === 'object') {
-    return obj as ClientProfile;
+    const { personalInformation, ...flatProfileFields } = obj;
+    return {
+      ...obj,
+      personalInformation: {
+        ...flatProfileFields,
+        ...(personalInformation as Record<string, unknown>),
+      } as ProfileData,
+    } as ClientProfile;
   }
   // Flat ProfileData — wrap it
   return { personalInformation: obj as ProfileData };
