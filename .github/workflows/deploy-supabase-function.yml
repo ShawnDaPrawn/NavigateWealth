@@ -43,4 +43,18 @@ jobs:
           fi
           export SUPABASE_ACCESS_TOKEN="$TOKEN"
           supabase --version
-          supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir .
+          status=0
+          for attempt in 1 2 3; do
+            echo "Deploy attempt $attempt of 3"
+            if [ "$attempt" -eq 3 ]; then
+              supabase --debug functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir . && exit 0
+            else
+              supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir . && exit 0
+            fi
+            status=$?
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 15))
+            fi
+          done
+          echo "::error::Supabase Edge Function deploy failed after 3 attempts."
+          exit "$status"
