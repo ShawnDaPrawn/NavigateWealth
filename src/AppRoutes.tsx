@@ -39,7 +39,7 @@ import {
 
 // ==================== LAZY-LOADED PAGES ====================
 // All non-critical pages are lazy-loaded to reduce initial bundle parse time.
-const HomePage = React.lazy(() => import('./components/pages/HomePage').then(m => ({ default: m.HomePage })));
+const HomePage = React.lazy(() => import('./components/pages/HomePage'));
 const ServicesPage = React.lazy(() => import('./components/pages/ServicesPage').then(m => ({ default: m.ServicesPage })));
 const AboutPage = React.lazy(() => import('./components/pages/AboutPage').then(m => ({ default: m.AboutPage })));
 const TeamPage = React.lazy(() => import('./components/pages/TeamPage').then(m => ({ default: m.TeamPage })));
