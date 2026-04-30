@@ -44,8 +44,8 @@ import { PolicyTable } from './PolicyTable';
 const FNAManagementView = React.lazy(() =>
   import('../modules/risk-planning-fna/components/FNAManagementView').then(m => ({ default: m.FNAManagementView }))
 );
-const PreviousFNAsDialog = React.lazy(() =>
-  import('../modules/risk-planning-fna/components/PreviousFNAsDialog').then(m => ({ default: m.PreviousFNAsDialog }))
+const PreviousFNAsDialog = React.lazy(
+  () => import('../modules/risk-planning-fna/components/PreviousFNAsDialog'),
 );
 const WillManagementView = React.lazy(() =>
   import('../modules/estate-planning-fna/components/WillManagementView').then(m => ({ default: m.WillManagementView }))
@@ -993,19 +993,21 @@ export function PolicyCategoryTab({
         />
       )}
 
-      {/* Previous FNAs Dialog - Unified for all FNA types */}
+      {/* Previous FNAs Dialog - Unified for all FNA types (lazy chunk requires Suspense) */}
       {hasFNA && fnaConfig && (
-        <PreviousFNAsDialog
-          open={previousFNAsDialogOpen}
-          onOpenChange={setPreviousFNAsDialogOpen}
-          clientId={clientId}
-          title={`Previous ${fnaListTitle}`}
-          apiUrl={fnaListApiUrl}
-          onViewFNA={(fnaId: string) => {
-            setSelectedHistoricalFnaId(fnaId);
-            setViewFNADialogOpen(true);
-          }}
-        />
+        <Suspense fallback={null}>
+          <PreviousFNAsDialog
+            open={previousFNAsDialogOpen}
+            onOpenChange={setPreviousFNAsDialogOpen}
+            clientId={clientId}
+            title={`Previous ${fnaListTitle}`}
+            apiUrl={fnaListApiUrl}
+            onViewFNA={(fnaId: string) => {
+              setSelectedHistoricalFnaId(fnaId);
+              setViewFNADialogOpen(true);
+            }}
+          />
+        </Suspense>
       )}
 
       {/* View Historical FNA Dialog */}

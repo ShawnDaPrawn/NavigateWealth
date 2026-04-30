@@ -227,3 +227,5 @@ export function PreviousFNAsDialog({
     </Dialog>
   );
 }
+
+export default PreviousFNAsDialog;
