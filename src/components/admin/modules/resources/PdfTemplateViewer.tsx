@@ -43,6 +43,10 @@ const CANVAS_COLOR_PROPS = [
   'caret-color',
 ] as const;
 
+const CSS_PIXELS_PER_INCH = 96;
+const PDF_EXPORT_TARGET_DPI = 300;
+const PDF_EXPORT_CANVAS_SCALE = PDF_EXPORT_TARGET_DPI / CSS_PIXELS_PER_INCH;
+
 function fallbackCanvasColor(property: string) {
   if (property === 'background-color') return '#ffffff';
   if (property.includes('border') || property === 'text-decoration-color') return '#e5e7eb';
@@ -204,7 +208,7 @@ export const PdfTemplateViewer = ({
           const rect = pageNode.getBoundingClientRect();
           canvas = await html2canvas(pageClone, {
             backgroundColor: '#ffffff',
-            scale: Math.min(window.devicePixelRatio || 1, 1.5),
+            scale: PDF_EXPORT_CANVAS_SCALE,
             useCORS: true,
             logging: false,
             width: Math.ceil(rect.width || pageNode.scrollWidth),
@@ -220,7 +224,7 @@ export const PdfTemplateViewer = ({
         if (index > 0) {
           pdf.addPage(pageSize.toLowerCase() as 'a4' | 'a3', orientation);
         }
-        pdf.addImage(imageData, 'PNG', 0, 0, pageDimensions.widthMm, pageDimensions.heightMm, undefined, 'FAST');
+        pdf.addImage(imageData, 'PNG', 0, 0, pageDimensions.widthMm, pageDimensions.heightMm, undefined, 'SLOW');
       }
 
       const blob = pdf.output('blob');
