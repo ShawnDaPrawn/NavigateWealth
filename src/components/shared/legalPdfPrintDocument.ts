@@ -255,7 +255,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
   const styles = `
     @page {
       size: ${pdfConfig.pageSize} ${pdfConfig.orientation};
-      margin: 12.5mm 10mm 25.5mm 10mm;
+      margin: 12.5mm 10mm 23mm 10mm;
 
       @bottom-left {
         content: "Page " counter(page) " of " counter(pages);
@@ -273,7 +273,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     }
 
     @page :first {
-      margin: 5mm 10mm 25.5mm 10mm;
+      margin: 5mm 10mm 23mm 10mm;
     }
 
     html,
@@ -455,12 +455,16 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       display: flex;
       align-items: flex-start;
       gap: 5mm;
+      font-size: 8px;
+      line-height: 1.35;
     }
 
     .legal-paged-preview-root .pagedjs_margin-bottom-left,
     .legal-paged-preview-root .pagedjs_margin-bottom-center,
     .legal-paged-preview-root .pagedjs_margin-bottom-right {
       padding-top: 0.5mm;
+      font-size: 8px;
+      line-height: 1.35;
     }
 
     .legal-paged-preview-root .pagedjs_margin-bottom-left {
@@ -477,6 +481,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       flex: 1 1 auto;
       text-align: left;
       color: #6b7280;
+      font-weight: 400;
     }
 
     .legal-paged-preview-root .pagedjs_margin-bottom-right,
@@ -493,6 +498,12 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     .legal-paged-preview-root .pagedjs_margin-bottom-right {
       font-size: inherit;
       line-height: inherit;
+    }
+
+    .legal-paged-preview-root .pagedjs_margin-content,
+    .legal-paged-preview-root .pagedjs_margin-content * {
+      font-size: 8px !important;
+      line-height: 1.35 !important;
     }
   `;
 
