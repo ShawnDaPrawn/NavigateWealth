@@ -337,6 +337,56 @@ function splitParagraphNode(node: HTMLElement): string[] {
   });
 }
 
+function applyPagedLegalTypography(root: HTMLElement) {
+  const headingStyles: Record<string, Record<string, string>> = {
+    H1: {
+      fontSize: '11.2px',
+      lineHeight: '1.25',
+      fontWeight: '800',
+      margin: '0 0 2.6mm',
+      padding: '0 0 1.2mm',
+    },
+    H2: {
+      fontSize: '10.7px',
+      lineHeight: '1.25',
+      fontWeight: '800',
+      margin: '5.2mm 0 1.9mm',
+      padding: '0 0 1.2mm',
+    },
+    H3: {
+      fontSize: '10px',
+      lineHeight: '1.35',
+      fontWeight: '700',
+      margin: '3.6mm 0 1.4mm',
+    },
+    H4: {
+      fontSize: '9.5px',
+      lineHeight: '1.35',
+      fontWeight: '700',
+      margin: '2.6mm 0 1.1mm',
+    },
+  };
+
+  root
+    .querySelectorAll<HTMLElement>('.pagedjs_page .legal-pdf-body h1, .pagedjs_page .legal-pdf-body h2, .pagedjs_page .legal-pdf-body h3, .pagedjs_page .legal-pdf-body h4')
+    .forEach((heading) => {
+      const styles = headingStyles[heading.tagName];
+      if (!styles) return;
+
+      Object.entries(styles).forEach(([property, value]) => {
+        heading.style.setProperty(property.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`), value, 'important');
+      });
+      heading.style.setProperty('color', '#111827', 'important');
+      heading.style.setProperty('letter-spacing', '0', 'important');
+    });
+
+  root.querySelectorAll<HTMLElement>('.pagedjs_page .legal-pdf-body hr').forEach((rule) => {
+    rule.style.setProperty('border', '0', 'important');
+    rule.style.setProperty('border-top', '1px solid #e5e7eb', 'important');
+    rule.style.setProperty('margin', '6mm 0', 'important');
+  });
+}
+
 function mmToPx(value: number): number {
   return value * (96 / 25.4);
 }
@@ -567,6 +617,8 @@ function PagedLegalDocumentPdfLayout({
           [{ [`${window.location.href}#legal-paged-inline`]: pagedSource.styles }],
           previewHostRef.current,
         );
+
+        applyPagedLegalTypography(previewHostRef.current);
 
         if (cancelled) {
           return;

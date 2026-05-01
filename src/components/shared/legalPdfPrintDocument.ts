@@ -69,6 +69,12 @@ export const LEGAL_PDF_CONTENT_CSS = `
     margin: 2.6mm 0 1.1mm !important;
   }
 
+  .legal-pdf-body hr {
+    border: 0 !important;
+    border-top: 1px solid #e5e7eb !important;
+    margin: 6mm 0 !important;
+  }
+
   .legal-pdf-body p,
   .legal-pdf-body li,
   .legal-pdf-body blockquote {
@@ -286,6 +292,37 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     }
 
     ${LEGAL_PDF_CONTENT_CSS}
+
+    .legal-paged-preview-root .legal-pdf-body h1,
+    .legal-paged-preview-root .legal-pdf-body h2,
+    .legal-paged-preview-root .legal-pdf-body h3,
+    .legal-paged-preview-root .legal-pdf-body h4 {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+      color: #111827 !important;
+      letter-spacing: 0 !important;
+    }
+
+    .legal-paged-preview-root .legal-pdf-body h1 {
+      font-size: 11.2px !important;
+      line-height: 1.25 !important;
+    }
+
+    .legal-paged-preview-root .legal-pdf-body h2 {
+      font-size: 10.7px !important;
+      line-height: 1.25 !important;
+    }
+
+    .legal-paged-preview-root .legal-pdf-body h3 {
+      font-size: 10px !important;
+      line-height: 1.35 !important;
+      font-weight: 700 !important;
+    }
+
+    .legal-paged-preview-root .legal-pdf-body h4 {
+      font-size: 9.5px !important;
+      line-height: 1.35 !important;
+      font-weight: 700 !important;
+    }
 
     .legal-paged-document {
       width: 100%;

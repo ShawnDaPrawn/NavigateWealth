@@ -32,6 +32,37 @@ interface PdfTemplateViewerProps {
   pdfPreparingLabel?: string;
 }
 
+const CANVAS_COLOR_PROPS = [
+  'color',
+  'background-color',
+  'border-top-color',
+  'border-right-color',
+  'border-bottom-color',
+  'border-left-color',
+  'text-decoration-color',
+  'caret-color',
+] as const;
+
+function fallbackCanvasColor(property: string) {
+  if (property === 'background-color') return '#ffffff';
+  if (property.includes('border') || property === 'text-decoration-color') return '#e5e7eb';
+  return '#111827';
+}
+
+function normalizeCanvasUnsupportedColors(root: HTMLElement) {
+  const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
+
+  elements.forEach((element) => {
+    const computed = window.getComputedStyle(element);
+    CANVAS_COLOR_PROPS.forEach((property) => {
+      const value = computed.getPropertyValue(property);
+      if (value.includes('oklch(') || value.includes('lab(') || value.includes('lch(')) {
+        element.style.setProperty(property, fallbackCanvasColor(property), 'important');
+      }
+    });
+  });
+}
+
 export const PdfTemplateViewer = ({ 
   open, 
   onOpenChange,
@@ -166,6 +197,7 @@ export const PdfTemplateViewer = ({
         pageWrapper.appendChild(pageClone);
         pageHost.appendChild(pageWrapper);
         document.body.appendChild(pageHost);
+        normalizeCanvasUnsupportedColors(pageClone);
 
         let canvas;
         try {
