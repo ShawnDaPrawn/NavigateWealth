@@ -2,6 +2,112 @@
 
 Navigate Wealth stores provider portal flow configuration and credentials in Supabase. The React admin app queues portal jobs; GitHub Actions starts a one-shot Playwright worker for each job.
 
+## Automation north star
+
+The provider portal worker should become a universal, hardened provider
+automation engine rather than a collection of provider-specific scripts.
+
+Every provider should move through the same core pipeline:
+
+```text
+login -> OTP -> search -> confirm policy -> extract mapped fields -> validate -> stage -> publish or review
+```
+
+The default expectation for a new provider is:
+
+```text
+provider config + discovery + mapping = working automation
+```
+
+Custom code is allowed only when a provider has a real portal-specific quirk,
+such as an unusual OTP checkpoint, hidden frame, non-standard document download
+control, or page layout that cannot be handled safely from selectors and label
+hints.
+
+The shared worker owns:
+
+- Job queue handling
+- Credential loading
+- Login and OTP orchestration
+- Policy search and policy-number confirmation
+- Extraction from configured selectors and labels
+- Shared semantic field validation
+- Document download orchestration
+- Staging and failure reporting
+- Debug artifacts
+
+A provider-specific pack should own only:
+
+- Provider identity and default flow values
+- Selector and label hints
+- Small provider-specific download or snapshot hooks, when unavoidable
+- Provider-specific validation overrides, when the shared semantic rules are
+  not enough
+
+Do not add new `if provider X, do Y` branches to the shared worker unless the
+same behavior is valid for every provider. Provider-specific behavior should
+live behind an adapter boundary.
+
+## Current refactor phases
+
+Use this sequence when hardening the automation module:
+
+1. Document the universal automation north star and provider-change guardrails.
+2. Freeze Allan Gray RA as the golden regression flow before moving runtime
+   logic. The current golden flow ledger is
+   `docs/provider-automation-golden-flows.md`.
+3. Introduce a provider adapter registry and move Allan Gray-specific logic into
+   an Allan Gray provider pack.
+4. Standardize shared field semantics and regression tests for common financial
+   fields.
+5. Split server flow configuration and portal routes after the worker/provider
+   boundary is safe.
+
+Allan Gray RA currently works and must be treated as a protected baseline.
+BrightRock and future provider refinements must not be allowed to quietly break
+Allan Gray or the generic provider flow.
+
+## Codex provider-change protocol
+
+When asking Codex to refine one provider, use a scoped prompt like:
+
+```text
+Refine only the BrightRock provider automation flow.
+
+Do not change Allan Gray behavior.
+Do not change the shared portal worker unless the change is provider-neutral.
+If shared engine changes are required, explain why and preserve existing
+provider behavior.
+
+Verification required:
+1. BrightRock targeted check.
+2. Allan Gray RA regression check.
+3. Generic provider-flow check.
+```
+
+For any provider-specific work, Codex should first identify whether the change
+belongs in provider config, a provider adapter, or the shared engine. Shared
+engine changes need the highest bar because they can affect every provider.
+
+## Provider onboarding checklist
+
+For each new provider, capture the following before production use:
+
+- Provider name and provider id
+- Product categories covered
+- Login URL
+- Credential profile
+- OTP type and selectors
+- Search method
+- Policy confirmation rule
+- Extraction fields
+- Field labels and selectors
+- Required stageable fields
+- Document download steps
+- Known portal quirks
+- Whether a provider adapter is required
+- Regression coverage added
+
 ## Why a separate worker exists
 
 Supabase Edge Functions handle the job API and storage. Playwright needs a Node process with browser binaries, so it should run as a hosted worker on Render, Railway, Fly.io, a VPS, or any container host that can keep a long-running process alive.

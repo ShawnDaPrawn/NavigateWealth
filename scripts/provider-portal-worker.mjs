@@ -1,4 +1,11 @@
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { getProviderAdapter } from './provider-adapters/index.mjs';
+import {
+  getFallbackValueForField,
+  getFieldSemanticKind,
+  isLikelyCurrencyValue,
+  isPlausibleValueForField,
+} from './provider-adapters/field-semantics.mjs';
 
 const DEFAULT_API_BASE = 'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/integrations';
 const TEMPLATE_METADATA_COLUMNS = {
@@ -407,88 +414,6 @@ function splitLabels(value) {
     .split(/\r?\n|,/)
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-function normaliseFieldSignature(field) {
-  return [
-    field?.targetFieldId,
-    field?.targetFieldName,
-    field?.columnName,
-    field?.sourceHeader,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-}
-
-function getFieldSemanticKind(field) {
-  const signature = normaliseFieldSignature(field);
-  if (/(policy\s*(number|no)|account\s*number|investment\s*number|reference)/i.test(signature)) return 'policy_number';
-  if (/(date\s*of\s*inception|inception\s*date|start\s*date|investment\s*start\s*date)/i.test(signature)) return 'date_of_inception';
-  if (
-    /(ret(_pre|_post)?_3|retirement_fund_value|invest_current_value|fundvalue|currentvalue)/i.test(signature)
-  ) return 'current_value';
-  if (
-    !/(maturity|estimated|projected|guaranteed|premium|contribution)/i.test(signature)
-    && /(current\s*value|fund\s*value|market\s*value|closing\s*balance|policy\s*value|account\s*value|retirement\s*annuity\s*value|\bvalue\b)/i.test(signature)
-  ) return 'current_value';
-  if (/(product\s*type|product\s*name|investment\s*type|retirement\s*annuity\s*fund)/i.test(signature)) return 'product_type';
-  return 'generic';
-}
-
-function getFallbackValueForField(field, fallbackValues = {}) {
-  const kind = getFieldSemanticKind(field);
-  if (kind === 'policy_number') return fallbackValues.policyNumber || '';
-  if (kind === 'date_of_inception') return fallbackValues.dateOfInception || '';
-  if (kind === 'current_value') return fallbackValues.currentValue || '';
-  if (kind === 'product_type') return fallbackValues.productType || '';
-  return '';
-}
-
-function isLikelyDateValue(value) {
-  const text = sampleText(value, 120);
-  if (!text) return false;
-  if (/\b(selected period|since inception|bank details|statement|download)\b/i.test(text)) return false;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return true;
-  if (/^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/.test(text)) return true;
-  if (/^\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4}$/.test(text)) return true;
-  return !Number.isNaN(Date.parse(text));
-}
-
-function isLikelyCurrencyValue(value) {
-  const text = sampleText(value, 120);
-  if (!text) return false;
-  if (!/\d/.test(text)) return false;
-  if (/\b(selected period|since inception|bank details|statement|download)\b/i.test(text)) return false;
-  return /(?:R\s*)?[-+]?\d[\d\s,.]*$/.test(text);
-}
-
-function isLikelyProductTypeValue(value) {
-  const text = sampleText(value, 160);
-  if (!text) return false;
-  if (/\b(selected period|since inception|bank details|statement|download|search|filter|details)\b/i.test(text)) return false;
-  if (isLikelyDateValue(text)) return false;
-  if (isLikelyCurrencyValue(text)) return false;
-  if (text.length < 3 || text.length > 120) return false;
-  return /[A-Za-z]/.test(text);
-}
-
-function isPlausibleValueForField(field, value, item) {
-  const text = sampleText(value, 160);
-  if (!text) return false;
-
-  switch (getFieldSemanticKind(field)) {
-    case 'policy_number':
-      return normalisePolicyNumber(text).includes(normalisePolicyNumber(item?.policyNumber || text));
-    case 'date_of_inception':
-      return isLikelyDateValue(text);
-    case 'current_value':
-      return isLikelyCurrencyValue(text);
-    case 'product_type':
-      return isLikelyProductTypeValue(text);
-    default:
-      return text.length <= 220;
-  }
 }
 
 function candidateSearchText(candidate) {
@@ -1095,85 +1020,6 @@ async function findClickableByIntent(page, selector, labels = []) {
   throw new Error('Could not confidently find the policy schedule download action.');
 }
 
-async function findAllanGrayDownloadAction(page) {
-  await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })).catch(() => undefined);
-  await page.waitForTimeout(500);
-
-  const inferredSelector = await evaluateWithNavigationRetry(page, () => {
-    const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
-    const isVisible = (el) => {
-      if (!(el instanceof HTMLElement)) return false;
-      const style = window.getComputedStyle(el);
-      const rect = el.getBoundingClientRect();
-      return style.display !== 'none'
-        && style.visibility !== 'hidden'
-        && rect.width >= 20
-        && rect.height >= 20;
-    };
-    const iconText = (el) => normalise([
-      el.textContent,
-      el.getAttribute('aria-label'),
-      el.getAttribute('title'),
-      el.getAttribute('download'),
-      el.getAttribute('data-testid'),
-      el.getAttribute('mattooltip'),
-      el.getAttribute('ng-reflect-message'),
-      el.getAttribute('class'),
-      ...Array.from(el.querySelectorAll('mat-icon, svg, use, i, span')).map((icon) => [
-        icon.textContent,
-        icon.getAttribute('aria-label'),
-        icon.getAttribute('title'),
-        icon.getAttribute('data-icon'),
-        icon.getAttribute('href'),
-        icon.getAttribute('xlink:href'),
-        icon.getAttribute('class'),
-      ].filter(Boolean).join(' ')),
-    ].filter(Boolean).join(' '));
-    const clickables = Array.from(document.querySelectorAll('a, button, [role="link"], [role="button"], [role="menuitem"], [tabindex], [onclick], .mat-icon-button, .mat-mdc-icon-button'))
-      .filter(isVisible)
-      .map((el) => {
-        const rect = el.getBoundingClientRect();
-        const text = iconText(el);
-        const toolbarPosition = rect.top >= 90
-          && rect.top <= 285
-          && rect.left >= window.innerWidth * 0.68;
-        const accountToolbarDownloadZone = rect.top >= 145
-          && rect.top <= 245
-          && rect.left >= window.innerWidth * 0.82
-          && rect.width >= 24
-          && rect.width <= 80
-          && rect.height >= 24
-          && rect.height <= 80;
-        const iconLike = Boolean(el.querySelector('svg, mat-icon, i, .material-icons, .mat-icon, [class*="icon" i]'))
-          || /download|file_download|cloud_download|picture_as_pdf|pdf/i.test(text);
-        const excluded = /zar|last\s+1\s+year|agra\d|account|client|user|profile|logout|south africa/i.test(text);
-        return {
-          el,
-          text,
-          rect,
-          score: (accountToolbarDownloadZone ? 160 : 0)
-            + (toolbarPosition ? 80 : 0)
-            + (/download|file_download|cloud_download|picture_as_pdf|pdf/i.test(text) ? 60 : 0)
-            + (iconLike ? 30 : 0)
-            + Math.round(rect.left / Math.max(window.innerWidth, 1) * 10)
-            - (excluded ? 200 : 0),
-        };
-      })
-      .filter((entry) => entry.score > 0)
-      .sort((a, b) => b.score - a.score);
-    const candidate = clickables[0]?.el;
-    if (!candidate) return '';
-    const id = `nw-allan-gray-download-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    candidate.setAttribute('data-nw-worker-clickable', id);
-    return `[data-nw-worker-clickable="${id}"]`;
-  }).catch(() => '');
-
-  if (!inferredSelector) return null;
-  const locator = page.locator(inferredSelector).first();
-  if (await locator.isVisible({ timeout: 1000 }).catch(() => false)) return locator;
-  return null;
-}
-
 function safeDownloadedPdfName(item, suggestedFilename, artifactId = 'policy_schedule') {
   const baseName = String(suggestedFilename || `${item.policyNumber || item.id}-${artifactId}.pdf`)
     .replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -1276,11 +1122,21 @@ async function captureVisibleDocumentActions(page) {
   }).catch(() => []);
 }
 
-async function findDocumentClickTarget(page, artifact, step) {
+function providerAdapterRuntime() {
+  return {
+    evaluateWithNavigationRetry,
+  };
+}
+
+async function findDocumentClickTarget(page, artifact, step, providerAdapter) {
   const labels = normaliseArtifactStepLabels(step, ['Policy schedule', 'Download', 'PDF', 'Statement']);
-  if (step?.target === 'download_button' && /allangray\.co\.za/i.test(page.url())) {
-    const allanGrayAction = await findAllanGrayDownloadAction(page);
-    if (allanGrayAction) return allanGrayAction;
+  const adapterTarget = await providerAdapter?.findDocumentClickTarget?.(page, {
+    artifact,
+    step,
+    labels,
+  }, providerAdapterRuntime());
+  if (adapterTarget) {
+    return adapterTarget;
   }
   return findClickableByIntent(page, step?.selector || '', labels);
 }
@@ -1302,14 +1158,14 @@ async function clickDocumentMenuItem(page, artifact, step, item) {
   return menuAction.click();
 }
 
-async function runDocumentDownloadSteps(page, artifact, item) {
+async function runDocumentDownloadSteps(page, artifact, item, providerAdapter) {
   const steps = Array.isArray(artifact.steps) ? artifact.steps : [];
   const clickStep = steps.find((step) => step.action === 'click') || {};
   const menuStep = steps.find((step) => step.action === 'click_menu_item');
   const downloadStep = steps.find((step) => step.action === 'wait_for_download') || {};
   const timeout = Number(downloadStep.timeoutMs || menuStep?.timeoutMs || clickStep.timeoutMs || 30000);
   const directTimeout = Math.min(Number(clickStep.timeoutMs || 5000), 10000);
-  const clickTarget = await findDocumentClickTarget(page, artifact, clickStep);
+  const clickTarget = await findDocumentClickTarget(page, artifact, clickStep, providerAdapter);
   if (!clickTarget) {
     const visibleActions = await captureVisibleDocumentActions(page);
     await writeDebugArtifact(item, `${artifact.id}-download-action-candidates`, {
@@ -1367,7 +1223,7 @@ async function uploadPolicyDocumentArtifact(item, artifact, downloaded) {
   return apiUpload(workerJobPath(`/items/${item.id}/policy-document`), formData);
 }
 
-async function processDocumentArtifacts(page, flow, item, jobMode) {
+async function processDocumentArtifacts(page, flow, item, jobMode, providerAdapter) {
   const artifacts = buildDocumentArtifacts(flow);
   const statuses = artifacts.length > 0
     ? artifacts.map((artifact) => artifactStatus(artifact, 'not_requested'))
@@ -1387,7 +1243,7 @@ async function processDocumentArtifacts(page, flow, item, jobMode) {
         artifactStatuses: statuses,
       });
 
-      downloaded = await runDocumentDownloadSteps(page, artifact, item);
+      downloaded = await runDocumentDownloadSteps(page, artifact, item, providerAdapter);
       statuses.splice(0, statuses.length, ...mergeArtifactStatus(statuses, artifactStatus(artifact, 'downloaded', {
         fileName: downloaded.fileName,
       })));
@@ -1915,196 +1771,6 @@ async function extractByLabels(page, fields) {
   }, fields);
 }
 
-async function extractAllanGraySnapshot(page, item) {
-  return evaluateWithNavigationRetry(page, (policyNumber) => {
-    const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
-    const extractMoney = (value) => {
-      const match = normalise(value).match(/R\s*[\d\s,]+(?:\.\d{1,2})?/i);
-      return match ? match[0].trim() : '';
-    };
-    const extractDate = (value) => {
-      const match = normalise(value).match(/\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/);
-      return match ? match[0].trim() : '';
-    };
-    const rawBodyText = document.body?.innerText || document.body?.textContent || '';
-    const bodyText = normalise(rawBodyText);
-    const bodyLines = String(rawBodyText)
-      .split(/\r?\n/)
-      .map((line) => normalise(line))
-      .filter(Boolean);
-    const result = {
-      policyNumber: normalise(policyNumber),
-      productType: '',
-      dateOfInception: '',
-      currentValue: '',
-      source: 'allan_gray_snapshot',
-      currentValueSource: '',
-      diagnostics: {
-        url: window.location.href,
-        title: document.title,
-        hasPolicyNumber: Boolean(policyNumber && bodyText.includes(policyNumber)),
-        labelledCandidates: [],
-        amountCandidates: [],
-        textSnippets: [],
-      },
-    };
-
-    const labelledValue = (labelRegex, valueRegex) => {
-      const labelMatch = bodyText.match(labelRegex);
-      if (!labelMatch || typeof labelMatch.index !== 'number') return '';
-      const segment = bodyText.slice(labelMatch.index, Math.min(bodyText.length, labelMatch.index + 260));
-      const valueMatch = segment.match(valueRegex);
-      result.diagnostics.textSnippets.push(segment.slice(0, 180));
-      return valueMatch ? valueMatch[0].trim() : '';
-    };
-    const lineValueAfter = (labelRegex, valueRegex, label) => {
-      for (let index = 0; index < bodyLines.length; index += 1) {
-        if (!labelRegex.test(bodyLines[index])) continue;
-        const segment = bodyLines.slice(index, index + 5).join(' ');
-        const valueMatch = segment.match(valueRegex);
-        result.diagnostics.textSnippets.push(`${label || labelRegex}: ${segment}`.slice(0, 220));
-        if (valueMatch) return valueMatch[0].trim();
-      }
-      return '';
-    };
-
-    const ownText = (el) => Array.from(el.childNodes || [])
-      .filter((node) => node.nodeType === Node.TEXT_NODE)
-      .map((node) => node.textContent || '')
-      .join(' ');
-    const isVisibleElement = (el) => {
-      if (!(el instanceof HTMLElement)) return false;
-      const style = window.getComputedStyle(el);
-      const rect = el.getBoundingClientRect();
-      return style.display !== 'none'
-        && style.visibility !== 'hidden'
-        && rect.width > 0
-        && rect.height > 0;
-    };
-    const visibleEntries = Array.from(document.querySelectorAll('body *')).filter(isVisibleElement).map((el) => {
-      const rect = el.getBoundingClientRect();
-      const text = normalise(ownText(el) || el.getAttribute('aria-label') || el.getAttribute('title') || el.innerText || el.textContent || '');
-      return {
-        text,
-        rect: {
-          top: rect.top,
-          bottom: rect.bottom,
-          left: rect.left,
-          right: rect.right,
-          width: rect.width,
-          height: rect.height,
-        },
-      };
-    }).filter((entry) => entry.text);
-
-    const addCandidate = (value, source, score = 0, context = '') => {
-      if (!value) return '';
-      result.diagnostics.amountCandidates.push({
-        value,
-        source,
-        score,
-        context: normalise(context).slice(0, 180),
-      });
-      return value;
-    };
-
-    const nearestMoneyAfterLabel = (labelRegex) => {
-      const labels = visibleEntries.filter((entry) => labelRegex.test(entry.text) && !extractMoney(entry.text));
-      const monies = visibleEntries
-        .map((entry) => ({ ...entry, money: extractMoney(entry.text) }))
-        .filter((entry) => entry.money);
-      const candidates = [];
-      for (const label of labels) {
-        for (const money of monies) {
-          const sameLine = Math.abs(money.rect.top - label.rect.top) <= 36;
-          const justBelow = money.rect.top >= label.rect.top && money.rect.top - label.rect.bottom <= 90;
-          const toRight = money.rect.left >= label.rect.left;
-          const verticalDistance = Math.abs(money.rect.top - label.rect.top);
-          const horizontalDistance = Math.max(0, money.rect.left - label.rect.right);
-          const belowDistance = Math.max(0, money.rect.top - label.rect.bottom);
-          if ((sameLine && toRight) || justBelow) {
-            candidates.push({
-              value: money.money,
-              label: label.text,
-              context: money.text,
-              distance: verticalDistance + horizontalDistance + belowDistance,
-            });
-          }
-        }
-      }
-      candidates.sort((a, b) => a.distance - b.distance);
-      const best = candidates[0];
-      return best ? addCandidate(best.value, `near ${best.label}`, best.distance, best.context) : '';
-    };
-
-    const labelledMoney = (label, labelRegex) => {
-      const value = lineValueAfter(labelRegex, /R\s*[\d\s,]+(?:\.\d{1,2})?/i, label)
-        || labelledValue(labelRegex, /R\s*[\d\s,]+(?:\.\d{1,2})?/i);
-      return value ? addCandidate(value, label, 0, label) : '';
-    };
-
-    result.currentValue = labelledMoney('Total value', /\bTotal\s+value\s*\??/i)
-      || labelledMoney('Closing balance', /\bClosing\s+balance\b/i)
-      || nearestMoneyAfterLabel(/\bTotal\s+value\s*\??/i)
-      || nearestMoneyAfterLabel(/\bClosing\s+balance\b/i)
-      || nearestMoneyAfterLabel(/\bValue\b/i);
-    result.currentValueSource = result.diagnostics.amountCandidates[0]?.source || '';
-    result.dateOfInception = lineValueAfter(/\bInception\s+date\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i, 'Inception date')
-      || lineValueAfter(/\bDate\s+of\s+inception\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i, 'Date of inception')
-      || labelledValue(/\bInception\s+date\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i)
-      || labelledValue(/\bDate\s+of\s+inception\b/i, /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/i);
-
-    const rows = Array.from(document.querySelectorAll('tr')).map((row) =>
-      Array.from(row.querySelectorAll('th,td'))
-        .map((cell) => normalise(cell.innerText || cell.textContent || ''))
-        .filter(Boolean),
-    ).filter((cells) => cells.length > 0);
-    const policyRow = rows.find((cells) =>
-      cells.some((cell) => policyNumber && normalise(cell).includes(policyNumber))
-      || cells.some((cell) => /retirement\s+annuity/i.test(cell))
-      || cells.some((cell) => extractMoney(cell)),
-    );
-    if (policyRow) {
-      const productCell = policyRow.find((cell) =>
-        /retirement\s+annuity|pension|provident|preservation|living\s+annuity/i.test(cell)
-        && !extractMoney(cell)
-        && !extractDate(cell)
-        && !/account\s*(no|number)|value|date/i.test(cell)
-      );
-      const dateCell = policyRow.find((cell) => extractDate(cell));
-      const valueCell = [...policyRow].reverse().find((cell) => extractMoney(cell));
-      result.productType = productCell || result.productType;
-      result.dateOfInception = dateCell ? extractDate(dateCell) : result.dateOfInception;
-      if (valueCell && !result.currentValue) {
-        result.currentValue = addCandidate(extractMoney(valueCell), 'policy row', 20, policyRow.join(' | '));
-        result.currentValueSource = 'policy row';
-      }
-    }
-
-    if (!result.productType) {
-      const productMatch = bodyText.match(/\bRetirement\s+Annuity\s+Fund\b/i);
-      result.productType = productMatch ? productMatch[0].trim() : '';
-    }
-    if (!result.currentValue) {
-      const allAmounts = Array.from(bodyText.matchAll(/R\s*[\d\s,]+(?:\.\d{1,2})?/gi)).map((match) => match[0].trim());
-      result.currentValue = addCandidate(allAmounts[0] || '', 'first page amount fallback', 100, bodyText.slice(0, 220));
-      result.currentValueSource = result.currentValue ? 'first page amount fallback' : '';
-    }
-
-    result.diagnostics.labelledCandidates = visibleEntries
-      .filter((entry) => /\b(total\s+value|closing\s+balance|inception\s+date|retirement\s+annuity|value)\b/i.test(entry.text))
-      .slice(0, 30)
-      .map((entry) => ({
-        text: entry.text.slice(0, 180),
-        rect: entry.rect,
-        money: extractMoney(entry.text),
-        date: extractDate(entry.text),
-      }));
-
-    return result;
-  }, String(item?.policyNumber || '')).catch(() => ({}));
-}
-
 function getFieldColumnName(field) {
   return String(field?.columnName || field?.sourceHeader || '').trim();
 }
@@ -2125,10 +1791,6 @@ function isPolicyNumberField(field) {
 
 function isPortalRunBlockingField(field) {
   return getFieldSemanticKind(field) === 'current_value';
-}
-
-function isAllanGrayPortalPage(page) {
-  return /allangray\.co\.za/i.test(page.url());
 }
 
 function findCurrentValueField(fields = []) {
@@ -2159,7 +1821,7 @@ function countVisibleValues(rawData) {
     .length;
 }
 
-async function extractPolicyRecord(page, flow, config, item) {
+async function extractPolicyRecord(page, flow, config, item, providerAdapter) {
   const mappingHeaders = Object.keys(config?.fieldMapping || {});
   const configuredFields = Array.isArray(flow.extraction?.fields) ? flow.extraction.fields : [];
   const fieldByHeader = new Map(configuredFields.map((field) => [getFieldColumnName(field), field]));
@@ -2171,11 +1833,10 @@ async function extractPolicyRecord(page, flow, config, item) {
     });
 
   const labelExtracted = await extractByLabels(page, fields);
-  const isAllanGrayProvider = isAllanGrayPortalPage(page);
-  const providerFallback = isAllanGrayProvider
-    ? await extractAllanGraySnapshot(page, item)
-    : {};
-  await writeDebugArtifact(item, 'allan-gray-snapshot', providerFallback);
+  const providerFallback = await providerAdapter?.extractSnapshot?.(page, item, providerAdapterRuntime()) || {};
+  if (providerAdapter?.snapshotDebugArtifactName) {
+    await writeDebugArtifact(item, providerAdapter.snapshotDebugArtifactName, providerFallback);
+  }
   const rawData = {};
   const extractedData = {};
   const missingRunBlockingFields = [];
@@ -2188,7 +1849,7 @@ async function extractPolicyRecord(page, flow, config, item) {
     const semanticKind = getFieldSemanticKind(field);
     const fallbackValue = getFallbackValueForField(field, providerFallback);
     if (
-      isAllanGrayProvider
+      providerAdapter?.requiresMappedCurrentValue
       && ['current_value', 'date_of_inception', 'product_type'].includes(semanticKind)
       && isPlausibleValueForField(field, fallbackValue, item)
     ) {
@@ -2227,7 +1888,7 @@ async function extractPolicyRecord(page, flow, config, item) {
   const currentValueField = findCurrentValueField(fields);
   const fallbackCurrentValue = providerFallback.currentValue || '';
   if (
-    isAllanGrayProvider
+    providerAdapter?.requiresMappedCurrentValue
     && fallbackCurrentValue
     && currentValueField
     && !String(rawData[getFieldColumnName(currentValueField)] || '').trim()
@@ -2248,8 +1909,8 @@ async function extractPolicyRecord(page, flow, config, item) {
   const hasMappedCurrentValue = currentValueField
     ? isLikelyCurrencyValue(rawData[getFieldColumnName(currentValueField)])
     : false;
-  if (isAllanGrayProvider && !hasMappedCurrentValue) {
-    await writeDebugArtifact(item, 'allan-gray-current-value-missing', {
+  if (providerAdapter?.requiresMappedCurrentValue && !hasMappedCurrentValue) {
+    await writeDebugArtifact(item, providerAdapter.currentValueMissingArtifactName || 'provider-current-value-missing', {
       pageUrl: page.url(),
       fieldNames: fields.map((field) => ({
         columnName: getFieldColumnName(field),
@@ -2260,12 +1921,14 @@ async function extractPolicyRecord(page, flow, config, item) {
       fallback: providerFallback,
     });
     const configuredFields = fields.map((field) => getFieldDisplayName(field)).filter(Boolean).join(', ') || 'none';
-    throw new Error(
-      `Allan Gray policy page did not produce a mapped current value. `
-      + `Detected fallback value: ${fallbackCurrentValue ? 'yes' : 'no'}`
-      + `${providerFallback.currentValueSource ? ` (${providerFallback.currentValueSource})` : ''}. `
-      + `Configured mapped fields: ${configuredFields}. URL: ${page.url()}. `
-      + 'The worker will not mark this policy as extracted until the current value is captured into a mapped field.',
+    throw providerAdapter.buildMissingMappedCurrentValueError?.({
+      fallbackCurrentValue,
+      providerFallback,
+      configuredFields,
+      pageUrl: page.url(),
+    }) || new Error(
+      `Provider policy page did not produce a mapped current value. `
+      + `Configured mapped fields: ${configuredFields}. URL: ${page.url()}.`,
     );
   }
 
@@ -2463,7 +2126,7 @@ async function extractRows(page, flow) {
   return rows;
 }
 
-async function processPolicyQueue(page, flow, config, jobMode, brain) {
+async function processPolicyQueue(page, flow, config, jobMode, brain, providerAdapter) {
   let completed = 0;
   let failed = 0;
   const failureSummaries = [];
@@ -2486,7 +2149,7 @@ async function processPolicyQueue(page, flow, config, jobMode, brain) {
         message: `Extracting values for ${item.clientName} / ${item.policyNumber}.`,
       });
 
-      const { rawData, extractedData, extractedFieldNames } = await extractPolicyRecord(page, flow, config, item);
+      const { rawData, extractedData, extractedFieldNames } = await extractPolicyRecord(page, flow, config, item, providerAdapter);
       console.log(`Portal item extracted ${item.clientName} / ${item.policyNumber}: ${extractedFieldNames.length ? extractedFieldNames.join(', ') : 'no mapped field names'}`);
       await writeDebugArtifact(item, 'extracted-row', {
         pageUrl: page.url(),
@@ -2494,7 +2157,7 @@ async function processPolicyQueue(page, flow, config, jobMode, brain) {
         rawData,
         documentRequested: buildDocumentArtifacts(flow).length > 0,
       });
-      const artifactResult = await processDocumentArtifacts(page, flow, item, jobMode);
+      const artifactResult = await processDocumentArtifacts(page, flow, item, jobMode, providerAdapter);
       const attachedDocument = artifactResult.attachedDocuments[0]?.document || null;
       const artifactFailures = artifactResult.statuses.filter((status) => status.status === 'failed');
       const artifactMessages = artifactResult.statuses.map((status) => {
@@ -2616,6 +2279,7 @@ async function runJob(jobId, requestedMode = mode) {
   let browser;
   try {
     const { job, flow, config, items, credentials, brain } = await loadRuntime(jobId);
+    const providerAdapter = getProviderAdapter({ job, flow });
     const jobMode = job.runMode || requestedMode;
     if (jobMode === 'run' && job.status !== 'dry_run_ready' && !forceStage && authToken) {
       throw new Error('Refusing to stage portal data before a successful dry run. Run with --mode dry-run first, or pass --force-stage after manual review.');
@@ -2684,7 +2348,7 @@ async function runJob(jobId, requestedMode = mode) {
         currentStep: 'processing_policy_queue',
         message: `Processing ${items.length} Navigate Wealth polic${items.length === 1 ? 'y' : 'ies'} one by one.`,
       });
-      await processPolicyQueue(page, flow, config, jobMode, brain);
+      await processPolicyQueue(page, flow, config, jobMode, brain, providerAdapter);
       return;
     }
 
