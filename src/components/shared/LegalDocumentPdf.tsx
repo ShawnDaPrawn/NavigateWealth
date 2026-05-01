@@ -337,6 +337,60 @@ function splitParagraphNode(node: HTMLElement): string[] {
   });
 }
 
+function getListMarkerText(list: HTMLElement, item: HTMLElement, index: number): string {
+  if (list.tagName === 'UL') {
+    return list.closest('li') ? '\u25E6' : '\u2022';
+  }
+
+  const dataItemNumber = item.getAttribute('data-item-num');
+  const parsedDataItemNumber = dataItemNumber ? Number.parseInt(dataItemNumber, 10) : Number.NaN;
+  if (Number.isFinite(parsedDataItemNumber)) {
+    return `${parsedDataItemNumber}.`;
+  }
+
+  const parsedStart = Number.parseInt(list.getAttribute('start') || '1', 10);
+  const start = Number.isFinite(parsedStart) ? parsedStart : 1;
+  return `${start + index}.`;
+}
+
+function applyPagedListMarkers(root: HTMLElement) {
+  root
+    .querySelectorAll<HTMLElement>('.pagedjs_page .legal-pdf-body ul, .pagedjs_page .legal-pdf-body ol')
+    .forEach((list) => {
+      list.style.setProperty('list-style', 'none', 'important');
+      list.style.setProperty('padding-left', '0', 'important');
+      list.style.setProperty('margin', '0 0 2.8mm', 'important');
+
+      const directItems = Array.from(list.children).filter(
+        (child): child is HTMLElement => child instanceof HTMLElement && child.tagName === 'LI',
+      );
+
+      directItems.forEach((item, index) => {
+        item.querySelector(':scope > .legal-pdf-list-marker')?.remove();
+
+        const marker = window.document.createElement('span');
+        marker.className = 'legal-pdf-list-marker';
+        marker.setAttribute('aria-hidden', 'true');
+        marker.textContent = getListMarkerText(list, item, index);
+        item.insertBefore(marker, item.firstChild);
+
+        item.style.setProperty('display', 'block', 'important');
+        item.style.setProperty('position', 'relative', 'important');
+        item.style.setProperty('padding-left', '5.2mm', 'important');
+        item.style.setProperty('margin-bottom', '1.1mm', 'important');
+
+        marker.style.setProperty('position', 'absolute', 'important');
+        marker.style.setProperty('left', '0', 'important');
+        marker.style.setProperty('top', '0', 'important');
+        marker.style.setProperty('width', '3.8mm', 'important');
+        marker.style.setProperty('text-align', 'right', 'important');
+        marker.style.setProperty('color', '#4b5563', 'important');
+        marker.style.setProperty('font-size', '9px', 'important');
+        marker.style.setProperty('line-height', '1.5', 'important');
+      });
+    });
+}
+
 function applyPagedLegalTypography(root: HTMLElement) {
   const headingStyles: Record<string, Record<string, string>> = {
     H1: {
@@ -384,6 +438,13 @@ function applyPagedLegalTypography(root: HTMLElement) {
     rule.style.setProperty('border', '0', 'important');
     rule.style.setProperty('border-top', '1px solid #e5e7eb', 'important');
     rule.style.setProperty('margin', '6mm 0', 'important');
+  });
+
+  applyPagedListMarkers(root);
+
+  root.querySelectorAll<HTMLElement>('.pagedjs_page .legal-pdf-body li > ul').forEach((list) => {
+    list.style.setProperty('margin-top', '1.1mm', 'important');
+    list.style.setProperty('margin-bottom', '1.1mm', 'important');
   });
 }
 

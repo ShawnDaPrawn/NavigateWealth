@@ -101,13 +101,38 @@ export const LEGAL_PDF_CONTENT_CSS = `
   .legal-pdf-body ul,
   .legal-pdf-body ol {
     margin: 0 0 2.8mm;
-    padding-left: 5.2mm;
+    padding-left: 0 !important;
+    list-style: none !important;
     page-break-inside: auto;
     break-inside: auto;
   }
 
+  .legal-pdf-body li > ul {
+    margin-top: 1.1mm !important;
+    margin-bottom: 1.1mm !important;
+  }
+
+  .legal-pdf-body li > ol {
+    margin-top: 1.1mm !important;
+    margin-bottom: 1.1mm !important;
+  }
+
   .legal-pdf-body li {
+    display: block !important;
+    position: relative !important;
+    padding-left: 5.2mm !important;
     margin-bottom: 1.1mm;
+  }
+
+  .legal-pdf-list-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 3.8mm;
+    text-align: right;
+    color: #4b5563;
+    font-size: 9px;
+    line-height: 1.5;
   }
 
   .legal-pdf-body table {
@@ -322,6 +347,29 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       font-size: 9.5px !important;
       line-height: 1.35 !important;
       font-weight: 700 !important;
+    }
+
+    .legal-paged-preview-root .legal-pdf-body ul,
+    .legal-paged-preview-root .legal-pdf-body ol {
+      list-style: none !important;
+      padding-left: 0 !important;
+    }
+
+    .legal-paged-preview-root .legal-pdf-body li {
+      display: block !important;
+      position: relative !important;
+      padding-left: 5.2mm !important;
+    }
+
+    .legal-paged-preview-root .legal-pdf-list-marker {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 3.8mm !important;
+      text-align: right !important;
+      color: #4b5563 !important;
+      font-size: 9px !important;
+      line-height: 1.5 !important;
     }
 
     .legal-paged-document {
