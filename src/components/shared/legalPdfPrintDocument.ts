@@ -46,7 +46,7 @@ export const LEGAL_PDF_CONTENT_CSS = `
     font-weight: 800 !important;
     margin: 0 0 2.6mm !important;
     padding: 0 0 1.2mm !important;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 0 !important;
   }
 
   .legal-pdf-body h2 {
@@ -54,7 +54,7 @@ export const LEGAL_PDF_CONTENT_CSS = `
     font-weight: 800 !important;
     margin: 5.2mm 0 1.9mm !important;
     padding: 0 0 1.2mm !important;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 0 !important;
   }
 
   .legal-pdf-body h3 {
@@ -70,9 +70,9 @@ export const LEGAL_PDF_CONTENT_CSS = `
   }
 
   .legal-pdf-body hr {
+    display: none !important;
     border: 0 !important;
-    border-top: 1px solid #e5e7eb !important;
-    margin: 6mm 0 !important;
+    margin: 0 !important;
   }
 
   .legal-pdf-body p,
@@ -330,11 +330,13 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     .legal-paged-preview-root .legal-pdf-body h1 {
       font-size: 11.2px !important;
       line-height: 1.25 !important;
+      border-bottom: 0 !important;
     }
 
     .legal-paged-preview-root .legal-pdf-body h2 {
       font-size: 10.7px !important;
       line-height: 1.25 !important;
+      border-bottom: 0 !important;
     }
 
     .legal-paged-preview-root .legal-pdf-body h3 {
@@ -388,7 +390,7 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       justify-content: space-between;
       gap: 10mm;
       height: 15mm;
-      border-bottom: 1px solid #d1d5db;
+      border-bottom: 0 !important;
       margin-bottom: 5mm;
     }
 
@@ -462,6 +464,8 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       margin: 0;
       letter-spacing: -0.2px;
       color: #111827;
+      border-bottom: 0 !important;
+      padding-bottom: 0 !important;
     }
 
     .legal-paged-doc-meta {
@@ -471,8 +475,8 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
       justify-content: end;
       align-items: baseline;
       margin-top: 2mm;
-      padding-top: 2mm;
-      border-top: 1px solid #e5e7eb;
+      padding-top: 0 !important;
+      border-top: 0 !important;
       font-size: 9.2px;
       color: #6b7280;
     }
@@ -483,9 +487,9 @@ export function buildLegalPagedPrintSource(document: LegalPdfDocumentData) {
     }
 
     .legal-paged-divider {
+      display: none !important;
       border: 0;
-      border-top: 2px solid #6b7280;
-      margin: 4mm 0 6mm;
+      margin: 0 0 6mm;
     }
 
     .legal-paged-body {

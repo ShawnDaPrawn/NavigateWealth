@@ -263,6 +263,13 @@ export const PdfTemplateViewer = ({
     }
 
     const contentMarkup = previewContainer.outerHTML;
+    const inlinePrintStyles = Array.from(contentRef.current?.querySelectorAll('style') || [])
+      .map((style) => style.textContent || '')
+      .join('\n');
+    const isPagedLegalPreview = Boolean(
+      previewContainer.matches('.legal-paged-preview-root, [data-legal-pdf-renderer="paged"]')
+        || previewContainer.querySelector('.pagedjs_page'),
+    );
 
     // Use LETTER_CSS for letters (which already includes BASE_PDF_CSS),
     // or BASE_PDF_CSS for standard forms
@@ -354,6 +361,34 @@ export const PdfTemplateViewer = ({
       }
     `;
 
+    const pagedLegalPrintOverrides = `
+      /* Paged legal document print overrides */
+      .legal-paged-preview-root {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+
+      .legal-paged-preview-root .pagedjs_pages {
+        display: block !important;
+        gap: 0 !important;
+      }
+
+      .legal-paged-preview-root .pagedjs_page {
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        width: ${pageDimensions.widthMm}mm !important;
+        height: ${pageDimensions.heightMm}mm !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+
+      .legal-paged-preview-root .pagedjs_page:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+      }
+    `;
+
     printWindow.document.open();
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -365,6 +400,7 @@ export const PdfTemplateViewer = ({
           <style>
             /* Layout styles */
             ${layoutCSS}
+            ${inlinePrintStyles}
 
             html, body {
               margin: 0;
@@ -402,6 +438,7 @@ export const PdfTemplateViewer = ({
               }
 
               ${isLetter ? letterPrintOverrides : formPrintOverrides}
+              ${isPagedLegalPreview ? pagedLegalPrintOverrides : ''}
             }
           </style>
         </head>
@@ -513,7 +550,7 @@ export const PdfTemplateViewer = ({
                 onClick={() => {
                   void (renderPdfFromPreview ? handleDownloadAsPdf() : handlePrintDownload());
                 }}
-                disabled={pdfExporting || (renderPdfFromPreview && !pdfExportReady)}
+                disabled={pdfExporting || !pdfExportReady}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {pdfExporting ? (
@@ -523,7 +560,7 @@ export const PdfTemplateViewer = ({
                 )}
                 {pdfExporting
                   ? 'Generating PDF...'
-                  : renderPdfFromPreview && !pdfExportReady
+                  : !pdfExportReady
                     ? pdfPreparingLabel || 'Preparing PDF preview...'
                   : primaryActionLabel || (renderPdfFromPreview ? 'Download PDF' : 'Print / Save as PDF')}
               </button>

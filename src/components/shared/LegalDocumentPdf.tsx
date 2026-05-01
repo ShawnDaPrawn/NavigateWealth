@@ -822,8 +822,7 @@ export function LegalDocumentPdfDialog({
       title={document.title}
       pageSize={pdfConfig.pageSize}
       orientation={pdfConfig.orientation}
-      renderPdfFromPreview
-      primaryActionLabel="Download PDF"
+      primaryActionLabel="Print / Save PDF"
       pageSelector={activePageSelector}
       pdfExportReady={rendererResolution.effectiveVersion === 'paged' ? pagedRenderState.ready : true}
       pdfPreparingLabel={pagedRenderState.error ? 'Falling back to legacy preview...' : 'Preparing paged preview...'}
