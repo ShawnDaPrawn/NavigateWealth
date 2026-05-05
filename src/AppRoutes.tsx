@@ -36,6 +36,7 @@ import {
   PendingRoute,
   DeclinedRoute,
 } from './components/auth/RouteGuards';
+import { AdminDashboardPage } from './components/pages/AdminDashboardPage';
 
 // ==================== LAZY-LOADED PAGES ====================
 // All non-critical pages are lazy-loaded to reduce initial bundle parse time.
@@ -96,7 +97,6 @@ const WhyUsPage = React.lazy(() => import('./components/pages/WhyUsPage'));
 const CareersPage = React.lazy(() => import('./components/pages/CareersPage'));
 const PressPage = React.lazy(() => import('./components/pages/PressPage'));
 const EmployeeBenefitsPage = React.lazy(() => import('./components/pages/EmployeeBenefitsPage'));
-const AdminDashboardPage = React.lazy(() => import('./components/pages/AdminDashboardPage'));
 const SitemapPage = React.lazy(() => import('./components/pages/SitemapPage'));
 const RequestCompletionPage = React.lazy(() => import('./components/pages/RequestCompletionPage'));
 const NewsletterConfirmPage = React.lazy(() => import('./components/pages/NewsletterConfirmPage'));

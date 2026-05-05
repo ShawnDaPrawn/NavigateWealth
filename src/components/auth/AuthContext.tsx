@@ -46,6 +46,8 @@ const AuthContext = _global[CONTEXT_GLOBAL_KEY] as React.Context<AuthContextType
 /** Prevents infinite admin shell spin if profile/KV or getUser() never settles. */
 const PROFILE_HYDRATION_TIMEOUT_MS = 45_000;
 const SESSION_USER_SNAPSHOT_MS = 5_000;
+/** Cold-start bootstrap: getSession() can stall in some browsers after hard refresh. */
+const SESSION_BOOTSTRAP_TIMEOUT_MS = 12_000;
 
 function promiseWithTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout>;
@@ -107,10 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const resolveAuthSession = async (authUser: AuthUser | null) => {
-      if (cancelled) return;
-      currentAuthUserRef.current = authUser?.id || null;
-
       try {
+        if (cancelled) return;
+        currentAuthUserRef.current = authUser?.id || null;
+
         if (!authUser) {
           profileHydrateInFlightRef.current.clear();
           profileLoadedForUserRef.current = null;
@@ -190,8 +192,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void (async () => {
       try {
+        if (cancelled) return;
         const supabase = getSupabaseClient();
-        const { data: { session } } = await supabase.auth.getSession();
+        let session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'] = null;
+        try {
+          const { data } = await promiseWithTimeout(
+            supabase.auth.getSession(),
+            SESSION_BOOTSTRAP_TIMEOUT_MS,
+            'session_bootstrap_timeout',
+          );
+          session = data.session ?? null;
+        } catch (bootErr) {
+          console.warn('⚠️ getSession bootstrap timed out or failed — continuing without session', bootErr);
+          session = null;
+        }
         if (cancelled) return;
         const bootUser = session?.user ? authUserFromSupabaseUser(session.user) : null;
         await resolveAuthSession(bootUser);
@@ -203,6 +217,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setIsLoading(false);
         }
+      } finally {
+        finishLoading();
       }
     })();
 
