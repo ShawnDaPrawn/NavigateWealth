@@ -1,11 +1,10 @@
 // Authentication Context - Global auth state management
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { 
-  AppUser, 
+import {
+  AppUser,
   signOut as authSignOut,
   onAuthStateChange,
-  authUserFromSupabaseUser,
   getSupabaseClient,
 } from '../../utils/auth';
 import {
@@ -14,6 +13,7 @@ import {
   updateUserProfile,
 } from '../../utils/auth/profileService';
 import type { AuthUser } from '../../utils/auth/types';
+import type { User as SupabaseSessionUser } from '@supabase/supabase-js@2.39.3';
 import { broadcastLogout, onLogoutBroadcast, broadcastNavigate } from '../../utils/auth/sessionSync';
 import { AUTH_SESSION_EXPIRED_EVENT } from '../../utils/api/client';
 import { toast } from 'sonner@2.0.3';
@@ -43,11 +43,9 @@ if (!_global[CONTEXT_GLOBAL_KEY]) {
 }
 const AuthContext = _global[CONTEXT_GLOBAL_KEY] as React.Context<AuthContextType | undefined>;
 
-/** Prevents infinite admin shell spin if profile/KV or getUser() never settles. */
+/** Prevents infinite shell spin if KV profile never settles. Passing the session user into profile load bypasses a redundant getUser() during hydration. */
 const PROFILE_HYDRATION_TIMEOUT_MS = 45_000;
 const SESSION_USER_SNAPSHOT_MS = 5_000;
-/** Cold-start bootstrap: bound slow getSession; never treat timeout as "signed out" if the listener already started hydration. */
-const SESSION_BOOTSTRAP_TIMEOUT_MS = 30_000;
 
 function promiseWithTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout>;
@@ -91,13 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const currentAuthUserRef = React.useRef<string | null>(null);
 
   const profileLoadedForUserRef = React.useRef<string | null>(null);
-  /** One shared in-flight hydrate per user id — avoids duplicate KV profile fetches when INITIAL_SESSION races getSession(). */
+  /** One shared in-flight hydrate per user id — dedupes INITIAL_SESSION vs SIGNED_IN. */
   const profileHydrateInFlightRef = React.useRef<Map<string, Promise<void>>>(new Map());
 
-  // Initialize auth state listener + cold-start session bootstrap.
-  // Supabase normally emits INITIAL_SESSION through the listener, but in some
-  // browsers or timing conditions the admin shell could render before profile
-  // resolution finished.
+  // Supabase client emits INITIAL_SESSION (and SIGNED_IN) via onAuthStateChange;
+  // parallel getSession() bootstrap was removed — it contended with auth and produced 30s timeouts.
   useEffect(() => {
     console.log('🔐 Initializing auth state listener...');
     let cancelled = false;
@@ -108,7 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const resolveAuthSession = async (authUser: AuthUser | null) => {
+    const resolveAuthSession = async (
+      authUser: AuthUser | null,
+      opts?: { supabaseUser?: SupabaseSessionUser },
+    ) => {
       try {
         if (cancelled) return;
         currentAuthUserRef.current = authUser?.id || null;
@@ -139,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               let userData: AppUser;
               try {
                 userData = await promiseWithTimeout(
-                  loadUserProfile(authUser.id, authUser.email),
+                  loadUserProfile(authUser.id, authUser.email, opts?.supabaseUser),
                   PROFILE_HYDRATION_TIMEOUT_MS,
                   'profile_hydration_timeout',
                 );
@@ -185,59 +184,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const subscription = onAuthStateChange(async (authUser, { event }) => {
+    const subscription = onAuthStateChange(async (authUser, { event, supabaseUser }) => {
       console.log('🔐 Auth pipeline event:', event);
-      await resolveAuthSession(authUser);
+      await resolveAuthSession(authUser, supabaseUser ? { supabaseUser } : undefined);
     });
-
-    void (async () => {
-      try {
-        if (cancelled) return;
-        const supabase = getSupabaseClient();
-        let session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'] = null;
-        let bootstrapTimedOut = false;
-        try {
-          const { data } = await promiseWithTimeout(
-            supabase.auth.getSession(),
-            SESSION_BOOTSTRAP_TIMEOUT_MS,
-            'session_bootstrap_timeout',
-          );
-          session = data.session ?? null;
-        } catch (bootErr) {
-          console.warn('⚠️ getSession bootstrap timed out or failed', bootErr);
-          bootstrapTimedOut = true;
-          session = null;
-        }
-        if (cancelled) return;
-
-        const bootUser = session?.user ? authUserFromSupabaseUser(session.user) : null;
-
-        // Critical: SIGNED_IN / INITIAL_SESSION may already be running resolveAuthSession(user) while
-        // getSession() is slow. Never call resolveAuthSession(null) on timeout — it clears the user
-        // and redirects to login (see session_bootstrap_timeout race).
-        if (bootstrapTimedOut && !bootUser) {
-          const pipelineActive =
-            currentAuthUserRef.current !== null ||
-            profileHydrateInFlightRef.current.size > 0;
-          if (pipelineActive) {
-            console.log(
-              '🔐 Bootstrap getSession timed out but auth pipeline already active — skipping resolveAuthSession(null)',
-            );
-            return;
-          }
-        }
-
-        await resolveAuthSession(bootUser);
-      } catch (error) {
-        console.error('❌ Session bootstrap error:', error);
-        if (!cancelled) {
-          profileLoadedForUserRef.current = null;
-          profileHydrateInFlightRef.current.clear();
-          setUser(null);
-          setIsLoading(false);
-        }
-      }
-    })();
 
     return () => {
       cancelled = true;

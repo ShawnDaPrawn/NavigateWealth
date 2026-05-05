@@ -296,9 +296,9 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 }
 
 /**
- * Get current user with full metadata
+ * Shape returned by {@link getCurrentUserWithMetadata} / {@link mapSupabaseUserToMetadataSnapshot}.
  */
-export async function getCurrentUserWithMetadata(): Promise<{
+export type SupabaseUserMetadataSnapshot = {
   id: string;
   email: string;
   firstName?: string;
@@ -308,7 +308,32 @@ export async function getCurrentUserWithMetadata(): Promise<{
   accountStatus?: string;
   emailConfirmed: boolean;
   createdAt: string;
-} | null> {
+  role?: string;
+  invited?: boolean;
+};
+
+export function mapSupabaseUserToMetadataSnapshot(user: User): SupabaseUserMetadataSnapshot {
+  const metadata = user.user_metadata || {};
+  const role = typeof metadata.role === 'string' ? metadata.role : undefined;
+  return {
+    id: user.id,
+    email: user.email || '',
+    firstName: metadata.first_name || '',
+    lastName: metadata.surname || metadata.firstName || '',
+    phoneNumber: metadata.full_phone_number || '',
+    displayName: metadata.display_name || '',
+    accountStatus: metadata.accountStatus || undefined,
+    emailConfirmed: user.email_confirmed_at !== null,
+    createdAt: user.created_at || '',
+    role,
+    invited: metadata.invited === true,
+  };
+}
+
+/**
+ * Get current user with full metadata
+ */
+export async function getCurrentUserWithMetadata(): Promise<SupabaseUserMetadataSnapshot | null> {
   const supabase = getSupabaseClient();
   
   try {
@@ -318,19 +343,7 @@ export async function getCurrentUserWithMetadata(): Promise<{
       return null;
     }
 
-    const metadata = data.user.user_metadata || {};
-    
-    return {
-      id: data.user.id,
-      email: data.user.email || '',
-      firstName: metadata.first_name || '',
-      lastName: metadata.surname || metadata.firstName || '',
-      phoneNumber: metadata.full_phone_number || '',
-      displayName: metadata.display_name || '',
-      accountStatus: metadata.accountStatus || undefined,
-      emailConfirmed: data.user.email_confirmed_at !== null,
-      createdAt: data.user.created_at || '',
-    };
+    return mapSupabaseUserToMetadataSnapshot(data.user);
   } catch (error) {
     console.error('❌ Get current user with metadata error:', error);
     return null;
@@ -542,7 +555,10 @@ export function onAuthStateChange(callback: AuthCallback) {
           }
         }
         
-        await callback(mapSupabaseUserToAuthUser(session.user), { event });
+        await callback(mapSupabaseUserToAuthUser(session.user), {
+          event,
+          supabaseUser: session.user,
+        });
       } else {
         await callback(null, { event });
       }

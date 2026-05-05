@@ -3,7 +3,8 @@
 import { projectId, publicAnonKey } from '../supabase/info';
 import { AppUser, UserProfile, UserSuspensionStatus, AccountStatus } from './types';
 import { AUTH_ERRORS, DEFAULT_APPLICATION_STATUS, DEFAULT_ACCOUNT_STATUS, DEFAULT_ROLE, SUPER_ADMIN_EMAIL } from './constants';
-import { getCurrentUserWithMetadata } from './authService';
+import { User as SupabaseAuthUser } from '@supabase/supabase-js@2.39.3';
+import { getCurrentUserWithMetadata, mapSupabaseUserToMetadataSnapshot } from './authService';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
 
@@ -181,8 +182,13 @@ async function fetchProfileResponse(encodedKey: string, encodedEmail: string): P
 
 /**
  * Load user profile from KV store.
+ * @param supabaseUserHint - When supplied (normal sign-in hydration), skips a redundant auth.getUser() round-trip that was contending with the session pipe and slowed login.
  */
-export async function loadUserProfile(userId: string, email: string): Promise<AppUser> {
+export async function loadUserProfile(
+  userId: string,
+  email: string,
+  supabaseUserHint?: SupabaseAuthUser | null,
+): Promise<AppUser> {
   try {
     console.log('Loading user profile for:', userId, email);
 
@@ -195,8 +201,13 @@ export async function loadUserProfile(userId: string, email: string): Promise<Ap
     const encodedKey = encodeURIComponent(key);
     const encodedEmail = encodeURIComponent(email);
 
+    const supabaseMetaPromise =
+      supabaseUserHint != null && supabaseUserHint.id === userId
+        ? Promise.resolve(mapSupabaseUserToMetadataSnapshot(supabaseUserHint))
+        : getCurrentUserWithMetadata();
+
     const [supabaseUserData, securityStatus, response] = await Promise.all([
-      getCurrentUserWithMetadata(),
+      supabaseMetaPromise,
       fetchSecurityStatus(userId),
       fetchProfileResponse(encodedKey, encodedEmail),
     ]);
@@ -247,8 +258,8 @@ export async function loadUserProfile(userId: string, email: string): Promise<Ap
     }
 
     if (response.status === 404 || !response.ok) {
-      const metaRole = (supabaseUserData as (Awaited<ReturnType<typeof getCurrentUserWithMetadata>> & { role?: string; invited?: boolean }) | null)?.role;
-      const isInvited = (supabaseUserData as (Awaited<ReturnType<typeof getCurrentUserWithMetadata>> & { role?: string; invited?: boolean }) | null)?.invited === true;
+      const metaRole = supabaseUserData?.role;
+      const isInvited = supabaseUserData?.invited === true;
       const isPersonnel =
         (metaRole && (PERSONNEL_ROLES as readonly string[]).includes(metaRole)) ||
         isInvited;

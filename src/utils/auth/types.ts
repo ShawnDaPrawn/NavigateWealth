@@ -1,6 +1,6 @@
 // Authentication Type Definitions
 
-import { Session } from '@supabase/supabase-js@2.39.3';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js@2.39.3';
 
 // User roles in the system
 export type UserRole = 'client' | 'admin' | 'super_admin';
@@ -84,5 +84,5 @@ export interface SignInResult {
 /** Second argument carries the Supabase auth event (INITIAL_SESSION, SIGNED_IN, etc.). */
 export type AuthCallback = (
   user: AuthUser | null,
-  details: { event: string },
+  details: { event: string; supabaseUser?: SupabaseUser },
 ) => void | Promise<void>;
