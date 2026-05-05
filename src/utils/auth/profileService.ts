@@ -41,6 +41,58 @@ function normalizeAccountStatus(status?: string | null): AccountStatus | undefin
   }
 }
 
+type SessionUserLike = {
+  user_metadata?: Record<string, unknown>;
+  app_metadata?: Record<string, unknown>;
+} | null | undefined;
+
+/**
+ * Best-effort AppUser when KV/profile loading fails or times out. Uses Supabase
+ * session metadata for personnel detection so admin routes are not bricked.
+ */
+export function buildAppUserFromAuthSessionFallback(
+  userId: string,
+  email: string,
+  sessionUser?: SessionUserLike,
+): AppUser {
+  const metadata = sessionUser?.user_metadata || {};
+  const metaRole = typeof metadata.role === 'string' ? metadata.role : undefined;
+  const invited =
+    metadata.invited === true || sessionUser?.app_metadata?.invited === true;
+
+  const isPersonnel =
+    (!!metaRole && (PERSONNEL_ROLES as readonly string[]).includes(metaRole)) || invited;
+
+  if (isPersonnel) {
+    return {
+      id: userId,
+      email,
+      firstName: '',
+      lastName: '',
+      role: (metaRole || 'admin') as AppUser['role'],
+      applicationStatus: DEFAULT_APPLICATION_STATUS,
+      accountStatus: 'approved',
+      accountType: undefined,
+      adviserAssigned: true,
+      suspended: false,
+    };
+  }
+
+  const isSuperAdmin = email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+  return {
+    id: userId,
+    email,
+    firstName: '',
+    lastName: '',
+    role: isSuperAdmin ? 'super_admin' : DEFAULT_ROLE,
+    applicationStatus: DEFAULT_APPLICATION_STATUS,
+    accountStatus: isSuperAdmin ? 'approved' : DEFAULT_ACCOUNT_STATUS,
+    accountType: undefined,
+    adviserAssigned: isSuperAdmin,
+    suspended: false,
+  };
+}
+
 /**
  * Fetch security status including suspension info.
  */

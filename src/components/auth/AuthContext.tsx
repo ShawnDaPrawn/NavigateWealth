@@ -8,7 +8,11 @@ import {
   authUserFromSupabaseUser,
   getSupabaseClient,
 } from '../../utils/auth';
-import { loadUserProfile, updateUserProfile } from '../../utils/auth/profileService';
+import {
+  buildAppUserFromAuthSessionFallback,
+  loadUserProfile,
+  updateUserProfile,
+} from '../../utils/auth/profileService';
 import type { AuthUser } from '../../utils/auth/types';
 import { broadcastLogout, onLogoutBroadcast, broadcastNavigate } from '../../utils/auth/sessionSync';
 import { AUTH_SESSION_EXPIRED_EVENT } from '../../utils/api/client';
@@ -38,6 +42,43 @@ if (!_global[CONTEXT_GLOBAL_KEY]) {
   _global[CONTEXT_GLOBAL_KEY] = createContext<AuthContextType | undefined>(undefined);
 }
 const AuthContext = _global[CONTEXT_GLOBAL_KEY] as React.Context<AuthContextType | undefined>;
+
+/** Prevents infinite admin shell spin if profile/KV or getUser() never settles. */
+const PROFILE_HYDRATION_TIMEOUT_MS = 45_000;
+const SESSION_USER_SNAPSHOT_MS = 5_000;
+
+function promiseWithTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return new Promise((resolve, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(Object.assign(new Error(label), { name: 'TimeoutError' }));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timeoutId);
+        reject(err);
+      },
+    );
+  });
+}
+
+async function getSessionUserSnapshotForFallback() {
+  try {
+    const supabase = getSupabaseClient();
+    const { data } = await promiseWithTimeout(
+      supabase.auth.getSession(),
+      SESSION_USER_SNAPSHOT_MS,
+      'session_snapshot_timeout',
+    );
+    return data.session?.user ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // Auth Provider Component
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -93,7 +134,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           hydrate = (async () => {
             try {
               console.log('✅ Auth user detected, loading profile...');
-              const userData = await loadUserProfile(authUser.id, authUser.email);
+              let userData: AppUser;
+              try {
+                userData = await promiseWithTimeout(
+                  loadUserProfile(authUser.id, authUser.email),
+                  PROFILE_HYDRATION_TIMEOUT_MS,
+                  'profile_hydration_timeout',
+                );
+              } catch (loadErr) {
+                const timedOut =
+                  loadErr instanceof Error &&
+                  (loadErr.message === 'profile_hydration_timeout' || loadErr.name === 'TimeoutError');
+                if (timedOut) {
+                  console.warn('Profile hydration timed out; using session-metadata fallback');
+                } else {
+                  console.error('Profile load failed; using session-metadata fallback', loadErr);
+                }
+                const sessionUser = await getSessionUserSnapshotForFallback();
+                userData = buildAppUserFromAuthSessionFallback(
+                  authUser.id,
+                  authUser.email,
+                  sessionUser,
+                );
+              }
 
               if (cancelled || currentAuthUserRef.current !== authUser.id) {
                 console.log('⚠️ Discarding stale profile load (auth state changed)');
