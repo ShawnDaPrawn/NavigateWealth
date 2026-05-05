@@ -46,8 +46,8 @@ const AuthContext = _global[CONTEXT_GLOBAL_KEY] as React.Context<AuthContextType
 /** Prevents infinite admin shell spin if profile/KV or getUser() never settles. */
 const PROFILE_HYDRATION_TIMEOUT_MS = 45_000;
 const SESSION_USER_SNAPSHOT_MS = 5_000;
-/** Cold-start bootstrap: getSession() can stall in some browsers after hard refresh. */
-const SESSION_BOOTSTRAP_TIMEOUT_MS = 12_000;
+/** Cold-start bootstrap: bound slow getSession; never treat timeout as "signed out" if the listener already started hydration. */
+const SESSION_BOOTSTRAP_TIMEOUT_MS = 30_000;
 
 function promiseWithTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout>;
@@ -195,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         const supabase = getSupabaseClient();
         let session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'] = null;
+        let bootstrapTimedOut = false;
         try {
           const { data } = await promiseWithTimeout(
             supabase.auth.getSession(),
@@ -203,11 +204,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           );
           session = data.session ?? null;
         } catch (bootErr) {
-          console.warn('⚠️ getSession bootstrap timed out or failed — continuing without session', bootErr);
+          console.warn('⚠️ getSession bootstrap timed out or failed', bootErr);
+          bootstrapTimedOut = true;
           session = null;
         }
         if (cancelled) return;
+
         const bootUser = session?.user ? authUserFromSupabaseUser(session.user) : null;
+
+        // Critical: SIGNED_IN / INITIAL_SESSION may already be running resolveAuthSession(user) while
+        // getSession() is slow. Never call resolveAuthSession(null) on timeout — it clears the user
+        // and redirects to login (see session_bootstrap_timeout race).
+        if (bootstrapTimedOut && !bootUser) {
+          const pipelineActive =
+            currentAuthUserRef.current !== null ||
+            profileHydrateInFlightRef.current.size > 0;
+          if (pipelineActive) {
+            console.log(
+              '🔐 Bootstrap getSession timed out but auth pipeline already active — skipping resolveAuthSession(null)',
+            );
+            return;
+          }
+        }
+
         await resolveAuthSession(bootUser);
       } catch (error) {
         console.error('❌ Session bootstrap error:', error);
@@ -217,8 +236,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setIsLoading(false);
         }
-      } finally {
-        finishLoading();
       }
     })();
 
