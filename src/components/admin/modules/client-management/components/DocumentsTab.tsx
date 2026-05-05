@@ -91,6 +91,14 @@ interface DocumentItem {
   // Link specific
   url?: string;
   description?: string;
+  // Generated system documents
+  sourceSystem?: string;
+  downloadMode?: 'roa-generated' | 'roa-evidence';
+  sha256?: string;
+  roaDocumentStatus?: 'draft' | 'final';
+  roaFormat?: 'pdf' | 'docx';
+  roaModuleId?: string;
+  roaRequirementId?: string;
 }
 
 export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
@@ -1193,6 +1201,11 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="font-medium truncate">{doc.title}</h4>
+                              {doc.sourceSystem === 'record-of-advice' && (
+                                <Badge variant="secondary" className="text-xs">
+                                  RoA
+                                </Badge>
+                              )}
                               {doc.status === 'new' && (
                                 <Badge className="bg-blue-100 text-blue-800">New</Badge>
                               )}
@@ -1222,6 +1235,16 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                               {doc.policyNumber && (
                                 <Badge variant="outline" className="text-xs">
                                   {doc.policyNumber}
+                                </Badge>
+                              )}
+                              {doc.roaDocumentStatus && (
+                                <Badge variant="outline" className="text-xs">
+                                  {doc.roaDocumentStatus === 'final' ? 'Final' : 'Draft'}
+                                </Badge>
+                              )}
+                              {doc.sha256 && (
+                                <Badge variant="outline" className="text-xs font-mono">
+                                  SHA {doc.sha256.slice(0, 8)}
                                 </Badge>
                               )}
                             </div>

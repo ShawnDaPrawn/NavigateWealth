@@ -31,7 +31,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [verificationEmailSent, setVerificationEmailSent] = useState(false);
@@ -58,8 +58,8 @@ export function LoginPage() {
   // Handle redirect when user becomes authenticated
   useEffect(() => {
     // Only automatically redirect if we are NOT in the middle of a login flow
-    // (isLoading) and NOT showing the 2FA modal.
-    if (isAuthenticated && user && !isLoading && !show2FAModal) {
+    // (isSubmitting) and NOT showing the 2FA modal.
+    if (isAuthenticated && user && !isSubmitting && !show2FAModal) {
       // If a returnUrl was provided (e.g. from session-expiry redirect), use it.
       // Otherwise, use the RouteGuards helper to determine the correct redirect path.
       const redirectPath = returnUrl || getAuthenticatedRedirectPath(user);
@@ -67,7 +67,7 @@ export function LoginPage() {
       // Perform a hard refresh to ensure the dashboard has the latest UI and data
       window.location.href = redirectPath;
     }
-  }, [isAuthenticated, user, navigate, isLoading, show2FAModal, returnUrl]);
+  }, [isAuthenticated, user, navigate, isSubmitting, show2FAModal, returnUrl]);
 
   const isRedirectingToAuthenticatedArea = isAuthenticated && user && !show2FAModal;
 
@@ -125,7 +125,7 @@ export function LoginPage() {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     
     try {
       // Proceed with normal sign in
@@ -150,7 +150,7 @@ export function LoginPage() {
             // and inform the user. All data remains visible to admin.
             if (securityData.success && securityData.status?.deleted) {
               await signOut();
-              setIsLoading(false);
+              setIsSubmitting(false);
               setError(
                 'Your account has been closed. If you believe this is an error, please contact Navigate Wealth support.'
               );
@@ -160,7 +160,7 @@ export function LoginPage() {
             // If the account is suspended, sign out and inform
             if (securityData.success && securityData.status?.suspended) {
               await signOut();
-              setIsLoading(false);
+              setIsSubmitting(false);
               setError(
                 'Your account has been suspended. Please contact Navigate Wealth support for assistance.'
               );
@@ -178,7 +178,7 @@ export function LoginPage() {
                 const elapsed = Date.now() - new Date(last2fa).getTime();
                 if (elapsed < THREE_HOURS_MS) {
                   // Grace period active — allow login without 2FA
-                  setIsLoading(false);
+                  setIsSubmitting(false);
                   return; // useEffect handles redirect
                 }
               }
@@ -213,7 +213,7 @@ export function LoginPage() {
               setTempUserEmail(email);
               setTempPassword(password);
               setShow2FAModal(true);
-              setIsLoading(false);
+              setIsSubmitting(false);
               return; // Don't proceed with login until 2FA is verified
             }
 
@@ -263,7 +263,7 @@ export function LoginPage() {
         setError('An unexpected error occurred. Please try again.');
       }
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -277,7 +277,7 @@ export function LoginPage() {
     // using the stored credentials.
     if (tempUserEmail && tempPassword) {
       try {
-        setIsLoading(true);
+        setIsSubmitting(true);
         await signIn(tempUserEmail, tempPassword);
         // Session is now active — the useEffect will detect
         // isAuthenticated and redirect to the dashboard.
@@ -287,7 +287,7 @@ export function LoginPage() {
           'Your identity was verified, but we could not complete sign-in. Please try logging in again.'
         );
       } finally {
-        setIsLoading(false);
+        setIsSubmitting(false);
       }
     }
 
@@ -419,7 +419,7 @@ export function LoginPage() {
             mode="signin"
             onClick={handleGoogleSignIn}
             isLoading={isGoogleLoading}
-            disabled={isLoading}
+            disabled={isSubmitting}
           />
 
           <form onSubmit={handleSubmit} className="space-y-5" aria-describedby={error ? 'login-error' : undefined}>
@@ -437,7 +437,7 @@ export function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
                   placeholder="you@example.com"
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -464,13 +464,13 @@ export function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-10"
                   placeholder="Enter your password"
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
@@ -497,9 +497,9 @@ export function LoginPage() {
             <Button
               type="submit"
               className="w-full bg-purple-700 hover:bg-purple-800"
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" aria-hidden="true"></span>
                   Signing in...

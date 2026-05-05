@@ -25,6 +25,14 @@ export interface DocumentItem {
   // Link specific fields
   url?: string;
   description?: string;
+  // System-generated document metadata
+  sourceSystem?: string;
+  downloadMode?: 'roa-generated' | 'roa-evidence';
+  sha256?: string;
+  roaDocumentStatus?: 'draft' | 'final';
+  roaFormat?: 'pdf' | 'docx';
+  roaModuleId?: string;
+  roaRequirementId?: string;
 }
 
 /**
@@ -87,6 +95,8 @@ export interface DownloadUrlResponse {
   success: boolean;
   url?: string;
   fileName?: string;
+  contentType?: string;
+  sha256?: string;
   error?: string;
 }
 

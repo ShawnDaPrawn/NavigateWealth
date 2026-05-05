@@ -305,6 +305,65 @@ app.get('/:userId/:documentId/download', async (c) => {
       return c.json({ success: false, error: 'Document not found' }, 404);
     }
 
+    if (docData.sourceSystem === 'record-of-advice') {
+      const storedRoAFile = await kv.get(docData.filePath) as Record<string, unknown> | null;
+
+      const blobStoragePath =
+        typeof storedRoAFile?.blobStoragePath === 'string' ? storedRoAFile.blobStoragePath.trim() : '';
+      if (blobStoragePath) {
+        await ensureBucket();
+        const { data: blobSigned, error: blobSignedErr } = await getSupabase().storage
+          .from(BUCKET_NAME)
+          .createSignedUrl(blobStoragePath, 3600);
+
+        if (!blobSignedErr && blobSigned?.signedUrl) {
+          log.info('✅ RoA document signed URL (object storage)');
+          return c.json({
+            success: true,
+            url: blobSigned.signedUrl,
+            fileName: docData.fileName,
+            contentType: typeof docData.contentType === 'string'
+              ? docData.contentType
+              : typeof storedRoAFile?.contentType === 'string'
+                ? storedRoAFile.contentType
+                : typeof storedRoAFile?.mimeType === 'string'
+                  ? storedRoAFile.mimeType
+                  : 'application/octet-stream',
+            sha256: typeof docData.sha256 === 'string' ? docData.sha256 : storedRoAFile?.sha256,
+          });
+        }
+        log.warn('RoA blob signed URL failed — falling back to embedded bytes if present', {
+          message: blobSignedErr?.message,
+        });
+      }
+
+      const bytesBase64 = typeof storedRoAFile?.bytesBase64 === 'string'
+        ? storedRoAFile.bytesBase64
+        : typeof storedRoAFile?.downloadBase64 === 'string'
+          ? storedRoAFile.downloadBase64
+          : '';
+      const contentType = typeof docData.contentType === 'string'
+        ? docData.contentType
+        : typeof storedRoAFile?.contentType === 'string'
+          ? storedRoAFile.contentType
+          : typeof storedRoAFile?.mimeType === 'string'
+            ? storedRoAFile.mimeType
+            : 'application/octet-stream';
+
+      if (!bytesBase64) {
+        return c.json({ success: false, error: 'RoA document content not found' }, 404);
+      }
+
+        log.info('RoA document URL generated (embedded payload)');
+      return c.json({
+        success: true,
+        url: `data:${contentType};base64,${bytesBase64}`,
+        fileName: docData.fileName,
+        contentType,
+        sha256: typeof docData.sha256 === 'string' ? docData.sha256 : storedRoAFile?.sha256,
+      });
+    }
+
     // Generate signed URL (valid for 1 hour)
     const { data: signedUrlData, error: signedUrlError } = await getSupabase().storage
       .from(BUCKET_NAME)

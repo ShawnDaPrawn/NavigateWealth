@@ -5,8 +5,11 @@ import {
   AppUser, 
   signOut as authSignOut,
   onAuthStateChange,
+  authUserFromSupabaseUser,
+  getSupabaseClient,
 } from '../../utils/auth';
 import { loadUserProfile, updateUserProfile } from '../../utils/auth/profileService';
+import type { AuthUser } from '../../utils/auth/types';
 import { broadcastLogout, onLogoutBroadcast, broadcastNavigate } from '../../utils/auth/sessionSync';
 import { AUTH_SESSION_EXPIRED_EVENT } from '../../utils/api/client';
 import { toast } from 'sonner@2.0.3';
@@ -44,52 +47,104 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutGuardRef = React.useRef(false);
   const currentAuthUserRef = React.useRef<string | null>(null);
 
-  // Initialize auth state listener
+  const profileLoadedForUserRef = React.useRef<string | null>(null);
+  /** One shared in-flight hydrate per user id — avoids duplicate KV profile fetches when INITIAL_SESSION races getSession(). */
+  const profileHydrateInFlightRef = React.useRef<Map<string, Promise<void>>>(new Map());
+
+  // Initialize auth state listener + cold-start session bootstrap.
+  // Supabase normally emits INITIAL_SESSION through the listener, but in some
+  // browsers or timing conditions the admin shell could render before profile
+  // resolution finished.
   useEffect(() => {
     console.log('🔐 Initializing auth state listener...');
-    
-    const subscription = onAuthStateChange(async (authUser) => {
-      currentAuthUserRef.current = authUser?.id || null;
-      
-      try {
-        if (authUser) {
-          // If we're in the middle of a logout, ignore stale auth events
-          if (logoutGuardRef.current) {
-            console.log('⚠️ Auth event ignored — logout in progress');
-            return;
-          }
-          console.log('✅ Auth user detected, loading profile...');
-          
-          // Load full user profile from database
-          // This function has its own error handling/fallback, but we wrap it just in case
-          const userData = await loadUserProfile(authUser.id, authUser.email);
-          
-          // If the latest auth event is no longer for this user, discard the profile
-          if (currentAuthUserRef.current !== authUser.id) {
-            console.log('⚠️ Discarding stale profile load (auth state changed)');
-            return;
-          }
-          
-          setUser(userData);
-          
-          console.log(`👤 User loaded with role: ${userData.role}`);
-        } else {
-          console.log('❌ No auth user');
-          setUser(null);
-          // Logout is complete — reset the guard so the next sign-in is processed
-          logoutGuardRef.current = false;
-        }
-      } catch (error) {
-        console.error('❌ Critical auth initialization error:', error);
-        // Fallback: clear user to force login or allow public access, but stop loading
-        setUser(null); 
-      } finally {
+    let cancelled = false;
+
+    const finishLoading = () => {
+      if (!cancelled) {
         setIsLoading(false);
       }
+    };
+
+    const resolveAuthSession = async (authUser: AuthUser | null) => {
+      if (cancelled) return;
+      currentAuthUserRef.current = authUser?.id || null;
+
+      try {
+        if (!authUser) {
+          profileHydrateInFlightRef.current.clear();
+          profileLoadedForUserRef.current = null;
+          console.log('❌ No auth user');
+          setUser(null);
+          logoutGuardRef.current = false;
+          return;
+        }
+
+        if (logoutGuardRef.current) {
+          console.log('⚠️ Auth event ignored — logout in progress');
+          return;
+        }
+
+        if (profileLoadedForUserRef.current === authUser.id) {
+          return;
+        }
+
+        let hydrate = profileHydrateInFlightRef.current.get(authUser.id);
+        if (!hydrate) {
+          hydrate = (async () => {
+            try {
+              console.log('✅ Auth user detected, loading profile...');
+              const userData = await loadUserProfile(authUser.id, authUser.email);
+
+              if (cancelled || currentAuthUserRef.current !== authUser.id) {
+                console.log('⚠️ Discarding stale profile load (auth state changed)');
+                return;
+              }
+
+              profileLoadedForUserRef.current = authUser.id;
+              setUser(userData);
+              console.log(`👤 User loaded with role: ${userData.role}`);
+            } catch (error) {
+              console.error('❌ Critical auth initialization error:', error);
+              profileLoadedForUserRef.current = null;
+              setUser(null);
+            } finally {
+              profileHydrateInFlightRef.current.delete(authUser.id);
+            }
+          })();
+          profileHydrateInFlightRef.current.set(authUser.id, hydrate);
+        }
+
+        await hydrate;
+      } finally {
+        finishLoading();
+      }
+    };
+
+    const subscription = onAuthStateChange(async (authUser, { event }) => {
+      console.log('🔐 Auth pipeline event:', event);
+      await resolveAuthSession(authUser);
     });
 
-    // Cleanup subscription
+    void (async () => {
+      try {
+        const supabase = getSupabaseClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (cancelled) return;
+        const bootUser = session?.user ? authUserFromSupabaseUser(session.user) : null;
+        await resolveAuthSession(bootUser);
+      } catch (error) {
+        console.error('❌ Session bootstrap error:', error);
+        if (!cancelled) {
+          profileLoadedForUserRef.current = null;
+          profileHydrateInFlightRef.current.clear();
+          setUser(null);
+          setIsLoading(false);
+        }
+      }
+    })();
+
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
     };
   }, []);
@@ -104,6 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Sign out in this tab without broadcasting again (to prevent infinite loop)
       try {
         logoutGuardRef.current = true;
+        profileLoadedForUserRef.current = null;
+        profileHydrateInFlightRef.current.clear();
         await authSignOut();
         setUser(null);
         console.log('✅ Synced logout from other tab');
@@ -127,6 +184,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!logoutGuardRef.current && user) {
         console.warn('⚠️ Session expired event received — clearing stale auth state');
         logoutGuardRef.current = true;
+        profileLoadedForUserRef.current = null;
+        profileHydrateInFlightRef.current.clear();
         setUser(null);
 
         // Notify the user with a toast
@@ -224,6 +283,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Set guard BEFORE signOut to prevent any in-flight refreshUser calls
       // from re-setting the user after we clear it
       logoutGuardRef.current = true;
+      profileLoadedForUserRef.current = null;
+      profileHydrateInFlightRef.current.clear();
 
       await authSignOut();
       console.log('✅ Logout successful on backend');
@@ -278,7 +339,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 const AUTH_DEFAULT: AuthContextType = {
   user: null,
   isAuthenticated: false,
-  isLoading: true,
+  isLoading: false,
   updateUser: async () => {},
   completeApplication: async () => {},
   logout: async () => {},

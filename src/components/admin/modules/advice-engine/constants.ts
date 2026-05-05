@@ -6,9 +6,11 @@ export const ENDPOINTS = {
   AI_SEARCH_CLIENTS: '/ai-intelligence/search-clients',
   
   // RoA
-  ROA_DRAFT: '/roa/draft',
-  ROA_MODULES: '/roa/modules',
-  ROA_SUBMIT: '/roa/submit',
+  ROA_DRAFT: '/advice-engine/roa/drafts',
+  ROA_MODULES: '/advice-engine/roa/modules',
+  ROA_MODULE_CONTRACTS: '/advice-engine/roa/module-contracts',
+  ROA_MODULE_CONTRACT_SCHEMA: '/advice-engine/roa/module-contracts/schema',
+  ROA_CLIENT_CONTEXT: '/advice-engine/roa/client',
 
   // Shared Resources
   CLIENT_DETAILS: '/clients',

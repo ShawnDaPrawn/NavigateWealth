@@ -11,9 +11,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { roaApi } from '../api';
 import { adviceEngineKeys } from './queryKeys';
+import { getFallbackRuntimeModules, moduleContractToRuntimeModule } from '../roaModuleRuntime';
 import type {
   RoADraft,
-  RoAFormData,
   RoAModule,
   UseRoADraftOptions,
   UseRoADraftReturn,
@@ -65,6 +65,11 @@ export function useRoADraft(options: UseRoADraftOptions = {}): UseRoADraftReturn
   const [localDraft, setLocalDraft] = useState<RoADraft | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setLocalDraft(null);
+    setError(null);
+  }, [draftId]);
+
   // Refs
   const autoSaveTimerRef = useRef<number | null>(null);
   const queryClient = useQueryClient();
@@ -92,16 +97,18 @@ export function useRoADraft(options: UseRoADraftOptions = {}): UseRoADraftReturn
     if (fetchedDraft && !localDraft) {
       setLocalDraft(fetchedDraft);
     }
-  }, [fetchedDraft]);
+  }, [fetchedDraft, localDraft]);
 
   // ============================================================================
   // Fetch Modules
   // ============================================================================
 
   const { data: modules = [] } = useQuery({
-    queryKey: adviceEngineKeys.roa.modules(),
+    queryKey: adviceEngineKeys.roa.moduleContracts({ status: 'active' }),
     queryFn: async () => {
-      return await roaApi.getModules();
+      const contracts = await roaApi.getModuleContracts({ status: 'active' });
+      const runtimeModules = contracts.map(moduleContractToRuntimeModule);
+      return runtimeModules.length > 0 ? runtimeModules : getFallbackRuntimeModules();
     },
     staleTime: 10 * 60 * 1000, // 10 minutes (modules rarely change)
     refetchOnMount: false, // RoA module definitions are stable reference data
@@ -112,7 +119,7 @@ export function useRoADraft(options: UseRoADraftOptions = {}): UseRoADraftReturn
   // ============================================================================
 
   const saveDraftMutation = useMutation({
-    mutationFn: async (data: Partial<RoAFormData>) => {
+    mutationFn: async (data: Partial<RoADraft>) => {
       return await roaApi.saveDraft(localDraft?.id || null, data);
     },
     onSuccess: (savedDraft) => {
@@ -171,6 +178,8 @@ export function useRoADraft(options: UseRoADraftOptions = {}): UseRoADraftReturn
         saveDraftMutation.mutate({
           selectedModules: localDraft.selectedModules,
           moduleData: localDraft.moduleData,
+          moduleOutputs: localDraft.moduleOutputs,
+          moduleEvidence: localDraft.moduleEvidence,
           clientId: localDraft.clientId,
           clientData: localDraft.clientData,
         });
@@ -207,7 +216,7 @@ export function useRoADraft(options: UseRoADraftOptions = {}): UseRoADraftReturn
    * Save draft manually
    */
   const saveDraft = useCallback(
-    async (data: Partial<RoAFormData>): Promise<void> => {
+    async (data: Partial<RoADraft>): Promise<void> => {
       await saveDraftMutation.mutateAsync(data);
     },
     [saveDraftMutation]

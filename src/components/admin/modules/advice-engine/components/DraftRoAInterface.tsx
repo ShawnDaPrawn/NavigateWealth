@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner@2.0.3';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
@@ -9,9 +11,12 @@ import { RoAStepModules } from './roa-steps/RoAStepModules';
 import { RoAStepModuleDetails } from './roa-steps/RoAStepModuleDetails';
 import { RoAStepReview } from './roa-steps/RoAStepReview';
 import { ChevronLeft, ChevronRight, FileText, Save } from 'lucide-react';
-import { RoADraft, RoAModule, RoAField } from '../types';
+import { RoADraft, RoAModule, RoAField, RoAEvidenceItem } from '../types';
+import { roaApi } from '../api';
+import { adviceEngineKeys } from '../hooks/queryKeys';
+import { getFallbackRuntimeModules, getModuleRuntimeStatus, moduleContractToRuntimeModule } from '../roaModuleRuntime';
 
-export type { RoADraft, RoAModule, RoAField };
+export type { RoADraft, RoAModule, RoAField, RoAEvidenceItem };
 
 const STEPS = [
   { id: 'start', title: 'Start', description: 'Begin RoA draft' },
@@ -25,14 +30,32 @@ export function DraftRoAInterface() {
   const [currentStep, setCurrentStep] = useState(0);
   const [roaDraft, setRoaDraft] = useState<RoADraft | null>(null);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [discardingDraftId, setDiscardingDraftId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { data: activeContracts = [] } = useQuery({
+    queryKey: adviceEngineKeys.roa.moduleContracts({ status: 'active' }),
+    queryFn: () => roaApi.getModuleContracts({ status: 'active' }),
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: allDrafts = [], isLoading: isLoadingDrafts } = useQuery({
+    queryKey: adviceEngineKeys.roa.drafts(),
+    queryFn: () => roaApi.listDrafts(),
+    staleTime: 30 * 1000,
+  });
+  const existingDrafts = allDrafts.filter((draft) => !draft.lockedAt);
+  const finalisedDrafts = allDrafts.filter((draft) => Boolean(draft.lockedAt));
+  const contractModules = activeContracts.map(moduleContractToRuntimeModule);
+  const availableModules = contractModules.length > 0
+    ? contractModules
+    : getFallbackRuntimeModules();
 
   const currentStepData = STEPS[currentStep];
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
-      autoSave();
+      await autoSave();
     }
   };
 
@@ -42,26 +65,33 @@ export function DraftRoAInterface() {
     }
   };
 
-  const autoSave = async () => {
-    if (!roaDraft) return;
+  const autoSave = async (draftToSave = roaDraft) => {
+    if (!draftToSave) return;
     
     setIsAutoSaving(true);
-    // Mock autosave delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setRoaDraft(prev => prev ? {
-      ...prev,
-      updatedAt: new Date()
-    } : null);
-    
-    setIsAutoSaving(false);
+    try {
+      const savedDraft = await roaApi.saveDraft(draftToSave.id, draftToSave);
+      setRoaDraft(savedDraft);
+      queryClient.invalidateQueries({ queryKey: adviceEngineKeys.roa.drafts() });
+    } catch (error) {
+      console.error('Failed to save RoA draft:', error);
+      toast.error(error instanceof Error ? error.message : 'Could not save RoA draft — your changes are kept locally.');
+      setRoaDraft((prev) => (prev
+        ? {
+            ...prev,
+            updatedAt: new Date(),
+          }
+        : null));
+    } finally {
+      setIsAutoSaving(false);
+    }
   };
 
   const updateDraft = (updates: Partial<RoADraft>) => {
     setRoaDraft(prev => prev ? { ...prev, ...updates } : null);
   };
 
-  const createNewDraft = () => {
+  const createNewDraft = async () => {
     const newDraft: RoADraft = {
       id: `roa-${Date.now()}`,
       selectedModules: [],
@@ -73,6 +103,7 @@ export function DraftRoAInterface() {
     };
     setRoaDraft(newDraft);
     setCurrentStep(1); // Move to client step
+    await autoSave(newDraft);
   };
 
   const resumeExistingDraft = (draft: RoADraft) => {
@@ -87,6 +118,38 @@ export function DraftRoAInterface() {
     }
   };
 
+  const discardDraft = async (draft: RoADraft) => {
+    const label = draft.clientData
+      ? `${draft.clientData.firstName} ${draft.clientData.lastName}`.trim()
+      : draft.clientSnapshot?.displayName || draft.id;
+    const ok = window.confirm(
+      `Discard this RoA draft${label ? ` for ${label}` : ''}? Uploaded evidence and generated drafts for this draft will be removed from the file index.`,
+    );
+    if (!ok) return;
+
+    setDiscardingDraftId(draft.id);
+    try {
+      await roaApi.deleteDraft(draft.id);
+      queryClient.invalidateQueries({ queryKey: adviceEngineKeys.roa.drafts() });
+      queryClient.removeQueries({ queryKey: adviceEngineKeys.roa.draft(draft.id) });
+      toast.success('Draft discarded');
+      if (roaDraft?.id === draft.id) {
+        setRoaDraft(null);
+        setCurrentStep(0);
+      }
+    } catch (error) {
+      console.error('Failed to discard RoA draft:', error);
+      toast.error(error instanceof Error ? error.message : 'Could not discard draft');
+    } finally {
+      setDiscardingDraftId(null);
+    }
+  };
+
+  const resumeFinalisedDraft = (draft: RoADraft) => {
+    setRoaDraft(draft);
+    setCurrentStep(4); // Locked finals are reviewed on the compile/export step only
+  };
+
   const canProceed = () => {
     switch (currentStep) {
       case 0: // Start
@@ -96,10 +159,16 @@ export function DraftRoAInterface() {
       case 2: // Modules
         return roaDraft && roaDraft.selectedModules.length > 0;
       case 3: // Details
-        return roaDraft && roaDraft.selectedModules.every(moduleId => 
-          roaDraft.moduleData[moduleId] && 
-          Object.keys(roaDraft.moduleData[moduleId]).length > 0
-        );
+        return roaDraft && roaDraft.selectedModules.every(moduleId => {
+          const module = availableModules.find(item => item.id === moduleId);
+          const moduleData = roaDraft.moduleData[moduleId];
+          if (!module || !moduleData) return false;
+          return getModuleRuntimeStatus(
+            module,
+            moduleData,
+            roaDraft.moduleEvidence?.[moduleId] || {},
+          ).complete;
+        });
       case 4: // Review
         return true;
       default:
@@ -111,9 +180,15 @@ export function DraftRoAInterface() {
     switch (currentStep) {
       case 0:
         return (
-          <RoAStepStart 
+          <RoAStepStart
             onCreateNew={createNewDraft}
             onResume={resumeExistingDraft}
+            onResumeFinal={resumeFinalisedDraft}
+            onDiscardDraft={discardDraft}
+            discardingDraftId={discardingDraftId}
+            existingDrafts={existingDrafts}
+            finalisedDrafts={finalisedDrafts}
+            isLoadingDrafts={isLoadingDrafts}
           />
         );
       case 1:
@@ -128,6 +203,7 @@ export function DraftRoAInterface() {
           <RoAStepModules 
             draft={roaDraft}
             onUpdate={updateDraft}
+            modules={availableModules}
           />
         );
       case 3:
@@ -135,13 +211,19 @@ export function DraftRoAInterface() {
           <RoAStepModuleDetails 
             draft={roaDraft}
             onUpdate={updateDraft}
+            modules={availableModules}
           />
         );
       case 4:
         return (
-          <RoAStepReview 
+          <RoAStepReview
             draft={roaDraft}
             onUpdate={updateDraft}
+            onDraftReplaced={(nextDraft) => {
+              setRoaDraft(nextDraft);
+              queryClient.invalidateQueries({ queryKey: adviceEngineKeys.roa.drafts() });
+            }}
+            modules={availableModules}
           />
         );
       default:

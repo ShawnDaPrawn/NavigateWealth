@@ -10,6 +10,8 @@ export { useAIChat } from './useAIChat';
 export { useClientSearch } from './useClientSearch';
 export { useChatHistory } from './useChatHistory';
 export { useRoADraft } from './useRoADraft';
+export { useRoAClientContext } from './useRoAClientContext';
+export { useRoAModuleContracts } from './useRoAModuleContracts';
 
 // Re-export types for convenience
 export type {

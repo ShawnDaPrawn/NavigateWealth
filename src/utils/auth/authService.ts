@@ -542,15 +542,19 @@ export function onAuthStateChange(callback: AuthCallback) {
           }
         }
         
-        // Call callback with authenticated user
-        callback(mapSupabaseUserToAuthUser(session.user));
+        await callback(mapSupabaseUserToAuthUser(session.user), { event });
       } else {
-        callback(null);
+        await callback(null, { event });
       }
     }
   );
 
   return subscription;
+}
+
+/** Used to bootstrap auth before/without waiting for the subscription's first event. */
+export function authUserFromSupabaseUser(supabaseUser: User): AuthUser {
+  return mapSupabaseUserToAuthUser(supabaseUser);
 }
 
 // Helper Functions

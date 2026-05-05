@@ -5,6 +5,7 @@ import { RoADraft } from '../DraftRoAInterface';
 import { Search, Plus, UserCheck } from 'lucide-react';
 import { useClientSearch } from '../../hooks/useClientSearch';
 import { useClient } from '../../hooks/useClient';
+import { useRoAClientContext } from '../../hooks/useRoAClientContext';
 import { ClientSearchResult } from '../../types';
 import { ClientSearchPanel } from './ClientSearchPanel';
 import { NewClientForm } from './NewClientForm';
@@ -24,6 +25,18 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
 
   // Fetch full client details for selected client
   const { data: clientDetails } = useClient(draft?.clientId);
+  const { data: clientContext } = useRoAClientContext(draft?.clientId);
+
+  React.useEffect(() => {
+    if (!draft?.clientId || !clientContext) return;
+    if (draft.contextCapturedAt === clientContext.clientSnapshot.capturedAt) return;
+
+    onUpdate({
+      clientSnapshot: clientContext.clientSnapshot,
+      adviserSnapshot: clientContext.adviserSnapshot,
+      contextCapturedAt: clientContext.clientSnapshot.capturedAt,
+    });
+  }, [clientContext, draft?.clientId, draft?.contextCapturedAt, onUpdate]);
 
   const handleSelectExistingClient = (client: ClientSearchResult) => {
     onUpdate({ 
@@ -42,6 +55,27 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
 
   const getSelectedClient = () => {
     if (draft?.clientId) {
+      if (clientContext?.clientSnapshot) {
+        const contact = clientContext.clientSnapshot.contactInformation;
+        return {
+          id: clientContext.clientSnapshot.clientId,
+          firstName: String(clientContext.clientSnapshot.personalInformation.firstName || '').trim()
+            || clientContext.clientSnapshot.displayName.split(' ')[0]
+            || '',
+          lastName: String(clientContext.clientSnapshot.personalInformation.lastName || '').trim()
+            || clientContext.clientSnapshot.displayName.split(' ').slice(1).join(' ')
+            || '',
+          email: String(clientContext.clientSnapshot.personalInformation.email || contact.email || ''),
+          mobile: String(clientContext.clientSnapshot.personalInformation.cellphone || contact.cellphone || ''),
+          riskProfile: String(
+            (clientContext.clientSnapshot.riskProfile as { profile?: string; riskCategory?: string } | null)?.profile
+            || (clientContext.clientSnapshot.riskProfile as { profile?: string; riskCategory?: string } | null)?.riskCategory
+            || (clientContext.clientSnapshot.profile?.riskAssessment as { riskCategory?: string } | undefined)?.riskCategory
+            || 'N/A'
+          )
+        };
+      }
+
       // Check fetched client details (Priority for existing clients)
       if (clientDetails) {
         return {

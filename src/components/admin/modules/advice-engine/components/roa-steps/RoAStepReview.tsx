@@ -1,38 +1,54 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { toast } from 'sonner@2.0.3';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Button } from '../../../../../ui/button';
 import { Badge } from '../../../../../ui/badge';
-import { Textarea } from '../../../../../ui/textarea';
 import { Label } from '../../../../../ui/label';
-import { Separator } from '../../../../../ui/separator';
 import { ScrollArea } from '../../../../../ui/scroll-area';
 import { Checkbox } from '../../../../../ui/checkbox';
-import { RoADraft } from '../DraftRoAInterface';
-import { getModuleSchema } from '../../roaModuleSchemas';
+import { RoADraft, RoAModule } from '../DraftRoAInterface';
 import { useClient } from '../../hooks/useClient';
-import { 
-  FileText, 
-  Download, 
-  Edit, 
-  CheckCircle, 
+import { roaApi } from '../../api';
+import { getFallbackRuntimeModule, getModuleRuntimeStatus } from '../../roaModuleRuntime';
+import type {
+  RoAAuditEvent,
+  RoACompiledModule,
+  RoACompiledSection,
+  RoAGeneratedDocument,
+  RoARecommendationSummary,
+} from '../../types';
+import {
   AlertTriangle,
-  User,
-  Calendar,
+  CheckCircle,
+  Clock,
+  Download,
+  FileCheck,
+  FileText,
+  Lock,
+  Printer,
   Shield,
-  Printer
+  User,
+  GitBranch,
 } from 'lucide-react';
 
 interface RoAStepReviewProps {
   draft: RoADraft | null;
   onUpdate: (updates: Partial<RoADraft>) => void;
+  onDraftReplaced?: (draft: RoADraft) => void;
+  modules?: RoAModule[];
 }
 
-export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
-  const [editableContent, setEditableContent] = useState<Record<string, string>>({});
+export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoAStepReviewProps) {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
+  const [hasConfirmedAccuracy, setHasConfirmedAccuracy] = useState(false);
+  const [hasReviewedCompilation, setHasReviewedCompilation] = useState(false);
+  const [isCloning, setIsCloning] = useState(false);
 
-  // Fetch client details from backend when a clientId is set (Guidelines §6)
+  useEffect(() => {
+    setHasConfirmedAccuracy(false);
+    setHasReviewedCompilation(false);
+  }, [draft?.id]);
+
   const { data: fetchedClient } = useClient(draft?.clientId ?? undefined);
 
   if (!draft) {
@@ -44,8 +60,10 @@ export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
     );
   }
 
-  // Get client information — prefer fetched server data, fall back to inline draft data
   const clientName = (() => {
+    if (draft.clientSnapshot?.displayName) {
+      return draft.clientSnapshot.displayName;
+    }
     if (draft.clientId && fetchedClient) {
       return `${fetchedClient.first_name} ${fetchedClient.last_name}`;
     }
@@ -55,122 +73,433 @@ export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
     return 'Unknown Client';
   })();
 
-  // Check completion status
-  const allModulesComplete = draft.selectedModules.every(moduleId => {
-    const module = getModuleSchema(moduleId);
+  const allModulesComplete = draft.selectedModules.every((moduleId) => {
+    const module = modules?.find((item) => item.id === moduleId) || getFallbackRuntimeModule(moduleId);
     if (!module) return false;
-    
-    const moduleData = draft.moduleData[moduleId] || {};
-    const requiredFields = module.fields.filter(f => f.required);
-    return requiredFields.every(f => 
-      moduleData[f.key] && moduleData[f.key].toString().trim() !== ''
-    );
+    return getModuleRuntimeStatus(
+      module,
+      draft.moduleData[moduleId] || {},
+      draft.moduleEvidence?.[moduleId] || {},
+    ).complete;
   });
+  const hasCompiledOutput = Boolean(draft.compiledOutput);
+  const isLocked = Boolean(draft.lockedAt);
 
-  const handleContentEdit = (section: string, content: string) => {
-    setEditableContent(prev => ({
-      ...prev,
-      [section]: content
-    }));
+  const downloadBase64 = (base64: string, contentType: string, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = `data:${contentType};base64,${base64}`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const generateDocuments = async (format: 'docx' | 'pdf' | 'both') => {
     setIsGenerating(true);
-    
-    // Mock generation process
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Mock download trigger
-    const fileName = `RoA_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}_v${draft.version}`;
-    // logger.info(`Generating ${format} document: ${fileName}`);
-    
-    setIsGenerating(false);
-    
-    // Update draft status
-    onUpdate({ status: 'complete' });
+    try {
+      const formats: Array<'docx' | 'pdf'> = format === 'both' ? ['pdf', 'docx'] : [format];
+      const result = await roaApi.generateDraftDocuments(draft.id, formats);
+      result.documents?.forEach((document) => {
+        if (document.downloadBase64) {
+          downloadBase64(document.downloadBase64, document.contentType, document.fileName);
+        }
+      });
+      onUpdate(result.draft);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  const renderModulePreview = (moduleId: string) => {
-    const module = getModuleSchema(moduleId);
-    const moduleData = draft.moduleData[moduleId] || {};
-    
-    if (!module) return null;
+  const downloadDocument = async (document: RoAGeneratedDocument) => {
+    const storedDocument = document.downloadBase64
+      ? document
+      : await roaApi.downloadGeneratedDocument(document.id);
+
+    if (storedDocument.downloadBase64) {
+      downloadBase64(storedDocument.downloadBase64, storedDocument.contentType, storedDocument.fileName);
+    }
+  };
+
+  const validateAndCompile = async () => {
+    setIsGenerating(true);
+    try {
+      const validationResult = await roaApi.validateDraft(draft.id);
+      onUpdate(validationResult.draft);
+      if (validationResult.validation?.valid) {
+        const compileResult = await roaApi.compileDraft(draft.id);
+        onUpdate(compileResult.draft);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const finaliseDraft = async () => {
+    setIsGenerating(true);
+    try {
+      const finalised = await roaApi.finaliseDraft(draft.id);
+      finalised.documents?.forEach((document) => {
+        if (document.downloadBase64) {
+          downloadBase64(document.downloadBase64, document.contentType, document.fileName);
+        }
+      });
+      onUpdate(finalised.draft);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const cloneEditableVersion = async () => {
+    if (!onDraftReplaced) return;
+    setIsCloning(true);
+    try {
+      const { draft: nextDraft } = await roaApi.cloneDraftFromFinal(draft.id);
+      onDraftReplaced(nextDraft);
+      toast.success(`Opened editable RoA version v${nextDraft.version}`);
+    } catch (error) {
+      console.error('Failed to branch RoA draft:', error);
+      toast.error('Could not create an editable version from this final RoA.');
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
+  const displayText = (value: unknown): string => {
+    if (value === undefined || value === null || value === '') return 'Not recorded';
+    if (Array.isArray(value)) return value.map(displayText).join(', ');
+    if (typeof value === 'object') return JSON.stringify(value, null, 2);
+    return String(value);
+  };
+
+  const renderContentLines = (content: string) => (
+    <div className="space-y-2">
+      {content.split('\n').filter(Boolean).map((line, index) => {
+        const cleaned = line.replace(/^[-#]\s*/, '').trim();
+        if (!cleaned) return null;
+        return (
+          <p key={`${cleaned}-${index}`} className="text-sm leading-relaxed text-muted-foreground">
+            {cleaned}
+          </p>
+        );
+      })}
+    </div>
+  );
+
+  const renderCompiledSection = (section: RoACompiledSection, index: number) => (
+    <div key={section.id} className="rounded-lg border p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Badge variant="outline">{String(index + 1).padStart(2, '0')}</Badge>
+        <h3 className="font-semibold">{section.title}</h3>
+      </div>
+      {renderContentLines(section.content)}
+    </div>
+  );
+
+  const renderRecommendationSummary = (recommendations: RoARecommendationSummary[]) => {
+    if (recommendations.length === 0) return null;
 
     return (
-      <Card key={moduleId} className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-lg">{module.title}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Module content preview */}
-          <div className="space-y-3">
-            {module.fields.map(field => {
-              const value = moduleData[field.key];
-              if (!value) return null;
-
-              return (
-                <div key={field.key} className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                  <Label className="font-medium text-sm">{field.label}:</Label>
-                  <div className="md:col-span-2">
-                    {field.type === 'textarea' ? (
-                      <div className="relative">
-                        <Textarea
-                          value={editableContent[`${moduleId}_${field.key}`] || value}
-                          onChange={(e) => handleContentEdit(`${moduleId}_${field.key}`, e.target.value)}
-                          className="min-h-[60px] text-sm"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1"
-                          onClick={() => {
-                            const content = editableContent[`${moduleId}_${field.key}`] || value;
-                            onUpdate({
-                              moduleData: {
-                                ...draft.moduleData,
-                                [moduleId]: {
-                                  ...draft.moduleData[moduleId],
-                                  [field.key]: content
-                                }
-                              }
-                            });
-                          }}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <p className="text-sm bg-muted/30 p-2 rounded">
-                        {Array.isArray(value) ? value.join(', ') : value.toString()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Disclosures */}
-          {module.disclosures.length > 0 && (
-            <div className="space-y-2">
-              <Label className="font-medium">Regulatory Disclosures:</Label>
-              <div className="bg-muted/30 p-3 rounded-lg space-y-1">
-                {module.disclosures.map((disclosure, index) => (
-                  <p key={index} className="text-xs text-muted-foreground">
-                    • {disclosure}
-                  </p>
-                ))}
+      <div className="rounded-lg border p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Shield className="h-4 w-4 text-purple-700" />
+          <h3 className="font-semibold">Recommendation Summary</h3>
+        </div>
+        <div className="space-y-3">
+          {recommendations.map((recommendation) => (
+            <div key={recommendation.moduleId} className="rounded-md bg-muted/30 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium">{recommendation.title}</p>
+                <Badge variant="secondary">{recommendation.category}</Badge>
               </div>
+              <p className="mt-1 text-sm text-muted-foreground">{recommendation.summary}</p>
             </div>
-          )}
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderCompiledModule = (module: RoACompiledModule) => (
+    <div key={module.moduleId} className="rounded-lg border p-4">
+      <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h3 className="font-semibold">{module.title}</h3>
+          <p className="text-xs text-muted-foreground">
+            {module.category} | Contract v{module.contractVersion} | {module.normalizedKey || module.moduleId}
+          </p>
+        </div>
+        <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
+          Compiled
+        </Badge>
+      </div>
+
+      <p className="mb-4 text-sm text-muted-foreground">{module.summary}</p>
+
+      {module.outputValues.length > 0 && (
+        <div className="mb-4 grid gap-2 md:grid-cols-2">
+          {module.outputValues.map((item) => (
+            <div key={`${module.moduleId}-${item.label}`} className="rounded-md bg-muted/30 p-2">
+              <p className="text-xs text-muted-foreground">{item.label}</p>
+              <p className="text-sm font-medium">{item.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {module.sections.map((section, index) => (
+          <div key={`${module.moduleId}-${section.id}`} className="rounded-md border bg-background p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <Badge variant="outline">{index + 1}</Badge>
+              <p className="font-medium">{section.title}</p>
+            </div>
+            {renderContentLines(section.content)}
+          </div>
+        ))}
+      </div>
+
+      {module.evidence.length > 0 && (
+        <div className="mt-4 rounded-md bg-muted/20 p-3">
+          <p className="text-sm font-medium">Evidence</p>
+          <div className="mt-2 space-y-1">
+            {module.evidence.map((item) => (
+              <div key={`${module.moduleId}-${item.fileName}`} className="text-xs text-muted-foreground">
+                <p>{item.label}: {item.fileName}</p>
+                <p>
+                  {item.source || 'source not recorded'}
+                  {item.sha256 ? ` | SHA-256 ${item.sha256.slice(0, 12)}...` : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderComplianceSnapshot = (
+    compilation: NonNullable<RoADraft['compiledOutput']>,
+  ) => {
+    const ctrl = compilation.documentControl;
+    if (!ctrl || typeof ctrl !== 'object') return null;
+    const contractVersions = (ctrl as Record<string, unknown>).moduleContractVersions;
+    const schemaVersions = (ctrl as Record<string, unknown>).moduleContractSchemaVersions;
+    if (!contractVersions || typeof contractVersions !== 'object') return null;
+
+    const titleById = new Map(compilation.modules.map((m) => [m.moduleId, m.title]));
+    const schemaMap =
+      schemaVersions && typeof schemaVersions === 'object'
+        ? (schemaVersions as Record<string, unknown>)
+        : {};
+
+    const rows = Object.entries(contractVersions as Record<string, unknown>);
+    if (rows.length === 0) return null;
+
+    return (
+      <div className="rounded-lg border border-muted bg-background p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <FileCheck className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Compliance snapshot (module contracts)</h3>
+        </div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Contract revision and schema version captured at compile time for traceability. This mirrors document control embedded in the canonical RoA.
+        </p>
+        <div className="overflow-x-auto rounded-md border">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 font-medium">Module</th>
+                <th className="px-3 py-2 font-medium">Contract ID</th>
+                <th className="px-3 py-2 font-medium">Version</th>
+                <th className="px-3 py-2 font-medium">Schema</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(([moduleId, version]) => (
+                <tr key={moduleId} className="border-t">
+                  <td className="px-3 py-2">{titleById.get(moduleId) || moduleId}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{moduleId}</td>
+                  <td className="px-3 py-2">{String(version)}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{String(schemaMap[moduleId] ?? '—')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCanonicalPreview = () => {
+    const compilation = draft.compiledOutput;
+    if (!compilation) {
+      return (
+        <div className="rounded-lg border border-dashed p-6 text-center">
+          <Shield className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+          <p className="font-medium">Canonical RoA not compiled yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Run Validate & Compile to build the final RoA structure from the client snapshot, adviser snapshot,
+            completed module outputs and active module contracts.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="rounded-lg border bg-muted/20 p-4">
+          <div className="grid gap-3 md:grid-cols-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Compilation</p>
+              <p className="truncate text-sm font-medium">{compilation.id}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Generated</p>
+              <p className="text-sm font-medium">{new Date(compilation.generatedAt).toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Status</p>
+              <p className="text-sm font-medium">{compilation.status}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Hash</p>
+              <p className="truncate text-sm font-medium">{displayText(compilation.hash)}</p>
+            </div>
+          </div>
+        </div>
+
+        {renderComplianceSnapshot(compilation)}
+
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold">Compiled RoA Sections</h3>
+          <div className="grid gap-3">
+            {compilation.documentSections.map(renderCompiledSection)}
+          </div>
+        </div>
+
+        {renderRecommendationSummary(compilation.recommendationSummary)}
+
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold">Compiled Module Sections</h3>
+          {compilation.modules.map(renderCompiledModule)}
+        </div>
+      </div>
+    );
+  };
+
+  const renderGeneratedDocuments = (documents: RoAGeneratedDocument[] = []) => {
+    if (documents.length === 0) return null;
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileCheck className="h-5 w-5" />
+            Generated Documents
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {documents
+            .slice()
+            .sort((a, b) => b.generatedAt.localeCompare(a.generatedAt))
+            .map((document) => (
+              <div key={document.id} className="flex flex-col gap-3 rounded-lg border p-3 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-sm font-medium">{document.fileName}</p>
+                    <Badge variant={document.documentStatus === 'final' ? 'default' : 'secondary'}>
+                      {document.documentStatus === 'final' ? 'Final' : 'Draft'}
+                    </Badge>
+                    <Badge variant="outline">{document.format.toUpperCase()}</Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Generated {new Date(document.generatedAt).toLocaleString()} | SHA-256 {document.sha256.slice(0, 12)}...
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => downloadDocument(document)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download
+                </Button>
+              </div>
+            ))}
         </CardContent>
       </Card>
     );
   };
 
+  const renderAuditTrail = (events: RoAAuditEvent[] = []) => {
+    if (events.length === 0) return null;
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            RoA Audit Trail
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {events.slice(-16).reverse().map((event) => (
+            <div key={event.id} className="rounded-lg border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium">{event.summary}</p>
+                <Badge variant="outline">{event.action.replace(/_/g, ' ')}</Badge>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {new Date(event.createdAt).toLocaleString()} | User {event.createdBy}
+              </p>
+              {event.details && Object.keys(event.details).length > 0 && (
+                <details className="mt-2 text-xs">
+                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Event details</summary>
+                  <pre className="mt-2 max-h-40 overflow-auto rounded bg-muted/50 p-2 font-mono text-[11px] leading-relaxed">
+                    {JSON.stringify(event.details, null, 2)}
+                  </pre>
+                </details>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderStatusBadge = () => {
+    if (allModulesComplete && hasCompiledOutput) {
+      return (
+        <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Ready to Generate
+        </Badge>
+      );
+    }
+
+    if (allModulesComplete) {
+      return (
+        <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+          <Shield className="h-3 w-3 mr-1" />
+          Ready to Compile
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-700">
+        <AlertTriangle className="h-3 w-3 mr-1" />
+        Incomplete Modules
+      </Badge>
+    );
+  };
+
+  const statusLabel = isLocked
+    ? 'Finalised and locked'
+    : hasCompiledOutput
+    ? 'Compiled'
+    : allModulesComplete
+      ? 'Complete - compile required'
+      : 'In Progress';
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold mb-2">Review & Compile</h2>
@@ -179,21 +508,10 @@ export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {allModulesComplete ? (
-            <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
-              <CheckCircle className="h-3 w-3 mr-1" />
-              Ready to Generate
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-700">
-              <AlertTriangle className="h-3 w-3 mr-1" />
-              Incomplete Modules
-            </Badge>
-          )}
+          {renderStatusBadge()}
         </div>
       </div>
 
-      {/* Summary Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -221,13 +539,12 @@ export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
             </div>
             <div>
               <Label className="font-medium">Status:</Label>
-              <p className="text-sm">{allModulesComplete ? 'Complete' : 'In Progress'}</p>
+              <p className="text-sm">{statusLabel}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Document Preview */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -235,13 +552,13 @@ export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
             Document Preview
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Review and edit content before final generation. Click the edit icon to modify text sections.
+            Review the canonical Record of Advice generated from the client snapshot, adviser details, module
+            contracts and completed module outputs.
           </p>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[600px] pr-4">
             <div className="space-y-6">
-              {/* Cover Page */}
               <div className="text-center space-y-2 pb-6 border-b">
                 <h1 className="text-2xl font-bold">RECORD OF ADVICE</h1>
                 <p className="text-lg">{clientName}</p>
@@ -250,50 +567,8 @@ export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
                 </p>
               </div>
 
-              {/* Executive Summary */}
-              <div className="space-y-3">
-                <h2 className="text-xl font-semibold">Executive Summary</h2>
-                <div className="relative">
-                  <Textarea
-                    value={editableContent['executive_summary'] || `This Record of Advice outlines our recommendations for ${clientName} across ${draft.selectedModules.length} key areas of financial planning. Our analysis takes into account your current financial position, risk profile, and stated objectives to provide tailored advice that aligns with your financial goals.`}
-                    onChange={(e) => handleContentEdit('executive_summary', e.target.value)}
-                    className="min-h-[100px]"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
+              {renderCanonicalPreview()}
 
-              <Separator />
-
-              {/* Module Sections */}
-              {draft.selectedModules.map(renderModulePreview)}
-
-              {/* Implementation & Next Steps */}
-              <div className="space-y-3">
-                <h2 className="text-xl font-semibold">Implementation & Next Steps</h2>
-                <div className="relative">
-                  <Textarea
-                    value={editableContent['next_steps'] || 'Implementation of these recommendations should proceed in the priority order outlined above. We will assist with all necessary paperwork and coordinate with product providers to ensure smooth implementation. Regular reviews will be scheduled to monitor progress and make adjustments as needed.'}
-                    onChange={(e) => handleContentEdit('next_steps', e.target.value)}
-                    className="min-h-[100px]"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Client Acknowledgment */}
               <div className="space-y-3 border-t pt-6">
                 <h2 className="text-xl font-semibold">Client Acknowledgment</h2>
                 <div className="bg-muted/30 p-4 rounded-lg space-y-3">
@@ -303,11 +578,11 @@ export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <Label>Client Signature:</Label>
-                      <div className="border-b border-dashed border-muted-foreground mt-2 h-8"></div>
+                      <div className="border-b border-dashed border-muted-foreground mt-2 h-8" />
                     </div>
                     <div>
                       <Label>Date:</Label>
-                      <div className="border-b border-dashed border-muted-foreground mt-2 h-8"></div>
+                      <div className="border-b border-dashed border-muted-foreground mt-2 h-8" />
                     </div>
                   </div>
                 </div>
@@ -317,7 +592,29 @@ export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
         </CardContent>
       </Card>
 
-      {/* Generation Controls */}
+      {renderGeneratedDocuments(draft.generatedDocuments)}
+
+      {renderAuditTrail(draft.auditEvents)}
+
+      {draft.validationResults && (!draft.validationResults.valid || draft.validationResults.warnings.length > 0) && (
+        <Card className={draft.validationResults.valid ? 'border-yellow-200 bg-yellow-50' : 'border-red-200 bg-red-50'}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlertTriangle className="h-4 w-4" />
+              Validation Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {draft.validationResults.blocking.map((issue) => (
+              <p key={issue.id} className="text-red-700">{issue.message}</p>
+            ))}
+            {draft.validationResults.warnings.map((issue) => (
+              <p key={issue.id} className="text-yellow-800">{issue.message}</p>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -326,7 +623,31 @@ export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Completion Check */}
+          {isLocked && (
+            <div className="space-y-3">
+              <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Lock className="mt-0.5 h-4 w-4 text-green-700" />
+                  <p className="text-sm text-green-700">
+                    This RoA is finalised and locked. Download the stored final documents above, or create a new editable version for future advice changes.
+                  </p>
+                </div>
+              </div>
+              {onDraftReplaced && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={isCloning}
+                  onClick={() => cloneEditableVersion()}
+                  className="w-full sm:w-auto"
+                >
+                  <GitBranch className="h-4 w-4 mr-2" />
+                  {isCloning ? 'Creating editable version…' : `Create editable v${draft.version + 1}`}
+                </Button>
+              )}
+            </div>
+          )}
+
           {!allModulesComplete && (
             <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg">
               <p className="text-sm text-orange-700">
@@ -335,28 +656,62 @@ export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
             </div>
           )}
 
-          {/* Terms Acceptance */}
-          <div className="flex items-start space-x-2">
-            <Checkbox
-              checked={hasAcceptedTerms}
-              onCheckedChange={setHasAcceptedTerms}
-            />
-            <div className="space-y-1">
-              <Label className="text-sm font-medium">
-                I confirm that all information is accurate and complete
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                This RoA will be saved to the client file and comply with FAIS requirements. 
-                Documents will be watermarked as "DRAFT" until marked as final.
+          {allModulesComplete && !hasCompiledOutput && (
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+              <p className="text-sm text-blue-700">
+                Run Validate & Compile before final export so the adviser can review the canonical RoA structure.
               </p>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                checked={hasConfirmedAccuracy}
+                onCheckedChange={(checked) => setHasConfirmedAccuracy(checked === true)}
+              />
+              <div className="space-y-1">
+                <Label className="text-sm font-medium">
+                  I confirm that all information is accurate and complete
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  This RoA will be saved to the client file and must comply with FAIS requirements.
+                  Documents will be watermarked as &quot;DRAFT&quot; until marked as final.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                checked={hasReviewedCompilation}
+                onCheckedChange={(checked) => setHasReviewedCompilation(checked === true)}
+                disabled={!hasCompiledOutput}
+              />
+              <div className="space-y-1">
+                <Label className={`text-sm font-medium ${!hasCompiledOutput ? 'text-muted-foreground' : ''}`}>
+                  I have reviewed the compiled Record of Advice, validation results, and the module contract compliance snapshot
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Includes compiled sections, recommendation summary, supporting evidence filenames, disclosures, and the contract versions table above after you run Validate &amp; Compile.
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Generation Buttons */}
           <div className="flex flex-wrap gap-3">
             <Button
+              variant="outline"
+              onClick={validateAndCompile}
+              disabled={isGenerating || isLocked}
+              className="flex-1"
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              Validate & Compile
+            </Button>
+
+            <Button
               onClick={() => generateDocuments('docx')}
-              disabled={!allModulesComplete || !hasAcceptedTerms || isGenerating}
+              disabled={!allModulesComplete || !hasCompiledOutput || !hasConfirmedAccuracy || !hasReviewedCompilation || isGenerating || isLocked}
               className="flex-1"
             >
               {isGenerating ? (
@@ -371,30 +726,40 @@ export function RoAStepReview({ draft, onUpdate }: RoAStepReviewProps) {
                 </div>
               )}
             </Button>
-            
+
             <Button
               variant="outline"
               onClick={() => generateDocuments('pdf')}
-              disabled={!allModulesComplete || !hasAcceptedTerms || isGenerating}
+              disabled={!allModulesComplete || !hasCompiledOutput || !hasConfirmedAccuracy || !hasReviewedCompilation || isGenerating || isLocked}
               className="flex-1"
             >
               <Printer className="h-4 w-4 mr-2" />
               Generate PDF
             </Button>
-            
+
             <Button
               variant="secondary"
               onClick={() => generateDocuments('both')}
-              disabled={!allModulesComplete || !hasAcceptedTerms || isGenerating}
+              disabled={!allModulesComplete || !hasCompiledOutput || !hasConfirmedAccuracy || !hasReviewedCompilation || isGenerating || isLocked}
               className="flex-1"
             >
               <FileText className="h-4 w-4 mr-2" />
               Both Formats
             </Button>
+
+            <Button
+              variant="default"
+              onClick={finaliseDraft}
+              disabled={!allModulesComplete || !hasCompiledOutput || !hasConfirmedAccuracy || !hasReviewedCompilation || isGenerating || isLocked}
+              className="flex-1"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Finalise
+            </Button>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Documents will be saved to the client file and available for download. 
+            Documents will be saved to the client file and available for download.
             Naming convention: RoA_{clientName.replace(/\s+/g, '_')}_{new Date().toISOString().split('T')[0]}_v{draft.version}
           </p>
         </CardContent>

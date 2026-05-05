@@ -113,6 +113,177 @@ export interface Personnel {
 }
 
 /**
+ * Frozen client context used by RoA drafts.
+ *
+ * This is intentionally broader than the lightweight Client search result:
+ * the RoA compiler needs the same client/adviser snapshot later even if the
+ * live profile changes after advice was given.
+ */
+export interface RoAClientSnapshot {
+  clientId: string;
+  displayName: string;
+  personalInformation: Record<string, unknown>;
+  contactInformation: Record<string, unknown>;
+  employmentInformation: Record<string, unknown>;
+  financialInformation: Record<string, unknown>;
+  familyMembers: unknown[];
+  assets: unknown[];
+  liabilities: unknown[];
+  riskProfile: unknown | null;
+  clientKeys: Record<string, unknown> | null;
+  policies: unknown[];
+  profile: Record<string, unknown> | null;
+  capturedAt: string;
+}
+
+export interface RoAAdviserSnapshot {
+  adviserId: string;
+  displayName: string;
+  email: string;
+  role: string;
+  jobTitle?: string;
+  fspReference?: string;
+  fscaStatus?: string;
+  capturedAt: string;
+}
+
+export interface RoAClientContext {
+  clientSnapshot: RoAClientSnapshot;
+  adviserSnapshot: RoAAdviserSnapshot;
+  fnaSummaries: Record<string, { count: number; latestUpdatedAt?: string }>;
+  dataQuality: {
+    missing: string[];
+    warnings: string[];
+    completenessScore: number;
+  };
+  sourceMap: Record<string, string>;
+}
+
+export type RoAContractStatus = 'draft' | 'active' | 'archived';
+
+export type RoAContractFieldType =
+  | RoAFieldType
+  | 'currency'
+  | 'percentage'
+  | 'file';
+
+export type RoAContractSourceType =
+  | 'clientSnapshot'
+  | 'adviserSnapshot'
+  | 'policyRegister'
+  | 'fna'
+  | 'moduleInput'
+  | 'documentUpload'
+  | 'calculated'
+  | 'manual';
+
+export interface RoAModuleContract {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  status: RoAContractStatus;
+  version: number;
+  schemaVersion: string;
+  input: {
+    sources: Array<{
+      id: string;
+      label: string;
+      type: RoAContractSourceType;
+      required: boolean;
+      sourcePath?: string;
+      description?: string;
+    }>;
+    gatheringMethods: Array<'typed' | 'upload' | 'clientProfile' | 'policyRegister' | 'fna' | 'calculated'>;
+  };
+  formSchema: {
+    sections: Array<{
+      id: string;
+      title: string;
+      description?: string;
+      fields: Array<{
+        key: string;
+        label: string;
+        type: RoAContractFieldType;
+        required?: boolean;
+        source: RoAContractSourceType;
+        sourcePath?: string;
+        options?: string[];
+        default?: string | number | boolean;
+        placeholder?: string;
+        helpText?: string;
+        validation?: {
+          minLength?: number;
+          maxLength?: number;
+          min?: number;
+          max?: number;
+          pattern?: string;
+        };
+      }>;
+    }>;
+  };
+  output: {
+    normalizedKey: string;
+    fields: Array<{
+      key: string;
+      label: string;
+      type: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'date';
+      required: boolean;
+      description?: string;
+    }>;
+  };
+  validation: {
+    requiredFields: string[];
+    rules: Array<{
+      id: string;
+      severity: 'blocking' | 'warning';
+      message: string;
+      fieldKeys?: string[];
+    }>;
+  };
+  evidence: {
+    requirements: Array<{
+      id: string;
+      label: string;
+      type: 'quote' | 'policy_schedule' | 'comparison' | 'application' | 'fna' | 'client_instruction' | 'other';
+      required: boolean;
+      acceptedMimeTypes?: string[];
+      guidance?: string;
+    }>;
+  };
+  documentSections: Array<{
+    id: string;
+    title: string;
+    purpose: string;
+    order: number;
+    required: boolean;
+    template: string;
+  }>;
+  disclosures: string[];
+  compileOrder: string[];
+  compilerHints?: {
+    includeReplacementAnalysis?: boolean;
+  };
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  publishedAt?: string;
+}
+
+export interface RoAModuleContractSchemaFormat {
+  schemaVersion: string;
+  allowedFieldTypes: RoAContractFieldType[];
+  allowedSourceTypes: RoAContractSourceType[];
+  allowedGatheringMethods: RoAModuleContract['input']['gatheringMethods'];
+  allowedEvidenceTypes: RoAModuleContract['evidence']['requirements'][number]['type'][];
+  allowedValidationSeverities: RoAModuleContract['validation']['rules'][number]['severity'][];
+  requiredContractKeys: string[];
+  requiredFieldKeys: string[];
+}
+
+/**
  * Client search result with additional metadata
  */
 export interface ClientSearchResult extends Client {
@@ -295,6 +466,123 @@ export type RoAModuleData =
  */
 export type RoAStatus = 'draft' | 'complete' | 'submitted' | 'archived';
 
+export interface RoAEvidenceItem {
+  id: string;
+  requirementId: string;
+  moduleId?: string;
+  label: string;
+  type: string;
+  fileName: string;
+  mimeType?: string;
+  size?: number;
+  storagePath?: string;
+  sha256?: string;
+  source?: string;
+  uploadedBy?: string;
+  uploadedAt: string;
+}
+
+export interface RoAValidationIssue {
+  id: string;
+  moduleId?: string;
+  moduleTitle?: string;
+  severity: 'blocking' | 'warning';
+  message: string;
+  fieldKeys?: string[];
+  requirementId?: string;
+}
+
+export interface RoAValidationResult {
+  valid: boolean;
+  blocking: RoAValidationIssue[];
+  warnings: RoAValidationIssue[];
+  checkedAt: string;
+}
+
+export interface RoACompiledSection {
+  id: string;
+  title: string;
+  content: string;
+}
+
+export interface RoACompiledModule {
+  moduleId: string;
+  title: string;
+  category: string;
+  contractVersion: number;
+  contractSchemaVersion?: string;
+  normalizedKey?: string;
+  summary: string;
+  outputValues: Array<{ label: string; value: string }>;
+  evidence: Array<{ id?: string; label: string; fileName: string; type: string; source?: string; sha256?: string; uploadedAt?: string }>;
+  sections: RoACompiledSection[];
+  disclosures: string[];
+  compilerHints?: RoAModuleContract['compilerHints'];
+}
+
+export interface RoARecommendationSummary {
+  moduleId: string;
+  title: string;
+  category: string;
+  summary: string;
+  outputValues: Array<{ label: string; value: string }>;
+}
+
+export interface RoACompiledOutput {
+  id: string;
+  draftId: string;
+  version: number;
+  status: 'draft' | 'final';
+  generatedAt: string;
+  documentControl: Record<string, unknown>;
+  client: RoAClientSnapshot | null;
+  adviser: RoAAdviserSnapshot | null;
+  scopeAndPurpose: string;
+  synopsis: string;
+  clientProfileSummary: RoACompiledSection[];
+  informationReliedUpon: string[];
+  needsAndObjectives: string[];
+  recommendationSummary: RoARecommendationSummary[];
+  modules: RoACompiledModule[];
+  replacementAnalysis: RoACompiledSection[];
+  feesCostsConflicts: string[];
+  risksAndDisclosures: string[];
+  implementationPlan: string[];
+  acknowledgements: string[];
+  appendices: string[];
+  documentSections: RoACompiledSection[];
+  html: string;
+  hash?: string;
+}
+
+export interface RoAGeneratedDocument {
+  id: string;
+  draftId: string;
+  compilationId: string;
+  format: 'pdf' | 'docx';
+  documentStatus: 'draft' | 'final';
+  fileName: string;
+  contentType: string;
+  storagePath: string;
+  sha256: string;
+  compilationHash?: string;
+  generatedAt: string;
+  generatedBy: string;
+  moduleContractVersions: Record<string, number>;
+  lockedAt?: string;
+  finalisedAt?: string;
+  downloadBase64?: string;
+}
+
+export interface RoAAuditEvent {
+  id: string;
+  action: string;
+  summary: string;
+  createdAt: string;
+  createdBy: string;
+  details?: Record<string, unknown>;
+}
+
 /**
  * RoA draft data
  */
@@ -320,6 +608,24 @@ export interface RoADraft {
   
   /** Module-specific data */
   moduleData: Record<string, RoAModuleData>;
+
+  /** Contract-normalized module outputs generated by the generic runtime */
+  moduleOutputs?: Record<string, Record<string, unknown>>;
+
+  /** Evidence metadata grouped by module and evidence requirement */
+  moduleEvidence?: Record<string, Record<string, RoAEvidenceItem>>;
+
+  /** Latest validation result produced by the generic RoA validator */
+  validationResults?: RoAValidationResult;
+
+  /** Latest compiled canonical output */
+  compiledOutput?: RoACompiledOutput;
+
+  /** Generated document metadata */
+  generatedDocuments?: RoAGeneratedDocument[];
+
+  /** Auditable actions performed during the RoA lifecycle */
+  auditEvents?: RoAAuditEvent[];
   
   /** Draft status */
   status: RoAStatus;
@@ -332,6 +638,19 @@ export interface RoADraft {
   
   /** Version number */
   version: number;
+
+  /** Backend owner / audit fields */
+  createdBy?: string;
+  updatedBy?: string;
+  adviserId?: string;
+
+  /** Frozen profile/adviser context captured for the RoA */
+  clientSnapshot?: RoAClientSnapshot;
+  adviserSnapshot?: RoAAdviserSnapshot;
+  contextCapturedAt?: string;
+  finalisedAt?: string;
+  finalisedBy?: string;
+  lockedAt?: string;
 }
 
 /**
@@ -340,7 +659,16 @@ export interface RoADraft {
 export interface RoAModule {
   /** Unique module ID */
   id: string;
-  
+
+  /** Source contract version used to derive this runtime module */
+  contractVersion?: number;
+
+  /** Contract schema version at fetch time */
+  schemaVersion?: string;
+
+  /** Optional publisher metadata from the module contract */
+  metadata?: Record<string, unknown>;
+
   /** Module title */
   title: string;
   
@@ -352,12 +680,30 @@ export interface RoAModule {
   
   /** Form fields for this module */
   fields: RoAField[];
+
+  /** Contract-defined input sources and gathering methods */
+  input?: RoAModuleContract['input'];
+
+  /** Contract-defined form sections used by the generic runtime */
+  formSchema?: RoAModuleContract['formSchema'];
   
   /** Disclosure text for this module */
   disclosures: string[];
   
   /** Order of fields in compiled output */
   compileOrder: string[];
+
+  /** Contract-driven evidence requirements */
+  evidence?: RoAModuleContract['evidence'];
+
+  /** Contract-driven validation rules */
+  validation?: RoAModuleContract['validation'];
+
+  /** Contract-driven document sections and templates */
+  documentSections?: RoAModuleContract['documentSections'];
+
+  /** Contract-driven normalized output description */
+  output?: RoAModuleContract['output'];
   
   /** Category (optional) */
   category?: string;
@@ -374,7 +720,10 @@ export type RoAFieldType =
   | 'chips'
   | 'checkbox'
   | 'radio'
-  | 'date';
+  | 'date'
+  | 'currency'
+  | 'percentage'
+  | 'file';
 
 /**
  * RoA form field definition
@@ -403,6 +752,12 @@ export interface RoAField {
   
   /** Help text */
   helpText?: string;
+
+  /** Contract-defined source used to prefill or evidence the field */
+  source?: RoAContractSourceType;
+
+  /** Optional source path, for example clientSnapshot.policies */
+  sourcePath?: string;
   
   /** Validation rules */
   validation?: {
@@ -420,9 +775,9 @@ export interface RoAField {
 export type RoAFormData = Record<string, RoAModuleData>;
 
 /**
- * RoA validation result
+ * Lightweight form validation result used by legacy local utilities.
  */
-export interface RoAValidationResult {
+export interface RoAFormValidationResult {
   /** Whether validation passed */
   valid: boolean;
   
@@ -713,7 +1068,7 @@ export interface UseRoADraftReturn {
   error: string | null;
   
   /** Save draft */
-  saveDraft: (data: Partial<RoAFormData>) => Promise<void>;
+  saveDraft: (data: Partial<RoADraft>) => Promise<void>;
   
   /** Submit draft */
   submitDraft: () => Promise<void>;

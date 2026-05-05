@@ -16,7 +16,7 @@ import type {
   Client,
   ConversationHistory,
   RoAFormData,
-  RoAValidationResult,
+  RoAFormValidationResult,
   RoAField,
   RoADraft,
   ApiKeyStatus,
@@ -233,7 +233,7 @@ export function validateChatInput(input: string): boolean {
 export function validateRoAForm(
   data: RoAFormData,
   fields: RoAField[]
-): RoAValidationResult {
+): RoAFormValidationResult {
   const errors: Record<string, string> = {};
 
   fields.forEach(field => {
