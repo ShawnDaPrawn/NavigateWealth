@@ -78,6 +78,30 @@ Commands that do **not** exist on clean `main` unless later tooling work lands:
 - `npm run deps:boundaries`
 - `npm run check-env`
 
+## Auth hydration (do not regress — 2026-05 incident)
+
+Session handling in `src/components/auth/AuthContext.tsx` and
+`src/utils/auth/profileService.ts` previously regressed twice:
+
+1. **Parallel cold-start `getSession()` bootstrap** alongside
+   `onAuthStateChange` contended with Supabase auth, triggered long timeouts,
+   and sometimes called `resolveAuthSession(null)` while `SIGNED_IN` was active
+   (users bounced to login despite valid credentials).
+2. **`loadUserProfile` always calling `auth.getUser()`** during hydration piled
+   on the same client and caused slow logins / profile timeouts.
+
+**Invariants future changes must preserve:**
+
+- **Single pipeline:** hydrate only from `onAuthStateChange`
+   (`INITIAL_SESSION` / `SIGNED_IN`). Do **not** add another bootstrapping
+   `getSession()` path without explicit review.
+- **Session hint:** pass `session.user` into `loadUserProfile(..., hint)` during
+   that pipeline so hydration does **not** stack a redundant `getUser()` on the
+   hot path. `refreshUser` may omit the hint.
+- **Regression tests** (must stay green — run `npm test`):
+  - `src/utils/auth/__tests__/loadUserProfile.sessionHint.test.ts`
+  - `src/components/auth/__tests__/authContext.invariants.test.ts`
+
 ## Notes
 
 - After changing Edge Function behavior, deploy:
