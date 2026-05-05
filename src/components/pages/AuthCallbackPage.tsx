@@ -34,8 +34,12 @@ export default function AuthCallbackPage() {
         const tokenHash = hashParams.get('token_hash');
         const hashType = hashParams.get('type');
         
-        // Detect if this is a personnel invite callback
-        const isInvite = type === 'invite' || hashType === 'invite' || hashType === 'recovery';
+        // Detect password setup: personnel invite, recovery link, or implicit recovery in hash
+        const isInvite =
+          type === 'invite' ||
+          type === 'recovery' ||
+          hashType === 'invite' ||
+          hashType === 'recovery';
         
         console.log('🔍 AUTH CALLBACK - Auth data:', { 
           hasCode: !!code, 

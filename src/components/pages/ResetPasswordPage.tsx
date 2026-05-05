@@ -31,64 +31,109 @@ export function ResetPasswordPage() {
   const passwordStrength = validatePassword(newPassword);
   const passwordsMatch = newPassword === confirmPassword && confirmPassword.length > 0;
 
-  // Verify and establish session from URL hash when component mounts
+  // Verify and establish session from URL (implicit hash, PKCE ?code=, or client auto-detection race)
   useEffect(() => {
     const verifySession = async () => {
       const supabase = getSupabaseClient();
-      
+
+      const hashRaw = window.location.hash.replace(/^#/, '');
+      const hashParams = new URLSearchParams(hashRaw);
+      const searchParams = new URLSearchParams(window.location.search);
+      const pick = (key: string) => hashParams.get(key) ?? searchParams.get(key);
+
+      const urlError = pick('error');
+      const errorDescription = pick('error_description');
+
       try {
-        // Check if we have hash params (from email link)
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-        const type = hashParams.get('type');
-        
-        // Detect invite flow from hash type or location state
+        if (urlError) {
+          console.warn('[reset-password] URL auth error:', urlError, errorDescription);
+          const readable = errorDescription
+            ? decodeURIComponent(errorDescription.replace(/\+/g, ' '))
+            : urlError;
+          setError(readable);
+          setIsExpired(true);
+          setHasValidToken(false);
+          return;
+        }
+
+        const type = pick('type');
         if (type === 'invite' || locationState?.fromInvite) {
           setIsInviteFlow(true);
         }
 
+        const code = searchParams.get('code');
+        /** PKCE (common on newer Supabase) — redirect is /reset-password?code=... */
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (data.session && !error) {
+            if (pick('type') === 'invite' || data.session.user.user_metadata?.invited) {
+              setIsInviteFlow(true);
+            }
+            setHasValidToken(true);
+            setIsExpired(false);
+            window.history.replaceState(null, '', window.location.pathname);
+            return;
+          }
+          console.warn(
+            '[reset-password] PKCE exchange failed — will retry via getSession (code may already be consumed)',
+            error?.message,
+          );
+        }
+
+        const accessToken = pick('access_token');
+        const refreshToken = pick('refresh_token');
+
+        // Implicit-flow tokens in fragment (legacy)
         if (accessToken && (type === 'recovery' || type === 'invite')) {
-          // Set the session with the tokens from the URL
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || '',
           });
-          
+
           if (error || !data.session) {
             setIsExpired(true);
             setHasValidToken(false);
           } else {
             setHasValidToken(true);
             setIsExpired(false);
-            
-            // Check user_metadata for invite flag
+
             if (data.session.user.user_metadata?.invited) {
               setIsInviteFlow(true);
             }
-            
-            // Clean up URL hash
+
             window.history.replaceState(null, '', window.location.pathname);
           }
-        } else {
-          // Check if user already has an active session
-          const { data: { session }, error: sessionCheckError } = await supabase.auth.getSession();
-          
-          if (sessionCheckError) {
-            setIsExpired(true);
-            setHasValidToken(false);
-          } else if (session) {
-            setHasValidToken(true);
-            setIsExpired(false);
-            
-            // Check user_metadata for invite flag
-            if (session.user.user_metadata?.invited) {
-              setIsInviteFlow(true);
-            }
-          } else {
-            setIsExpired(true);
-            setHasValidToken(false);
+          return;
+        }
+
+        // Hash already consumed by detectSessionInUrl or exchange ran elsewhere — retry getSession briefly
+        let session:
+          | Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']
+          | null = null;
+        const delays = [0, 150, 350, 600];
+        for (const ms of delays) {
+          if (ms > 0) {
+            await new Promise((r) => setTimeout(r, ms));
           }
+          const { data: sessWrap, error: sessionErr } = await supabase.auth.getSession();
+          if (sessionErr) {
+            console.warn('[reset-password] getSession:', sessionErr.message);
+          }
+          if (sessWrap.session) {
+            session = sessWrap.session;
+            break;
+          }
+        }
+
+        if (session) {
+          setHasValidToken(true);
+          setIsExpired(false);
+          if (session.user.user_metadata?.invited) {
+            setIsInviteFlow(true);
+          }
+        } else {
+          setIsExpired(true);
+          setHasValidToken(false);
         }
       } catch (error: unknown) {
         setIsExpired(true);
@@ -98,7 +143,7 @@ export function ResetPasswordPage() {
       }
     };
 
-    verifySession();
+    void verifySession();
   }, [locationState]);
 
   const handleSubmit = async (e: React.FormEvent) => {
