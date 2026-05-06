@@ -18,6 +18,13 @@ import { TasksAPI } from '../api';
 import { taskKeys } from './useTaskQueries';
 import type { Task, CreateTaskInput, UpdateTaskInput, TaskStatus } from '../types';
 
+export function mergeTaskReorderIntoList(previousTasks: Task[] | undefined, reorderedTasks: Task[]): Task[] {
+  if (!previousTasks) return reorderedTasks;
+
+  const reorderedById = new Map(reorderedTasks.map((task) => [task.id, task]));
+  return previousTasks.map((task) => reorderedById.get(task.id) ?? task);
+}
+
 // ============================================================================
 // CREATE MUTATION
 // ============================================================================
@@ -284,7 +291,7 @@ export function useReorderTasks() {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists() });
       const previousTasks = queryClient.getQueryData<Task[]>(taskKeys.lists());
       
-      queryClient.setQueryData(taskKeys.lists(), tasks);
+      queryClient.setQueryData(taskKeys.lists(), mergeTaskReorderIntoList(previousTasks, tasks));
 
       return { previousTasks };
     },
