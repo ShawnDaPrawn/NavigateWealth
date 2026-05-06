@@ -13,6 +13,11 @@ interface ProviderListProps {
   onDelete?: (id: string) => void;
 }
 
+const formatLastSync = (value?: string) => {
+  const timestamp = String(value || '').trim();
+  return timestamp && timestamp !== '-' ? timestamp : 'No sync yet';
+};
+
 export function ProviderList({ providers, selectedProviderId, onSelect, onDelete }: ProviderListProps) {
   return (
     <Card className="w-1/3 min-w-[300px] flex flex-col h-full overflow-hidden">
@@ -66,7 +71,7 @@ export function ProviderList({ providers, selectedProviderId, onSelect, onDelete
 
             <div className="text-xs text-gray-500 flex items-center gap-1 mt-3 pt-3 border-t border-gray-100">
               <Clock className="w-3 h-3" />
-              Last updated: {provider.lastAttempted || 'Never'}
+              Last sync: {formatLastSync(provider.lastAttempted)}
             </div>
 
             {onDelete && (

@@ -41,6 +41,42 @@ interface IntegrationHistoryItem {
   [key: string]: unknown;
 }
 
+const emptyIntegrationStats = (): IntegrationStats => ({
+  lastAttempted: '-',
+  lastUpdateStatus: null,
+  lastSuccessful: '-',
+});
+
+const formatIntegrationDateTime = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+};
+
+const formatIntegrationDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString();
+};
+
+const buildIntegrationStats = (history: IntegrationHistoryItem[]): IntegrationStats => {
+  if (!Array.isArray(history) || history.length === 0) return emptyIntegrationStats();
+
+  const sortedHistory = [...history].sort((a, b) =>
+    new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+  );
+  const lastAttempt = sortedHistory[0];
+  const lastSuccess = sortedHistory.find((item) => item.status === 'success');
+
+  return {
+    lastAttempted: lastAttempt?.uploadedAt ? formatIntegrationDateTime(lastAttempt.uploadedAt) : '-',
+    lastUpdateStatus: lastAttempt?.status === 'success' || lastAttempt?.status === 'failed'
+      ? lastAttempt.status
+      : null,
+    lastSuccessful: lastSuccess?.uploadedAt ? formatIntegrationDate(lastSuccess.uploadedAt) : '-',
+  };
+};
+
 async function getSupabaseAuthToken(): Promise<string> {
   let token = publicAnonKey;
   try {
@@ -198,35 +234,37 @@ export const productManagementApi = {
     const response = await api.get<{ providers: ProviderDTO[] }>('product-management/providers');
     const rawProviders = response.providers || [];
 
-    // Map to IntegrationProvider (Legacy shape)
-    return rawProviders.map(p => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      categoryIds: p.category_ids || (p as Record<string, unknown>).categoryIds as string[] || [],
-      logoUrl: p.logo_url || (p as Record<string, unknown>).logoUrl as string || '',
-      // Stats are not available in the lightweight Provider list anymore
-      // These will be fetched per-provider or need a separate aggregation endpoint
-      lastAttempted: '-', 
-      lastUpdateStatus: 'never',
-      lastSuccessful: '-'
+    return Promise.all(rawProviders.map(async (p) => {
+      const categoryIds = p.category_ids || (p as Record<string, unknown>).categoryIds as string[] || [];
+      const categoryHistoryResults = await Promise.allSettled(
+        categoryIds.map((categoryId) =>
+          api.get<IntegrationHistoryItem[]>(
+            `integrations/history?providerId=${encodeURIComponent(p.id)}&categoryId=${encodeURIComponent(categoryId)}`
+          )
+        )
+      );
+      const providerHistory = categoryHistoryResults.flatMap((result) =>
+        result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []
+      );
+      const stats = buildIntegrationStats(providerHistory);
+
+      return {
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        categoryIds,
+        logoUrl: p.logo_url || (p as Record<string, unknown>).logoUrl as string || '',
+        lastAttempted: stats.lastAttempted,
+        lastUpdateStatus: stats.lastUpdateStatus || 'never',
+        lastSuccessful: stats.lastSuccessful,
+      };
     }));
   },
 
   fetchIntegrationHistory: async (providerId: string, categoryId: string): Promise<IntegrationStats> => {
     const history = await api.get<IntegrationHistoryItem[]>(`integrations/history?providerId=${providerId}&categoryId=${categoryId}`);
     
-    if (Array.isArray(history) && history.length > 0) {
-        const lastAttempt = history[0];
-        const lastSuccess = history.find((h) => h.status === 'success');
-        
-        return {
-            lastAttempted: new Date(lastAttempt.uploadedAt).toLocaleDateString() + ' ' + new Date(lastAttempt.uploadedAt).toLocaleTimeString(),
-            lastUpdateStatus: lastAttempt.status as 'success' | 'failed',
-            lastSuccessful: lastSuccess ? new Date(lastSuccess.uploadedAt).toLocaleDateString() : '-'
-        };
-    }
-    return { lastAttempted: '-', lastUpdateStatus: null, lastSuccessful: '-' };
+    return buildIntegrationStats(history);
   },
 
   fetchIntegrationConfig: async (providerId: string, categoryId: string): Promise<IntegrationConfig> => {

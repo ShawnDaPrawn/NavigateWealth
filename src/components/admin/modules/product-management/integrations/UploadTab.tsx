@@ -43,6 +43,18 @@ const formatExtractedValue = (value: unknown) => {
   return String(value);
 };
 
+const formatDisplayDateTime = (value?: string) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '-' : `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+};
+
+const formatDisplayDate = (value?: string) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+};
+
 const getExtractedValues = (row: IntegrationSyncRun['rows'][number]) =>
   Object.entries(row.rawData || {})
     .filter(([key, value]) => !isPortalMetadataColumn(key) && String(value ?? '').trim().length > 0)
@@ -114,6 +126,30 @@ export function UploadTab({
   const reviewDescription = stagedRun?.source === 'portal'
     ? 'Portal runs and spreadsheet uploads now stage through the same canonical integration template format.'
     : 'Upload the downloaded Integration Template or any spreadsheet that matches its configured columns.';
+  const displayStats = {
+    lastAttempted: stats.lastAttempted && stats.lastAttempted !== '-'
+      ? stats.lastAttempted
+      : formatDisplayDateTime(stagedRun?.createdAt),
+    lastSuccessful: stats.lastSuccessful && stats.lastSuccessful !== '-'
+      ? stats.lastSuccessful
+      : stagedRun?.summary.publishedRows
+        ? formatDisplayDate(stagedRun.updatedAt || stagedRun.createdAt)
+        : '-',
+    lastStatus: stats.lastUpdateStatus
+      ? stats.lastUpdateStatus
+      : stagedRun?.summary.publishedRows
+        ? 'success'
+        : null,
+    lastStatusLabel: stats.lastUpdateStatus === 'success'
+      ? 'Successful'
+      : stats.lastUpdateStatus === 'failed'
+        ? 'Failed'
+        : stagedRun
+          ? stagedRun.summary.publishedRows > 0
+            ? 'Published'
+            : 'Staged'
+          : 'No Data',
+  };
   const attachedPortalDocuments = portalJobItems
     .filter((item) => item.documentAttached || item.artifactStatuses?.some((status) => status.status === 'attached'))
     .map((item) => {
@@ -128,6 +164,18 @@ export function UploadTab({
     .flatMap((item) => (item.artifactStatuses || [])
       .filter((status) => status.status === 'failed')
       .map((status) => ({ item, status })));
+  const skippedPortalDocuments = portalJobItems
+    .flatMap((item) => (item.artifactStatuses || [])
+      .filter((status) => status.status === 'not_requested' || status.status === 'skipped')
+      .map((status) => ({ item, status })));
+  const portalDocumentActivityCount = portalJobItems.reduce((count, item) => count + (item.artifactStatuses?.length || 0), 0);
+  const portalDocumentStatusLabel = attachedPortalDocuments.length > 0
+    ? `${attachedPortalDocuments.length} PDF${attachedPortalDocuments.length === 1 ? '' : 's'} attached`
+    : failedPortalDocuments.length > 0
+      ? `${failedPortalDocuments.length} PDF issue${failedPortalDocuments.length === 1 ? '' : 's'}`
+      : portalDocumentActivityCount > 0
+        ? 'No PDFs attached'
+        : 'PDF not requested';
 
   const renderStagedRun = () => (
     <Card>
@@ -179,32 +227,58 @@ export function UploadTab({
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5" />
-            <div>
-              <h5 className="font-medium text-blue-900">Canonical Policy Sync Staged</h5>
-              <p className="text-sm text-blue-700 mt-1">
-                {stagedRun?.source === 'portal'
-                  ? 'The Playwright worker staged these rows into the same row-and-column contract used by the downloadable Integration Template.'
-                  : 'This spreadsheet was staged using the same canonical contract as the downloadable Integration Template.'}
-              </p>
-              <p className="text-sm text-blue-700 mt-2">
-                Hidden template metadata is used when present, policy number matching is used as fallback, and only populated changed cells are publishable.
-              </p>
+          <div className="rounded-lg border bg-white p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 text-green-600" />
+                <div>
+                  <h5 className="font-medium text-gray-900">
+                    {publishableRows.length > 0
+                      ? `${publishableRows.length} policy update${publishableRows.length === 1 ? '' : 's'} ready for review`
+                      : 'No field changes waiting to publish'}
+                  </h5>
+                  <p className="mt-1 text-sm text-gray-600">
+                    {stagedRun?.source === 'portal'
+                      ? 'Portal extraction is staged for this product category. Review the changed cells below, then publish only the rows you trust.'
+                      : 'Spreadsheet data is staged for review. Only populated changed cells can be published.'}
+                  </p>
+                </div>
+              </div>
               {stagedRun?.source === 'portal' && (
-                <p className="text-sm text-blue-700 mt-2">
-                  Portal PDFs are attached directly to the matched client policy by the worker; field publishing below only applies to changed field values.
-                </p>
+                <Badge variant="outline" className={cn(
+                  'shrink-0',
+                  attachedPortalDocuments.length > 0
+                    ? 'border-green-200 bg-green-50 text-green-700'
+                    : failedPortalDocuments.length > 0
+                      ? 'border-red-200 bg-red-50 text-red-700'
+                      : 'border-gray-200 bg-gray-50 text-gray-600',
+                )}>
+                  {portalDocumentStatusLabel}
+                </Badge>
               )}
             </div>
+            <details className="mt-3 text-sm text-gray-500">
+              <summary className="cursor-pointer font-medium text-gray-700">Matching details</summary>
+              <p className="mt-2">
+                Hidden template metadata is used when present, policy number matching is used as fallback, and only populated changed cells are publishable.
+              </p>
+            </details>
           </div>
 
-          {stagedRun?.source === 'portal' && (attachedPortalDocuments.length > 0 || failedPortalDocuments.length > 0) && (
+          {stagedRun?.source === 'portal' && (
             <div className="rounded-lg border bg-white p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <FileText className="h-4 w-4 text-green-600" />
-                <h5 className="font-medium text-gray-900">Portal Documents</h5>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-gray-600" />
+                  <h5 className="font-medium text-gray-900">Portal Documents</h5>
+                </div>
+                <Badge variant="outline" className="border-gray-200 bg-gray-50 text-gray-600">
+                  {portalDocumentStatusLabel}
+                </Badge>
               </div>
+              {attachedPortalDocuments.length === 0 && failedPortalDocuments.length === 0 && skippedPortalDocuments.length === 0 && (
+                <p className="text-sm text-gray-500">No PDF download or attachment activity was recorded for this run.</p>
+              )}
               <div className="space-y-2 text-sm">
                 {attachedPortalDocuments.map(({ item, fileName, label }) => (
                   <div key={`${item.id}-${fileName}`} className="flex flex-col gap-1 rounded-md border border-green-100 bg-green-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
@@ -219,6 +293,12 @@ export function UploadTab({
                   <div key={`${item.id}-${status.id}`} className="rounded-md border border-red-100 bg-red-50 px-3 py-2">
                     <p className="font-medium text-red-900">{status.label} failed</p>
                     <p className="text-xs text-red-700">{item.clientName} / {item.policyNumber}: {status.error || 'No failure reason supplied'}</p>
+                  </div>
+                ))}
+                {attachedPortalDocuments.length === 0 && failedPortalDocuments.length === 0 && skippedPortalDocuments.map(({ item, status }) => (
+                  <div key={`${item.id}-${status.id}`} className="rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
+                    <p className="font-medium text-gray-800">{status.label} {status.status === 'not_requested' ? 'not requested' : 'skipped'}</p>
+                    <p className="text-xs text-gray-500">{item.clientName} / {item.policyNumber}</p>
                   </div>
                 ))}
               </div>
@@ -285,11 +365,16 @@ export function UploadTab({
                       </TableCell>
                       <TableCell className="text-xs">
                         {[...row.validationErrors, ...row.warnings].length > 0 ? (
-                          <div className="space-y-1 text-amber-700">
-                            {[...row.validationErrors, ...row.warnings].slice(0, 2).map((message, index) => (
-                              <p key={`${row.id}-warning-${index}`}>{message}</p>
-                            ))}
-                          </div>
+                          <details className="text-amber-700">
+                            <summary className="cursor-pointer whitespace-nowrap">
+                              {[...row.validationErrors, ...row.warnings].length} warning{[...row.validationErrors, ...row.warnings].length === 1 ? '' : 's'}
+                            </summary>
+                            <div className="mt-2 max-w-xs space-y-1 text-[11px] leading-5 text-amber-800">
+                              {[...row.validationErrors, ...row.warnings].map((message, index) => (
+                                <p key={`${row.id}-warning-${index}`}>{message}</p>
+                              ))}
+                            </div>
+                          </details>
                         ) : (
                           <span className="text-gray-400">No warnings</span>
                         )}
@@ -315,7 +400,9 @@ export function UploadTab({
               ) : (
                 <UploadCloud className="w-4 h-4 mr-2" />
               )}
-              Publish Matched Rows
+              {publishableRows.length > 0
+                ? `Publish ${publishableRows.length} Update${publishableRows.length === 1 ? '' : 's'}`
+                : 'No Updates To Publish'}
             </Button>
           </div>
         </div>
@@ -443,23 +530,23 @@ export function UploadTab({
         <Card className="bg-gray-50 border-gray-200 shadow-none">
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500 uppercase mb-1">Last Attempted</p>
-            <p className="text-sm font-semibold">{stats.lastAttempted || '-'}</p>
+            <p className="text-sm font-semibold">{displayStats.lastAttempted}</p>
           </CardContent>
         </Card>
         <Card className={cn(
           'border-gray-200 shadow-none',
-          stats.lastUpdateStatus === 'success' ? 'bg-green-50/50' :
-            stats.lastUpdateStatus === 'failed' ? 'bg-red-50/50' : 'bg-gray-50',
+          displayStats.lastStatus === 'success' ? 'bg-green-50/50' :
+            displayStats.lastStatus === 'failed' ? 'bg-red-50/50' : 'bg-gray-50',
         )}>
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500 uppercase mb-1">Last Status</p>
             <div className="flex items-center gap-2">
-              {stats.lastUpdateStatus === 'success' ? (
+              {displayStats.lastStatus === 'success' ? (
                 <div className="contents"><CheckCircle2 className="w-4 h-4 text-green-600" /><span className="text-sm font-semibold text-green-700">Successful</span></div>
-              ) : stats.lastUpdateStatus === 'failed' ? (
+              ) : displayStats.lastStatus === 'failed' ? (
                 <div className="contents"><AlertCircle className="w-4 h-4 text-red-600" /><span className="text-sm font-semibold text-red-700">Failed</span></div>
               ) : (
-                <span className="text-sm font-semibold text-gray-600">No Data</span>
+                <span className="text-sm font-semibold text-gray-600">{displayStats.lastStatusLabel}</span>
               )}
             </div>
           </CardContent>
@@ -467,7 +554,7 @@ export function UploadTab({
         <Card className="bg-gray-50 border-gray-200 shadow-none">
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500 uppercase mb-1">Last Successful</p>
-            <p className="text-sm font-semibold">{stats.lastSuccessful || '-'}</p>
+            <p className="text-sm font-semibold">{displayStats.lastSuccessful}</p>
           </CardContent>
         </Card>
       </div>

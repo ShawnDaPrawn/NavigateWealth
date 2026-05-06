@@ -172,6 +172,7 @@ export function PortalAutomationTab({
   const [runMode, setRunMode] = useState<PortalJobRunMode>('run');
   const [credentialUsername, setCredentialUsername] = useState('');
   const [credentialPassword, setCredentialPassword] = useState('');
+  const [isEditingCredentials, setIsEditingCredentials] = useState(false);
   const [isAwaitingCredentialSave, setIsAwaitingCredentialSave] = useState(false);
   const [lastSavedCredentialProfileId, setLastSavedCredentialProfileId] = useState<string | null>(null);
   const [loginUrl, setLoginUrl] = useState('');
@@ -186,6 +187,7 @@ export function PortalAutomationTab({
   const [resultContainerSelector, setResultContainerSelector] = useState('');
   const [resultLinkSelector, setResultLinkSelector] = useState('');
   const [smartAssistEnabled, setSmartAssistEnabled] = useState(false);
+  const [showSmartAssistConfig, setShowSmartAssistConfig] = useState(false);
   const [smartAssistGoal, setSmartAssistGoal] = useState('');
   const [policyScheduleEnabled, setPolicyScheduleEnabled] = useState(false);
   const [policyScheduleLabelsText, setPolicyScheduleLabelsText] = useState('');
@@ -194,6 +196,7 @@ export function PortalAutomationTab({
   const [policyListStepsJson, setPolicyListStepsJson] = useState('[]');
   const [policyListStepsError, setPolicyListStepsError] = useState('');
   const [otp, setOtp] = useState('');
+  const [submittedOtpForJobId, setSubmittedOtpForJobId] = useState<string | null>(null);
   const [policyRowSelector, setPolicyRowSelector] = useState('');
   const [fieldSelectors, setFieldSelectors] = useState<PortalFlowField[]>([]);
   const selectedCategoryName = PRODUCT_CATEGORIES.find((category) => category.id === selectedCategoryId)?.name || selectedCategoryId;
@@ -256,11 +259,14 @@ export function PortalAutomationTab({
     ? Math.round(((queueSummary.completed + queueSummary.failed + queueSummary.skipped) / queueSummary.total) * 100)
     : 0;
   const hasCredentialDraft = Boolean(credentialUsername.trim() || credentialPassword);
+  const showCredentialFields = Boolean(selectedProfile && (!credentialsSaved || isEditingCredentials));
   const canSaveCredentials = Boolean(
     selectedProfile &&
     !isSavingCredentials &&
-    ((credentialUsername.trim() && credentialPassword) ||
-      (credentialsSaved && (credentialUsername.trim() || credentialPassword)))
+    showCredentialFields &&
+    (credentialsSaved
+      ? (credentialUsername.trim() || credentialPassword)
+      : (credentialUsername.trim() && credentialPassword))
   );
   const showCredentialSaveSuccess = credentialsSaved && lastSavedCredentialProfileId === selectedCredentialProfileId;
   const configuredPolicyListSteps = (() => {
@@ -275,6 +281,12 @@ export function PortalAutomationTab({
   const hasSearchFallback = Boolean(searchInputSelector.trim() || searchLabels.length > 0);
   const hasPostLoginFallback = configuredPolicyListSteps.length > 0 || hasSearchFallback;
   const smartAssistReady = Boolean(brainMemory?.available && brainMemory?.configured);
+  const smartAssistStatusLabel = !brainMemory?.available
+    ? 'Needs key'
+    : smartAssistEnabled
+      ? 'Armed'
+      : 'Off';
+  const otpSubmittedForCurrentJob = Boolean(job?.id && submittedOtpForJobId === job.id && job.status === 'waiting_for_otp');
   const stagedRowsAwaitingPublish = stagedRun?.rows.filter((row) =>
     row.matchStatus === 'matched' &&
     row.diffs.length > 0 &&
@@ -313,6 +325,12 @@ export function PortalAutomationTab({
   const updateFieldSelector = (index: number, selector: string) => {
     setFieldSelectors(prev => prev.map((field, currentIndex) => (
       currentIndex === index ? { ...field, selector } : field
+    )));
+  };
+
+  const updateFieldRequired = (index: number, required: boolean) => {
+    setFieldSelectors(prev => prev.map((field, currentIndex) => (
+      currentIndex === index ? { ...field, required } : field
     )));
   };
 
@@ -364,6 +382,7 @@ export function PortalAutomationTab({
     }
     if (credentialsSaved && isAwaitingCredentialSave && !hasCredentialDraft) {
       setLastSavedCredentialProfileId(selectedCredentialProfileId);
+      setIsEditingCredentials(false);
       setIsAwaitingCredentialSave(false);
       return;
     }
@@ -371,6 +390,12 @@ export function PortalAutomationTab({
       setIsAwaitingCredentialSave(false);
     }
   }, [credentialsSaved, hasCredentialDraft, isAwaitingCredentialSave, isSavingCredentials, selectedCredentialProfileId]);
+
+  useEffect(() => {
+    if (job?.status !== 'waiting_for_otp') {
+      setSubmittedOtpForJobId(null);
+    }
+  }, [job?.id, job?.status]);
 
   const buildPolicyScheduleDraft = (): PortalProviderFlow['policySchedule'] => ({
     ...(flow?.policySchedule || {}),
@@ -473,17 +498,9 @@ export function PortalAutomationTab({
             <>
               <Alert className="border-blue-200 bg-blue-50 text-blue-900">
                 <ListChecks className="h-4 w-4" />
-                <AlertTitle>Shared provider login, isolated product flow</AlertTitle>
+                <AlertTitle>Provider login is shared. This product flow is isolated.</AlertTitle>
                 <AlertDescription>
-                  {provider.name} credentials are shared once for the provider. Automation flow settings, latest job, policy queue, discovery report, and staged results are isolated to {selectedCategoryName}.
-                </AlertDescription>
-              </Alert>
-
-              <Alert className="bg-amber-50 border-amber-200 text-amber-900">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Live worker mode</AlertTitle>
-                <AlertDescription>
-                  Provider credentials are saved server-side in Supabase and never returned to the browser. GitHub Actions starts the Playwright worker when you create a job and continues after an admin enters the SMS OTP here.
+                  Jobs, staged results, and flow settings here are only for {selectedCategoryName}. Credentials stay saved server-side and are not shown in the browser.
                 </AlertDescription>
               </Alert>
 
@@ -536,51 +553,86 @@ export function PortalAutomationTab({
                         : 'Enter both the username and password once, then click Save Credentials before creating a portal job.'}
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="portal-username">Username</Label>
-                      <Input
-                        id="portal-username"
-                        value={credentialUsername}
-                        onChange={(event) => setCredentialUsername(event.target.value)}
-                        placeholder={credentialStatus?.hasUsername ? 'Saved. Enter to replace.' : 'Provider username'}
-                      />
+                  {showCredentialFields && (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="portal-username">Username</Label>
+                        <Input
+                          id="portal-username"
+                          value={credentialUsername}
+                          onChange={(event) => setCredentialUsername(event.target.value)}
+                          placeholder={credentialStatus?.hasUsername ? 'Leave blank to keep saved username' : 'Provider username'}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="portal-password">Password</Label>
+                        <Input
+                          id="portal-password"
+                          type="password"
+                          value={credentialPassword}
+                          onChange={(event) => setCredentialPassword(event.target.value)}
+                          placeholder={credentialStatus?.hasPassword ? 'Leave blank to keep saved password' : 'Provider password'}
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="portal-password">Password</Label>
-                      <Input
-                        id="portal-password"
-                        type="password"
-                        value={credentialPassword}
-                        onChange={(event) => setCredentialPassword(event.target.value)}
-                        placeholder={credentialStatus?.hasPassword ? 'Saved already. Enter a new password only if replacing it.' : 'Provider password'}
-                      />
-                    </div>
-                  </div>
+                  )}
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs text-gray-500">
                       {showCredentialSaveSuccess
                         ? 'Credentials were saved successfully. You can create a portal job now.'
                         : credentialsSaved
-                          ? 'You only need to re-enter a field if you want to replace the saved value.'
+                          ? 'Saved credentials are locked. Open update mode only when you need to replace a saved value.'
                           : 'The first save requires both fields.'}
                     </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsAwaitingCredentialSave(true);
-                        onSaveCredentials(selectedProfile.id, {
-                          username: credentialUsername,
-                          password: credentialPassword || undefined,
-                        });
-                        setCredentialPassword('');
-                      }}
-                      disabled={!canSaveCredentials}
-                    >
-                      {isSavingCredentials ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <KeyRound className="h-4 w-4 mr-2" />}
-                      {credentialsSaved ? 'Update Credentials' : 'Save Credentials'}
-                    </Button>
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                      {credentialsSaved && !isEditingCredentials ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setCredentialUsername('');
+                            setCredentialPassword('');
+                            setIsEditingCredentials(true);
+                          }}
+                        >
+                          <KeyRound className="h-4 w-4 mr-2" />
+                          Update Credentials
+                        </Button>
+                      ) : (
+                        <>
+                          {credentialsSaved && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => {
+                                setCredentialUsername('');
+                                setCredentialPassword('');
+                                setIsEditingCredentials(false);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setIsAwaitingCredentialSave(true);
+                              onSaveCredentials(selectedProfile.id, {
+                                username: credentialUsername,
+                                password: credentialPassword || undefined,
+                              });
+                              setCredentialUsername('');
+                              setCredentialPassword('');
+                            }}
+                            disabled={!canSaveCredentials}
+                          >
+                            {isSavingCredentials ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <KeyRound className="h-4 w-4 mr-2" />}
+                            {credentialsSaved ? 'Save Updated Credentials' : 'Save Credentials'}
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -623,24 +675,42 @@ export function PortalAutomationTab({
                         <Bot className="h-4 w-4" />
                       </div>
                       <div>
-                        <h5 className="font-medium text-gray-900">Smart Search Assist</h5>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h5 className="font-medium text-gray-900">Smart Search Assist</h5>
+                          <Badge variant="outline" className={cn(
+                            brainMemory?.available
+                              ? smartAssistEnabled
+                                ? 'border-green-200 bg-green-50 text-green-700'
+                                : 'border-gray-200 bg-white text-gray-600'
+                              : 'border-amber-200 bg-amber-50 text-amber-800',
+                          )}>
+                            {smartAssistStatusLabel}
+                          </Badge>
+                        </div>
                         <p className="text-sm text-gray-500">
-                          When the normal flow cannot confidently find the provider search box or result row, the worker can ask a guarded Google-hosted brain for one safe next step.
+                          Used only when the normal search path cannot confidently find the next step.
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="smart-assist-enabled" className="text-sm text-gray-700">
-                        Enable assist
-                      </Label>
+                    <div className="flex flex-wrap items-center gap-2">
                       <Switch
                         id="smart-assist-enabled"
+                        aria-label="Enable smart search assist"
                         checked={smartAssistEnabled}
                         onCheckedChange={setSmartAssistEnabled}
                       />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSmartAssistConfig((current) => !current)}
+                      >
+                        {showSmartAssistConfig ? 'Hide Settings' : 'Configure'}
+                      </Button>
                     </div>
                   </div>
 
+                  {showSmartAssistConfig && (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Search goal</Label>
@@ -698,6 +768,7 @@ export function PortalAutomationTab({
                       )}
                     </div>
                   </div>
+                  )}
                 </div>
 
                 <div className="space-y-3">
@@ -723,11 +794,10 @@ export function PortalAutomationTab({
                           : normaliseIntegrationLabelList(field.labels);
                         const effectiveSelector = String(binding?.portalSelector || field.selector || '').trim();
                         return (
-                          <div key={`${getPortalFieldKey(field)}-${index}`} className="grid grid-cols-1 gap-2 rounded-md border bg-gray-50 p-3 md:grid-cols-[180px_1fr] md:items-start">
+                          <div key={`${getPortalFieldKey(field)}-${index}`} className="grid grid-cols-1 gap-3 rounded-md border bg-gray-50 p-3 md:grid-cols-[200px_1fr_120px] md:items-start">
                             <div>
                               <p className="text-sm font-medium text-gray-900">{getPortalFieldTitle(field)}</p>
                               <p className="text-xs text-gray-500">Spreadsheet column: {getPortalFieldColumnName(field)}</p>
-                              {field.required && <p className="text-xs text-red-600">Required</p>}
                             </div>
                             <div className="space-y-2 rounded-md border bg-white px-3 py-2 text-sm text-gray-700">
                               <p>
@@ -740,6 +810,16 @@ export function PortalAutomationTab({
                                 <span className="font-medium text-gray-900">Selector override:</span>{' '}
                                 {effectiveSelector || 'No selector fallback is available for this field yet'}
                               </p>
+                            </div>
+                            <div className="flex items-center justify-between rounded-md border bg-white px-3 py-2 md:justify-center md:gap-2">
+                              <Label htmlFor={`required-field-${index}`} className="text-xs text-gray-700">
+                                Required
+                              </Label>
+                              <Switch
+                                id={`required-field-${index}`}
+                                checked={field.required === true}
+                                onCheckedChange={(required) => updateFieldRequired(index, required)}
+                              />
                             </div>
                           </div>
                         );
@@ -1069,8 +1149,15 @@ export function PortalAutomationTab({
             {currentJobWarning && (
               <Alert className="border-amber-200 bg-amber-50 text-amber-900">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Worker warning</AlertTitle>
-                <AlertDescription>{currentJobWarning}</AlertDescription>
+                <AlertTitle>
+                  {job.warnings?.length || 1} worker warning{(job.warnings?.length || 1) === 1 ? '' : 's'}
+                </AlertTitle>
+                <AlertDescription>
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-sm font-medium">View detail</summary>
+                    <p className="mt-2 text-xs leading-5">{currentJobWarning}</p>
+                  </details>
+                </AlertDescription>
               </Alert>
             )}
             {job.error && <p className="text-sm text-red-700">{job.error}</p>}
@@ -1086,18 +1173,18 @@ export function PortalAutomationTab({
                 <AlertDescription className="space-y-3">
                   <p>
                     {stagedRun
-                      ? `This run extracted ${stagedRun.summary.totalRows} row${stagedRun.summary.totalRows === 1 ? '' : 's'} and staged them into the same canonical integration template format used by manual spreadsheet uploads. Published rows: ${stagedRun.summary.publishedRows}.`
-                      : 'The worker extracted policy data and created a staged sync run in the canonical integration template format.'}
+                      ? `${stagedRun.summary.totalRows} row${stagedRun.summary.totalRows === 1 ? '' : 's'} extracted. Published rows: ${stagedRun.summary.publishedRows}.`
+                      : 'The worker extracted policy data and created a staged sync run.'}
                     {stagedRun && stagedRowsAwaitingPublish > 0
                       ? ` ${stagedRowsAwaitingPublish} row${stagedRowsAwaitingPublish === 1 ? '' : 's'} still need to be published before the live policy records change.`
                       : ''}
                   </p>
                   {stagedPreviewRow && (
-                    <div className="rounded-md border border-blue-200 bg-white/80 p-3">
-                      <p className="text-xs font-medium uppercase tracking-wide text-blue-700">
-                        Extracted values for {stagedPreviewRow.policyNumber}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">{stagedPreviewMatchCopy}</p>
+                    <details className="rounded-md border border-blue-200 bg-white/80 p-3">
+                      <summary className="cursor-pointer text-sm font-medium text-blue-900">
+                        View extracted values for {stagedPreviewRow.policyNumber}
+                      </summary>
+                      <p className="mt-2 text-xs text-slate-500">{stagedPreviewMatchCopy}</p>
                       <div className="mt-2 space-y-1 text-sm text-slate-700">
                         {stagedPreviewExtractedValues.length > 0 ? (
                           stagedPreviewExtractedValues.map(([key, value]) => (
@@ -1125,7 +1212,7 @@ export function PortalAutomationTab({
                           </div>
                         )}
                       </div>
-                    </div>
+                    </details>
                   )}
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" size="sm" onClick={onOpenUploadTab}>
@@ -1147,28 +1234,42 @@ export function PortalAutomationTab({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-amber-700">
                     <Clock className="h-4 w-4" />
-                    <span className="text-sm font-medium">Enter the SMS OTP from your phone</span>
+                    <span className="text-sm font-medium">
+                      {otpSubmittedForCurrentJob
+                        ? 'OTP submitted. Waiting for the provider portal to continue.'
+                        : 'Enter the SMS OTP from your phone'}
+                    </span>
                   </div>
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <Input
-                      value={otp}
-                      onChange={(event) => setOtp(event.target.value)}
-                      placeholder="Enter OTP"
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      autoFocus
-                    />
-                    <Button
-                      onClick={() => {
-                        onSubmitOtp(otp);
-                        setOtp('');
-                      }}
-                      disabled={otp.trim().length < 4 || isSubmittingOtp}
-                    >
-                      {isSubmittingOtp ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                      Submit OTP
-                    </Button>
-                  </div>
+                  {otpSubmittedForCurrentJob ? (
+                    <div className="flex flex-col gap-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
+                      <span>The input is hidden to avoid submitting the same OTP twice.</span>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setSubmittedOtpForJobId(null)}>
+                        Enter Different OTP
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Input
+                        value={otp}
+                        onChange={(event) => setOtp(event.target.value)}
+                        placeholder="Enter OTP"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        autoFocus
+                      />
+                      <Button
+                        onClick={() => {
+                          if (job.id) setSubmittedOtpForJobId(job.id);
+                          onSubmitOtp(otp);
+                          setOtp('');
+                        }}
+                        disabled={otp.trim().length < 4 || isSubmittingOtp}
+                      >
+                        {isSubmittingOtp ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                        Submit OTP
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </>
             )}
