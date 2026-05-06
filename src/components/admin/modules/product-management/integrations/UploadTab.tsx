@@ -334,31 +334,37 @@ export function UploadTab({
                       <TableCell>{getStatusBadge(row.publishStatus)}</TableCell>
                       <TableCell className="min-w-[220px] text-xs">
                         {extractedValues.length > 0 ? (
-                          <div className="space-y-1">
-                            {extractedValues.map(([key, value]) => (
-                              <div key={`${row.id}-raw-${key}`}>
-                                <span className="font-medium text-gray-900">{key}:</span>{' '}
-                                <span className="text-gray-700">{formatExtractedValue(value)}</span>
-                              </div>
-                            ))}
-                          </div>
+                          <details>
+                            <summary className="cursor-pointer whitespace-nowrap font-medium text-gray-900">
+                              {extractedValues.length} value{extractedValues.length === 1 ? '' : 's'}
+                            </summary>
+                            <div className="mt-2 max-w-sm space-y-1 text-[11px] leading-5">
+                              {extractedValues.map(([key, value]) => (
+                                <div key={`${row.id}-raw-${key}`}>
+                                  <span className="font-medium text-gray-900">{key}:</span>{' '}
+                                  <span className="text-gray-700">{formatExtractedValue(value)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
                         ) : (
                           <span className="text-gray-400">No extracted values</span>
                         )}
                       </TableCell>
                       <TableCell className="text-xs">
                         {row.diffs.length > 0 ? (
-                          <div className="space-y-1">
-                            <div className="font-medium text-gray-900">
+                          <details>
+                            <summary className="cursor-pointer whitespace-nowrap font-medium text-gray-900">
                               {row.diffs.length} changed cell{row.diffs.length === 1 ? '' : 's'}
+                            </summary>
+                            <div className="mt-2 max-w-sm space-y-1 text-[11px] leading-5">
+                              {row.diffs.map((diff) => (
+                                <div key={diff.fieldId}>
+                                  <span className="font-medium">{diff.fieldName}:</span> {String(diff.oldValue ?? '-')} {' -> '} {String(diff.newValue ?? '-')}
+                                </div>
+                              ))}
                             </div>
-                            {row.diffs.slice(0, 3).map((diff) => (
-                              <div key={diff.fieldId}>
-                                <span className="font-medium">{diff.fieldName}:</span> {String(diff.oldValue ?? '-')} {' -> '} {String(diff.newValue ?? '-')}
-                              </div>
-                            ))}
-                            {row.diffs.length > 3 && <span className="text-gray-400">+{row.diffs.length - 3} more</span>}
-                          </div>
+                          </details>
                         ) : (
                           <span className="text-gray-400">No publishable cell changes</span>
                         )}

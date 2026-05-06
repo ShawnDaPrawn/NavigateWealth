@@ -3,15 +3,27 @@ import { Button } from '../../../../ui/button';
 import { TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
 import { Bot, History, UploadCloud, Settings2 } from 'lucide-react';
-import { IntegrationProvider, PRODUCT_CATEGORIES } from '../types';
+import { IntegrationProvider, IntegrationStats, PRODUCT_CATEGORIES } from '../types';
 
 interface IntegrationHeaderProps {
   provider: IntegrationProvider;
   selectedCategoryId: string;
+  stats?: IntegrationStats;
   onCategoryChange: (id: string) => void;
 }
 
-export function IntegrationHeader({ provider, selectedCategoryId, onCategoryChange }: IntegrationHeaderProps) {
+const formatCategorySync = (stats?: IntegrationStats) => {
+  if (!stats?.lastAttempted || stats.lastAttempted === '-') return 'No sync yet';
+  return stats.lastAttempted;
+};
+
+const getCategoryStatus = (stats?: IntegrationStats) => {
+  if (stats?.lastUpdateStatus === 'success') return 'Successful';
+  if (stats?.lastUpdateStatus === 'failed') return 'Failed';
+  return 'Not synced';
+};
+
+export function IntegrationHeader({ provider, selectedCategoryId, stats, onCategoryChange }: IntegrationHeaderProps) {
   return (
     <div className="p-6 border-b bg-white z-10">
       <div className="flex justify-between items-start mb-6">
@@ -20,7 +32,7 @@ export function IntegrationHeader({ provider, selectedCategoryId, onCategoryChan
           <p className="text-gray-500">Manage spreadsheet imports and field mapping for {provider.name}</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="w-[200px]">
+          <div className="w-[250px]">
             <Select value={selectedCategoryId} onValueChange={onCategoryChange}>
               <SelectTrigger className="h-9 bg-white border-gray-300">
                 <SelectValue placeholder="Select product..." />
@@ -33,6 +45,9 @@ export function IntegrationHeader({ provider, selectedCategoryId, onCategoryChan
                 ))}
               </SelectContent>
             </Select>
+            <p className="mt-1 text-xs text-gray-500">
+              {getCategoryStatus(stats)} · Last sync: {formatCategorySync(stats)}
+            </p>
           </div>
           <Button variant="outline">
             <History className="w-4 h-4 mr-2" />

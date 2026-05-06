@@ -282,7 +282,7 @@ export function PortalAutomationTab({
   const hasPostLoginFallback = configuredPolicyListSteps.length > 0 || hasSearchFallback;
   const smartAssistReady = Boolean(brainMemory?.available && brainMemory?.configured);
   const smartAssistStatusLabel = !brainMemory?.available
-    ? 'Needs key'
+    ? smartAssistEnabled ? 'Unavailable' : 'Needs key'
     : smartAssistEnabled
       ? 'Armed'
       : 'Off';
@@ -690,6 +690,11 @@ export function PortalAutomationTab({
                         <p className="text-sm text-gray-500">
                           Used only when the normal search path cannot confidently find the next step.
                         </p>
+                        {smartAssistEnabled && !brainMemory?.available && (
+                          <p className="text-xs text-amber-700">
+                            Configured for this flow, but inactive until the backend AI key is available.
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -793,23 +798,46 @@ export function PortalAutomationTab({
                           ? bindingLabels
                           : normaliseIntegrationLabelList(field.labels);
                         const effectiveSelector = String(binding?.portalSelector || field.selector || '').trim();
+                        const visibleLabels = effectiveLabels.slice(0, 3);
                         return (
                           <div key={`${getPortalFieldKey(field)}-${index}`} className="grid grid-cols-1 gap-3 rounded-md border bg-gray-50 p-3 md:grid-cols-[200px_1fr_120px] md:items-start">
                             <div>
                               <p className="text-sm font-medium text-gray-900">{getPortalFieldTitle(field)}</p>
                               <p className="text-xs text-gray-500">Spreadsheet column: {getPortalFieldColumnName(field)}</p>
                             </div>
-                            <div className="space-y-2 rounded-md border bg-white px-3 py-2 text-sm text-gray-700">
-                              <p>
-                                <span className="font-medium text-gray-900">Provider labels:</span>{' '}
-                                {effectiveLabels.length > 0
-                                  ? effectiveLabels.join(', ')
-                                  : 'No labels are available for this field yet'}
-                              </p>
-                              <p>
-                                <span className="font-medium text-gray-900">Selector override:</span>{' '}
-                                {effectiveSelector || 'No selector fallback is available for this field yet'}
-                              </p>
+                            <div className="rounded-md border bg-white px-3 py-2 text-sm text-gray-700">
+                              <div className="flex flex-wrap gap-1.5">
+                                {visibleLabels.length > 0 ? (
+                                  visibleLabels.map((label) => (
+                                    <Badge key={`${getPortalFieldKey(field)}-${label}`} variant="outline" className="border-gray-200 bg-gray-50 text-[10px] text-gray-600">
+                                      {label}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-gray-500">No provider labels yet</span>
+                                )}
+                                {effectiveLabels.length > visibleLabels.length && (
+                                  <Badge variant="outline" className="border-gray-200 bg-gray-50 text-[10px] text-gray-600">
+                                    +{effectiveLabels.length - visibleLabels.length} more
+                                  </Badge>
+                                )}
+                                {effectiveSelector && (
+                                  <Badge variant="outline" className="border-blue-200 bg-blue-50 text-[10px] text-blue-700">
+                                    Selector set
+                                  </Badge>
+                                )}
+                              </div>
+                              <details className="mt-2 text-xs text-gray-500">
+                                <summary className="cursor-pointer font-medium text-gray-700">Provider matching hints</summary>
+                                <p className="mt-2">
+                                  <span className="font-medium text-gray-900">Labels:</span>{' '}
+                                  {effectiveLabels.length > 0 ? effectiveLabels.join(', ') : 'No labels are available for this field yet'}
+                                </p>
+                                <p className="mt-1 break-words">
+                                  <span className="font-medium text-gray-900">Selector:</span>{' '}
+                                  {effectiveSelector || 'No selector fallback is available for this field yet'}
+                                </p>
+                              </details>
                             </div>
                             <div className="flex items-center justify-between rounded-md border bg-white px-3 py-2 md:justify-center md:gap-2">
                               <Label htmlFor={`required-field-${index}`} className="text-xs text-gray-700">

@@ -687,6 +687,7 @@ export function IntegrationsTab() {
             <IntegrationHeader 
                 provider={selectedProvider} 
                 selectedCategoryId={selectedCategoryId}
+                stats={integrationStats}
                 onCategoryChange={handleCategoryChange}
             />
 
