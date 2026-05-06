@@ -112,6 +112,18 @@ export const submissionsKeys = {
   countNew: () => [...submissionsKeys.all, 'count', 'new'] as const,
 } as const;
 
+// Legacy requests module compatibility while request-to-submission migration
+// remains incomplete on main/Vercel.
+export const requestKeys = {
+  all: ['requests'] as const,
+  lists: () => [...requestKeys.all, 'list'] as const,
+  list: (filters?: Record<string, unknown>) => [...requestKeys.lists(), filters ?? {}] as const,
+  detail: (id: string) => [...requestKeys.all, 'detail', id] as const,
+  templates: () => [...requestKeys.all, 'templates'] as const,
+  templateList: (filters?: Record<string, unknown>) => [...requestKeys.templates(), filters ?? {}] as const,
+  template: (id: string) => [...requestKeys.templates(), id] as const,
+} as const;
+
 // ============================================================================
 // COMMUNICATIONS
 // ============================================================================
