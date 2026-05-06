@@ -37,6 +37,7 @@ export const dashboardKeys = {
   stats: () => ['dashboard-stats'] as const,
   metrics: () => ['dashboard-metrics'] as const,
   tasksToday: () => ['dashboard-tasks-today'] as const,
+  recentRequests: () => ['dashboard-recent-requests'] as const,
   systemActivity: () => ['dashboard-system-activity'] as const,
 } as const;
 
