@@ -37,7 +37,6 @@ export const dashboardKeys = {
   stats: () => ['dashboard-stats'] as const,
   metrics: () => ['dashboard-metrics'] as const,
   tasksToday: () => ['dashboard-tasks-today'] as const,
-  recentRequests: () => ['dashboard-recent-requests'] as const,
   systemActivity: () => ['dashboard-system-activity'] as const,
 } as const;
 
@@ -194,8 +193,8 @@ export const integrationsKeys = {
     [...integrationsKeys.all, 'history', providerId, categoryId] as const,
   config: (providerId: string | null, categoryId: string | null) =>
     [...integrationsKeys.all, 'config', providerId, categoryId] as const,
-  portalFlow: (providerId: string | null) =>
-    [...integrationsKeys.all, 'portal-flow', providerId] as const,
+  portalFlow: (providerId: string | null, categoryId: string | null) =>
+    [...integrationsKeys.all, 'portal-flow', providerId, categoryId] as const,
   portalBrainMemory: (providerId: string | null, categoryId: string | null) =>
     [...integrationsKeys.all, 'portal-brain-memory', providerId, categoryId] as const,
   portalCredentialStatus: (providerId: string | null, profileId: string | null) =>
@@ -346,20 +345,6 @@ export const permissionKeys = {
   all: [...personnelKeys.all, 'permissions'] as const,
   detail: (personnelId: string) => [...permissionKeys.all, personnelId] as const,
   me: () => [...permissionKeys.all, 'me'] as const,
-} as const;
-
-// ============================================================================
-// REQUESTS
-// ============================================================================
-
-export const requestKeys = {
-  all: ['requests'] as const,
-  lists: () => [...requestKeys.all, 'list'] as const,
-  list: (filters?: Record<string, unknown>) => [...requestKeys.lists(), filters ?? {}] as const,
-  detail: (id: string) => [...requestKeys.all, 'detail', id] as const,
-  templates: () => [...requestKeys.all, 'templates'] as const,
-  templateList: (filters?: Record<string, unknown>) => [...requestKeys.templates(), filters ?? {}] as const,
-  template: (id: string) => [...requestKeys.templates(), id] as const,
 } as const;
 
 // ============================================================================

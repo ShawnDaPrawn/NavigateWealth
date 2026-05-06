@@ -4,6 +4,20 @@ interface DefaultPortalFlowProvider {
 
 interface DefaultPortalFlowOptions {
   defaultPortalBrainGoal: (providerName: string) => string;
+  categoryId?: string;
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  retirement_planning: 'Retirement Planning',
+  retirement_pre: 'Pre-Retirement',
+  retirement_post: 'Post-Retirement',
+  investments: 'Investments',
+  investments_voluntary: 'Voluntary Investments',
+  investments_guaranteed: 'Guaranteed Investments',
+};
+
+function isInvestmentCategory(categoryId?: string): boolean {
+  return String(categoryId || '').startsWith('investments');
 }
 
 export function getDefaultPortalFlow(
@@ -14,13 +28,24 @@ export function getDefaultPortalFlow(
   const providerName = String(provider.name || providerId);
   const providerKey = providerName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
   const isAllanGray = providerName.toLowerCase().includes('allan gray') || providerId.toLowerCase().includes('allan');
+  const categoryLabel = CATEGORY_LABELS[options.categoryId || ''] || 'portal';
+  const categorySuffix = options.categoryId ? `${providerId}:${options.categoryId}:default` : `${providerId}:default`;
   const now = new Date().toISOString();
 
   if (isAllanGray) {
+    const productTypeLabels = isInvestmentCategory(options.categoryId)
+      ? ['Investment', 'Unit trust', 'Portfolio', 'Account type', 'Product type']
+      : ['Retirement annuity fund'];
+    const currentValueLabels = isInvestmentCategory(options.categoryId)
+      ? ['Total value', 'Market value', 'Portfolio value', 'Current value', 'Closing balance', 'Value']
+      : ['Total value', 'Closing balance', 'Value'];
+
     return {
-      id: `${providerId}:default`,
+      id: categorySuffix,
       providerId,
-      name: 'Allan Gray portal policy extraction',
+      name: options.categoryId
+        ? `Allan Gray ${categoryLabel} portal extraction`
+        : 'Allan Gray portal policy extraction',
       loginUrl: 'https://login.secure.allangray.co.za/?audience=New%20clients',
       credentialProfiles: [
         {
@@ -85,9 +110,9 @@ export function getDefaultPortalFlow(
         policyRowSelector: '[data-testid*="policy" i], table tbody tr',
         fields: [
           { sourceHeader: 'Policy Number', columnName: 'Policy Number', targetFieldName: 'Policy Number', selector: '[data-field="policyNumber"], [data-testid*="policy-number" i], [data-testid*="account-number" i], [data-testid*="investment-number" i]', labels: ['Policy number', 'Account number', 'Investment number'], attribute: 'text', required: true, transform: 'trim' },
-          { sourceHeader: 'Product Type', columnName: 'Product Type', targetFieldName: 'Product Type', selector: '[data-field="productType"], [data-testid*="retirement-annuity" i], [data-testid*="product-type" i]', labels: ['Retirement annuity fund'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Product Type', columnName: 'Product Type', targetFieldName: 'Product Type', selector: '[data-field="productType"], [data-testid*="retirement-annuity" i], [data-testid*="product-type" i]', labels: productTypeLabels, attribute: 'text', transform: 'trim' },
           { sourceHeader: 'Date of Inception', columnName: 'Date of Inception', targetFieldName: 'Date of Inception', selector: '[data-field="inceptionDate"], [data-testid*="inception" i], [data-testid*="start-date" i]', labels: ['Inception date', 'Date of inception'], attribute: 'text', transform: 'trim' },
-          { sourceHeader: 'Current Value', columnName: 'Current Value', targetFieldName: 'Current Value', selector: '[data-field="fundValue"], [data-testid*="closing-balance" i], [data-testid*="fund-value" i], [data-testid*="market-value" i], [data-testid*="current-value" i]', labels: ['Total value', 'Closing balance', 'Value'], attribute: 'text', required: true, transform: 'trim' },
+          { sourceHeader: 'Current Value', columnName: 'Current Value', targetFieldName: 'Current Value', selector: '[data-field="fundValue"], [data-testid*="closing-balance" i], [data-testid*="fund-value" i], [data-testid*="market-value" i], [data-testid*="current-value" i]', labels: currentValueLabels, attribute: 'text', required: true, transform: 'trim' },
         ],
       },
       policySchedule: {
@@ -111,9 +136,11 @@ export function getDefaultPortalFlow(
   }
 
   return {
-    id: `${providerId}:default`,
+    id: categorySuffix,
     providerId,
-    name: `${providerName} portal policy extraction`,
+    name: options.categoryId
+      ? `${providerName} ${categoryLabel} portal policy extraction`
+      : `${providerName} portal policy extraction`,
     loginUrl: '',
     credentialProfiles: [
       {

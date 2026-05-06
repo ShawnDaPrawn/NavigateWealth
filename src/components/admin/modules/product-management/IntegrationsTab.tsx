@@ -25,6 +25,47 @@ const terminalPortalJobStatuses: PortalSyncJob['status'][] = [
 const isActivePortalJob = (job: PortalSyncJob | null) =>
   Boolean(job && !terminalPortalJobStatuses.includes(job.status));
 
+const normalisePortalCategoryProbe = (value: unknown) =>
+  String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+const recordHasRetirementAnnuityMarker = (record?: Record<string, unknown>) => {
+  if (!record) return false;
+  return Object.entries(record).some(([key, value]) => {
+    const text = `${normalisePortalCategoryProbe(key)} ${normalisePortalCategoryProbe(value)}`;
+    return /\bretirement\s+annuit/.test(text) || /\bretirement\s+annuity\s+fund\b/.test(text);
+  });
+};
+
+const syncRunHasRetirementAnnuityMarker = (run?: IntegrationSyncRun | null) =>
+  Boolean(run?.rows?.some((row) =>
+    recordHasRetirementAnnuityMarker(row.rawData) ||
+    recordHasRetirementAnnuityMarker(row.mappedData) ||
+    row.diffs.some((diff) =>
+      recordHasRetirementAnnuityMarker({
+        fieldName: diff.fieldName,
+        oldValue: diff.oldValue,
+        newValue: diff.newValue,
+      })
+    )
+  ));
+
+const jobItemsHaveRetirementAnnuityMarker = (items?: PortalJobPolicyItem[] | null) =>
+  Boolean(items?.some((item) =>
+    recordHasRetirementAnnuityMarker(item.rawData) ||
+    recordHasRetirementAnnuityMarker(item.extractedData)
+  ));
+
+const portalArtifactsMatchSelectedCategory = (
+  categoryId: string,
+  stagedRun?: IntegrationSyncRun | null,
+  items?: PortalJobPolicyItem[] | null,
+) => {
+  if (categoryId.startsWith('investments')) {
+    return !syncRunHasRetirementAnnuityMarker(stagedRun) && !jobItemsHaveRetirementAnnuityMarker(items);
+  }
+  return true;
+};
+
 export function IntegrationsTab() {
   const queryClient = useQueryClient();
   
@@ -102,9 +143,9 @@ export function IntegrationsTab() {
   const mappingBindings: IntegrationFieldBinding[] = configBindings;
 
   const { data: portalFlow, isLoading: isLoadingPortalFlow } = useQuery({
-    queryKey: integrationsKeys.portalFlow(selectedProviderId),
-    enabled: !!selectedProviderId,
-    queryFn: () => productManagementApi.fetchPortalFlow(selectedProviderId!)
+    queryKey: integrationsKeys.portalFlow(selectedProviderId, selectedCategoryId),
+    enabled: !!selectedProviderId && !!selectedCategoryId,
+    queryFn: () => productManagementApi.fetchPortalFlow(selectedProviderId!, selectedCategoryId)
   });
 
   const { data: portalBrainMemory } = useQuery<PortalBrainMemorySummary>({
@@ -131,29 +172,36 @@ export function IntegrationsTab() {
     queryFn: () => productManagementApi.fetchPortalCredentialStatus(selectedProviderId!, selectedPortalCredentialProfileId)
   });
 
+  const portalJobForSelection = portalJob?.providerId === selectedProviderId && portalJob.categoryId === selectedCategoryId
+    ? portalJob
+    : null;
+  const stagedRunForSelection = stagedRun?.providerId === selectedProviderId && stagedRun.categoryId === selectedCategoryId
+    ? stagedRun
+    : null;
+
   const { data: latestPortalJob } = useQuery({
     queryKey: integrationsKeys.latestPortalJob(selectedProviderId, selectedCategoryId),
     enabled: !!selectedProviderId && !!selectedCategoryId,
     queryFn: () => productManagementApi.fetchLatestPortalJob(selectedProviderId!, selectedCategoryId),
-    refetchInterval: isActivePortalJob(portalJob) ? 3000 : false,
+    refetchInterval: isActivePortalJob(portalJobForSelection) ? 3000 : false,
     refetchIntervalInBackground: true,
   });
 
   const { data: portalDiscoveryReport, isLoading: isLoadingPortalDiscoveryReport } = useQuery({
-    queryKey: integrationsKeys.portalDiscoveryReport(portalJob?.id || null),
-    enabled: !!portalJob?.id,
-    queryFn: () => productManagementApi.fetchPortalDiscoveryReport(portalJob!.id)
+    queryKey: integrationsKeys.portalDiscoveryReport(portalJobForSelection?.id || null),
+    enabled: !!portalJobForSelection?.id,
+    queryFn: () => productManagementApi.fetchPortalDiscoveryReport(portalJobForSelection!.id, selectedProviderId!, selectedCategoryId)
   });
 
   const { data: portalJobItemsData, isLoading: isLoadingPortalJobItems } = useQuery({
-    queryKey: integrationsKeys.portalJobItems(portalJob?.id || null),
-    enabled: !!portalJob?.id,
-    queryFn: () => productManagementApi.fetchPortalJobItems(portalJob!.id),
-    refetchInterval: isActivePortalJob(portalJob) ? 3000 : false,
+    queryKey: integrationsKeys.portalJobItems(portalJobForSelection?.id || null),
+    enabled: !!portalJobForSelection?.id,
+    queryFn: () => productManagementApi.fetchPortalJobItems(portalJobForSelection!.id, selectedProviderId!, selectedCategoryId),
+    refetchInterval: isActivePortalJob(portalJobForSelection) ? 3000 : false,
     refetchIntervalInBackground: true,
   });
 
-  const stagedRunId = portalJob?.stagedRunId || latestPortalJob?.stagedRunId || null;
+  const stagedRunId = portalJobForSelection?.stagedRunId || latestPortalJob?.stagedRunId || null;
 
   const { data: portalStagedRun } = useQuery({
     queryKey: integrationsKeys.syncRun(stagedRunId),
@@ -161,8 +209,35 @@ export function IntegrationsTab() {
     queryFn: () => productManagementApi.fetchIntegrationSyncRun(stagedRunId!),
   });
 
+  const portalArtifactsMatchSelection = portalArtifactsMatchSelectedCategory(
+    selectedCategoryId,
+    portalStagedRun || stagedRunForSelection,
+    portalJobItemsData?.items || [],
+  );
+  const stagedRunForSelectionIsLoaded = !portalJobForSelection?.stagedRunId || (
+    portalStagedRun !== undefined &&
+    portalStagedRun?.id === portalJobForSelection.stagedRunId &&
+    portalStagedRun.providerId === selectedProviderId &&
+    portalStagedRun.categoryId === selectedCategoryId
+  );
+  const visiblePortalJobForSelection = portalArtifactsMatchSelection && stagedRunForSelectionIsLoaded ? portalJobForSelection : null;
+  const visibleStagedRunForSelection = portalArtifactsMatchSelection && stagedRunForSelectionIsLoaded ? stagedRunForSelection : null;
+
   useEffect(() => {
-    if (!latestPortalJob) return;
+    if (latestPortalJob === undefined) return;
+
+    if (latestPortalJob === null) {
+      setPortalJob((currentJob) =>
+        currentJob?.providerId === selectedProviderId && currentJob.categoryId === selectedCategoryId
+          ? null
+          : currentJob
+      );
+      return;
+    }
+
+    if (latestPortalJob.providerId !== selectedProviderId || latestPortalJob.categoryId !== selectedCategoryId) {
+      return;
+    }
 
     setPortalJob((currentJob) => {
       if (!currentJob) return latestPortalJob;
@@ -178,17 +253,37 @@ export function IntegrationsTab() {
 
       return currentJob;
     });
-  }, [latestPortalJob]);
+  }, [latestPortalJob, selectedCategoryId, selectedProviderId]);
 
   useEffect(() => {
     if (!portalStagedRun) return;
+    if (portalStagedRun.providerId !== selectedProviderId || portalStagedRun.categoryId !== selectedCategoryId) return;
 
     setStagedRun((currentRun) => {
       if (!currentRun) return portalStagedRun;
       if (currentRun.id !== portalStagedRun.id) return portalStagedRun;
       return currentRun.updatedAt === portalStagedRun.updatedAt ? currentRun : portalStagedRun;
     });
-  }, [portalStagedRun]);
+  }, [portalStagedRun, selectedCategoryId, selectedProviderId]);
+
+  useEffect(() => {
+    if (portalArtifactsMatchSelection) return;
+    setPortalJob(null);
+    setStagedRun(null);
+  }, [portalArtifactsMatchSelection]);
+
+  useEffect(() => {
+    setPortalJob((currentJob) =>
+      currentJob?.providerId === selectedProviderId && currentJob.categoryId === selectedCategoryId
+        ? currentJob
+        : null
+    );
+    setStagedRun((currentRun) =>
+      currentRun?.providerId === selectedProviderId && currentRun.categoryId === selectedCategoryId
+        ? currentRun
+        : null
+    );
+  }, [selectedCategoryId, selectedProviderId]);
 
   // Sync server config to local state
   useEffect(() => {
@@ -272,8 +367,8 @@ export function IntegrationsTab() {
 
   const publishRunMutation = useMutation({
     mutationFn: async () => {
-        if (!stagedRun) throw new Error("No staged run selected");
-        const rowIds = stagedRun.rows
+        if (!visibleStagedRunForSelection) throw new Error("No staged run selected");
+        const rowIds = visibleStagedRunForSelection.rows
             .filter(row =>
                 row.matchStatus === 'matched' &&
                 row.diffs.length > 0 &&
@@ -282,10 +377,10 @@ export function IntegrationsTab() {
                 row.publishStatus !== 'skipped'
             )
             .map(row => row.id);
-        return productManagementApi.publishIntegrationSyncRun(stagedRun.id, rowIds);
+        return productManagementApi.publishIntegrationSyncRun(visibleStagedRunForSelection.id, selectedProviderId!, selectedCategoryId, rowIds);
     },
     onSuccess: (run) => {
-        const newlyPublishedRows = Math.max(0, run.summary.publishedRows - (stagedRun?.summary.publishedRows || 0));
+        const newlyPublishedRows = Math.max(0, run.summary.publishedRows - (visibleStagedRunForSelection?.summary.publishedRows || 0));
         setStagedRun(run);
         toast.success(`Published ${newlyPublishedRows} policy row${newlyPublishedRows === 1 ? '' : 's'}.`);
         queryClient.invalidateQueries({ queryKey: integrationsKeys.history(selectedProviderId, selectedCategoryId) });
@@ -333,8 +428,8 @@ export function IntegrationsTab() {
 
   const refreshPortalJobMutation = useMutation({
     mutationFn: async () => {
-        if (!portalJob) throw new Error("No portal job selected");
-        return productManagementApi.fetchPortalJob(portalJob.id);
+        if (!visiblePortalJobForSelection) throw new Error("No portal job selected");
+        return productManagementApi.fetchPortalJob(visiblePortalJobForSelection.id, selectedProviderId!, selectedCategoryId);
     },
     onSuccess: (job) => {
         setPortalJob(job);
@@ -353,8 +448,8 @@ export function IntegrationsTab() {
 
   const submitPortalOtpMutation = useMutation({
     mutationFn: async (otp: string) => {
-        if (!portalJob) throw new Error("No portal job selected");
-        return productManagementApi.submitPortalOtp(portalJob.id, otp);
+        if (!visiblePortalJobForSelection) throw new Error("No portal job selected");
+        return productManagementApi.submitPortalOtp(visiblePortalJobForSelection.id, otp, selectedProviderId!, selectedCategoryId);
     },
     onSuccess: (job) => {
         setPortalJob(job);
@@ -368,8 +463,8 @@ export function IntegrationsTab() {
 
   const retryPortalJobItemMutation = useMutation({
     mutationFn: async (item: PortalJobPolicyItem) => {
-        if (!portalJob) throw new Error("No portal job selected");
-        return productManagementApi.retryPortalJobItem(portalJob.id, item.id);
+        if (!visiblePortalJobForSelection) throw new Error("No portal job selected");
+        return productManagementApi.retryPortalJobItem(visiblePortalJobForSelection.id, item.id, selectedProviderId!, selectedCategoryId);
     },
     onSuccess: ({ job }) => {
         setPortalJob(job);
@@ -385,7 +480,8 @@ export function IntegrationsTab() {
   const applyPortalFlowMutation = useMutation({
     mutationFn: async (patch: { policyRowSelector?: string; fields: PortalFlowField[] }) => {
         if (!selectedProviderId || !portalFlow) throw new Error("Portal flow is not loaded");
-        return productManagementApi.savePortalFlow(selectedProviderId, {
+        if (!selectedCategoryId) throw new Error("No category selected");
+        return productManagementApi.savePortalFlow(selectedProviderId, selectedCategoryId, {
             ...portalFlow,
             extraction: {
                 ...portalFlow.extraction,
@@ -397,7 +493,7 @@ export function IntegrationsTab() {
     },
     onSuccess: () => {
         toast.success("Portal flow selectors updated. Run dry-run before staging.");
-        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId) });
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId, selectedCategoryId) });
     },
     onError: (err: Error) => {
         toast.error(err.message || "Failed to update portal flow");
@@ -406,16 +502,31 @@ export function IntegrationsTab() {
 
   const savePortalFlowMutation = useMutation({
     mutationFn: async (flow: PortalProviderFlow) => {
-        if (!selectedProviderId) throw new Error("No provider selected");
-        return productManagementApi.savePortalFlow(selectedProviderId, flow);
+        if (!selectedProviderId || !selectedCategoryId) throw new Error("No provider or category selected");
+        return productManagementApi.savePortalFlow(selectedProviderId, selectedCategoryId, flow);
     },
     onSuccess: () => {
         toast.success("Portal automation flow saved.");
-        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId) });
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId, selectedCategoryId) });
         queryClient.invalidateQueries({ queryKey: integrationsKeys.portalBrainMemory(selectedProviderId, selectedCategoryId) });
     },
     onError: (err: Error) => {
         toast.error(err.message || "Failed to save portal flow");
+    }
+  });
+
+  const resetPortalFlowMutation = useMutation({
+    mutationFn: async () => {
+        if (!selectedProviderId || !selectedCategoryId) throw new Error("No provider or category selected");
+        return productManagementApi.resetPortalFlow(selectedProviderId, selectedCategoryId);
+    },
+    onSuccess: () => {
+        toast.success("This product flow was reset. Provider credentials were kept.");
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId, selectedCategoryId) });
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalBrainMemory(selectedProviderId, selectedCategoryId) });
+    },
+    onError: (err: Error) => {
+        toast.error(err.message || "Failed to reset portal flow");
     }
   });
 
@@ -430,7 +541,7 @@ export function IntegrationsTab() {
     onSuccess: (_, variables) => {
         toast.success("Provider portal credentials saved in Supabase.");
         queryClient.invalidateQueries({ queryKey: integrationsKeys.portalCredentialStatus(selectedProviderId, variables.profileId) });
-        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId) });
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId, selectedCategoryId) });
     },
     onError: (err: Error) => {
         toast.error(err.message || "Failed to save portal credentials");
@@ -540,6 +651,19 @@ export function IntegrationsTab() {
       saveConfigMutation.mutate();
   };
 
+  const handleCategoryChange = (categoryId: string) => {
+    setPortalJob(null);
+    setStagedRun(null);
+    setUploadedFile(null);
+    setRawFile(null);
+    setShowUploadPreview(false);
+    setPreviewData(null);
+    queryClient.removeQueries({ queryKey: integrationsKeys.portalDiscoveryReport(portalJobForSelection?.id || null) });
+    queryClient.removeQueries({ queryKey: integrationsKeys.portalJobItems(portalJobForSelection?.id || null) });
+    queryClient.removeQueries({ queryKey: integrationsKeys.syncRun(stagedRunId) });
+    setSelectedCategoryId(categoryId);
+  };
+
   const isColumnMapped = (colName: string) =>
     configBindings.some((binding) => binding.columnName === colName && binding.targetFieldId !== '');
 
@@ -563,7 +687,7 @@ export function IntegrationsTab() {
             <IntegrationHeader 
                 provider={selectedProvider} 
                 selectedCategoryId={selectedCategoryId}
-                onCategoryChange={setSelectedCategoryId}
+                onCategoryChange={handleCategoryChange}
             />
 
             {/* Tab: Upload & Sync */}
@@ -590,7 +714,7 @@ export function IntegrationsTab() {
                 isPublishingRun={publishRunMutation.isPending}
                 isColumnMapped={isColumnMapped}
                 previewData={previewData}
-                stagedRun={stagedRun}
+                stagedRun={visibleStagedRunForSelection}
                 portalJobItems={portalJobItemsData?.items || []}
                 stats={integrationStats}
                 matchedColumnsCount={matchedColumnsCount}
@@ -617,11 +741,12 @@ export function IntegrationsTab() {
             {/* Tab: Portal Automation */}
             <TabsContent value="portal" className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
               <PortalAutomationTab
+                key={`${selectedProvider.id}:${selectedCategoryId}:portal`}
                 provider={selectedProvider}
                 selectedCategoryId={selectedCategoryId}
                 flow={portalFlow}
-                job={portalJob}
-                stagedRun={stagedRun}
+                job={visiblePortalJobForSelection}
+                stagedRun={visibleStagedRunForSelection}
                 jobItems={portalJobItemsData?.items || []}
                 discoveryReport={portalDiscoveryReport}
                 isLoadingFlow={isLoadingPortalFlow}
@@ -635,11 +760,13 @@ export function IntegrationsTab() {
                 onCredentialProfileChange={setSelectedPortalCredentialProfileId}
                 isSavingCredentials={savePortalCredentialsMutation.isPending}
                 isSavingFlow={savePortalFlowMutation.isPending}
+                isResettingFlow={resetPortalFlowMutation.isPending}
                 isSubmittingOtp={submitPortalOtpMutation.isPending}
                 isRefreshingJob={refreshPortalJobMutation.isPending}
                 onCreateJob={(credentialProfileId, runMode, options) => createPortalJobMutation.mutate({ credentialProfileId, runMode, ...options })}
                 onSaveCredentials={(profileId, credentials) => savePortalCredentialsMutation.mutate({ profileId, ...credentials })}
                 onSaveFlow={(flow) => savePortalFlowMutation.mutate(flow)}
+                onResetFlow={() => resetPortalFlowMutation.mutate()}
                 onSubmitOtp={(otp) => submitPortalOtpMutation.mutate(otp)}
                 onRefreshJob={() => refreshPortalJobMutation.mutate()}
                 onRetryItem={(item) => retryPortalJobItemMutation.mutate(item)}

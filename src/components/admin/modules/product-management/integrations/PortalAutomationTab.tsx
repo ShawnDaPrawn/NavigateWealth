@@ -10,7 +10,7 @@ import { Separator } from '../../../../ui/separator';
 import { Switch } from '../../../../ui/switch';
 import { Textarea } from '../../../../ui/textarea';
 import { AlertCircle, Bot, CheckCircle2, Clock, FileText, KeyRound, ListChecks, Loader2, Play, RefreshCw, RotateCcw, Search, Settings2 } from 'lucide-react';
-import { IntegrationFieldBinding, IntegrationProvider, IntegrationSyncRun, PortalBrainMemorySummary, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob } from '../types';
+import { IntegrationFieldBinding, IntegrationProvider, IntegrationSyncRun, PortalBrainMemorySummary, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob, PRODUCT_CATEGORIES } from '../types';
 import { cn } from '../../../../ui/utils';
 import { buildPortalFieldsFromBindings, normaliseIntegrationLabelList } from '@/shared/integrations/binding-utils';
 
@@ -33,11 +33,13 @@ interface PortalAutomationTabProps {
   onCredentialProfileChange: (profileId: string) => void;
   isSavingCredentials: boolean;
   isSavingFlow: boolean;
+  isResettingFlow: boolean;
   isSubmittingOtp: boolean;
   isRefreshingJob: boolean;
   onCreateJob: (credentialProfileId: string, runMode: PortalJobRunMode, options?: Pick<PortalProviderFlow, 'policySchedule' | 'documentArtifacts'>) => void;
   onSaveCredentials: (profileId: string, credentials: { username: string; password?: string }) => void;
   onSaveFlow: (flow: PortalProviderFlow) => void;
+  onResetFlow: () => void;
   onSubmitOtp: (otp: string) => void;
   onRefreshJob: () => void;
   onRetryItem: (item: PortalJobPolicyItem) => void;
@@ -152,11 +154,13 @@ export function PortalAutomationTab({
   onCredentialProfileChange,
   isSavingCredentials,
   isSavingFlow,
+  isResettingFlow,
   isSubmittingOtp,
   isRefreshingJob,
   onCreateJob,
   onSaveCredentials,
   onSaveFlow,
+  onResetFlow,
   onSubmitOtp,
   onRefreshJob,
   onRetryItem,
@@ -192,6 +196,8 @@ export function PortalAutomationTab({
   const [otp, setOtp] = useState('');
   const [policyRowSelector, setPolicyRowSelector] = useState('');
   const [fieldSelectors, setFieldSelectors] = useState<PortalFlowField[]>([]);
+  const selectedCategoryName = PRODUCT_CATEGORIES.find((category) => category.id === selectedCategoryId)?.name || selectedCategoryId;
+  const selectedScopeLabel = `${provider.name} / ${selectedCategoryName}`;
 
   useEffect(() => {
     if (flow?.credentialProfiles?.length && !selectedCredentialProfileId) {
@@ -445,11 +451,16 @@ export function PortalAutomationTab({
                 Launch a GitHub Actions Playwright worker for {provider.name}, pause for SMS OTP, then stage extracted rows for policy review.
               </CardDescription>
             </div>
-            {job && (
-              <Badge variant="outline" className={cn('capitalize', statusClassNames[job.status])}>
-                {job.status.replace(/_/g, ' ')}
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-800">
+                {selectedScopeLabel}
               </Badge>
-            )}
+              {job && (
+                <Badge variant="outline" className={cn('capitalize', statusClassNames[job.status])}>
+                  {job.status.replace(/_/g, ' ')}
+                </Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -460,6 +471,14 @@ export function PortalAutomationTab({
             </div>
           ) : flow ? (
             <>
+              <Alert className="border-blue-200 bg-blue-50 text-blue-900">
+                <ListChecks className="h-4 w-4" />
+                <AlertTitle>Shared provider login, isolated product flow</AlertTitle>
+                <AlertDescription>
+                  {provider.name} credentials are shared once for the provider. Automation flow settings, latest job, policy queue, discovery report, and staged results are isolated to {selectedCategoryName}.
+                </AlertDescription>
+              </Alert>
+
               <Alert className="bg-amber-50 border-amber-200 text-amber-900">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Live worker mode</AlertTitle>
@@ -871,7 +890,20 @@ export function PortalAutomationTab({
                   </div>
                 </details>
 
-                <div className="flex justify-end">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (window.confirm(`Reset only the ${selectedScopeLabel} portal flow? Provider credentials and other product flows will be kept.`)) {
+                        onResetFlow();
+                      }
+                    }}
+                    disabled={isResettingFlow || isSavingFlow}
+                  >
+                    {isResettingFlow ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+                    Reset This Product Flow
+                  </Button>
                   <Button type="button" variant="outline" onClick={saveFlowConfiguration} disabled={isSavingFlow}>
                     {isSavingFlow ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                     Save Search Setup
@@ -950,8 +982,15 @@ export function PortalAutomationTab({
       {job && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Current Job</CardTitle>
-            <CardDescription>GitHub Actions runs the Playwright worker and updates this status automatically.</CardDescription>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="text-lg">Current Job</CardTitle>
+                <CardDescription>GitHub Actions runs the Playwright worker and updates this status automatically.</CardDescription>
+              </div>
+              <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-800">
+                {selectedScopeLabel}
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

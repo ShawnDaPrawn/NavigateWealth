@@ -732,6 +732,67 @@ function categoryMatches(requestedCategoryId: string, policyCategoryId: string):
   return (groupedCategories[requestedCategoryId] || [requestedCategoryId]).includes(policyCategoryId);
 }
 
+function isRetirementPortalCategory(categoryId: string): boolean {
+  return categoryMatches('retirement_planning', categoryId);
+}
+
+function isInvestmentPortalCategory(categoryId: string): boolean {
+  return categoryMatches('investments', categoryId);
+}
+
+function normalisePortalCategoryProbe(value: unknown): string {
+  return String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function recordHasRetirementAnnuityMarker(record?: Record<string, unknown>): boolean {
+  if (!record) return false;
+  return Object.entries(record).some(([key, value]) => {
+    const text = `${normalisePortalCategoryProbe(key)} ${normalisePortalCategoryProbe(value)}`;
+    return /\bretirement\s+annuit/.test(text) || /\bretirement\s+annuity\s+fund\b/.test(text);
+  });
+}
+
+function syncRunHasRetirementAnnuityMarker(run?: IntegrationSyncRun | null): boolean {
+  if (!run) return false;
+  return (run.rows || []).some((row) =>
+    recordHasRetirementAnnuityMarker(row.rawData) ||
+    recordHasRetirementAnnuityMarker(row.mappedData) ||
+    row.diffs.some((diff) =>
+      recordHasRetirementAnnuityMarker({
+        fieldName: diff.fieldName,
+        oldValue: diff.oldValue,
+        newValue: diff.newValue,
+      })
+    )
+  );
+}
+
+function portalJobItemsHaveRetirementAnnuityMarker(items?: PortalJobPolicyItem[] | null): boolean {
+  if (!Array.isArray(items)) return false;
+  return items.some((item) =>
+    recordHasRetirementAnnuityMarker(item.rawData) ||
+    recordHasRetirementAnnuityMarker(item.extractedData)
+  );
+}
+
+function inferPortalRowCategoryId(row: Record<string, unknown>, fallbackCategoryId: string): string {
+  if (recordHasRetirementAnnuityMarker(row)) {
+    return 'retirement_planning';
+  }
+  return fallbackCategoryId;
+}
+
+function portalArtifactsMatchCategory(categoryId: string, options: {
+  stagedRun?: IntegrationSyncRun | null;
+  items?: PortalJobPolicyItem[] | null;
+} = {}): boolean {
+  if (isInvestmentPortalCategory(categoryId)) {
+    return !syncRunHasRetirementAnnuityMarker(options.stagedRun) &&
+      !portalJobItemsHaveRetirementAnnuityMarker(options.items);
+  }
+  return true;
+}
+
 function summarisePortalJobItems(items: PortalJobPolicyItem[]): PortalJobQueueSummary {
   return {
     total: items.length,
@@ -1403,16 +1464,61 @@ function normaliseDocumentArtifactStatuses(value: unknown, fallback: PortalDocum
   });
 }
 
-function getDefaultPortalFlow(provider: KvProvider, providerId: string): PortalProviderFlow {
+function getDefaultPortalFlow(provider: KvProvider, providerId: string, categoryId?: string): PortalProviderFlow {
   return buildDefaultPortalFlow(provider, providerId, {
     defaultPortalBrainGoal,
+    categoryId,
   }) as PortalProviderFlow;
 }
 
-async function getPortalFlow(provider: KvProvider, providerId: string): Promise<PortalProviderFlow> {
-  const configured = (await kv.get(`portal-flow:${providerId}`)) as PortalProviderFlow | null;
-  const defaultFlow = getDefaultPortalFlow(provider, providerId);
+function portalFlowKey(providerId: string, categoryId?: string): string {
+  const cleanCategoryId = String(categoryId || '').trim();
+  return cleanCategoryId ? `portal-flow:${providerId}:${cleanCategoryId}` : `portal-flow:${providerId}`;
+}
+
+function getPortalJobScopeError(job: PortalSyncJob, providerId?: string, categoryId?: string): string | null {
+  const cleanProviderId = String(providerId || '').trim();
+  const cleanCategoryId = String(categoryId || '').trim();
+  if (cleanProviderId && cleanProviderId !== job.providerId) {
+    return `Portal job belongs to provider ${job.providerId}, not ${cleanProviderId}`;
+  }
+  if (cleanCategoryId && cleanCategoryId !== job.categoryId) {
+    return `Portal job belongs to category ${job.categoryId}, not ${cleanCategoryId}`;
+  }
+  return null;
+}
+
+function getSyncRunScopeError(run: IntegrationSyncRun, providerId?: string, categoryId?: string): string | null {
+  const cleanProviderId = String(providerId || '').trim();
+  const cleanCategoryId = String(categoryId || '').trim();
+  if (cleanProviderId && cleanProviderId !== run.providerId) {
+    return `Sync run belongs to provider ${run.providerId}, not ${cleanProviderId}`;
+  }
+  if (cleanCategoryId && cleanCategoryId !== run.categoryId) {
+    return `Sync run belongs to category ${run.categoryId}, not ${cleanCategoryId}`;
+  }
+  return null;
+}
+
+async function getPortalFlow(provider: KvProvider, providerId: string, categoryId?: string): Promise<PortalProviderFlow> {
+  const scopedFlow = categoryId
+    ? (await kv.get(portalFlowKey(providerId, categoryId))) as PortalProviderFlow | null
+    : null;
+  const legacyProviderFlow = !categoryId || isRetirementPortalCategory(categoryId)
+    ? (await kv.get(portalFlowKey(providerId))) as PortalProviderFlow | null
+    : null;
+  let configured = scopedFlow || legacyProviderFlow;
+  const defaultFlow = getDefaultPortalFlow(provider, providerId, categoryId);
   if (!configured) return defaultFlow;
+  if (!scopedFlow && legacyProviderFlow && categoryId && isRetirementPortalCategory(categoryId)) {
+    configured = {
+      ...legacyProviderFlow,
+      id: `${providerId}:${categoryId}:default`,
+      providerId,
+      updatedAt: legacyProviderFlow.updatedAt || new Date().toISOString(),
+    };
+    await kv.set(portalFlowKey(providerId, categoryId), configured);
+  }
 
   const defaultExtractionFields = normaliseExtractionFields(defaultFlow.extraction?.fields, []);
   const configuredExtractionFields = normaliseExtractionFields(configured.extraction?.fields, []);
@@ -2085,7 +2191,7 @@ async function stagePortalRows(jobId: string, rawRows: Record<string, unknown>[]
   const rowsByCategory = new Map<string, Record<string, unknown>[]>();
   for (const row of rawRows) {
     const rowMetadata = getTemplateRowMetadata(row);
-    const categoryId = rowMetadata.categoryId || job.categoryId;
+    const categoryId = inferPortalRowCategoryId(row, rowMetadata.categoryId || job.categoryId);
     const group = rowsByCategory.get(categoryId) || [];
     group.push(row);
     rowsByCategory.set(categoryId, group);
@@ -2423,12 +2529,13 @@ app.get("/template", requireAuth, async (c) => {
 app.get("/portal-flows/:providerId", requireAuth, async (c) => {
   try {
     const providerId = c.req.param("providerId");
+    const categoryId = String(c.req.query("categoryId") || '').trim();
     const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
     if (!provider) {
       return c.json({ error: "Invalid provider ID" }, 400);
     }
 
-    const flow = await getPortalFlow(provider, providerId);
+    const flow = await getPortalFlow(provider, providerId, categoryId || undefined);
     return c.json({ success: true, flow: sanitisePortalFlow(flow) });
   } catch (e) {
     log.error("Portal flow fetch error:", e);
@@ -2440,18 +2547,19 @@ app.get("/portal-flows/:providerId", requireAuth, async (c) => {
 app.put("/portal-flows/:providerId", requireAuth, async (c) => {
   try {
     const providerId = c.req.param("providerId");
+    const categoryId = String(c.req.query("categoryId") || '').trim();
     const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
     if (!provider) {
       return c.json({ error: "Invalid provider ID" }, 400);
     }
 
     const body = await c.req.json();
-    const defaultFlow = getDefaultPortalFlow(provider, providerId);
+    const defaultFlow = getDefaultPortalFlow(provider, providerId, categoryId || undefined);
     const flow: PortalProviderFlow = {
       ...defaultFlow,
       ...body,
       providerId,
-      id: body?.id || `${providerId}:default`,
+      id: categoryId ? `${providerId}:${categoryId}:default` : body?.id || `${providerId}:default`,
       credentialProfiles: Array.isArray(body?.credentialProfiles) ? body.credentialProfiles : defaultFlow.credentialProfiles,
       navigation: {
         ...(defaultFlow.navigation || {}),
@@ -2471,11 +2579,43 @@ app.put("/portal-flows/:providerId", requireAuth, async (c) => {
       updatedAt: new Date().toISOString(),
     };
 
-    await kv.set(`portal-flow:${providerId}`, flow);
+    await kv.set(portalFlowKey(providerId, categoryId || undefined), flow);
     return c.json({ success: true, flow: sanitisePortalFlow(flow) });
   } catch (e) {
     log.error("Portal flow save error:", e);
     return c.json({ error: `Failed to save portal flow: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// DELETE /portal-flows/:providerId
+app.delete("/portal-flows/:providerId", requireAuth, async (c) => {
+  try {
+    const providerId = c.req.param("providerId");
+    const categoryId = String(c.req.query("categoryId") || '').trim();
+    if (!categoryId) {
+      return c.json({ error: "Missing categoryId" }, 400);
+    }
+
+    const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
+    if (!provider) {
+      return c.json({ error: "Invalid provider ID" }, 400);
+    }
+
+    const currentFlow = await getPortalFlow(provider, providerId, categoryId);
+    const defaultFlow = getDefaultPortalFlow(provider, providerId, categoryId);
+    const resetFlow: PortalProviderFlow = {
+      ...defaultFlow,
+      credentialProfiles: Array.isArray(currentFlow.credentialProfiles) && currentFlow.credentialProfiles.length > 0
+        ? currentFlow.credentialProfiles
+        : defaultFlow.credentialProfiles,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await kv.set(portalFlowKey(providerId, categoryId), resetFlow);
+    return c.json({ success: true, flow: sanitisePortalFlow(resetFlow) });
+  } catch (e) {
+    log.error("Portal flow reset error:", e);
+    return c.json({ error: `Failed to reset portal flow: ${getErrMsg(e)}` }, 500);
   }
 });
 
@@ -2493,7 +2633,7 @@ app.get("/portal-flows/:providerId/brain-memory", requireAuth, async (c) => {
       return c.json({ error: "Invalid provider ID" }, 400);
     }
 
-    const flow = await getPortalFlow(provider, providerId);
+    const flow = await getPortalFlow(provider, providerId, categoryId);
     const memory = await loadPortalBrainMemory(providerId, categoryId);
     const brainConfig = getPortalBrainConfig();
     const summary = summarisePortalBrainMemory(memory, {
@@ -2579,7 +2719,7 @@ app.put("/portal-flows/:providerId/credentials/:profileId", requireAuth, async (
         ),
         updatedAt: new Date().toISOString(),
       };
-      await kv.set(`portal-flow:${providerId}`, updatedFlow);
+      await kv.set(portalFlowKey(providerId), updatedFlow);
     }
 
     return c.json({ success: true, status: portalCredentialStatus(record, providerId, profileId) });
@@ -2605,17 +2745,14 @@ app.post("/portal-jobs", requireAuth, async (c) => {
       return c.json({ error: "Invalid provider ID" }, 400);
     }
 
-    const flow = await getPortalFlow(provider, providerId);
+    const flow = await getPortalFlow(provider, providerId, categoryId);
     const credentialProfileId = String(body?.credentialProfileId || flow.credentialProfiles[0]?.id || '');
     if (!credentialProfileId || !flow.credentialProfiles.some((profile) => profile.id === credentialProfileId)) {
       return c.json({ error: "Invalid credential profile" }, 400);
     }
-    const credentialProfile = flow.credentialProfiles.find((profile) => profile.id === credentialProfileId);
-    if (credentialProfile?.source === 'supabase_kv') {
-      const credentialRecord = (await kv.get(portalCredentialKey(providerId, credentialProfileId))) as PortalCredentialRecord | null;
-      if (!credentialRecord?.username || !credentialRecord?.password) {
-        return c.json({ error: "Save the provider portal username and password before creating a portal job" }, 400);
-      }
+    const credentialRecord = (await kv.get(portalCredentialKey(providerId, credentialProfileId))) as PortalCredentialRecord | null;
+    if (!credentialRecord?.username || !credentialRecord?.password) {
+      return c.json({ error: "Save the provider portal username and password before creating a portal job" }, 400);
     }
 
     const runMode = normaliseRunMode(body?.runMode);
@@ -2692,6 +2829,18 @@ app.get("/portal-jobs/latest", requireAuth, async (c) => {
     }
 
     const job = (await kv.get(`portal-job:${latest.jobId}`)) as PortalSyncJob | null;
+    if (!job || getPortalJobScopeError(job, providerId, categoryId)) {
+      await kv.del(`portal-job:latest:${providerId}:${categoryId}`);
+      return c.json({ success: true, job: null });
+    }
+    const stagedRun = job.stagedRunId
+      ? (await kv.get(`sync-run:${job.stagedRunId}`)) as IntegrationSyncRun | null
+      : null;
+    const items = stagedRun ? [] : await loadPortalJobItems(job.id);
+    if (!portalArtifactsMatchCategory(categoryId, { stagedRun, items })) {
+      await kv.del(`portal-job:latest:${providerId}:${categoryId}`);
+      return c.json({ success: true, job: null });
+    }
     return c.json({ success: true, job });
   } catch (e) {
     log.error("Latest portal job fetch error:", e);
@@ -2707,6 +2856,10 @@ app.get("/portal-jobs/:jobId", requireAuth, async (c) => {
     if (!job) {
       return c.json({ error: "Portal job not found" }, 404);
     }
+    const scopeError = getPortalJobScopeError(job, c.req.query("providerId"), c.req.query("categoryId"));
+    if (scopeError) {
+      return c.json({ error: scopeError }, 409);
+    }
     return c.json({ success: true, job });
   } catch (e) {
     log.error("Portal job fetch error:", e);
@@ -2721,6 +2874,10 @@ app.get("/portal-jobs/:jobId/items", requireAuth, async (c) => {
     const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
     if (!job) {
       return c.json({ error: "Portal job not found" }, 404);
+    }
+    const scopeError = getPortalJobScopeError(job, c.req.query("providerId"), c.req.query("categoryId"));
+    if (scopeError) {
+      return c.json({ error: scopeError }, 409);
     }
 
     const items = await loadPortalJobItems(jobId);
@@ -2739,6 +2896,11 @@ app.post("/portal-jobs/:jobId/items/:itemId/retry", requireAuth, async (c) => {
     const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
     if (!job) {
       return c.json({ error: "Portal job not found" }, 404);
+    }
+    const body = await c.req.json().catch(() => ({}));
+    const scopeError = getPortalJobScopeError(job, body?.providerId, body?.categoryId);
+    if (scopeError) {
+      return c.json({ error: scopeError }, 409);
     }
 
     const items = await loadPortalJobItems(jobId);
@@ -2899,6 +3061,10 @@ app.get("/portal-jobs/:jobId/discovery-report", requireAuth, async (c) => {
     if (!job) {
       return c.json({ error: "Portal job not found" }, 404);
     }
+    const scopeError = getPortalJobScopeError(job, c.req.query("providerId"), c.req.query("categoryId"));
+    if (scopeError) {
+      return c.json({ error: scopeError }, 409);
+    }
 
     const latest = (await kv.get(`portal-discovery-report:latest:${jobId}`)) as { reportId: string } | null;
     if (!latest?.reportId) {
@@ -2923,6 +3089,10 @@ app.post("/portal-jobs/:jobId/otp", requireAuth, async (c) => {
     }
 
     const body = await c.req.json();
+    const scopeError = getPortalJobScopeError(job, body?.providerId, body?.categoryId);
+    if (scopeError) {
+      return c.json({ error: scopeError }, 409);
+    }
     const otp = String(body?.otp || '').trim();
     if (!/^[0-9A-Za-z]{4,12}$/.test(otp)) {
       return c.json({ error: "OTP must be 4 to 12 letters or numbers" }, 400);
@@ -3047,7 +3217,7 @@ app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
     if (!provider) {
       return c.json({ error: "Invalid provider ID" }, 400);
     }
-    const flow = await getPortalFlow(provider, job.providerId);
+    const flow = await getPortalFlow(provider, job.providerId, job.categoryId);
     const schema = await getSchemaForCategory(job.categoryId);
     const storedConfig = (await kv.get(`config:mapping:${job.providerId}:${job.categoryId}`)) as IntegrationConfig | null;
     const config = storedConfig
@@ -3126,7 +3296,7 @@ app.post("/portal-worker/jobs/:jobId/brain/decide", async (c) => {
       return c.json({ error: "Invalid provider ID" }, 400);
     }
 
-    const flow = await getPortalFlow(provider, job.providerId);
+    const flow = await getPortalFlow(provider, job.providerId, job.categoryId);
     const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
     const stage = String(body.stage || '');
     const policyNumber = String(body.policyNumber || '').trim();
@@ -3936,6 +4106,13 @@ app.post("/sync-runs/:runId/publish", requireAuth, async (c) => {
     const run = (await kv.get(`sync-run:${runId}`)) as IntegrationSyncRun | null;
     if (!run) {
       return c.json({ error: "Sync run not found" }, 404);
+    }
+    const scopeError = getSyncRunScopeError(run, body?.providerId, body?.categoryId);
+    if (scopeError) {
+      return c.json({ error: scopeError }, 409);
+    }
+    if (body?.categoryId && !portalArtifactsMatchCategory(String(body.categoryId), { stagedRun: run })) {
+      return c.json({ error: "This staged portal extraction contains retirement annuity data and cannot be published from an investments category." }, 409);
     }
 
     const publishedRun = await publishSyncRun(run, { rowIds });

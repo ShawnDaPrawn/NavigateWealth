@@ -23,7 +23,7 @@ describe('provider portal golden flows', () => {
   });
 
   it('preserves the Allan Gray default portal flow anchors', () => {
-    expect(portalDefaultFlowsSource).toContain("name: 'Allan Gray portal policy extraction'");
+    expect(portalDefaultFlowsSource).toContain(": 'Allan Gray portal policy extraction'");
     expect(portalDefaultFlowsSource).toContain("loginUrl: 'https://login.secure.allangray.co.za/?audience=New%20clients'");
     expect(portalDefaultFlowsSource).toContain("id: 'allan-gray-env'");
     expect(portalDefaultFlowsSource).toContain("usernameEnvVar: 'NW_PROVIDER_ALLAN_GRAY_USERNAME'");
@@ -40,7 +40,8 @@ describe('provider portal golden flows', () => {
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Product Type'");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Date of Inception'");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Current Value'");
-    expect(portalDefaultFlowsSource).toContain("labels: ['Total value', 'Closing balance', 'Value']");
+    expect(portalDefaultFlowsSource).toContain(": ['Retirement annuity fund']");
+    expect(portalDefaultFlowsSource).toContain(": ['Total value', 'Closing balance', 'Value']");
     expect(portalDefaultFlowsSource).toContain("required: true, transform: 'trim'");
   });
 
@@ -73,8 +74,25 @@ describe('provider portal golden flows', () => {
   });
 
   it('keeps the generic provider path configurable rather than Allan Gray-only', () => {
-    expect(portalDefaultFlowsSource).toContain("name: `${providerName} portal policy extraction`");
+    expect(portalDefaultFlowsSource).toContain(": `${providerName} portal policy extraction`");
     expect(portalDefaultFlowsSource).toContain("extraction: { fields: [] }");
     expect(portalDefaultFlowsSource).toContain("notes: ['Configure login, policy search, and field labels before running this provider in production.']");
+  });
+
+  it('keeps portal flow configuration isolated by provider and category', () => {
+    expect(integrationsSource).toContain('function portalFlowKey(providerId: string, categoryId?: string): string');
+    expect(integrationsSource).toContain('`portal-flow:${providerId}:${cleanCategoryId}`');
+    expect(integrationsSource).toContain('const scopedFlow = categoryId');
+    expect(integrationsSource).toContain('const legacyProviderFlow = !categoryId || isRetirementPortalCategory(categoryId)');
+    expect(integrationsSource).toContain('await kv.set(portalFlowKey(providerId, categoryId), configured)');
+    expect(integrationsSource).toContain('app.delete("/portal-flows/:providerId"');
+    expect(integrationsSource).toContain('function getPortalJobScopeError(job: PortalSyncJob, providerId?: string, categoryId?: string): string | null');
+    expect(integrationsSource).toContain('function getSyncRunScopeError(run: IntegrationSyncRun, providerId?: string, categoryId?: string): string | null');
+    expect(integrationsSource).toContain('function recordHasRetirementAnnuityMarker(record?: Record<string, unknown>): boolean');
+    expect(integrationsSource).toContain('function inferPortalRowCategoryId(row: Record<string, unknown>, fallbackCategoryId: string): string');
+    expect(integrationsSource).toContain('function portalArtifactsMatchCategory(categoryId: string, options: {');
+    expect(integrationsSource).toContain('await getPortalFlow(provider, job.providerId, job.categoryId)');
+    expect(portalDefaultFlowsSource).toContain("investments: 'Investments'");
+    expect(portalDefaultFlowsSource).toContain("['Investment', 'Unit trust', 'Portfolio', 'Account type', 'Product type']");
   });
 });

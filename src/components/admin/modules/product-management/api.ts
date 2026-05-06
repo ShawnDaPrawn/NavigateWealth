@@ -269,7 +269,7 @@ export const productManagementApi = {
     return data;
   },
 
-  publishIntegrationSyncRun: async (runId: string, rowIds?: string[]): Promise<IntegrationSyncRun> => {
+  publishIntegrationSyncRun: async (runId: string, providerId: string, categoryId: string, rowIds?: string[]): Promise<IntegrationSyncRun> => {
     const token = await getSupabaseAuthToken();
     const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/sync-runs/${runId}/publish`, {
       method: 'POST',
@@ -277,7 +277,7 @@ export const productManagementApi = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ rowIds }),
+      body: JSON.stringify({ providerId, categoryId, rowIds }),
     });
 
     const data = await res.json();
@@ -325,8 +325,10 @@ export const productManagementApi = {
     URL.revokeObjectURL(url);
   },
 
-  fetchPortalFlow: async (providerId: string): Promise<PortalProviderFlow> => {
-    const response = await api.get<{ success: boolean; flow: PortalProviderFlow }>(`integrations/portal-flows/${providerId}`);
+  fetchPortalFlow: async (providerId: string, categoryId: string): Promise<PortalProviderFlow> => {
+    const response = await api.get<{ success: boolean; flow: PortalProviderFlow }>(
+      `integrations/portal-flows/${providerId}?categoryId=${encodeURIComponent(categoryId)}`
+    );
     return response.flow;
   },
 
@@ -335,8 +337,18 @@ export const productManagementApi = {
     return response.summary;
   },
 
-  savePortalFlow: async (providerId: string, flow: PortalProviderFlow): Promise<PortalProviderFlow> => {
-    const response = await api.put<{ success: boolean; flow: PortalProviderFlow }>(`integrations/portal-flows/${providerId}`, flow);
+  savePortalFlow: async (providerId: string, categoryId: string, flow: PortalProviderFlow): Promise<PortalProviderFlow> => {
+    const response = await api.put<{ success: boolean; flow: PortalProviderFlow }>(
+      `integrations/portal-flows/${providerId}?categoryId=${encodeURIComponent(categoryId)}`,
+      flow
+    );
+    return response.flow;
+  },
+
+  resetPortalFlow: async (providerId: string, categoryId: string): Promise<PortalProviderFlow> => {
+    const response = await api.delete<{ success: boolean; flow: PortalProviderFlow }>(
+      `integrations/portal-flows/${providerId}?categoryId=${encodeURIComponent(categoryId)}`
+    );
     return response.flow;
   },
 
@@ -367,18 +379,25 @@ export const productManagementApi = {
     });
   },
 
-  fetchPortalJob: async (jobId: string): Promise<PortalSyncJob> => {
-    const response = await api.get<{ success: boolean; job: PortalSyncJob }>(`integrations/portal-jobs/${jobId}`);
+  fetchPortalJob: async (jobId: string, providerId: string, categoryId: string): Promise<PortalSyncJob> => {
+    const response = await api.get<{ success: boolean; job: PortalSyncJob }>(
+      `integrations/portal-jobs/${jobId}?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`
+    );
     return response.job;
   },
 
-  fetchPortalJobItems: async (jobId: string): Promise<{ items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }> => {
-    const response = await api.get<{ success: boolean; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }>(`integrations/portal-jobs/${jobId}/items`);
+  fetchPortalJobItems: async (jobId: string, providerId: string, categoryId: string): Promise<{ items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }> => {
+    const response = await api.get<{ success: boolean; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }>(
+      `integrations/portal-jobs/${jobId}/items?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`
+    );
     return { items: response.items || [], summary: response.summary };
   },
 
-  retryPortalJobItem: async (jobId: string, itemId: string): Promise<{ job: PortalSyncJob; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }> => {
-    const response = await api.post<{ success: boolean; job: PortalSyncJob; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }>(`integrations/portal-jobs/${jobId}/items/${itemId}/retry`, {});
+  retryPortalJobItem: async (jobId: string, itemId: string, providerId: string, categoryId: string): Promise<{ job: PortalSyncJob; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }> => {
+    const response = await api.post<{ success: boolean; job: PortalSyncJob; items: PortalJobPolicyItem[]; summary: PortalJobQueueSummary }>(
+      `integrations/portal-jobs/${jobId}/items/${itemId}/retry`,
+      { providerId, categoryId }
+    );
     return { job: response.job, items: response.items || [], summary: response.summary };
   },
 
@@ -387,13 +406,15 @@ export const productManagementApi = {
     return response.job;
   },
 
-  fetchPortalDiscoveryReport: async (jobId: string): Promise<PortalDiscoveryReport | null> => {
-    const response = await api.get<{ success: boolean; report: PortalDiscoveryReport | null }>(`integrations/portal-jobs/${jobId}/discovery-report`);
+  fetchPortalDiscoveryReport: async (jobId: string, providerId: string, categoryId: string): Promise<PortalDiscoveryReport | null> => {
+    const response = await api.get<{ success: boolean; report: PortalDiscoveryReport | null }>(
+      `integrations/portal-jobs/${jobId}/discovery-report?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`
+    );
     return response.report;
   },
 
-  submitPortalOtp: async (jobId: string, otp: string): Promise<PortalSyncJob> => {
-    const response = await api.post<{ success: boolean; job: PortalSyncJob }>(`integrations/portal-jobs/${jobId}/otp`, { otp });
+  submitPortalOtp: async (jobId: string, otp: string, providerId: string, categoryId: string): Promise<PortalSyncJob> => {
+    const response = await api.post<{ success: boolean; job: PortalSyncJob }>(`integrations/portal-jobs/${jobId}/otp`, { otp, providerId, categoryId });
     return response.job;
   }
 };
