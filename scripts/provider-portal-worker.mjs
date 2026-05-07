@@ -1,6 +1,10 @@
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { getProviderAdapter } from './provider-adapters/index.mjs';
 import {
+  assertPortalRuntimeConfigured,
+  isPortalConfigurationError,
+} from './provider-portal-runtime-validation.mjs';
+import {
   getFallbackValueForField,
   getFieldSemanticKind,
   isLikelyCurrencyValue,
@@ -2279,6 +2283,7 @@ async function runJob(jobId, requestedMode = mode) {
   let browser;
   try {
     const { job, flow, config, items, credentials, brain } = await loadRuntime(jobId);
+    assertPortalRuntimeConfigured(flow);
     const providerAdapter = getProviderAdapter({ job, flow });
     const jobMode = job.runMode || requestedMode;
     if (jobMode === 'run' && job.status !== 'dry_run_ready' && !forceStage && authToken) {
@@ -2371,11 +2376,18 @@ async function runJob(jobId, requestedMode = mode) {
       body: JSON.stringify({ rows }),
     });
   } catch (error) {
+    const configurationError = isPortalConfigurationError(error);
     await updateJob('failed', {
       currentStep: 'failed',
-      message: 'Portal worker failed.',
+      message: configurationError
+        ? 'Portal flow is not configured for automation.'
+        : 'Portal worker failed.',
       error: error instanceof Error ? error.message : String(error),
     }).catch(() => undefined);
+    if (configurationError) {
+      console.warn(error instanceof Error ? error.message : String(error));
+      return;
+    }
     throw error;
   } finally {
     if (browser) await browser.close();
