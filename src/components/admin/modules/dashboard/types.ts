@@ -54,30 +54,6 @@ export interface TaskDueToday {
  */
 export type DashboardTaskStatus = 'todo' | 'in_progress' | 'completed' | 'cancelled';
 
-export interface RecentRequest {
-  id: string;
-  templateName: string;
-  title?: string;
-  recipientEmail: string;
-  status: RequestStatus;
-  createdAt: string;
-  updatedAt?: string;
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
-  clientId?: string;
-  assignedTo?: string;
-}
-
-export type RequestStatus = 
-  | 'new'
-  | 'awaiting information'
-  | 'info_gathering'
-  | 'pending'
-  | 'sent_for_quote'
-  | 'generated'
-  | 'closed'
-  | 'finalised'
-  | 'cancelled';
-
 export interface SystemActivity {
   type: SystemActivityType;
   count: number;
@@ -88,9 +64,6 @@ export interface SystemActivity {
 }
 
 export type SystemActivityType = 
-  | 'awaiting_info'
-  | 'pending_review'
-  | 'open_requests'
   | 'new_applications'
   | 'new_policies'
   | 'completed_fnas'
@@ -133,13 +106,6 @@ export interface TasksWidgetProps {
   maxTasks?: number;
 }
 
-export interface RequestsWidgetProps {
-  onViewAll?: () => void;
-  onModuleChange?: (module: string) => void;
-  onViewRequest?: (requestId: string) => void;
-  maxRequests?: number;
-}
-
 export interface SystemActivityCardProps {
   onViewDetails?: (activityType: SystemActivityType) => void;
   onModuleChange?: (module: string) => void;
@@ -172,12 +138,6 @@ export interface DashboardMetricsResponse {
 export interface TasksDueTodayResponse {
   success: boolean;
   data: TaskDueToday[];
-  error?: string;
-}
-
-export interface RecentRequestsResponse {
-  success: boolean;
-  data: RecentRequest[];
   error?: string;
 }
 

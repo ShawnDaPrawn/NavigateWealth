@@ -132,7 +132,6 @@ export const PERMISSIONED_MODULES: AdminModule[] = [
   'compliance',
   'tasks',
   'applications',
-  'quotes',
   'submissions',
   'communication',
   'marketing',
@@ -176,7 +175,6 @@ export const ROLE_MODULE_PRESETS: Record<string, AdminModule[]> = {
     'calendar',
     'communication',
     'resources',
-    'quotes',
   ],
   paraplanner: [
     'clients',
@@ -184,7 +182,6 @@ export const ROLE_MODULE_PRESETS: Record<string, AdminModule[]> = {
     'resources',
     'tasks',
     'calendar',
-    'quotes',
   ],
   compliance: [
     'compliance',
@@ -315,14 +312,6 @@ export const MODULE_CAPABILITIES: Record<AdminModule, CapabilityMeta[]> = {
     { key: 'edit',    label: 'Edit',    description: 'Edit post content and scheduling' },
     { key: 'publish', label: 'Publish', description: 'Publish posts to connected accounts' },
     { key: 'delete',  label: 'Delete',  description: 'Delete posts' },
-  ],
-
-  // ── Quotes (mapped to Requests module) ───────────────────────
-  quotes: [
-    { key: 'create',  label: 'Create',  description: 'Submit new requests' },
-    { key: 'edit',    label: 'Edit',    description: 'Modify request details' },
-    { key: 'approve', label: 'Approve', description: 'Approve or reject requests' },
-    { key: 'delete',  label: 'Delete',  description: 'Delete request templates' },
   ],
 
   // ── Submissions ──────────────────────────────────────────────

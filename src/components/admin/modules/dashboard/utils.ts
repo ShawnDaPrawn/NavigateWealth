@@ -1,4 +1,4 @@
-import type { RequestStatus, TaskPriority, BadgeVariant, TrendDirection, TaskDueToday } from './types';
+import type { TaskPriority, BadgeVariant, TrendDirection, TaskDueToday } from './types';
 
 export function formatNumber(value: number, locale: string = 'en-ZA'): string {
   // Use manual formatting to ensure consistent comma-separated thousands
@@ -85,38 +85,6 @@ export function getTrendDirection(
   if (growth > threshold) return 'up';
   if (growth < -threshold) return 'down';
   return 'neutral';
-}
-
-export function getStatusLabel(status: RequestStatus | string): string {
-  const statusMap: Record<string, string> = {
-    'new': 'New',
-    'awaiting information': 'Awaiting Information',
-    'info_gathering': 'Awaiting Information',
-    'pending': 'Pending Review',
-    'sent_for_quote': 'Sent for Quote',
-    'generated': 'Generated',
-    'closed': 'Closed',
-    'finalised': 'Finalised',
-    'cancelled': 'Cancelled',
-  };
-
-  return statusMap[status?.toLowerCase()] || status;
-}
-
-export function getStatusVariant(status: RequestStatus | string): BadgeVariant {
-  const lowerStatus = status?.toLowerCase();
-
-  if (['awaiting information', 'info_gathering'].includes(lowerStatus)) {
-    return 'default';
-  }
-  if (['pending', 'sent_for_quote'].includes(lowerStatus)) {
-    return 'secondary';
-  }
-  if (['closed', 'finalised', 'cancelled'].includes(lowerStatus)) {
-    return 'outline';
-  }
-
-  return 'default';
 }
 
 export function getPriorityVariant(priority: TaskPriority): BadgeVariant {
@@ -241,22 +209,6 @@ export function sortByPriority<T extends { priority: TaskPriority }>(
   return [...items].sort((a, b) => {
     return priorityOrder[a.priority] - priorityOrder[b.priority];
   });
-}
-
-export function isOpenStatus(status: RequestStatus): boolean {
-  const openStatuses: RequestStatus[] = [
-    'awaiting information',
-    'info_gathering',
-    'pending',
-    'sent_for_quote',
-    'generated'
-  ];
-  return openStatuses.includes(status);
-}
-
-export function isClosedStatus(status: RequestStatus): boolean {
-  const closedStatuses: RequestStatus[] = ['closed', 'finalised', 'cancelled'];
-  return closedStatuses.includes(status);
 }
 
 export function isHighPriority(priority: TaskPriority): boolean {

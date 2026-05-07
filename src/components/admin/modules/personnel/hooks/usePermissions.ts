@@ -208,7 +208,7 @@ export function useCurrentUserPermissions(): ResolvedPermissions {
   const allModules: AdminModule[] = [
     'dashboard', 'clients', 'esign', 'personnel', 'advice-engine',
     'product-management', 'resources', 'publications', 'compliance',
-    'tasks', 'notes', 'applications', 'quotes', 'submissions', 'communication',
+    'tasks', 'notes', 'applications', 'submissions', 'communication',
     'marketing', 'reporting', 'calendar', 'issues', 'ai-management',
   ];
 

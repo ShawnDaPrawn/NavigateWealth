@@ -12,7 +12,6 @@ export type AdminModule =
   | 'tasks' 
   | 'notes'
   | 'applications' 
-  | 'quotes' 
   | 'submissions'
   | 'communication' 
   | 'marketing' 

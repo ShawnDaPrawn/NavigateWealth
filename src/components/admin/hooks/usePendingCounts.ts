@@ -9,7 +9,7 @@ import { getIncompleteCount } from '../modules/applications/utils';
 const ALL_MODULES: AdminModule[] = [
   'dashboard', 'clients', 'personnel', 'advice-engine', 'product-management',
   'resources', 'publications', 'compliance', 'tasks', 'notes', 'applications',
-  'quotes', 'submissions', 'communication', 'marketing', 'reporting', 'calendar',
+  'submissions', 'communication', 'marketing', 'reporting', 'calendar',
   'esign', 'issues', 'ai-management',
 ];
 
@@ -47,7 +47,6 @@ async function fetchPendingCounts(): Promise<Record<AdminModule, { count: number
 
   // Fetch application stats from backend
   let applicationsPending = 0;
-  let requestsPending = 0;
   try {
     const statsResponse = await fetch(
       `${SERVER_BASE}/admin/stats`,
@@ -59,8 +58,6 @@ async function fetchPendingCounts(): Promise<Record<AdminModule, { count: number
       // Count "submitted_for_review" + incomplete (draft + in-progress signups)
       applicationsPending =
         (data.stats?.submitted_for_review || 0) + getIncompleteCount(data.stats);
-      // Get pending requests count
-      requestsPending = data.stats?.pending_requests || 0;
     }
   } catch (error) {
     // Silently handle network errors - these are expected when offline or server unavailable
@@ -119,7 +116,6 @@ async function fetchPendingCounts(): Promise<Record<AdminModule, { count: number
   // Set actual counts for operations modules
   result.applications = { count: applicationsPending };
   result.tasks = { count: tasksPending };
-  result.quotes = { count: requestsPending };
   result.submissions = { count: submissionsNew };
   result.calendar = { count: 0 }; // TODO: Implement calendar counting
   result.issues = { count: issuesOpen };

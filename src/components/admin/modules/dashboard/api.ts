@@ -6,7 +6,6 @@ import type {
   DashboardStats,
   DashboardMetrics,
   TaskDueToday,
-  RecentRequest,
   SystemActivity,
   LastCleanupRun,
   CleanupRunResult,
@@ -193,66 +192,12 @@ export const tasksApi = {
   },
 };
 
-export const requestsApi = {
-  async getRecent(limit: number = 10): Promise<RecentRequest[]> {
-    try {
-      const response = await api.get<{ success: boolean; data: RecentRequest[] }>(
-        `${ENDPOINTS.RECENT_REQUESTS}?limit=${limit}`
-      );
-      return response.data || [];
-    } catch (error) {
-      logger.error('Failed to fetch recent requests', error, { limit });
-      return [];
-    }
-  },
-
-  async getOpenCount(): Promise<number> {
-    try {
-      const requests = await this.getRecent(100); 
-      return requests.filter(r => {
-        const status = r.status?.toLowerCase();
-        return ['awaiting information', 'info_gathering', 'pending', 'sent_for_quote', 'generated'].includes(status);
-      }).length;
-    } catch (error) {
-      logger.error('Failed to fetch open requests count', error);
-      return 0;
-    }
-  },
-
-  async getAwaitingInfo(): Promise<RecentRequest[]> {
-    try {
-      const requests = await this.getRecent(100);
-      return requests.filter(r => {
-        const status = r.status?.toLowerCase();
-        return status === 'awaiting information' || status === 'info_gathering';
-      });
-    } catch (error) {
-      logger.error('Failed to fetch requests awaiting info', error);
-      return [];
-    }
-  },
-
-  async getPendingReview(): Promise<RecentRequest[]> {
-    try {
-      const requests = await this.getRecent(100);
-      return requests.filter(r => {
-        const status = r.status?.toLowerCase();
-        return status === 'pending';
-      });
-    } catch (error) {
-      logger.error('Failed to fetch pending review requests', error);
-      return [];
-    }
-  },
-};
-
 export const systemActivityApi = {
   async getAll(): Promise<SystemActivity[]> {
     try {
-      const [stats, metrics, requestsCount] = await Promise.all([
+      const [stats, metrics] = await Promise.all([
         dashboardStatsApi.getStats(),
         dashboardMetricsApi.getMetrics(),
-        requestsApi.getOpenCount(),
       ]);
 
       const activities: SystemActivity[] = [
@@ -313,11 +258,10 @@ export const systemActivityApi = {
 export const dashboardApi = {
   async getAll() {
     try {
-      const [stats, metrics, tasks, requests, activities] = await Promise.all([
+      const [stats, metrics, tasks, activities] = await Promise.all([
         dashboardStatsApi.getStats(),
         dashboardMetricsApi.getMetrics(),
         tasksApi.getDueToday(),
-        requestsApi.getRecent(10),
         systemActivityApi.getAll(),
       ]);
 
@@ -325,7 +269,6 @@ export const dashboardApi = {
         stats,
         metrics,
         tasks,
-        requests,
         activities,
       };
     } catch (error) {
@@ -342,7 +285,6 @@ export const dashboardApi = {
   stats: dashboardStatsApi,
   metrics: dashboardMetricsApi,
   tasks: tasksApi,
-  requests: requestsApi,
   activity: systemActivityApi,
 };
 

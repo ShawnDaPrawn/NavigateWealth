@@ -2,6 +2,10 @@ import * as XLSX from 'xlsx';
 import { Report, ReportRun } from './types';
 import { reportingApi } from './api';
 
+type SpreadsheetCellValue = string | number | boolean | null;
+
+const ILLEGAL_XML_CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
+
 /**
  * Sanitise a string for use as an Excel sheet name.
  * Strips characters forbidden by the OOXML spec: : \ / ? * [ ]
@@ -9,6 +13,81 @@ import { reportingApi } from './api';
  */
 function sanitiseSheetName(name: string): string {
   return name.replace(/[:\\/?*[\]]/g, '').substring(0, 31) || 'Report';
+}
+
+function sanitiseCellText(value: string): string {
+  return value.replace(ILLEGAL_XML_CONTROL_CHARS, '').trim();
+}
+
+function normaliseCellValue(value: unknown): SpreadsheetCellValue {
+  if (value == null) return '';
+
+  if (typeof value === 'string') {
+    return sanitiseCellText(value);
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : '';
+  }
+
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'bigint') {
+    return value.toString();
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? '' : value.toISOString();
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => normaliseCellValue(item))
+      .filter((item) => item !== '')
+      .join('; ');
+  }
+
+  if (typeof value === 'object') {
+    try {
+      return sanitiseCellText(JSON.stringify(value));
+    } catch {
+      return '';
+    }
+  }
+
+  return '';
+}
+
+export function normaliseRowsForXLSX(
+  rows: Record<string, unknown>[]
+): { rows: Record<string, SpreadsheetCellValue>[]; headers: string[] } {
+  const headers: string[] = [];
+  const headerSet = new Set<string>();
+
+  for (const row of rows) {
+    for (const key of Object.keys(row)) {
+      const header = sanitiseCellText(key) || 'Column';
+      if (!headerSet.has(header)) {
+        headerSet.add(header);
+        headers.push(header);
+      }
+    }
+  }
+
+  const normalisedRows = rows.map((row) => {
+    const normalised: Record<string, SpreadsheetCellValue> = {};
+
+    for (const [key, value] of Object.entries(row)) {
+      const header = sanitiseCellText(key) || 'Column';
+      normalised[header] = normaliseCellValue(value);
+    }
+
+    return normalised;
+  });
+
+  return { rows: normalisedRows, headers };
 }
 
 /**
@@ -43,16 +122,16 @@ function generateAndDownloadXLSX(
   filename: string
 ): string {
   // Build worksheet from JSON rows — SheetJS places each key into its own column
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const { rows: normalisedRows, headers } = normaliseRowsForXLSX(rows);
+  const ws = XLSX.utils.json_to_sheet(normalisedRows, { header: headers });
 
   // Auto-size columns based on header + content width (best-effort)
-  const headers = Object.keys(rows[0] || {});
   const colWidths = headers.map((header) => {
     // Start with header length
     let maxLen = header.length;
     // Sample first 50 rows for width estimation
-    for (let i = 0; i < Math.min(rows.length, 50); i++) {
-      const cellVal = rows[i][header];
+    for (let i = 0; i < Math.min(normalisedRows.length, 50); i++) {
+      const cellVal = normalisedRows[i][header];
       const cellLen = cellVal != null ? String(cellVal).length : 0;
       if (cellLen > maxLen) maxLen = cellLen;
     }

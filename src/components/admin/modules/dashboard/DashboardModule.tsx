@@ -5,7 +5,6 @@ import { KPIGrid } from './components/KPIGrid';
 import { SystemActivityCard } from './components/SystemActivityCard';
 import { QuickActionsCard } from './components/QuickActionsCard';
 import { TasksWidget } from './components/TasksWidget';
-// import { RequestsWidget } from './components/RequestsWidget';
 import { RecentNotesWidget } from './components/RecentNotesWidget';
 import { NewsletterKPICard } from './components/NewsletterKPICard';
 import { SystemHealthCard } from './components/SystemHealthCard';

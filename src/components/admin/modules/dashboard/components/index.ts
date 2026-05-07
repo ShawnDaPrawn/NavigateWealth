@@ -2,7 +2,6 @@ export * from './KPICard';
 export * from './KPIGrid';
 export * from './PlatformFeaturesCard';
 export * from './QuickActionsCard';
-export * from './RequestsWidget';
 export * from './SystemActivityCard';
 export * from './SystemHealthCard';
 export * from './TasksWidget';

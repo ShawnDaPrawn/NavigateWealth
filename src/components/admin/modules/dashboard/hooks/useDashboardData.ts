@@ -6,7 +6,6 @@ import type {
   DashboardStats,
   DashboardMetrics,
   TaskDueToday,
-  RecentRequest,
   SystemActivity,
 } from '../types';
 
@@ -14,7 +13,6 @@ export interface UseDashboardDataReturn {
   stats: DashboardStats | null;
   metrics: DashboardMetrics | null;
   tasks: TaskDueToday[];
-  requests: RecentRequest[];
   activities: SystemActivity[];
   loading: boolean;
   error: string | null;
@@ -23,7 +21,6 @@ export interface UseDashboardDataReturn {
     stats: boolean;
     metrics: boolean;
     tasks: boolean;
-    requests: boolean;
     activities: boolean;
   };
 }
@@ -77,21 +74,6 @@ export function useDashboardData(): UseDashboardDataReturn {
     staleTime: 30000,
   });
 
-  // Fetch recent requests
-  const {
-    data: requests,
-    isLoading: requestsLoading,
-    error: requestsError,
-    refetch: refetchRequests,
-  } = useQuery({
-    queryKey: dashboardKeys.recentRequests(),
-    queryFn: () => dashboardApi.requests.getRecent(10),
-    enabled: isAdmin,
-    refetchInterval: isAdmin ? 60000 : false,
-    retry: false,
-    staleTime: 30000,
-  });
-
   // Fetch system activity
   const {
     data: activities,
@@ -113,16 +95,15 @@ export function useDashboardData(): UseDashboardDataReturn {
       refetchStats(),
       refetchMetrics(),
       refetchTasks(),
-      refetchRequests(),
       refetchActivities(),
     ]);
   };
 
   // Determine overall loading state
-  const loading = statsLoading || metricsLoading || tasksLoading || requestsLoading || activitiesLoading;
+  const loading = statsLoading || metricsLoading || tasksLoading || activitiesLoading;
 
   // Collect errors
-  const errors = [statsError, metricsError, tasksError, requestsError, activitiesError]
+  const errors = [statsError, metricsError, tasksError, activitiesError]
     .filter(Boolean)
     .map((e) => (e as Error).message);
   const error = errors.length > 0 ? errors.join('; ') : null;
@@ -131,7 +112,6 @@ export function useDashboardData(): UseDashboardDataReturn {
     stats: stats || null,
     metrics: metrics || null,
     tasks: tasks || [],
-    requests: requests || [],
     activities: activities || [],
     loading,
     error,
@@ -140,7 +120,6 @@ export function useDashboardData(): UseDashboardDataReturn {
       stats: statsLoading,
       metrics: metricsLoading,
       tasks: tasksLoading,
-      requests: requestsLoading,
       activities: activitiesLoading,
     },
   };

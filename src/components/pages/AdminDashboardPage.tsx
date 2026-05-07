@@ -29,7 +29,6 @@ import { ProductManagementSkeleton } from '../admin/modules/product-management/c
 import { ResourcesSkeleton } from '../admin/modules/resources/components/ResourcesSkeleton';
 import { PublicationsSkeleton } from '../admin/modules/publications/components/PublicationsSkeleton';
 import { ComplianceSkeleton } from '../admin/modules/compliance/components/ComplianceSkeleton';
-import { RequestsSkeleton } from '../admin/modules/requests/components/RequestsSkeleton';
 import { CommunicationSkeleton } from '../admin/modules/communication/components/CommunicationSkeleton';
 import { SocialMediaSkeleton } from '../admin/modules/social-media/components/SocialMediaSkeleton';
 import { ReportingSkeleton } from '../admin/modules/reporting/components/ReportingSkeleton';
@@ -51,7 +50,6 @@ const PersonnelModule = React.lazy(() => import('../admin/modules/personnel').th
 const TaskManagementModule = React.lazy(() => import('../admin/modules/tasks').then(m => ({ default: m.TaskManagementModule })));
 const ApplicationsModule = React.lazy(() => import('../admin/modules/applications').then(m => ({ default: m.ApplicationsModule })));
 const ReportingModule = React.lazy(() => import('../admin/modules/reporting').then(m => ({ default: m.ReportingModule })));
-const RequestsModule = React.lazy(() => import('../admin/modules/requests').then(m => ({ default: m.RequestsModule })));
 const CalendarModule = React.lazy(() => import('../admin/modules/calendar').then(m => ({ default: m.CalendarModule })));
 const AdviceEngineModule = React.lazy(() => import('../admin/modules/advice-engine').then(m => ({ default: m.AdviceEngineModule })));
 const ComplianceModule = React.lazy(() => import('../admin/modules/compliance').then(m => ({ default: m.ComplianceModule })));
@@ -231,14 +229,6 @@ export function AdminDashboardPage() {
           <Suspense fallback={<ApplicationsSkeleton />}>
             <ErrorBoundary fallbackTitle="Applications Module Error">
               <ApplicationsModule />
-            </ErrorBoundary>
-          </Suspense>
-        );
-      case 'quotes':
-        return (
-          <Suspense fallback={<RequestsSkeleton />}>
-            <ErrorBoundary fallbackTitle="Requests Module Error">
-              <RequestsModule />
             </ErrorBoundary>
           </Suspense>
         );
