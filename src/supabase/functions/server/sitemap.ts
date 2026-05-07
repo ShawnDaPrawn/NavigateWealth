@@ -66,6 +66,7 @@ const SITEMAP_URLS: SitemapEntry[] = [
   { loc: '/about', lastmod: '2026-03-01' },
   { loc: '/team', lastmod: '2026-03-01' },
   { loc: '/contact', lastmod: '2026-03-01' },
+  { loc: '/schedule-consultation', lastmod: '2026-03-01' },
   { loc: '/why-us', lastmod: '2026-03-01' },
   { loc: '/risk-management', lastmod: '2026-03-01' },
   { loc: '/retirement-planning', lastmod: '2026-03-01' },

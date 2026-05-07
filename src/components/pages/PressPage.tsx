@@ -9,6 +9,7 @@ import { Input } from '../ui/input';
 import { MediaAccessModal } from '../modals/MediaAccessModal';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { SITE_ORIGIN } from '@/utils/siteOrigin';
 import {
   Newspaper,
   Calendar,
@@ -493,7 +494,14 @@ export function PressPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Website</span>
-                    <span className="font-medium text-purple-600">navigatewealth.co</span>
+                    <a
+                      href={SITE_ORIGIN}
+                      className="font-medium text-purple-600 hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      www.navigatewealth.co
+                    </a>
                   </div>
                 </CardContent>
               </Card>

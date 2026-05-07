@@ -9,6 +9,7 @@ import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { useImagePrefetch, prefetchImages } from '../../hooks/useImagePrefetch';
 import { getOptimizedImageUrl } from '../../utils/optimizedImages';
+import { SITE_ORIGIN } from '@/utils/siteOrigin';
 import {
   TrendingUp,
   Shield,
@@ -230,7 +231,7 @@ export function ServicesPage() {
         title="Our Services | Navigate Wealth"
         description="Comprehensive wealth management services from Navigate Wealth — risk management, retirement planning, investments, medical aid, estate planning, tax planning, and employee benefits."
         keywords={['financial services', 'wealth management', 'risk management', 'retirement planning', 'investment management', 'medical aid', 'estate planning', 'tax planning', 'employee benefits', 'South Africa']}
-        canonicalUrl="https://www.navigatewealth.co/services"
+        canonicalUrl={`${SITE_ORIGIN}/services`}
       />
 
       <div className="min-h-screen">

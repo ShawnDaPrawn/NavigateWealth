@@ -1,4 +1,12 @@
 {
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "navigatewealth.co" }],
+      "destination": "https://www.navigatewealth.co/:path*",
+      "permanent": true
+    }
+  ],
   "outputDirectory": "dist",
   "routes": [
     { "handle": "filesystem" },

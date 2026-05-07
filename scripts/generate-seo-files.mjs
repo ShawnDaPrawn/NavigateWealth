@@ -20,6 +20,7 @@ const sitemapEntries = [
   { path: '/about', lastmod: '2026-03-01' },
   { path: '/team', lastmod: '2026-03-01' },
   { path: '/contact', lastmod: '2026-03-01' },
+  { path: '/schedule-consultation', lastmod: '2026-03-01' },
   { path: '/why-us', lastmod: '2026-03-01' },
   { path: '/risk-management', lastmod: '2026-03-01' },
   { path: '/retirement-planning', lastmod: '2026-03-01' },

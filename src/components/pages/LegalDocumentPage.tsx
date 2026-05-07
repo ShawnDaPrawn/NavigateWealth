@@ -14,6 +14,7 @@ import {
   normalizeLegalDocumentAnchors,
   sanitizeLegalDocumentHtml,
 } from '../../utils/legalHtml';
+import { siteAbsoluteUrl } from '@/utils/siteOrigin';
 
 type LegalBlock = {
   id?: string;
@@ -292,7 +293,7 @@ export function LegalDocumentPage() {
   if (!legalDocument || error) {
     return (
       <div className="min-h-screen bg-stone-50">
-        <SEO title={seoTitle} description={seoDescription} canonicalUrl={`https://navigatewealth.co/legal/${slug || ''}`} />
+        <SEO title={seoTitle} description={seoDescription} canonicalUrl={siteAbsoluteUrl(`/legal/${slug || ''}`)} />
         <div className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8">
           <Card className="border-stone-200 bg-white shadow-sm">
             <CardHeader>
@@ -318,8 +319,8 @@ export function LegalDocumentPage() {
       <SEO
         title={seoTitle}
         description={seoDescription}
-        canonicalUrl={`https://navigatewealth.co/legal/${slug}`}
-        structuredData={createWebPageSchema(seoTitle, seoDescription, `https://navigatewealth.co/legal/${slug}`)}
+        canonicalUrl={siteAbsoluteUrl(`/legal/${slug}`)}
+        structuredData={createWebPageSchema(seoTitle, seoDescription, siteAbsoluteUrl(`/legal/${slug}`))}
       />
 
       <div className="mx-auto max-w-screen-2xl px-4 py-12 sm:px-6 lg:px-8">
