@@ -497,29 +497,125 @@ async function completeManualOtpAfterDelivery(page, flow) {
   return promptForManualOtp(page, flow);
 }
 
+async function forceSmsSelectionInDom(page) {
+  return page.evaluate(() => {
+    const normalise = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+    const matchesSms = (value) => /\bSMS\b/i.test(normalise(value));
+    const clickElement = (element) => {
+      if (!element) return false;
+      element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+      element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+      element.click();
+      return true;
+    };
+
+    const smsInputs = Array.from(document.querySelectorAll('input, [role="radio"], [role="option"], [aria-label], [data-value], [value]'))
+      .filter((element) => matchesSms([
+        element.getAttribute('value'),
+        element.getAttribute('id'),
+        element.getAttribute('name'),
+        element.getAttribute('aria-label'),
+        element.getAttribute('data-value'),
+        element.textContent,
+      ].join(' ')));
+
+    for (const element of smsInputs) {
+      const input = element instanceof HTMLInputElement ? element : null;
+      if (input && ['radio', 'checkbox'].includes(String(input.type || '').toLowerCase())) {
+        input.checked = true;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        clickElement(input);
+        return 'input_checked';
+      }
+      if (clickElement(element)) return 'option_clicked';
+    }
+
+    const textNodes = Array.from(document.querySelectorAll('label, button, [role="radio"], [role="option"], [role="button"], li, div, span'))
+      .filter((element) => /^SMS$/i.test(normalise(element.textContent)));
+    for (const element of textNodes) {
+      const target = element.closest('label, button, [role="radio"], [role="option"], [role="button"], li, div') || element;
+      if (clickElement(target)) return 'text_control_clicked';
+    }
+    return '';
+  }).catch(() => '');
+}
+
+async function detectSmsSelectionState(page) {
+  return page.evaluate(() => {
+    const normalise = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+    const matchesSms = (value) => /\bSMS\b/i.test(normalise(value));
+    const smsControls = Array.from(document.querySelectorAll('input, [role="radio"], [role="option"], [aria-checked], [aria-selected], [value], [data-value]'))
+      .filter((element) => matchesSms([
+        element.getAttribute('value'),
+        element.getAttribute('id'),
+        element.getAttribute('name'),
+        element.getAttribute('aria-label'),
+        element.getAttribute('data-value'),
+        element.textContent,
+      ].join(' ')));
+
+    if (!smsControls.length) return 'unknown';
+    for (const element of smsControls) {
+      if (element instanceof HTMLInputElement && element.checked) return 'selected';
+      if (String(element.getAttribute('aria-checked') || '').toLowerCase() === 'true') return 'selected';
+      if (String(element.getAttribute('aria-selected') || '').toLowerCase() === 'true') return 'selected';
+      const className = String(element.getAttribute('class') || '');
+      if (/\b(selected|active|checked)\b/i.test(className)) return 'selected';
+    }
+    return 'unselected';
+  }).catch(() => 'unknown');
+}
+
+async function selectBrightRockSmsOtpOption(page) {
+  const smsCandidates = [
+    page.getByRole('radio', { name: /\bSMS\b/i }).first(),
+    page.getByLabel(/\bSMS\b/i).first(),
+    page.locator('input[value*="sms" i], input[id*="sms" i], input[name*="sms" i]').first(),
+    page.locator('label').filter({ hasText: /^\s*SMS\s*$/i }).first(),
+    page.getByText(/^\s*SMS\s*$/i).first(),
+  ];
+
+  for (const candidate of smsCandidates) {
+    const exists = await candidate.count().then((count) => count > 0).catch(() => false);
+    if (!exists) continue;
+    const tagName = await candidate.evaluate((element) => element.tagName.toLowerCase()).catch(() => '');
+    const type = await candidate.evaluate((element) => String(element.getAttribute('type') || '').toLowerCase()).catch(() => '');
+    if (tagName === 'input' && ['radio', 'checkbox'].includes(type)) {
+      await candidate.check({ force: true, timeout: 5000 }).catch(async () => {
+        await candidate.evaluate((element) => {
+          element.checked = true;
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      });
+    } else {
+      await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 600 });
+    }
+    await page.waitForTimeout(500);
+    const state = await detectSmsSelectionState(page);
+    if (state !== 'unselected') return true;
+  }
+
+  const strategy = await forceSmsSelectionInDom(page);
+  await page.waitForTimeout(700);
+  const state = await detectSmsSelectionState(page);
+  return Boolean(strategy) && state !== 'unselected';
+}
+
 async function chooseSmsOtpDeliveryIfPresent(page) {
   const bodyText = await page.locator('body').innerText({ timeout: 2500 }).catch(() => '');
   if (!looksLikeOtpDeliveryChoice(bodyText)) {
     return false;
   }
 
-  const smsCandidates = [
-    page.getByRole('radio', { name: /\bSMS\b/i }).first(),
-    page.getByLabel(/\bSMS\b/i).first(),
-    page.locator('label').filter({ hasText: /\bSMS\b/i }).first(),
-    page.locator('input[value*="sms" i], input[id*="sms" i], input[name*="sms" i]').first(),
-    page.getByText(/\bSMS\b/i).first(),
-  ];
-  let selectedSms = false;
-  for (const candidate of smsCandidates) {
-    if (!(await candidate.isVisible({ timeout: 800 }).catch(() => false))) continue;
-    await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 600 });
-    selectedSms = true;
-    break;
-  }
-
+  const selectedSms = await selectBrightRockSmsOtpOption(page);
   if (!selectedSms) {
-    throw new Error('BrightRock asked how to receive the OTP, but the SMS option was not visible.');
+    const snapshot = await capturePolicyConfirmationSnapshot(page).catch(() => ({ sample: '' }));
+    throw new Error(
+      'BrightRock asked how to receive the OTP, but the worker could not positively select SMS. '
+      + `Visible page sample: ${snapshot.sample || 'none'}`,
+    );
   }
 
   const sendCandidates = [

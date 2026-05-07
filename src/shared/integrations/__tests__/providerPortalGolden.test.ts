@@ -105,6 +105,9 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('async function findOtpEntryTarget');
     expect(workerSource).toContain('async function waitForBrightRockOtpDeliveryProgress');
     expect(workerSource).toContain('BrightRock did not confirm that the SMS OTP was sent');
+    expect(workerSource).toContain('async function selectBrightRockSmsOtpOption');
+    expect(workerSource).toContain('forceSmsSelectionInDom');
+    expect(workerSource).toContain('could not positively select SMS');
     expect(workerSource).toContain("kind: 'digits'");
     expect(workerSource).toContain("page.getByRole('radio', { name: /\\bSMS\\b/i })");
     expect(portalDefaultFlowsSource).toContain("Search by reference number");
