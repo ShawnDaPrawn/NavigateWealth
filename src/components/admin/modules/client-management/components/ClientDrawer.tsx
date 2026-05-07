@@ -30,6 +30,9 @@ const PolicyDetailsSection = React.lazy(loadPolicyDetailsSection);
 const loadDocumentsTab = () =>
   import('./DocumentsTab').then((m) => ({ default: m.DocumentsTab }));
 const DocumentsTab = React.lazy(loadDocumentsTab);
+const loadAskVascoPortalTab = () =>
+  import('./AskVascoPortalTab').then((m) => ({ default: m.AskVascoPortalTab }));
+const AskVascoPortalTab = React.lazy(loadAskVascoPortalTab);
 const loadSecurityTab = () =>
   import('./SecurityTab').then((m) => ({ default: m.SecurityTab }));
 const SecurityTab = React.lazy(loadSecurityTab);
@@ -97,6 +100,7 @@ type DrawerTab =
   | 'policies'
   | 'security'
   | 'documents'
+  | 'askVasco'
   | 'esign'
   | 'compliance'
   | 'communication'
@@ -168,6 +172,7 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
       async () => {
         await loadDocumentsTab();
       },
+      () => loadAskVascoPortalTab(),
       () => queryClient.prefetchQuery({
         queryKey: noteKeys.clientNotes(client.id),
         queryFn: () => NotesAPI.getClientNotes(client.id),
@@ -254,12 +259,13 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
             Uses ShadCN Tabs component with rounded, filled style
             See: /components/admin/TAB_DESIGN_STANDARDS.md */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-10">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="personal">Personal Details</TabsTrigger>
             <TabsTrigger value="policies">Policy Details</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="askVasco">Ask Vasco</TabsTrigger>
             <TabsTrigger value="esign">E-Sign</TabsTrigger>
             <TabsTrigger value="compliance">Compliance</TabsTrigger>
             <TabsTrigger value="communication">
@@ -313,14 +319,21 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
             </Suspense>
           </TabsContent>
 
-          {/* 5. E-Sign Section */}
+          {/* 5. Ask Vasco Section */}
+          <TabsContent value="askVasco" className="space-y-4">
+            <Suspense fallback={<TabPanelFallback />}>
+              <AskVascoPortalTab selectedClient={client} />
+            </Suspense>
+          </TabsContent>
+
+          {/* 6. E-Sign Section */}
           <TabsContent value="esign" className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <EsignTab selectedClient={client} />
             </Suspense>
           </TabsContent>
 
-          {/* 6. Compliance Section */}
+          {/* 7. Compliance Section */}
           <TabsContent value="compliance" className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <ComplianceTab 
@@ -332,14 +345,14 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
             </Suspense>
           </TabsContent>
 
-          {/* 7. Communication Section */}
+          {/* 8. Communication Section */}
           <TabsContent value="communication" className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <CommunicationTab client={client} />
             </Suspense>
           </TabsContent>
 
-          {/* 8. Notes Section */}
+          {/* 9. Notes Section */}
           <TabsContent value="notes" className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <ClientNotesTab selectedClient={client} />
