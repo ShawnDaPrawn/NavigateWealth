@@ -344,6 +344,14 @@ function looksLikeOtpPage(text) {
   return /otp|one[-\s]*time|verification|verify|code|pin|passcode|send\s+otp|sms/i.test(text || '');
 }
 
+function looksLikeOtpDeliveryChoice(text) {
+  return /how\s+would\s+you\s+like\s+to\s+receive\s+your\s+otp|email\s+sms|send\s+otp/i.test(text || '');
+}
+
+function looksLikeOtpSentConfirmation(text) {
+  return /otp\s+(has\s+been\s+)?sent|code\s+(has\s+been\s+)?sent|sms\s+(has\s+been\s+)?sent|enter\s+(the\s+)?(otp|code|pin|passcode)|verification\s+(otp|code|pin|passcode)/i.test(text || '');
+}
+
 async function findOtpEntryTarget(page, flow, preferredSelector, timeoutMs = 60000) {
   const selectors = preferredSelector ? [preferredSelector, ...getOtpSelectors(flow)] : getOtpSelectors(flow);
   const deadline = Date.now() + timeoutMs;
@@ -408,6 +416,27 @@ async function fillOtpTarget(target, code) {
   await target.locator.fill(String(code || '').trim());
 }
 
+async function waitForBrightRockOtpDeliveryProgress(page, flow, timeoutMs = 20000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const target = await findOtpEntryTarget(page, flow, undefined, 1000);
+    if (target) return true;
+
+    const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
+    if (looksLikeOtpSentConfirmation(bodyText)) return true;
+    if (!looksLikeOtpDeliveryChoice(bodyText) && looksLikeOtpPage(bodyText)) return true;
+
+    await page.waitForTimeout(1000);
+  }
+
+  const snapshot = await capturePolicyConfirmationSnapshot(page).catch(() => ({ sample: '' }));
+  throw new Error(
+    'BrightRock did not confirm that the SMS OTP was sent. '
+    + 'Check whether SMS was selected and whether BrightRock still shows the Send OTP choice. '
+    + `Visible page sample: ${snapshot.sample || 'none'}`,
+  );
+}
+
 async function waitForManualOtp(timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -470,7 +499,7 @@ async function completeManualOtpAfterDelivery(page, flow) {
 
 async function chooseSmsOtpDeliveryIfPresent(page) {
   const bodyText = await page.locator('body').innerText({ timeout: 2500 }).catch(() => '');
-  if (!/how\s+would\s+you\s+like\s+to\s+receive\s+your\s+otp|send\s+otp|email\s+sms/i.test(bodyText)) {
+  if (!looksLikeOtpDeliveryChoice(bodyText)) {
     return false;
   }
 
@@ -499,16 +528,22 @@ async function chooseSmsOtpDeliveryIfPresent(page) {
     page.locator('button, input[type="submit"], [role="button"]').filter({ hasText: /send\s+otp|\bsend\b/i }).first(),
     page.locator('input[type="submit"][value*="send" i], input[type="button"][value*="send" i]').first(),
   ];
-  for (const candidate of sendCandidates) {
-    if (!(await candidate.isVisible({ timeout: 800 }).catch(() => false))) continue;
-    await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 1500 });
-    await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
-    await page.waitForTimeout(1000);
-    return true;
+  const sendDeadline = Date.now() + 10000;
+  while (Date.now() < sendDeadline) {
+    for (const candidate of sendCandidates) {
+      if (!(await candidate.isVisible({ timeout: 500 }).catch(() => false))) continue;
+      if (!(await candidate.isEnabled({ timeout: 500 }).catch(() => true))) continue;
+      await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 1500 });
+      await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
+      await page.waitForTimeout(1000);
+      await waitForBrightRockOtpDeliveryProgress(page, undefined, 20000);
+      return true;
+    }
+    await page.waitForTimeout(700);
   }
 
-  throw new Error('BrightRock SMS OTP option was selected, but the Send OTP action was not visible.');
+  throw new Error('BrightRock SMS OTP option was selected, but the Send OTP action was not visible or was still disabled.');
 }
 
 function describeNavigationFailure(error) {
