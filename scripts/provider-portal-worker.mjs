@@ -260,6 +260,39 @@ async function waitForManualOtp(timeoutMs) {
   throw new Error('Timed out waiting for manual OTP.');
 }
 
+async function completeManualOtpIfPresent(page, flow, timeoutMs = 45000) {
+  const otp = flow?.otp || {};
+  const selectors = [
+    ...(Array.isArray(otp.detectionSelectors) ? otp.detectionSelectors : []),
+    otp.inputSelector,
+  ].map((selector) => String(selector || '').trim()).filter(Boolean);
+  const otpSelector = await firstVisibleSelector(page, selectors, timeoutMs);
+  if (!otpSelector) return false;
+
+  await updateJob('waiting_for_otp', {
+    currentStep: 'manual_sms_otp',
+    message: otp.instructions || 'Waiting for manual SMS OTP.',
+  });
+  const code = await waitForManualOtp(otp.timeoutMs || 600000);
+  const inputSelector = String(otp.inputSelector || otpSelector).trim() || otpSelector;
+  await (await visibleLocator(page, inputSelector)).fill(code);
+  const submitSelector = String(otp.submitSelector || '').trim();
+  if (submitSelector) {
+    const submit = page.locator(submitSelector).first();
+    if (await submit.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await clickWithOverlayFallback(page, submit, { timeout: 5000, settleMs: 1500 });
+    } else {
+      await page.keyboard.press('Enter');
+    }
+  } else {
+    await page.keyboard.press('Enter');
+  }
+  await page.waitForLoadState('domcontentloaded', { timeout: 45000 }).catch(() => undefined);
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
+  await page.waitForTimeout(1500);
+  return true;
+}
+
 function describeNavigationFailure(error) {
   const message = error instanceof Error ? error.message : String(error);
   if (/net::ERR_ABORTED/i.test(message)) return 'the provider aborted the page load';
@@ -358,6 +391,71 @@ function resolveProviderLoginUrl(flow, providerAdapter) {
   } catch {
     throw new Error(`Provider portal flow has an invalid login URL: ${candidate}`);
   }
+}
+
+async function detectAuthCheckpoint(page, flow) {
+  const snapshot = await page.evaluate(() => {
+    const normalise = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+    const bodyText = normalise(document.body?.innerText || '');
+    const visibleInputs = Array.from(document.querySelectorAll('input, textarea, select, [role="textbox"], [role="searchbox"], [role="combobox"]'))
+      .filter((el) => {
+        if (!(el instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+      })
+      .map((el) => [
+        el.getAttribute('type'),
+        el.getAttribute('name'),
+        el.getAttribute('id'),
+        el.getAttribute('placeholder'),
+        el.getAttribute('aria-label'),
+        el.getAttribute('title'),
+        el.parentElement?.textContent,
+      ].map(normalise).join(' '))
+      .slice(0, 8);
+    return {
+      url: window.location.href,
+      title: document.title || '',
+      bodyText,
+      visibleInputs,
+    };
+  }).catch(() => ({ url: page.url(), title: '', bodyText: '', visibleInputs: [] }));
+
+  const text = [
+    snapshot.url,
+    snapshot.title,
+    snapshot.bodyText,
+    ...(Array.isArray(snapshot.visibleInputs) ? snapshot.visibleInputs : []),
+  ].join(' ').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+
+  const searchReadyText = splitLabels(flow?.search?.searchInputLabels)
+    .filter((label) => label.length >= 8 && !/^search$/i.test(label))
+    .concat(['Search by reference number', 'Policy details', 'Policy structure', 'Cover summary', 'FSP Junction']);
+  if (searchReadyText.some((label) => label && new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(text))) {
+    return '';
+  }
+
+  const hasAuthCheckpoint = /login\s*verification|verify\s+(your\s+)?(identity|login|account)|verification\s+(code|step)|one[-\s]*time\s*(pin|password|code)|\botp\b|two[-\s]*factor|multi[-\s]*factor|authenticator|security\s+code|passcode|enter\s+(the\s+)?code|send\s+(code|otp|pin)/i.test(text);
+  if (!hasAuthCheckpoint) return '';
+
+  const sample = String(snapshot.bodyText || text).replace(/\s+/g, ' ').trim().slice(0, 260);
+  return sample || 'provider page is still asking for login verification';
+}
+
+async function assertPastAuthCheckpoint(page, flow, stageLabel) {
+  const checkpoint = await detectAuthCheckpoint(page, flow);
+  if (!checkpoint) return;
+
+  const handledOtp = await completeManualOtpIfPresent(page, flow, 5000);
+  if (handledOtp) return;
+
+  throw new Error(
+    `Provider is still on a login verification step before ${stageLabel}. `
+    + `Complete the BrightRock verification/OTP step before policy search can continue. `
+    + `Visible page sample: ${checkpoint}`,
+  );
 }
 
 function normalisePolicyNumber(value) {
@@ -1558,6 +1656,7 @@ async function searchPolicyByNumber(page, flow, item, brain) {
       addItemWarning(item.id, searchNavigation.warning);
     }
   }
+  await assertPastAuthCheckpoint(page, flow, 'policy search');
 
   const smartAssist = brainAssistConfig(flow);
   const rememberedInputSelectors = rememberedSelectorsForStage(brain, 'search_input');
@@ -2320,19 +2419,8 @@ async function runJob(jobId, requestedMode = mode) {
     await (await visibleLocator(page, flow.login.passwordSelector)).fill(password);
     await (await visibleLocator(page, flow.login.submitSelector)).click();
 
-    const otpSelector = await firstVisibleSelector(page, flow.otp.detectionSelectors, 45000);
-    if (otpSelector) {
-      await updateJob('waiting_for_otp', {
-        currentStep: 'manual_sms_otp',
-        message: flow.otp.instructions || 'Waiting for manual SMS OTP.',
-      });
-      const otp = await waitForManualOtp(flow.otp.timeoutMs || 600000);
-      await (await visibleLocator(page, flow.otp.inputSelector)).fill(otp);
-      await (await visibleLocator(page, flow.otp.submitSelector)).click();
-      await page.waitForLoadState('domcontentloaded', { timeout: 45000 }).catch(() => undefined);
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
-      await page.waitForTimeout(1500);
-    }
+    await completeManualOtpIfPresent(page, flow, 45000);
+    await assertPastAuthCheckpoint(page, flow, 'post-login navigation');
 
     if (flow.navigation?.postLoginUrl) {
       const postLoginNavigation = await attemptConfiguredNavigation(page, {

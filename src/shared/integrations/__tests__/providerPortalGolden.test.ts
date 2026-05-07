@@ -97,6 +97,8 @@ describe('provider portal golden flows', () => {
     expect(portalDefaultFlowsSource).toContain('BrightRock portal policy extraction');
     expect(portalDefaultFlowsSource).toContain("loginUrl: 'https://iris.brightrock.co.za/'");
     expect(portalDefaultFlowsSource).toContain("id: 'brightrock-env'");
+    expect(portalDefaultFlowsSource).toContain('input[name*="verification" i]');
+    expect(portalDefaultFlowsSource).toContain('input[name*="passcode" i]');
     expect(portalDefaultFlowsSource).toContain("Search by reference number");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Premium'");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Life Cover'");
@@ -104,6 +106,13 @@ describe('provider portal golden flows', () => {
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Severe Illness'");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Income Protection'");
     expect(portalDefaultFlowsSource).toContain('BrightRock does not currently offer a direct cover-summary PDF download');
+  });
+
+  it('does not hand login verification pages to smart assist search', () => {
+    expect(workerSource).toContain('async function completeManualOtpIfPresent');
+    expect(workerSource).toContain('async function assertPastAuthCheckpoint');
+    expect(workerSource).toContain('Provider is still on a login verification step before');
+    expect(workerSource).toContain("await assertPastAuthCheckpoint(page, flow, 'policy search')");
   });
 
   it('keeps portal flow configuration isolated by provider and category', () => {
