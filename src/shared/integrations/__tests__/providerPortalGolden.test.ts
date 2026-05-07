@@ -110,6 +110,8 @@ describe('provider portal golden flows', () => {
 
   it('does not hand login verification pages to smart assist search', () => {
     expect(workerSource).toContain('async function completeManualOtpIfPresent');
+    expect(workerSource).toContain('async function requestManualOtpDeliveryIfPresent');
+    expect(workerSource).toContain('Send OTP');
     expect(workerSource).toContain('async function assertPastAuthCheckpoint');
     expect(workerSource).toContain('Provider is still on a login verification step before');
     expect(workerSource).toContain("await assertPastAuthCheckpoint(page, flow, 'policy search')");

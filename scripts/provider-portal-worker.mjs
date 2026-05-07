@@ -260,13 +260,132 @@ async function waitForManualOtp(timeoutMs) {
   throw new Error('Timed out waiting for manual OTP.');
 }
 
+const DEFAULT_OTP_DELIVERY_METHOD_SELECTORS = [
+  'label:has-text("SMS")',
+  '[role="radio"]:has-text("SMS")',
+  'button:has-text("SMS")',
+  'input[value*="sms" i]',
+  'input[id*="sms" i]',
+  'input[name*="sms" i]',
+  'text=/^\\s*SMS\\s*$/i',
+  'label:has-text("Email")',
+  '[role="radio"]:has-text("Email")',
+  'button:has-text("Email")',
+  'input[value*="email" i]',
+  'input[id*="email" i]',
+  'input[name*="email" i]',
+  'text=/^\\s*Email\\s*$/i',
+];
+
+const DEFAULT_OTP_DELIVERY_SUBMIT_SELECTORS = [
+  'button:has-text("Send OTP")',
+  'input[type="submit"][value*="Send OTP" i]',
+  'button:has-text("Send code")',
+  'input[type="submit"][value*="Send code" i]',
+  'button:has-text("Send PIN")',
+  'button:has-text("Continue")',
+  'button[type="submit"]',
+  'input[type="submit"]',
+];
+
+function selectorsFromConfig(value, fallback = []) {
+  if (Array.isArray(value)) {
+    return value.map((selector) => String(selector || '').trim()).filter(Boolean);
+  }
+  const selector = String(value || '').trim();
+  return selector ? [selector] : fallback;
+}
+
+async function getVisiblePageText(page) {
+  return (await page.locator('body').innerText({ timeout: 2000 }).catch(() => '') || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function hasOtpDeliveryPrompt(text) {
+  return /how\s+would\s+you\s+like\s+to\s+receive\s+your\s+otp|receive\s+.*\botp\b|send\s+(?:an?\s+)?(?:otp|one[-\s]*time\s*(?:pin|password|code)|code|pin)/i.test(String(text || ''));
+}
+
+async function firstVisibleLocatorFromSelectors(page, selectors, timeoutMs = 500) {
+  for (const selector of selectors) {
+    try {
+      const locator = page.locator(selector).first();
+      if (await locator.isVisible({ timeout: timeoutMs }).catch(() => false)) {
+        return locator;
+      }
+    } catch {
+      // Ignore provider-specific selector syntax issues and try the next hint.
+    }
+  }
+  return null;
+}
+
+async function requestManualOtpDeliveryIfPresent(page, flow, timeoutMs = 5000) {
+  const otp = flow?.otp || {};
+  const deliveryMethodSelectors = selectorsFromConfig(
+    otp.deliveryMethodSelector || otp.deliveryMethodSelectors || otp.deliveryChoiceSelector || otp.deliveryChoiceSelectors,
+    DEFAULT_OTP_DELIVERY_METHOD_SELECTORS,
+  );
+  const deliverySubmitSelectors = selectorsFromConfig(
+    otp.deliverySubmitSelector || otp.deliverySubmitSelectors,
+    DEFAULT_OTP_DELIVERY_SUBMIT_SELECTORS,
+  );
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const pageText = await getVisiblePageText(page);
+    const sawDeliveryPrompt = hasOtpDeliveryPrompt(pageText);
+    const methodLocator = await firstVisibleLocatorFromSelectors(page, deliveryMethodSelectors, 300);
+    let selectedMethod = false;
+
+    if (methodLocator && (sawDeliveryPrompt || /email|sms/i.test(await methodLocator.textContent({ timeout: 300 }).catch(() => '')))) {
+      await updateJob('running', {
+        currentStep: 'requesting_manual_otp',
+        message: 'Selecting the provider OTP delivery method.',
+      });
+      await clickWithOverlayFallback(page, methodLocator, { timeout: 5000, settleMs: 500 });
+      selectedMethod = true;
+    }
+
+    const submitLocator = await firstVisibleLocatorFromSelectors(page, deliverySubmitSelectors, 300);
+    if (submitLocator && (sawDeliveryPrompt || selectedMethod)) {
+      await updateJob('running', {
+        currentStep: 'requesting_manual_otp',
+        message: 'Requesting the provider OTP before waiting for manual entry.',
+      });
+      await clickWithOverlayFallback(page, submitLocator, { timeout: 5000, settleMs: 1500 });
+      return true;
+    }
+
+    if (!sawDeliveryPrompt && !methodLocator && !submitLocator) return false;
+    await page.waitForTimeout(700);
+  }
+
+  return false;
+}
+
 async function completeManualOtpIfPresent(page, flow, timeoutMs = 45000) {
   const otp = flow?.otp || {};
   const selectors = [
     ...(Array.isArray(otp.detectionSelectors) ? otp.detectionSelectors : []),
     otp.inputSelector,
   ].map((selector) => String(selector || '').trim()).filter(Boolean);
-  const otpSelector = await firstVisibleSelector(page, selectors, timeoutMs);
+  const deadline = Date.now() + timeoutMs;
+  let otpSelector = null;
+  let requestedDelivery = false;
+
+  while (Date.now() < deadline && !otpSelector) {
+    otpSelector = await firstVisibleSelector(page, selectors, Math.min(1500, Math.max(0, deadline - Date.now())));
+    if (otpSelector) break;
+
+    if (!requestedDelivery) {
+      requestedDelivery = await requestManualOtpDeliveryIfPresent(page, flow, Math.min(5000, Math.max(0, deadline - Date.now())));
+      if (requestedDelivery) continue;
+    }
+
+    await page.waitForTimeout(500);
+  }
+
   if (!otpSelector) return false;
 
   await updateJob('waiting_for_otp', {
