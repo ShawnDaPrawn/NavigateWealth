@@ -1,6 +1,7 @@
 export const brightRockAdapter = {
   id: 'brightrock',
   label: 'BrightRock',
+  defaultLoginUrl: 'https://iris.brightrock.co.za/',
   snapshotDebugArtifactName: 'brightrock-snapshot',
 
   matches(context = {}) {

@@ -347,6 +347,19 @@ async function attemptConfiguredNavigation(page, options) {
   return { attempted: true, warning: '' };
 }
 
+function resolveProviderLoginUrl(flow, providerAdapter) {
+  const candidate = String(flow?.loginUrl || providerAdapter?.defaultLoginUrl || '').trim();
+  if (!candidate) {
+    throw new Error('Provider portal flow is missing a login URL. Configure the provider loginUrl before running this job.');
+  }
+
+  try {
+    return new URL(candidate).toString();
+  } catch {
+    throw new Error(`Provider portal flow has an invalid login URL: ${candidate}`);
+  }
+}
+
 function normalisePolicyNumber(value) {
   return String(value ?? '')
     .trim()
@@ -2282,6 +2295,7 @@ async function runJob(jobId, requestedMode = mode) {
   try {
     const { job, flow, config, items, credentials, brain } = await loadRuntime(jobId);
     const providerAdapter = getProviderAdapter({ job, flow });
+    flow.loginUrl = resolveProviderLoginUrl(flow, providerAdapter);
     const jobMode = job.runMode || requestedMode;
     if (jobMode === 'run' && job.status !== 'dry_run_ready' && !forceStage && authToken) {
       throw new Error('Refusing to stage portal data before a successful dry run. Run with --mode dry-run first, or pass --force-stage after manual review.');

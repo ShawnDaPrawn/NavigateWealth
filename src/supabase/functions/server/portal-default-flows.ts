@@ -147,7 +147,7 @@ export function getDefaultPortalFlow(
       name: options.categoryId
         ? `BrightRock ${categoryLabel} portal extraction`
         : 'BrightRock portal policy extraction',
-      loginUrl: '',
+      loginUrl: 'https://iris.brightrock.co.za/',
       credentialProfiles: [
         {
           id: 'brightrock-env',
@@ -160,7 +160,7 @@ export function getDefaultPortalFlow(
       login: {
         usernameSelector: 'input[autocomplete="username"], input[name*="user" i], input[type="email"], input[type="text"]',
         passwordSelector: 'input[type="password"], input[autocomplete="current-password"]',
-        submitSelector: 'button[type="submit"], button:has-text("Log in"), button:has-text("Login"), input[type="submit"]',
+        submitSelector: 'button[type="submit"], button:has-text("GO"), button:has-text("Go"), button:has-text("Log in"), button:has-text("Login"), input[type="submit"], input[value*="GO" i]',
       },
       otp: {
         mode: 'manual_sms',

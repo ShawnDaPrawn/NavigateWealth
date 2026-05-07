@@ -62,6 +62,7 @@ describe('provider portal golden flows', () => {
     expect(adapterRegistrySource).toContain("import { brightRockAdapter } from './brightrock.mjs'");
     expect(adapterRegistrySource).toContain('brightRockAdapter');
     expect(brightRockAdapterSource).toContain("id: 'brightrock'");
+    expect(brightRockAdapterSource).toContain("defaultLoginUrl: 'https://iris.brightrock.co.za/'");
     expect(brightRockAdapterSource).toContain('async function extractBrightRockSnapshot');
     expect(brightRockAdapterSource).toContain('brightrock_policy_structure');
     expect(brightRockAdapterSource).toContain('that\\s+you\\s+can\\s+recover\\s+from');
@@ -94,6 +95,7 @@ describe('provider portal golden flows', () => {
 
   it('provides a BrightRock risk portal flow without document download', () => {
     expect(portalDefaultFlowsSource).toContain('BrightRock portal policy extraction');
+    expect(portalDefaultFlowsSource).toContain("loginUrl: 'https://iris.brightrock.co.za/'");
     expect(portalDefaultFlowsSource).toContain("id: 'brightrock-env'");
     expect(portalDefaultFlowsSource).toContain("Search by reference number");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Premium'");
