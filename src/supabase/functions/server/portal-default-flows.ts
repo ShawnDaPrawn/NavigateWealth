@@ -8,6 +8,7 @@ interface DefaultPortalFlowOptions {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
+  risk_planning: 'Risk Planning',
   retirement_planning: 'Retirement Planning',
   retirement_pre: 'Pre-Retirement',
   retirement_post: 'Post-Retirement',
@@ -28,6 +29,10 @@ export function getDefaultPortalFlow(
   const providerName = String(provider.name || providerId);
   const providerKey = providerName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
   const isAllanGray = providerName.toLowerCase().includes('allan gray') || providerId.toLowerCase().includes('allan');
+  const isBrightRock = providerName.toLowerCase().includes('brightrock')
+    || providerName.toLowerCase().includes('bright rock')
+    || providerId.toLowerCase().includes('brightrock')
+    || providerId.toLowerCase().includes('bright-rock');
   const categoryLabel = CATEGORY_LABELS[options.categoryId || ''] || 'portal';
   const categorySuffix = options.categoryId ? `${providerId}:${options.categoryId}:default` : `${providerId}:default`;
   const now = new Date().toISOString();
@@ -129,6 +134,87 @@ export function getDefaultPortalFlow(
         'Credentials are stored server-side in Supabase and are never returned to the browser.',
         'Use label phrases first. Advanced selectors are only needed when the provider page is ambiguous.',
         'SMS OTP is a manual pause-and-resume checkpoint and is cleared after the worker consumes it.',
+      ],
+      needsDiscovery: true,
+      updatedAt: now,
+    };
+  }
+
+  if (isBrightRock) {
+    return {
+      id: categorySuffix,
+      providerId,
+      name: options.categoryId
+        ? `BrightRock ${categoryLabel} portal extraction`
+        : 'BrightRock portal policy extraction',
+      loginUrl: '',
+      credentialProfiles: [
+        {
+          id: 'brightrock-env',
+          label: 'BrightRock Supabase credentials',
+          source: 'supabase_kv',
+          usernameEnvVar: 'NW_PROVIDER_BRIGHTROCK_USERNAME',
+          passwordEnvVar: 'NW_PROVIDER_BRIGHTROCK_PASSWORD',
+        },
+      ],
+      login: {
+        usernameSelector: 'input[autocomplete="username"], input[name*="user" i], input[type="email"], input[type="text"]',
+        passwordSelector: 'input[type="password"], input[autocomplete="current-password"]',
+        submitSelector: 'button[type="submit"], button:has-text("Log in"), button:has-text("Login"), input[type="submit"]',
+      },
+      otp: {
+        mode: 'manual_sms',
+        detectionSelectors: ['input[autocomplete="one-time-code"]', 'input[name*="otp" i]', 'input[name*="code" i]'],
+        inputSelector: 'input[autocomplete="one-time-code"], input[name*="otp" i], input[name*="code" i]',
+        submitSelector: 'button[type="submit"], button:has-text("Verify"), button:has-text("Continue")',
+        timeoutMs: 600000,
+        instructions: 'Enter the BrightRock OTP in Navigate Wealth when the worker pauses.',
+      },
+      navigation: { policyListSteps: [] },
+      search: {
+        mode: 'policy_number',
+        searchInputLabels: ['Search by reference number', 'Reference number', 'BrightRock reference number', 'Search'],
+        searchInputSelector: 'input[type="search"], input[placeholder*="reference" i], input[name*="reference" i], input[id*="reference" i], input[type="text"]',
+        submitSelector: 'button:has-text("Go"), button:has-text("Search"), button[type="submit"], input[type="submit"]',
+        resultContainerSelector: 'body',
+        resultLinkSelector: 'a, button, [role="link"], [role="button"]',
+        noResultsText: ['No results', 'No policies found', 'not authorised', 'not authorized'],
+        instructions: 'Search BrightRock by reference number from the logged-in home page. The policy details page must confirm the policy number before extraction.',
+        brain: {
+          enabled: false,
+          goal: options.defaultPortalBrainGoal(providerName),
+          maxDecisionsPerItem: 2,
+          rememberSelectors: true,
+        },
+      },
+      extraction: {
+        policyRowSelector: 'body',
+        fields: [
+          { sourceHeader: 'Policy Number', columnName: 'Policy Number', targetFieldName: 'Policy Number', labels: ['Policy number'], attribute: 'text', required: true, transform: 'trim' },
+          { sourceHeader: 'Premium', columnName: 'Premium', targetFieldName: 'Premium', labels: ['Current monthly premium'], attribute: 'text', required: true, transform: 'trim' },
+          { sourceHeader: 'Life Cover', columnName: 'Life Cover', targetFieldName: 'Life Cover', labels: ["That's caused by death"], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Capital Disability', columnName: 'Capital Disability', targetFieldName: 'Capital Disability', labels: ["That's permanent"], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Severe Illness', columnName: 'Severe Illness', targetFieldName: 'Severe Illness', labels: ['Additional expense needs', 'Additional Expenses'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Income Protection', columnName: 'Income Protection', targetFieldName: 'Income Protection', labels: ['That you can recover from'], attribute: 'text', transform: 'trim' },
+        ],
+      },
+      policySchedule: {
+        enabled: false,
+        downloadLabels: [],
+        documentType: 'policy_schedule',
+        required: false,
+        waitForDownloadMs: 30000,
+      },
+      documentArtifacts: [],
+      notes: [
+        'BrightRock currently exposes the needed risk values on Policy details > Policy structure.',
+        'Use the Search by reference number block after login and enter the Navigate Wealth policy number.',
+        'Extract premium from Current monthly premium.',
+        "Extract Life Cover from That's caused by death using the lump-sum amount.",
+        "Extract Capital Disability from That's permanent using the lump-sum amount.",
+        'Extract Severe Illness from Additional Expenses / Additional expense needs using the lump-sum amount.',
+        'Extract temporary ICB / Income Protection from That you can recover from using the monthly amount.',
+        'BrightRock does not currently offer a direct cover-summary PDF download in this flow; leave document download disabled.',
       ],
       needsDiscovery: true,
       updatedAt: now,

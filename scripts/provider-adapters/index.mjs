@@ -1,7 +1,9 @@
 import { allanGrayAdapter } from './allan-gray.mjs';
+import { brightRockAdapter } from './brightrock.mjs';
 
 const providerAdapters = [
   allanGrayAdapter,
+  brightRockAdapter,
 ];
 
 export function getProviderAdapter(context = {}) {

@@ -11,6 +11,7 @@ describe('provider portal golden flows', () => {
   const workerSource = readRepoFile('scripts/provider-portal-worker.mjs');
   const adapterRegistrySource = readRepoFile('scripts/provider-adapters/index.mjs');
   const allanGrayAdapterSource = readRepoFile('scripts/provider-adapters/allan-gray.mjs');
+  const brightRockAdapterSource = readRepoFile('scripts/provider-adapters/brightrock.mjs');
   const integrationsSource = readRepoFile('src/supabase/functions/server/integrations.tsx');
   const portalDefaultFlowsSource = readRepoFile('src/supabase/functions/server/portal-default-flows.ts');
   const goldenDocs = readRepoFile('docs/provider-automation-golden-flows.md');
@@ -57,6 +58,18 @@ describe('provider portal golden flows', () => {
     expect(allanGrayAdapterSource).toContain('The worker will not mark this policy as extracted until the current value is captured into a mapped field.');
   });
 
+  it('keeps BrightRock extraction behind its provider adapter boundary', () => {
+    expect(adapterRegistrySource).toContain("import { brightRockAdapter } from './brightrock.mjs'");
+    expect(adapterRegistrySource).toContain('brightRockAdapter');
+    expect(brightRockAdapterSource).toContain("id: 'brightrock'");
+    expect(brightRockAdapterSource).toContain('async function extractBrightRockSnapshot');
+    expect(brightRockAdapterSource).toContain('brightrock_policy_structure');
+    expect(brightRockAdapterSource).toContain('that\\s+you\\s+can\\s+recover\\s+from');
+    expect(brightRockAdapterSource).toContain("that's\\s+permanent");
+    expect(brightRockAdapterSource).toContain("that's\\s+caused\\s+by\\s+death");
+    expect(brightRockAdapterSource).toContain('additional\\s+expense\\s+needs');
+  });
+
   it('keeps the shared worker routed through the provider adapter registry', () => {
     expect(workerSource).toContain("import { getProviderAdapter } from './provider-adapters/index.mjs'");
     expect(workerSource).toContain('const providerAdapter = getProviderAdapter({ job, flow });');
@@ -77,6 +90,18 @@ describe('provider portal golden flows', () => {
     expect(portalDefaultFlowsSource).toContain(": `${providerName} portal policy extraction`");
     expect(portalDefaultFlowsSource).toContain("extraction: { fields: [] }");
     expect(portalDefaultFlowsSource).toContain("notes: ['Configure login, policy search, and field labels before running this provider in production.']");
+  });
+
+  it('provides a BrightRock risk portal flow without document download', () => {
+    expect(portalDefaultFlowsSource).toContain('BrightRock portal policy extraction');
+    expect(portalDefaultFlowsSource).toContain("id: 'brightrock-env'");
+    expect(portalDefaultFlowsSource).toContain("Search by reference number");
+    expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Premium'");
+    expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Life Cover'");
+    expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Capital Disability'");
+    expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Severe Illness'");
+    expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Income Protection'");
+    expect(portalDefaultFlowsSource).toContain('BrightRock does not currently offer a direct cover-summary PDF download');
   });
 
   it('keeps portal flow configuration isolated by provider and category', () => {

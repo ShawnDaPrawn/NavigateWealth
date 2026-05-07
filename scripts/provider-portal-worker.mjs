@@ -52,6 +52,8 @@ Environment:
   NW_PORTAL_FORCE_STAGE=1              Allow staging without a prior dry-run-ready job
   NW_PROVIDER_ALLAN_GRAY_USERNAME      Allan Gray username
   NW_PROVIDER_ALLAN_GRAY_PASSWORD      Allan Gray password
+  NW_PROVIDER_BRIGHTROCK_USERNAME      BrightRock username
+  NW_PROVIDER_BRIGHTROCK_PASSWORD      BrightRock password
   NW_PLAYWRIGHT_HEADED=1               Optional visible browser mode
 `);
   process.exit(0);

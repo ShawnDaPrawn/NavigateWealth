@@ -28,6 +28,11 @@ export function getFieldSemanticKind(field) {
   const signature = normaliseFieldSignature(field);
   if (/(policy\s*(number|no)|account\s*number|investment\s*number|reference)/i.test(signature)) return 'policy_number';
   if (/(date\s*of\s*inception|inception\s*date|start\s*date|investment\s*start\s*date)/i.test(signature)) return 'date_of_inception';
+  if (/(risk_monthly_premium|\bpremium\b|monthly\s+premium|current\s+monthly\s+premium)/i.test(signature)) return 'premium';
+  if (/(risk_life_cover|life\s+cover|death\s+cover|caused\s+by\s+death)/i.test(signature)) return 'life_cover';
+  if (/(risk_severe_illness|severe\s+illness|critical\s+illness|additional\s+expense)/i.test(signature)) return 'severe_illness';
+  if (/(risk_disability|capital\s+disability|disability|that's\s+permanent)/i.test(signature)) return 'disability';
+  if (/(risk_temporary_icb|temporary\s+icb|income\s+protection|that\s+you\s+can\s+recover\s+from)/i.test(signature)) return 'temporary_icb';
   if (/(ret(_pre|_post)?_3|retirement_fund_value|invest_current_value|fundvalue|currentvalue)/i.test(signature)) return 'current_value';
   if (
     !/(maturity|estimated|projected|guaranteed|premium|contribution)/i.test(signature)
@@ -41,6 +46,11 @@ export function getFallbackValueForField(field, fallbackValues = {}) {
   const kind = getFieldSemanticKind(field);
   if (kind === 'policy_number') return fallbackValues.policyNumber || '';
   if (kind === 'date_of_inception') return fallbackValues.dateOfInception || '';
+  if (kind === 'premium') return fallbackValues.premium || '';
+  if (kind === 'life_cover') return fallbackValues.lifeCover || '';
+  if (kind === 'severe_illness') return fallbackValues.severeIllness || '';
+  if (kind === 'disability') return fallbackValues.disability || '';
+  if (kind === 'temporary_icb') return fallbackValues.temporaryIcb || '';
   if (kind === 'current_value') return fallbackValues.currentValue || '';
   if (kind === 'product_type') return fallbackValues.productType || '';
   return '';
@@ -83,6 +93,11 @@ export function isPlausibleValueForField(field, value, item) {
       return normaliseProviderPolicyNumber(text).includes(normaliseProviderPolicyNumber(item?.policyNumber || text));
     case 'date_of_inception':
       return isLikelyDateValue(text);
+    case 'premium':
+    case 'life_cover':
+    case 'severe_illness':
+    case 'disability':
+    case 'temporary_icb':
     case 'current_value':
       return isLikelyCurrencyValue(text);
     case 'product_type':
