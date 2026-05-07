@@ -101,6 +101,7 @@ describe('provider portal golden flows', () => {
     expect(portalDefaultFlowsSource).toContain('input[name*="passcode" i]');
     expect(portalDefaultFlowsSource).toContain('BrightRock defaults to SMS OTP');
     expect(workerSource).toContain('async function chooseSmsOtpDeliveryIfPresent');
+    expect(workerSource).toContain('async function completeManualOtpAfterDelivery');
     expect(workerSource).toContain("page.getByRole('radio', { name: /\\bSMS\\b/i })");
     expect(portalDefaultFlowsSource).toContain("Search by reference number");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Premium'");
@@ -114,6 +115,7 @@ describe('provider portal golden flows', () => {
   it('does not hand login verification pages to smart assist search', () => {
     expect(workerSource).toContain('async function completeManualOtpIfPresent');
     expect(workerSource).toContain('await chooseSmsOtpDeliveryIfPresent(page)');
+    expect(workerSource).toContain('await completeManualOtpAfterDelivery(page, flow)');
     expect(workerSource).toContain('async function assertPastAuthCheckpoint');
     expect(workerSource).toContain('Provider is still on a login verification step before');
     expect(workerSource).toContain("await assertPastAuthCheckpoint(page, flow, 'policy search')");

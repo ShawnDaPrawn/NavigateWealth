@@ -250,6 +250,35 @@ async function firstVisibleSelector(page, selectors, timeoutMs) {
   return null;
 }
 
+function getOtpSelectors(flow) {
+  const otp = flow?.otp || {};
+  return [
+    ...(Array.isArray(otp.detectionSelectors) ? otp.detectionSelectors : []),
+    otp.inputSelector,
+    'input[autocomplete="one-time-code"]',
+    'input[inputmode="numeric"]',
+    'input[type="tel"]',
+    'input[type="number"]',
+    'input[maxlength="4"]',
+    'input[maxlength="5"]',
+    'input[maxlength="6"]',
+    'input[maxlength="7"]',
+    'input[maxlength="8"]',
+    'input[name*="otp" i]',
+    'input[id*="otp" i]',
+    'input[placeholder*="otp" i]',
+    'input[name*="code" i]',
+    'input[id*="code" i]',
+    'input[placeholder*="code" i]',
+    'input[name*="pin" i]',
+    'input[id*="pin" i]',
+    'input[placeholder*="pin" i]',
+    'input[name*="verification" i]',
+    'input[id*="verification" i]',
+    'input[placeholder*="verification" i]',
+  ].map((selector) => String(selector || '').trim()).filter(Boolean);
+}
+
 async function waitForManualOtp(timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -260,21 +289,15 @@ async function waitForManualOtp(timeoutMs) {
   throw new Error('Timed out waiting for manual OTP.');
 }
 
-async function completeManualOtpIfPresent(page, flow, timeoutMs = 45000) {
+async function fillManualOtp(page, flow, code, preferredSelector) {
   const otp = flow?.otp || {};
-  const selectors = [
-    ...(Array.isArray(otp.detectionSelectors) ? otp.detectionSelectors : []),
-    otp.inputSelector,
-  ].map((selector) => String(selector || '').trim()).filter(Boolean);
-  const otpSelector = await firstVisibleSelector(page, selectors, timeoutMs);
-  if (!otpSelector) return false;
+  const selectors = preferredSelector ? [preferredSelector, ...getOtpSelectors(flow)] : getOtpSelectors(flow);
+  const otpSelector = await firstVisibleSelector(page, selectors, 60000);
+  if (!otpSelector) {
+    throw new Error('The SMS OTP was submitted in Navigate Wealth, but the provider OTP input was not visible.');
+  }
 
-  await updateJob('waiting_for_otp', {
-    currentStep: 'manual_sms_otp',
-    message: otp.instructions || 'Waiting for manual SMS OTP.',
-  });
-  const code = await waitForManualOtp(otp.timeoutMs || 600000);
-  const inputSelector = String(otp.inputSelector || otpSelector).trim() || otpSelector;
+  const inputSelector = otpSelector;
   await (await visibleLocator(page, inputSelector)).fill(code);
   const submitSelector = String(otp.submitSelector || '').trim();
   if (submitSelector) {
@@ -291,6 +314,26 @@ async function completeManualOtpIfPresent(page, flow, timeoutMs = 45000) {
   await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
   await page.waitForTimeout(1500);
   return true;
+}
+
+async function promptForManualOtp(page, flow, preferredSelector) {
+  const otp = flow?.otp || {};
+  await updateJob('waiting_for_otp', {
+    currentStep: 'manual_sms_otp',
+    message: otp.instructions || 'Waiting for manual SMS OTP.',
+  });
+  const code = await waitForManualOtp(otp.timeoutMs || 600000);
+  return fillManualOtp(page, flow, code, preferredSelector);
+}
+
+async function completeManualOtpIfPresent(page, flow, timeoutMs = 45000) {
+  const otpSelector = await firstVisibleSelector(page, getOtpSelectors(flow), timeoutMs);
+  if (!otpSelector) return false;
+  return promptForManualOtp(page, flow, otpSelector);
+}
+
+async function completeManualOtpAfterDelivery(page, flow) {
+  return promptForManualOtp(page, flow);
 }
 
 async function chooseSmsOtpDeliveryIfPresent(page) {
@@ -496,8 +539,8 @@ async function assertPastAuthCheckpoint(page, flow, stageLabel) {
 
   const requestedSmsOtp = await chooseSmsOtpDeliveryIfPresent(page);
   if (requestedSmsOtp) {
-    const completedOtp = await completeManualOtpIfPresent(page, flow, 45000);
-    if (completedOtp) return;
+    await completeManualOtpAfterDelivery(page, flow);
+    return;
   }
 
   throw new Error(
@@ -2468,8 +2511,12 @@ async function runJob(jobId, requestedMode = mode) {
     await (await visibleLocator(page, flow.login.passwordSelector)).fill(password);
     await (await visibleLocator(page, flow.login.submitSelector)).click();
 
-    await chooseSmsOtpDeliveryIfPresent(page);
-    await completeManualOtpIfPresent(page, flow, 45000);
+    const sentSmsOtp = await chooseSmsOtpDeliveryIfPresent(page);
+    if (sentSmsOtp) {
+      await completeManualOtpAfterDelivery(page, flow);
+    } else {
+      await completeManualOtpIfPresent(page, flow, 45000);
+    }
     await assertPastAuthCheckpoint(page, flow, 'post-login navigation');
 
     if (flow.navigation?.postLoginUrl) {
