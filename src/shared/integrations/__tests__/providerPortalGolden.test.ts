@@ -102,6 +102,8 @@ describe('provider portal golden flows', () => {
     expect(portalDefaultFlowsSource).toContain('BrightRock defaults to SMS OTP');
     expect(workerSource).toContain('async function chooseSmsOtpDeliveryIfPresent');
     expect(workerSource).toContain('async function completeManualOtpAfterDelivery');
+    expect(workerSource).toContain('async function findOtpEntryTarget');
+    expect(workerSource).toContain("kind: 'digits'");
     expect(workerSource).toContain("page.getByRole('radio', { name: /\\bSMS\\b/i })");
     expect(portalDefaultFlowsSource).toContain("Search by reference number");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Premium'");

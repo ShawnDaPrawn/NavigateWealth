@@ -259,6 +259,17 @@ function getOtpSelectors(flow) {
     'input[inputmode="numeric"]',
     'input[type="tel"]',
     'input[type="number"]',
+    'input[type="text"]',
+    'input[aria-label*="otp" i]',
+    'input[aria-label*="code" i]',
+    'input[aria-label*="pin" i]',
+    'input[aria-label*="verification" i]',
+    'input[title*="otp" i]',
+    'input[title*="code" i]',
+    'input[title*="pin" i]',
+    'input[class*="otp" i]',
+    'input[class*="code" i]',
+    'input[class*="pin" i]',
     'input[maxlength="4"]',
     'input[maxlength="5"]',
     'input[maxlength="6"]',
@@ -279,6 +290,124 @@ function getOtpSelectors(flow) {
   ].map((selector) => String(selector || '').trim()).filter(Boolean);
 }
 
+function getSearchScopes(page) {
+  return [page, ...page.frames().filter((frame) => frame !== page.mainFrame())];
+}
+
+async function getVisibleFillableControls(scope) {
+  const locator = scope.locator([
+    'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"])',
+    'textarea',
+    '[role="textbox"]',
+    '[contenteditable="true"]',
+  ].join(', '));
+  const count = Math.min(await locator.count().catch(() => 0), 20);
+  const controls = [];
+  for (let index = 0; index < count; index += 1) {
+    const candidate = locator.nth(index);
+    const isVisible = await candidate.isVisible({ timeout: 250 }).catch(() => false);
+    if (!isVisible) continue;
+    const isEnabled = await candidate.isEnabled({ timeout: 250 }).catch(() => true);
+    if (!isEnabled) continue;
+    const meta = await candidate.evaluate((element) => ({
+      type: String(element.getAttribute('type') || '').toLowerCase(),
+      name: String(element.getAttribute('name') || ''),
+      id: String(element.getAttribute('id') || ''),
+      placeholder: String(element.getAttribute('placeholder') || ''),
+      ariaLabel: String(element.getAttribute('aria-label') || ''),
+      title: String(element.getAttribute('title') || ''),
+      className: String(element.getAttribute('class') || ''),
+      maxLength: Number(element.getAttribute('maxlength') || element.maxLength || 0),
+      readOnly: Boolean(element.readOnly),
+    })).catch(() => ({}));
+    if (meta.readOnly) continue;
+    controls.push({ locator: candidate, meta });
+  }
+  return controls;
+}
+
+function isOtpishControl(meta = {}) {
+  const text = [
+    meta.name,
+    meta.id,
+    meta.placeholder,
+    meta.ariaLabel,
+    meta.title,
+    meta.className,
+  ].join(' ');
+  return /otp|one[-\s]*time|verification|verify|code|pin|passcode/i.test(text)
+    || ['tel', 'number'].includes(String(meta.type || '').toLowerCase())
+    || (Number(meta.maxLength || 0) >= 4 && Number(meta.maxLength || 0) <= 12);
+}
+
+function looksLikeOtpPage(text) {
+  return /otp|one[-\s]*time|verification|verify|code|pin|passcode|send\s+otp|sms/i.test(text || '');
+}
+
+async function findOtpEntryTarget(page, flow, preferredSelector, timeoutMs = 60000) {
+  const selectors = preferredSelector ? [preferredSelector, ...getOtpSelectors(flow)] : getOtpSelectors(flow);
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const scopes = getSearchScopes(page);
+    for (const scope of scopes) {
+      for (const selector of selectors) {
+        const locator = scope.locator(selector).first();
+        if (await locator.isVisible({ timeout: 250 }).catch(() => false)) {
+          return { kind: 'single', locator, scope };
+        }
+      }
+
+      const roleCandidates = [
+        scope.getByRole('textbox', { name: /otp|one[-\s]*time|verification|verify|code|pin|passcode/i }).first(),
+        scope.getByLabel(/otp|one[-\s]*time|verification|verify|code|pin|passcode/i).first(),
+      ];
+      for (const locator of roleCandidates) {
+        if (await locator.isVisible({ timeout: 250 }).catch(() => false)) {
+          return { kind: 'single', locator, scope };
+        }
+      }
+
+      const bodyText = await scope.locator('body').innerText({ timeout: 750 }).catch(() => '');
+      const controls = await getVisibleFillableControls(scope);
+      const otpControls = controls.filter((control) => isOtpishControl(control.meta));
+      if (otpControls.length === 1) {
+        return { kind: 'single', locator: otpControls[0].locator, scope };
+      }
+      if (otpControls.length > 1 && otpControls.length <= 12) {
+        const singleDigitControls = otpControls.filter((control) => Number(control.meta.maxLength || 0) === 1);
+        if (singleDigitControls.length >= 4) {
+          return { kind: 'digits', locators: singleDigitControls.map((control) => control.locator), scope };
+        }
+        return { kind: 'single', locator: otpControls[0].locator, scope };
+      }
+
+      if (looksLikeOtpPage(bodyText) && controls.length === 1) {
+        return { kind: 'single', locator: controls[0].locator, scope };
+      }
+      if (looksLikeOtpPage(bodyText) && controls.length > 1 && controls.length <= 12) {
+        const singleDigitControls = controls.filter((control) => Number(control.meta.maxLength || 0) === 1);
+        if (singleDigitControls.length >= 4) {
+          return { kind: 'digits', locators: singleDigitControls.map((control) => control.locator), scope };
+        }
+      }
+    }
+    await page.waitForTimeout(1000);
+  }
+  return null;
+}
+
+async function fillOtpTarget(target, code) {
+  if (target.kind === 'digits') {
+    const digits = String(code || '').trim().split('');
+    const count = Math.min(digits.length, target.locators.length);
+    for (let index = 0; index < count; index += 1) {
+      await target.locators[index].fill(digits[index]);
+    }
+    return;
+  }
+  await target.locator.fill(String(code || '').trim());
+}
+
 async function waitForManualOtp(timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -289,19 +418,22 @@ async function waitForManualOtp(timeoutMs) {
   throw new Error('Timed out waiting for manual OTP.');
 }
 
-async function fillManualOtp(page, flow, code, preferredSelector) {
+async function fillManualOtp(page, flow, code, preferredSelector, existingTarget) {
   const otp = flow?.otp || {};
-  const selectors = preferredSelector ? [preferredSelector, ...getOtpSelectors(flow)] : getOtpSelectors(flow);
-  const otpSelector = await firstVisibleSelector(page, selectors, 60000);
-  if (!otpSelector) {
-    throw new Error('The SMS OTP was submitted in Navigate Wealth, but the provider OTP input was not visible.');
+  const target = existingTarget || await findOtpEntryTarget(page, flow, preferredSelector, 90000);
+  if (!target) {
+    const snapshot = await capturePolicyConfirmationSnapshot(page).catch(() => ({ sample: '' }));
+    throw new Error(
+      'The SMS OTP was submitted in Navigate Wealth, but the provider OTP input was not visible. '
+      + `Visible page sample: ${snapshot.sample || 'none'}`,
+    );
   }
 
-  const inputSelector = otpSelector;
-  await (await visibleLocator(page, inputSelector)).fill(code);
+  await fillOtpTarget(target, code);
   const submitSelector = String(otp.submitSelector || '').trim();
   if (submitSelector) {
-    const submit = page.locator(submitSelector).first();
+    const submitScope = target.scope || page;
+    const submit = submitScope.locator(submitSelector).first();
     if (await submit.isVisible({ timeout: 3000 }).catch(() => false)) {
       await clickWithOverlayFallback(page, submit, { timeout: 5000, settleMs: 1500 });
     } else {
@@ -316,20 +448,20 @@ async function fillManualOtp(page, flow, code, preferredSelector) {
   return true;
 }
 
-async function promptForManualOtp(page, flow, preferredSelector) {
+async function promptForManualOtp(page, flow, preferredSelector, existingTarget) {
   const otp = flow?.otp || {};
   await updateJob('waiting_for_otp', {
     currentStep: 'manual_sms_otp',
     message: otp.instructions || 'Waiting for manual SMS OTP.',
   });
   const code = await waitForManualOtp(otp.timeoutMs || 600000);
-  return fillManualOtp(page, flow, code, preferredSelector);
+  return fillManualOtp(page, flow, code, preferredSelector, existingTarget);
 }
 
 async function completeManualOtpIfPresent(page, flow, timeoutMs = 45000) {
-  const otpSelector = await firstVisibleSelector(page, getOtpSelectors(flow), timeoutMs);
-  if (!otpSelector) return false;
-  return promptForManualOtp(page, flow, otpSelector);
+  const target = await findOtpEntryTarget(page, flow, undefined, timeoutMs);
+  if (!target) return false;
+  return promptForManualOtp(page, flow, undefined, target);
 }
 
 async function completeManualOtpAfterDelivery(page, flow) {
