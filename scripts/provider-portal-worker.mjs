@@ -293,6 +293,49 @@ async function completeManualOtpIfPresent(page, flow, timeoutMs = 45000) {
   return true;
 }
 
+async function chooseSmsOtpDeliveryIfPresent(page) {
+  const bodyText = await page.locator('body').innerText({ timeout: 2500 }).catch(() => '');
+  if (!/how\s+would\s+you\s+like\s+to\s+receive\s+your\s+otp|send\s+otp|email\s+sms/i.test(bodyText)) {
+    return false;
+  }
+
+  const smsCandidates = [
+    page.getByRole('radio', { name: /\bSMS\b/i }).first(),
+    page.getByLabel(/\bSMS\b/i).first(),
+    page.locator('label').filter({ hasText: /\bSMS\b/i }).first(),
+    page.locator('input[value*="sms" i], input[id*="sms" i], input[name*="sms" i]').first(),
+    page.getByText(/\bSMS\b/i).first(),
+  ];
+  let selectedSms = false;
+  for (const candidate of smsCandidates) {
+    if (!(await candidate.isVisible({ timeout: 800 }).catch(() => false))) continue;
+    await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 600 });
+    selectedSms = true;
+    break;
+  }
+
+  if (!selectedSms) {
+    throw new Error('BrightRock asked how to receive the OTP, but the SMS option was not visible.');
+  }
+
+  const sendCandidates = [
+    page.getByRole('button', { name: /send\s+otp/i }).first(),
+    page.getByRole('button', { name: /\bsend\b/i }).first(),
+    page.locator('button, input[type="submit"], [role="button"]').filter({ hasText: /send\s+otp|\bsend\b/i }).first(),
+    page.locator('input[type="submit"][value*="send" i], input[type="button"][value*="send" i]').first(),
+  ];
+  for (const candidate of sendCandidates) {
+    if (!(await candidate.isVisible({ timeout: 800 }).catch(() => false))) continue;
+    await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 1500 });
+    await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForTimeout(1000);
+    return true;
+  }
+
+  throw new Error('BrightRock SMS OTP option was selected, but the Send OTP action was not visible.');
+}
+
 function describeNavigationFailure(error) {
   const message = error instanceof Error ? error.message : String(error);
   if (/net::ERR_ABORTED/i.test(message)) return 'the provider aborted the page load';
@@ -450,6 +493,12 @@ async function assertPastAuthCheckpoint(page, flow, stageLabel) {
 
   const handledOtp = await completeManualOtpIfPresent(page, flow, 5000);
   if (handledOtp) return;
+
+  const requestedSmsOtp = await chooseSmsOtpDeliveryIfPresent(page);
+  if (requestedSmsOtp) {
+    const completedOtp = await completeManualOtpIfPresent(page, flow, 45000);
+    if (completedOtp) return;
+  }
 
   throw new Error(
     `Provider is still on a login verification step before ${stageLabel}. `
@@ -2419,6 +2468,7 @@ async function runJob(jobId, requestedMode = mode) {
     await (await visibleLocator(page, flow.login.passwordSelector)).fill(password);
     await (await visibleLocator(page, flow.login.submitSelector)).click();
 
+    await chooseSmsOtpDeliveryIfPresent(page);
     await completeManualOtpIfPresent(page, flow, 45000);
     await assertPastAuthCheckpoint(page, flow, 'post-login navigation');
 

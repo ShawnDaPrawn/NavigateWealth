@@ -1526,6 +1526,7 @@ async function getPortalFlow(provider: KvProvider, providerId: string, categoryI
   return {
     ...defaultFlow,
     ...configured,
+    loginUrl: String(configured.loginUrl || '').trim() || defaultFlow.loginUrl,
     navigation: {
       ...(defaultFlow.navigation || {}),
       ...(configured.navigation || {}),
@@ -2560,6 +2561,7 @@ app.put("/portal-flows/:providerId", requireAuth, async (c) => {
       ...body,
       providerId,
       id: categoryId ? `${providerId}:${categoryId}:default` : body?.id || `${providerId}:default`,
+      loginUrl: String(body?.loginUrl || '').trim() || defaultFlow.loginUrl,
       credentialProfiles: Array.isArray(body?.credentialProfiles) ? body.credentialProfiles : defaultFlow.credentialProfiles,
       navigation: {
         ...(defaultFlow.navigation || {}),

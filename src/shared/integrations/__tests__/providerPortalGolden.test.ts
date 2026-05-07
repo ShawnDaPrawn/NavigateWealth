@@ -99,6 +99,9 @@ describe('provider portal golden flows', () => {
     expect(portalDefaultFlowsSource).toContain("id: 'brightrock-env'");
     expect(portalDefaultFlowsSource).toContain('input[name*="verification" i]');
     expect(portalDefaultFlowsSource).toContain('input[name*="passcode" i]');
+    expect(portalDefaultFlowsSource).toContain('BrightRock defaults to SMS OTP');
+    expect(workerSource).toContain('async function chooseSmsOtpDeliveryIfPresent');
+    expect(workerSource).toContain("page.getByRole('radio', { name: /\\bSMS\\b/i })");
     expect(portalDefaultFlowsSource).toContain("Search by reference number");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Premium'");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Life Cover'");
@@ -110,9 +113,15 @@ describe('provider portal golden flows', () => {
 
   it('does not hand login verification pages to smart assist search', () => {
     expect(workerSource).toContain('async function completeManualOtpIfPresent');
+    expect(workerSource).toContain('await chooseSmsOtpDeliveryIfPresent(page)');
     expect(workerSource).toContain('async function assertPastAuthCheckpoint');
     expect(workerSource).toContain('Provider is still on a login verification step before');
     expect(workerSource).toContain("await assertPastAuthCheckpoint(page, flow, 'policy search')");
+  });
+
+  it('does not let blank saved login URLs mask provider defaults', () => {
+    expect(integrationsSource).toContain("loginUrl: String(configured.loginUrl || '').trim() || defaultFlow.loginUrl");
+    expect(integrationsSource).toContain("loginUrl: String(body?.loginUrl || '').trim() || defaultFlow.loginUrl");
   });
 
   it('keeps portal flow configuration isolated by provider and category', () => {

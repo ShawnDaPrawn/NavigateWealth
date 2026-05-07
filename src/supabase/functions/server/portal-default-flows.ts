@@ -188,7 +188,7 @@ export function getDefaultPortalFlow(
         inputSelector: 'input[autocomplete="one-time-code"], input[inputmode="numeric"], input[name*="otp" i], input[id*="otp" i], input[placeholder*="otp" i], input[name*="code" i], input[id*="code" i], input[placeholder*="code" i], input[aria-label*="code" i], input[name*="pin" i], input[id*="pin" i], input[placeholder*="pin" i], input[name*="passcode" i], input[id*="passcode" i], input[placeholder*="passcode" i], input[name*="verification" i], input[id*="verification" i], input[placeholder*="verification" i], input[aria-label*="verification" i]',
         submitSelector: 'button[type="submit"], button:has-text("GO"), button:has-text("Go"), button:has-text("Verify"), button:has-text("Continue"), button:has-text("Submit"), input[type="submit"], input[value*="GO" i], input[value*="Verify" i], input[value*="Continue" i]',
         timeoutMs: 600000,
-        instructions: 'Enter the BrightRock OTP in Navigate Wealth when the worker pauses.',
+        instructions: 'BrightRock defaults to SMS OTP. Enter the SMS OTP in Navigate Wealth when the worker pauses.',
       },
       navigation: { policyListSteps: [] },
       search: {
@@ -229,6 +229,7 @@ export function getDefaultPortalFlow(
       notes: [
         'BrightRock currently exposes the needed risk values on Policy details > Policy structure.',
         'Use the Search by reference number block after login and enter the Navigate Wealth policy number.',
+        'When BrightRock asks how to receive the OTP, choose SMS and send the OTP before waiting for the code.',
         'Extract premium from Current monthly premium.',
         "Extract Life Cover from That's caused by death using the lump-sum amount.",
         "Extract Capital Disability from That's permanent using the lump-sum amount.",

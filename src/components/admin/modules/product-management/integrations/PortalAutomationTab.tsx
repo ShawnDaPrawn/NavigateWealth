@@ -408,8 +408,8 @@ export function PortalAutomationTab({
     waitForDownloadMs: flow?.policySchedule?.waitForDownloadMs || 45000,
   });
 
-  const saveFlowConfiguration = () => {
-    if (!flow) return;
+  const buildFlowDraft = () => {
+    if (!flow) return null;
     let policyListSteps = flow.navigation.policyListSteps || [];
     try {
       const parsed = JSON.parse(policyListStepsJson || '[]');
@@ -417,10 +417,10 @@ export function PortalAutomationTab({
       setPolicyListStepsError('');
     } catch {
       setPolicyListStepsError('Policy list steps must be valid JSON.');
-      return;
+      return null;
     }
 
-    onSaveFlow({
+    return {
       ...flow,
       loginUrl: loginUrl.trim(),
       login: {
@@ -459,7 +459,13 @@ export function PortalAutomationTab({
       },
       policySchedule: buildPolicyScheduleDraft(),
       needsDiscovery: false,
-    });
+    };
+  };
+
+  const saveFlowConfiguration = () => {
+    const draft = buildFlowDraft();
+    if (!draft) return;
+    onSaveFlow(draft);
   };
 
   return (
@@ -507,12 +513,19 @@ export function PortalAutomationTab({
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_260px]">
                 <div className="space-y-2">
                   <Label htmlFor="portal-login-url">Login URL</Label>
-                  <Input
-                    id="portal-login-url"
-                    value={loginUrl}
-                    onChange={(event) => setLoginUrl(event.target.value)}
-                    placeholder="https://provider.example/login"
-                  />
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      id="portal-login-url"
+                      value={loginUrl}
+                      onChange={(event) => setLoginUrl(event.target.value)}
+                      placeholder="https://provider.example/login"
+                      className="sm:flex-1"
+                    />
+                    <Button type="button" variant="outline" onClick={saveFlowConfiguration} disabled={isSavingFlow}>
+                      {isSavingFlow ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                      Save URL
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Credential Profile</Label>
@@ -617,6 +630,8 @@ export function PortalAutomationTab({
                             type="button"
                             variant="outline"
                             onClick={() => {
+                              const draft = buildFlowDraft();
+                              if (draft) onSaveFlow(draft);
                               setIsAwaitingCredentialSave(true);
                               onSaveCredentials(selectedProfile.id, {
                                 username: credentialUsername,
