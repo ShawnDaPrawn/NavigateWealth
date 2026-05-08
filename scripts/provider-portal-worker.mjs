@@ -349,14 +349,52 @@ function looksLikeOtpDeliveryChoice(text) {
 }
 
 function looksLikeOtpSentConfirmation(text) {
-  return /otp\s+(has\s+been\s+)?sent|code\s+(has\s+been\s+)?sent|sms\s+(has\s+been\s+)?sent|enter\s+(the\s+)?(otp|code|pin|passcode)|verification\s+(otp|code|pin|passcode)/i.test(text || '');
+  return /otp\s+(has\s+been\s+)?sent|code\s+(has\s+been\s+)?sent|sms\s+(has\s+been\s+)?sent|sent\s+(to|via)\s+(your\s+)?(mobile|cell|phone|sms)|message\s+(has\s+been\s+)?sent/i.test(text || '');
+}
+
+function looksLikeOtpEntryPrompt(text) {
+  return /enter\s+(the\s+)?(otp|code|pin|passcode)|verification\s+(otp|code|pin|passcode)/i.test(text || '');
+}
+
+function looksLikePendingOtpSendAction(text) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!value || /\bresend\b/i.test(value)) return false;
+  return /\bsend\s+(otp|code|pin|passcode|sms)\b/i.test(value) || /^send$/i.test(value);
+}
+
+function getSearchReadyLabels(flow) {
+  return splitLabels(flow?.search?.searchInputLabels)
+    .filter((label) => label.length >= 8 && !/^search$/i.test(label))
+    .concat(['Search by reference number', 'Policy details', 'Policy structure', 'Cover summary', 'FSP Junction']);
+}
+
+function textContainsConfiguredLabel(text, labels) {
+  return labels.some((label) => label && new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(text));
+}
+
+async function writeOtpDiagnostics(page, name, payload = {}) {
+  const snapshot = await capturePolicyConfirmationSnapshot(page).catch(() => ({
+    currentUrl: page.url(),
+    title: '',
+    sample: '',
+  }));
+  await writeDebugArtifact(null, name, {
+    ...payload,
+    snapshot: {
+      currentUrl: snapshot.currentUrl || page.url(),
+      title: snapshot.title || '',
+      sample: snapshot.sample || '',
+    },
+    createdAt: new Date().toISOString(),
+  });
+  await writeDebugScreenshot(page, null, name);
 }
 
 async function hasVisibleOtpSendAction(page) {
   const sendCandidates = [
-    page.getByRole('button', { name: /send\s+(otp|code|pin|passcode)/i }).first(),
+    page.getByRole('button', { name: /send\s+(otp|code|pin|passcode)|send\s+sms|\bsend\b/i }).first(),
     page.locator('button, input[type="submit"], input[type="button"], [role="button"]')
-      .filter({ hasText: /send\s+(otp|code|pin|passcode)|send\s+sms/i })
+      .filter({ hasText: /send\s+(otp|code|pin|passcode)|send\s+sms|\bsend\b/i })
       .first(),
     page.locator('input[type="submit"][value*="send" i], input[type="button"][value*="send" i]').first(),
   ];
@@ -364,6 +402,13 @@ async function hasVisibleOtpSendAction(page) {
   for (const candidate of sendCandidates) {
     if (!(await candidate.isVisible({ timeout: 250 }).catch(() => false))) continue;
     if (!(await candidate.isEnabled({ timeout: 250 }).catch(() => true))) continue;
+    const label = await candidate.evaluate((element) => [
+      element.getAttribute('value'),
+      element.getAttribute('aria-label'),
+      element.getAttribute('title'),
+      element.textContent,
+    ].filter(Boolean).join(' ')).catch(() => '');
+    if (!looksLikePendingOtpSendAction(label)) continue;
     return true;
   }
   return false;
@@ -458,22 +503,30 @@ async function fillOtpTarget(target, code) {
 
 async function waitForBrightRockOtpDeliveryProgress(page, flow, timeoutMs = 20000) {
   const deadline = Date.now() + timeoutMs;
+  let latest = null;
   while (Date.now() < deadline) {
     const pendingSendAction = await hasVisibleOtpSendAction(page);
     const target = await findOtpEntryTarget(page, flow, undefined, 1000);
-    if (target && !pendingSendAction) return true;
-
     const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
-    if (looksLikeOtpSentConfirmation(bodyText) && !pendingSendAction) return true;
-    if (!looksLikeOtpDeliveryChoice(bodyText) && looksLikeOtpPage(bodyText) && !pendingSendAction) return true;
+    latest = {
+      pendingSendAction,
+      hasOtpInput: Boolean(target),
+      hasDeliveryChoice: looksLikeOtpDeliveryChoice(bodyText),
+      hasSentConfirmation: looksLikeOtpSentConfirmation(bodyText),
+      hasEntryPrompt: looksLikeOtpEntryPrompt(bodyText),
+      sample: sampleText(bodyText),
+    };
+
+    if (latest.hasSentConfirmation && !pendingSendAction) return true;
 
     await page.waitForTimeout(1000);
   }
 
   const snapshot = await capturePolicyConfirmationSnapshot(page).catch(() => ({ sample: '' }));
+  await writeOtpDiagnostics(page, 'brightrock-otp-delivery-unconfirmed', { latest });
   throw new Error(
     'BrightRock did not confirm that the SMS OTP was sent. '
-    + 'Check whether SMS was selected and whether BrightRock still shows the Send OTP choice. '
+    + 'The worker will not wait for a phone code until BrightRock shows a sent confirmation. '
     + `Visible page sample: ${snapshot.sample || 'none'}`,
   );
 }
@@ -520,11 +573,25 @@ async function fillManualOtp(page, flow, code, preferredSelector, existingTarget
 
 async function promptForManualOtp(page, flow, preferredSelector, existingTarget) {
   const otp = flow?.otp || {};
+  const timeoutMs = otp.timeoutMs || 600000;
   await updateJob('waiting_for_otp', {
     currentStep: 'manual_sms_otp',
     message: otp.instructions || 'Waiting for manual SMS OTP.',
   });
-  const code = await waitForManualOtp(otp.timeoutMs || 600000);
+  let code;
+  try {
+    code = await waitForManualOtp(timeoutMs);
+  } catch (error) {
+    await writeOtpDiagnostics(page, 'manual-otp-timeout', {
+      timeoutMs,
+      instructions: otp.instructions || 'Waiting for manual SMS OTP.',
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error(
+      'Timed out waiting for manual OTP. The provider showed an OTP step, but no code was submitted in Navigate Wealth before the timeout. '
+      + 'Worker diagnostics were captured for the OTP screen when debug artifacts are enabled.',
+    );
+  }
   return fillManualOtp(page, flow, code, preferredSelector, existingTarget);
 }
 
@@ -822,10 +889,7 @@ async function detectAuthCheckpoint(page, flow) {
   ].join(' ').replace(/\s+/g, ' ').trim();
   if (!text) return '';
 
-  const searchReadyText = splitLabels(flow?.search?.searchInputLabels)
-    .filter((label) => label.length >= 8 && !/^search$/i.test(label))
-    .concat(['Search by reference number', 'Policy details', 'Policy structure', 'Cover summary', 'FSP Junction']);
-  if (searchReadyText.some((label) => label && new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(text))) {
+  if (textContainsConfiguredLabel(text, getSearchReadyLabels(flow))) {
     return '';
   }
 
@@ -836,23 +900,54 @@ async function detectAuthCheckpoint(page, flow) {
   return sample || 'provider page is still asking for login verification';
 }
 
-async function assertPastAuthCheckpoint(page, flow, stageLabel) {
-  const checkpoint = await detectAuthCheckpoint(page, flow);
-  if (!checkpoint) return;
-
+async function handleManualOtpCheckpoint(page, flow) {
   const requestedSmsOtp = await chooseSmsOtpDeliveryIfPresent(page, flow);
   if (requestedSmsOtp) {
     await completeManualOtpAfterDelivery(page, flow);
-    return;
+    return true;
   }
 
   const sentVisibleOtp = await clickVisibleOtpSendAction(page, flow);
   if (sentVisibleOtp) {
     await completeManualOtpAfterDelivery(page, flow);
-    return;
+    return true;
   }
 
   const handledOtp = await completeManualOtpIfPresent(page, flow, 5000);
+  return Boolean(handledOtp);
+}
+
+async function waitForManualOtpCheckpointIfPresent(page, flow, timeoutMs = 12000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+
+    const checkpoint = await detectAuthCheckpoint(page, flow);
+    if (checkpoint) {
+      const handled = await handleManualOtpCheckpoint(page, flow);
+      if (!handled) {
+        return { handled: false, checkpoint };
+      }
+      return { handled: true, checkpoint };
+    }
+
+    const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
+    if (textContainsConfiguredLabel([page.url(), bodyText].join(' '), getSearchReadyLabels(flow))) {
+      return { handled: false, checkpoint: '' };
+    }
+
+    await page.waitForTimeout(1000);
+  }
+
+  return { handled: false, checkpoint: '' };
+}
+
+async function assertPastAuthCheckpoint(page, flow, stageLabel) {
+  const checkpoint = await detectAuthCheckpoint(page, flow);
+  if (!checkpoint) return;
+
+  const handledOtp = await handleManualOtpCheckpoint(page, flow);
   if (handledOtp) return;
 
   throw new Error(
@@ -2823,13 +2918,7 @@ async function runJob(jobId, requestedMode = mode) {
     await (await visibleLocator(page, flow.login.passwordSelector)).fill(password);
     await (await visibleLocator(page, flow.login.submitSelector)).click();
 
-    const sentSmsOtp = await chooseSmsOtpDeliveryIfPresent(page, flow);
-    if (sentSmsOtp) {
-      await completeManualOtpAfterDelivery(page, flow);
-    } else {
-      await clickVisibleOtpSendAction(page, flow);
-      await completeManualOtpIfPresent(page, flow, 45000);
-    }
+    await waitForManualOtpCheckpointIfPresent(page, flow, 12000);
     await assertPastAuthCheckpoint(page, flow, 'post-login navigation');
 
     if (flow.navigation?.postLoginUrl) {
