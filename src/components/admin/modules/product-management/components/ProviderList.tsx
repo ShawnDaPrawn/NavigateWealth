@@ -11,7 +11,12 @@ import {
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
-import { Provider, PRODUCT_CATEGORIES } from '../types';
+import {
+  Provider,
+  getPortalAutomationCategoryOptions,
+  getProductCategoryLabel,
+  isProductCategoryGroup,
+} from '../types';
 
 interface ProviderListProps {
   providers: Provider[];
@@ -52,8 +57,8 @@ export function ProviderList({
               </TableCell>
             </TableRow>
           ) : (
-            providers.map((provider) => (
-              <TableRow key={provider.id}>
+            providers.map((provider, providerIndex) => (
+              <TableRow key={`${provider.id}-${providerIndex}`}>
                 <TableCell>
                   <div className="w-20 h-10 rounded bg-gray-50 border flex items-center justify-center overflow-hidden">
                     {provider.logo ? (
@@ -73,14 +78,19 @@ export function ProviderList({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
-                    {provider.categoryIds.map(catId => {
-                      const category = PRODUCT_CATEGORIES.find(c => c.id === catId);
-                      return category ? (
-                        <Badge key={catId} variant="secondary" className="text-xs font-normal">
-                          {category.name}
-                        </Badge>
-                      ) : null;
-                    })}
+                    {getPortalAutomationCategoryOptions(provider.categoryIds).map((category, categoryIndex) => (
+                      <Badge key={`${provider.id}-${category.id}-${categoryIndex}`} variant="secondary" className="text-xs font-normal">
+                        {category.name}
+                      </Badge>
+                    ))}
+                    {provider.categoryIds.filter(isProductCategoryGroup).map((catId, index) => (
+                      <Badge key={`${provider.id}-${catId}-${index}`} variant="outline" className="text-xs font-normal text-amber-700 border-amber-300 bg-amber-50">
+                        Group only: {getProductCategoryLabel(catId)}
+                      </Badge>
+                    ))}
+                    {getPortalAutomationCategoryOptions(provider.categoryIds).length === 0 && (
+                      <span className="text-xs text-muted-foreground">No automation categories</span>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="text-right">

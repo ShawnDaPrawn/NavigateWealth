@@ -1,6 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { IntegrationProvider, IntegrationConfig, IntegrationFieldBinding, PreviewData, IntegrationSyncRun, PortalBrainMemorySummary, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob, ProductCategoryId } from './types';
+import {
+  IntegrationProvider,
+  IntegrationConfig,
+  IntegrationFieldBinding,
+  PreviewData,
+  IntegrationSyncRun,
+  PortalBrainMemorySummary,
+  PortalFlowField,
+  PortalJobPolicyItem,
+  PortalJobRunMode,
+  PortalProviderFlow,
+  PortalSyncJob,
+  ProductCategoryId,
+  getPortalAutomationCategoryOptions,
+  isPortalAutomationCategory,
+} from './types';
 import { productManagementApi } from './api';
 import { ProviderList } from './integrations/ProviderList';
 import { IntegrationHeader } from './integrations/IntegrationHeader';
@@ -109,8 +124,8 @@ export function IntegrationsTab() {
   // Reset UI when provider changes
   useEffect(() => {
     if (selectedProvider) {
-        const firstCat = selectedProvider.categoryIds[0];
-        if (firstCat) setSelectedCategoryId(firstCat);
+        const firstCat = getPortalAutomationCategoryOptions(selectedProvider.categoryIds)[0] || '';
+        setSelectedCategoryId(firstCat);
         
         setUploadedFile(null);
         setRawFile(null);
@@ -406,6 +421,9 @@ export function IntegrationsTab() {
   const createPortalJobMutation = useMutation({
     mutationFn: async (params: { credentialProfileId: string; runMode: PortalJobRunMode; policySchedule?: PortalProviderFlow['policySchedule']; documentArtifacts?: PortalProviderFlow['documentArtifacts'] }) => {
         if (!selectedProviderId || !selectedCategoryId) throw new Error("Missing provider or category");
+        if (!isPortalAutomationCategory(selectedCategoryId)) {
+          throw new Error("Portal automation can only run for specific product subcategories.");
+        }
         return productManagementApi.createPortalJob(selectedProviderId, selectedCategoryId, params.credentialProfileId, params.runMode, {
           policySchedule: params.policySchedule,
           documentArtifacts: params.documentArtifacts,

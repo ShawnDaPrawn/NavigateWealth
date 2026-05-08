@@ -18,18 +18,53 @@ export type ProductCategoryId =
 export const PRODUCT_CATEGORIES = [
   { id: 'risk_planning', name: 'Risk Planning' },
   { id: 'medical_aid', name: 'Medical Aid' },
-  { id: 'retirement_planning', name: 'Retirement Planning' },
-  { id: 'retirement_pre', name: 'Pre-Retirement' },
-  { id: 'retirement_post', name: 'Post-Retirement' },
-  { id: 'investments', name: 'Investments' },
-  { id: 'investments_voluntary', name: 'Voluntary Investments' },
-  { id: 'investments_guaranteed', name: 'Guaranteed Investments' },
+  { id: 'retirement_planning', name: 'Retirement Planning', isGroup: true, automationEligible: false, children: ['retirement_pre', 'retirement_post'] },
+  { id: 'retirement_pre', name: 'Pre-Retirement', automationEligible: true, parentId: 'retirement_planning' },
+  { id: 'retirement_post', name: 'Post-Retirement', automationEligible: true, parentId: 'retirement_planning' },
+  { id: 'investments', name: 'Investments', isGroup: true, automationEligible: false, children: ['investments_voluntary', 'investments_guaranteed'] },
+  { id: 'investments_voluntary', name: 'Voluntary Investments', automationEligible: true, parentId: 'investments' },
+  { id: 'investments_guaranteed', name: 'Guaranteed Investments', automationEligible: true, parentId: 'investments' },
   { id: 'employee_benefits', name: 'Employee Benefits' },
   { id: 'employee_benefits_risk', name: 'Risk' },
   { id: 'employee_benefits_retirement', name: 'Retirement' },
   { id: 'tax_planning', name: 'Tax Planning' },
   { id: 'estate_planning', name: 'Estate Planning' },
 ] as const;
+
+export const PORTAL_AUTOMATION_CATEGORY_IDS: ProductCategoryId[] = [
+  'risk_planning',
+  'medical_aid',
+  'retirement_pre',
+  'retirement_post',
+  'investments_voluntary',
+  'investments_guaranteed',
+  'employee_benefits',
+  'employee_benefits_risk',
+  'employee_benefits_retirement',
+  'tax_planning',
+  'estate_planning',
+];
+
+export const PRODUCT_CATEGORY_GROUP_IDS: ProductCategoryId[] = [
+  'retirement_planning',
+  'investments',
+];
+
+export function getProductCategoryLabel(categoryId: string): string {
+  return PRODUCT_CATEGORIES.find((category) => category.id === categoryId)?.name || categoryId;
+}
+
+export function isProductCategoryGroup(categoryId: string): boolean {
+  return PRODUCT_CATEGORY_GROUP_IDS.includes(categoryId as ProductCategoryId);
+}
+
+export function isPortalAutomationCategory(categoryId: string): boolean {
+  return PORTAL_AUTOMATION_CATEGORY_IDS.includes(categoryId as ProductCategoryId);
+}
+
+export function getPortalAutomationCategoryOptions(categoryIds: string[]): ProductCategoryId[] {
+  return categoryIds.filter(isPortalAutomationCategory) as ProductCategoryId[];
+}
 
 export const FIELD_TYPES = [
   { value: 'text', label: 'Text' },

@@ -10,7 +10,21 @@ import { Separator } from '../../../../ui/separator';
 import { Switch } from '../../../../ui/switch';
 import { Textarea } from '../../../../ui/textarea';
 import { AlertCircle, Bot, CheckCircle2, Clock, FileText, KeyRound, ListChecks, Loader2, Play, RefreshCw, RotateCcw, Search, Settings2 } from 'lucide-react';
-import { IntegrationFieldBinding, IntegrationProvider, IntegrationSyncRun, PortalBrainMemorySummary, PortalCredentialStatus, PortalDiscoveryReport, PortalFlowField, PortalJobPolicyItem, PortalJobRunMode, PortalProviderFlow, PortalSyncJob, PRODUCT_CATEGORIES } from '../types';
+import {
+  IntegrationFieldBinding,
+  IntegrationProvider,
+  IntegrationSyncRun,
+  PortalBrainMemorySummary,
+  PortalCredentialStatus,
+  PortalDiscoveryReport,
+  PortalFlowField,
+  PortalJobPolicyItem,
+  PortalJobRunMode,
+  PortalProviderFlow,
+  PortalSyncJob,
+  PRODUCT_CATEGORIES,
+  isPortalAutomationCategory,
+} from '../types';
 import { cn } from '../../../../ui/utils';
 import { buildPortalFieldsFromBindings, normaliseIntegrationLabelList } from '@/shared/integrations/binding-utils';
 
@@ -201,6 +215,7 @@ export function PortalAutomationTab({
   const [fieldSelectors, setFieldSelectors] = useState<PortalFlowField[]>([]);
   const selectedCategoryName = PRODUCT_CATEGORIES.find((category) => category.id === selectedCategoryId)?.name || selectedCategoryId;
   const selectedScopeLabel = `${provider.name} / ${selectedCategoryName}`;
+  const automationCategorySelected = isPortalAutomationCategory(selectedCategoryId);
 
   useEffect(() => {
     if (flow?.credentialProfiles?.length && !selectedCredentialProfileId) {
@@ -1055,6 +1070,16 @@ export function PortalAutomationTab({
                 </Alert>
               )}
 
+              {!automationCategorySelected && (
+                <Alert className="bg-amber-50 border-amber-200 text-amber-900">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Select a product subcategory</AlertTitle>
+                  <AlertDescription>
+                    Portal automation is only available for specific product categories such as Pre-Retirement, Post-Retirement, Voluntary Investments, and Guaranteed Investments. Parent categories are used for grouping and reporting only.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <div className="flex flex-wrap gap-3">
                 <div className="flex w-full items-center justify-between gap-3 rounded-md border bg-gray-50 px-3 py-2 text-sm sm:w-auto">
                   <div>
@@ -1074,7 +1099,7 @@ export function PortalAutomationTab({
                     policySchedule: buildPolicyScheduleDraft(),
                     documentArtifacts: flow?.documentArtifacts || [],
                   })}
-                  disabled={!selectedCredentialProfileId || !credentialStatus?.hasUsername || !credentialStatus?.hasPassword || isCreatingJob}
+                  disabled={!automationCategorySelected || !selectedCredentialProfileId || !credentialStatus?.hasUsername || !credentialStatus?.hasPassword || isCreatingJob}
                   className="bg-purple-600 hover:bg-purple-700"
                 >
                   {isCreatingJob ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}

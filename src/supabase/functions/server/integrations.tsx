@@ -732,6 +732,38 @@ function categoryMatches(requestedCategoryId: string, policyCategoryId: string):
   return (groupedCategories[requestedCategoryId] || [requestedCategoryId]).includes(policyCategoryId);
 }
 
+const PORTAL_AUTOMATION_CATEGORY_LABELS: Record<string, string> = {
+  risk_planning: 'Risk Planning',
+  medical_aid: 'Medical Aid',
+  retirement_pre: 'Pre-Retirement',
+  retirement_post: 'Post-Retirement',
+  investments_voluntary: 'Voluntary Investments',
+  investments_guaranteed: 'Guaranteed Investments',
+  employee_benefits: 'Employee Benefits',
+  employee_benefits_risk: 'Employee Benefits Risk',
+  employee_benefits_retirement: 'Employee Benefits Retirement',
+  tax_planning: 'Tax Planning',
+  estate_planning: 'Estate Planning',
+};
+
+function isPortalAutomationCategory(categoryId: string): boolean {
+  return Object.prototype.hasOwnProperty.call(PORTAL_AUTOMATION_CATEGORY_LABELS, categoryId);
+}
+
+function getPortalAutomationCategoryError(categoryId: string): string | null {
+  if (isPortalAutomationCategory(categoryId)) return null;
+
+  if (categoryId === 'retirement_planning') {
+    return 'Retirement Planning is a parent category. Portal automation can only run for Pre-Retirement or Post-Retirement.';
+  }
+
+  if (categoryId === 'investments') {
+    return 'Investments is a parent category. Portal automation can only run for Voluntary Investments or Guaranteed Investments.';
+  }
+
+  return 'Portal automation can only run for specific product subcategories. Select a supported category before starting a job.';
+}
+
 function isRetirementPortalCategory(categoryId: string): boolean {
   return categoryMatches('retirement_planning', categoryId);
 }
@@ -829,7 +861,7 @@ async function buildPortalPolicyQueue(job: PortalSyncJob, fields: SchemaField[])
     if (!Array.isArray(clientPolicies)) continue;
 
     for (const policy of clientPolicies as KvPolicy[]) {
-      if (policy.archived || policy.providerId !== job.providerId || !categoryMatches(job.categoryId, policy.categoryId)) continue;
+      if (policy.archived || policy.providerId !== job.providerId || policy.categoryId !== job.categoryId) continue;
 
       const policyNumber = await getPolicyNumberForPolicy(policy, fields, schemaCache);
       const normalizedPolicyNumber = normalisePolicyNumber(policyNumber);
@@ -2740,6 +2772,11 @@ app.post("/portal-jobs", requireAuth, async (c) => {
 
     if (!providerId || !categoryId) {
       return c.json({ error: "Missing providerId or categoryId" }, 400);
+    }
+
+    const automationCategoryError = getPortalAutomationCategoryError(categoryId);
+    if (automationCategoryError) {
+      return c.json({ error: automationCategoryError }, 400);
     }
 
     const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;

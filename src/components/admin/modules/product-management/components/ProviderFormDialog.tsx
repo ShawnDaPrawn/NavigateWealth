@@ -14,7 +14,13 @@ import {
   DialogTitle,
 } from '../../../../ui/dialog';
 import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
-import { PRODUCT_CATEGORIES, ProductCategoryId, SaveProviderRequest } from '../types';
+import {
+  PRODUCT_CATEGORIES,
+  ProductCategoryId,
+  SaveProviderRequest,
+  getProductCategoryLabel,
+  isPortalAutomationCategory,
+} from '../types';
 
 interface ProviderFormDialogProps {
   isOpen: boolean;
@@ -50,6 +56,8 @@ export function ProviderFormDialog({
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const automationCategories = PRODUCT_CATEGORIES.filter((category) => isPortalAutomationCategory(category.id));
+  const unsupportedCategoryIds = formData.categoryIds.filter((categoryId) => !isPortalAutomationCategory(categoryId));
 
   useEffect(() => {
     if (isOpen) {
@@ -113,7 +121,10 @@ export function ProviderFormDialog({
 
   const handleSubmit = async () => {
       if (!formData.name.trim()) return;
-      await onSave(formData);
+      await onSave({
+        ...formData,
+        categoryIds: formData.categoryIds.filter(isPortalAutomationCategory),
+      });
   };
 
   return (
@@ -205,8 +216,13 @@ export function ProviderFormDialog({
 
           <div className="grid gap-2">
             <Label>Product Categories</Label>
+            {unsupportedCategoryIds.length > 0 && (
+              <p className="text-xs text-amber-700">
+                {unsupportedCategoryIds.map(getProductCategoryLabel).join(', ')} {unsupportedCategoryIds.length === 1 ? 'is a group' : 'are groups'} and will be removed from provider automation. Select the specific subcategory instead.
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-4 border rounded-lg p-4 bg-gray-50">
-              {PRODUCT_CATEGORIES.map((category) => (
+              {automationCategories.map((category) => (
                 <div key={category.id} className="flex items-center space-x-2">
                   <Checkbox 
                     id={`cat-${category.id}`} 

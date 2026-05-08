@@ -14,6 +14,11 @@ describe('provider portal golden flows', () => {
   const brightRockAdapterSource = readRepoFile('scripts/provider-adapters/brightrock.mjs');
   const integrationsSource = readRepoFile('src/supabase/functions/server/integrations.tsx');
   const portalDefaultFlowsSource = readRepoFile('src/supabase/functions/server/portal-default-flows.ts');
+  const productTypesSource = readRepoFile('src/components/admin/modules/product-management/types.ts');
+  const providerFormSource = readRepoFile('src/components/admin/modules/product-management/components/ProviderFormDialog.tsx');
+  const productProviderListSource = readRepoFile('src/components/admin/modules/product-management/components/ProviderList.tsx');
+  const integrationHeaderSource = readRepoFile('src/components/admin/modules/product-management/integrations/IntegrationHeader.tsx');
+  const portalAutomationTabSource = readRepoFile('src/components/admin/modules/product-management/integrations/PortalAutomationTab.tsx');
   const goldenDocs = readRepoFile('docs/provider-automation-golden-flows.md');
 
   it('documents Allan Gray RA as a protected golden flow', () => {
@@ -152,5 +157,25 @@ describe('provider portal golden flows', () => {
     expect(integrationsSource).toContain('await getPortalFlow(provider, job.providerId, job.categoryId)');
     expect(portalDefaultFlowsSource).toContain("investments: 'Investments'");
     expect(portalDefaultFlowsSource).toContain("['Investment', 'Unit trust', 'Portfolio', 'Account type', 'Product type']");
+  });
+
+  it('keeps parent product categories out of portal automation', () => {
+    expect(productTypesSource).toContain('PORTAL_AUTOMATION_CATEGORY_IDS');
+    expect(productTypesSource).toContain("PRODUCT_CATEGORY_GROUP_IDS: ProductCategoryId[] = [");
+    expect(productTypesSource).toContain("'retirement_planning'");
+    expect(productTypesSource).toContain("'investments'");
+    expect(productTypesSource).toContain('function isPortalAutomationCategory');
+    expect(productTypesSource).toContain('function getPortalAutomationCategoryOptions');
+    expect(providerFormSource).toContain('formData.categoryIds.filter(isPortalAutomationCategory)');
+    expect(productProviderListSource).toContain('getPortalAutomationCategoryOptions(provider.categoryIds)');
+    expect(productProviderListSource).toContain('Group only: {getProductCategoryLabel(catId)}');
+    expect(integrationHeaderSource).toContain('getPortalAutomationCategoryOptions(provider.categoryIds)');
+    expect(portalAutomationTabSource).toContain('Portal automation is only available for specific product categories');
+    expect(portalAutomationTabSource).toContain('disabled={!automationCategorySelected');
+    expect(integrationsSource).toContain('function getPortalAutomationCategoryError(categoryId: string): string | null');
+    expect(integrationsSource).toContain('Retirement Planning is a parent category');
+    expect(integrationsSource).toContain('Investments is a parent category');
+    expect(integrationsSource).toContain('const automationCategoryError = getPortalAutomationCategoryError(categoryId);');
+    expect(integrationsSource).toContain('policy.categoryId !== job.categoryId');
   });
 });

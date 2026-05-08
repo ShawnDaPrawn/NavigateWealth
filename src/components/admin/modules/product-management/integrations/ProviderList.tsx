@@ -4,7 +4,7 @@ import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { CheckCircle2, AlertCircle, Clock, Trash2 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
-import { IntegrationProvider, PRODUCT_CATEGORIES } from '../types';
+import { IntegrationProvider, getPortalAutomationCategoryOptions, getProductCategoryLabel } from '../types';
 
 interface ProviderListProps {
   providers: IntegrationProvider[];
@@ -26,8 +26,10 @@ export function ProviderList({ providers, selectedProviderId, onSelect, onDelete
         <CardDescription>Select a provider to manage data sync</CardDescription>
       </CardHeader>
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {providers.map((provider) => (
-          <div
+        {providers.map((provider) => {
+          const automationCategories = getPortalAutomationCategoryOptions(provider.categoryIds);
+          return (
+            <div
             key={provider.id}
             onClick={() => onSelect(provider.id)}
             className={cn(
@@ -58,13 +60,18 @@ export function ProviderList({ providers, selectedProviderId, onSelect, onDelete
             
             <div className="space-y-1 mb-3">
                <div className="flex flex-wrap gap-1">
-                  {provider.categoryIds.slice(0, 3).map(cat => (
+                  {automationCategories.slice(0, 3).map(cat => (
                     <span key={cat} className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full border border-gray-200">
-                      {PRODUCT_CATEGORIES.find(c => c.id === cat)?.name}
+                      {getProductCategoryLabel(cat)}
                     </span>
                   ))}
-                  {provider.categoryIds.length > 3 && (
-                    <span className="text-[10px] px-1.5 py-0.5 text-gray-500">+ {provider.categoryIds.length - 3} more</span>
+                  {automationCategories.length === 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-full border border-amber-200">
+                      No automation category
+                    </span>
+                  )}
+                  {automationCategories.length > 3 && (
+                    <span className="text-[10px] px-1.5 py-0.5 text-gray-500">+ {automationCategories.length - 3} more</span>
                   )}
                </div>
             </div>
@@ -90,8 +97,9 @@ export function ProviderList({ providers, selectedProviderId, onSelect, onDelete
                     <Trash2 className="w-3 h-3" />
                 </Button>
             )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </Card>
   );
