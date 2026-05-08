@@ -111,12 +111,15 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('async function waitForBrightRockOtpDeliveryProgress');
     expect(workerSource).toContain('async function hasVisibleOtpSendAction');
     expect(workerSource).toContain('function looksLikePendingOtpSendAction');
+    expect(workerSource).toContain('function getOtpSendActionCandidates');
+    expect(workerSource).toContain('/^(go|continue|next|submit)$/i');
     expect(workerSource).toContain('async function clickVisibleOtpSendAction');
     expect(workerSource).toContain('async function waitForManualOtpCheckpointIfPresent');
     expect(workerSource).toContain('async function writeOtpDiagnostics');
     expect(workerSource).toContain('BrightRock did not confirm that the SMS OTP was sent');
     expect(workerSource).toContain('The worker will not wait for a phone code until BrightRock shows a sent confirmation');
     expect(workerSource).toContain('manual-otp-timeout');
+    expect(workerSource).toContain('brightrock-otp-send-action-missing');
     expect(workerSource).toContain('/\\bresend\\b/i.test(value)');
     expect(workerSource).toContain('send\\s+(otp|code|pin|passcode)');
     expect(workerSource).toContain('async function selectBrightRockSmsOtpOption');

@@ -359,7 +359,8 @@ function looksLikeOtpEntryPrompt(text) {
 function looksLikePendingOtpSendAction(text) {
   const value = String(text || '').replace(/\s+/g, ' ').trim();
   if (!value || /\bresend\b/i.test(value)) return false;
-  return /\bsend\s+(otp|code|pin|passcode|sms)\b/i.test(value) || /^send$/i.test(value);
+  return /\bsend\s+(otp|code|pin|passcode|sms)\b/i.test(value)
+    || /^(send|go|continue|next|submit)$/i.test(value);
 }
 
 function getSearchReadyLabels(flow) {
@@ -390,24 +391,42 @@ async function writeOtpDiagnostics(page, name, payload = {}) {
   await writeDebugScreenshot(page, null, name);
 }
 
-async function hasVisibleOtpSendAction(page) {
-  const sendCandidates = [
+async function getControlLabel(locator) {
+  return locator.evaluate((element) => [
+    element.getAttribute('value'),
+    element.getAttribute('aria-label'),
+    element.getAttribute('title'),
+    element.textContent,
+  ].filter(Boolean).join(' ')).catch(() => '');
+}
+
+function getOtpSendActionCandidates(page, flow) {
+  const candidates = [
     page.getByRole('button', { name: /send\s+(otp|code|pin|passcode)|send\s+sms|\bsend\b/i }).first(),
+    page.getByRole('button', { name: /^(go|continue|next|submit)$/i }).first(),
     page.locator('button, input[type="submit"], input[type="button"], [role="button"]')
-      .filter({ hasText: /send\s+(otp|code|pin|passcode)|send\s+sms|\bsend\b/i })
+      .filter({ hasText: /send\s+(otp|code|pin|passcode)|send\s+sms|\bsend\b|^(go|continue|next|submit)$/i })
       .first(),
     page.locator('input[type="submit"][value*="send" i], input[type="button"][value*="send" i]').first(),
+    page.locator('input[type="submit"][value="GO" i], input[type="button"][value="GO" i]').first(),
+    page.locator('input[type="submit"][value="Continue" i], input[type="button"][value="Continue" i]').first(),
+    page.locator('input[type="submit"][value="Next" i], input[type="button"][value="Next" i]').first(),
+    page.locator('input[type="submit"][value="Submit" i], input[type="button"][value="Submit" i]').first(),
   ];
 
-  for (const candidate of sendCandidates) {
+  const submitSelector = String(flow?.otp?.submitSelector || '').trim();
+  if (submitSelector) {
+    candidates.push(page.locator(submitSelector).first());
+  }
+
+  return candidates;
+}
+
+async function hasVisibleOtpSendAction(page) {
+  for (const candidate of getOtpSendActionCandidates(page)) {
     if (!(await candidate.isVisible({ timeout: 250 }).catch(() => false))) continue;
     if (!(await candidate.isEnabled({ timeout: 250 }).catch(() => true))) continue;
-    const label = await candidate.evaluate((element) => [
-      element.getAttribute('value'),
-      element.getAttribute('aria-label'),
-      element.getAttribute('title'),
-      element.textContent,
-    ].filter(Boolean).join(' ')).catch(() => '');
+    const label = await getControlLabel(candidate);
     if (!looksLikePendingOtpSendAction(label)) continue;
     return true;
   }
@@ -415,18 +434,11 @@ async function hasVisibleOtpSendAction(page) {
 }
 
 async function clickVisibleOtpSendAction(page, flow) {
-  const sendCandidates = [
-    page.getByRole('button', { name: /send\s+(otp|code|pin|passcode)/i }).first(),
-    page.getByRole('button', { name: /\bsend\b/i }).first(),
-    page.locator('button, input[type="submit"], input[type="button"], [role="button"]')
-      .filter({ hasText: /send\s+(otp|code|pin|passcode)|send\s+sms|\bsend\b/i })
-      .first(),
-    page.locator('input[type="submit"][value*="send" i], input[type="button"][value*="send" i]').first(),
-  ];
-
-  for (const candidate of sendCandidates) {
+  for (const candidate of getOtpSendActionCandidates(page, flow)) {
     if (!(await candidate.isVisible({ timeout: 500 }).catch(() => false))) continue;
     if (!(await candidate.isEnabled({ timeout: 500 }).catch(() => true))) continue;
+    const label = await getControlLabel(candidate);
+    if (!looksLikePendingOtpSendAction(label)) continue;
     await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 1500 });
     await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
@@ -505,7 +517,7 @@ async function waitForBrightRockOtpDeliveryProgress(page, flow, timeoutMs = 2000
   const deadline = Date.now() + timeoutMs;
   let latest = null;
   while (Date.now() < deadline) {
-    const pendingSendAction = await hasVisibleOtpSendAction(page);
+    const pendingSendAction = await hasVisibleOtpSendAction(page, flow);
     const target = await findOtpEntryTarget(page, flow, undefined, 1000);
     const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
     latest = {
@@ -727,18 +739,19 @@ async function chooseSmsOtpDeliveryIfPresent(page, flow) {
   }
 
   const sendCandidates = [
-    page.getByRole('button', { name: /send\s+otp/i }).first(),
-    page.getByRole('button', { name: /send\s+(code|pin|passcode)/i }).first(),
+    ...getOtpSendActionCandidates(page, flow),
     page.getByRole('button', { name: /resend\s+(otp|code|pin|passcode)/i }).first(),
-    page.getByRole('button', { name: /\bsend\b/i }).first(),
-    page.locator('button, input[type="submit"], input[type="button"], [role="button"]').filter({ hasText: /send\s+(otp|code|pin|passcode)|resend\s+(otp|code|pin|passcode)|send\s+sms|\bsend\b/i }).first(),
-    page.locator('input[type="submit"][value*="send" i], input[type="button"][value*="send" i]').first(),
+    page.locator('button, input[type="submit"], input[type="button"], [role="button"]').filter({ hasText: /resend\s+(otp|code|pin|passcode)/i }).first(),
   ];
   const sendDeadline = Date.now() + 10000;
+  const seenCandidates = [];
   while (Date.now() < sendDeadline) {
     for (const candidate of sendCandidates) {
       if (!(await candidate.isVisible({ timeout: 500 }).catch(() => false))) continue;
       if (!(await candidate.isEnabled({ timeout: 500 }).catch(() => true))) continue;
+      const label = await getControlLabel(candidate);
+      seenCandidates.push(sampleText(label, 120));
+      if (!looksLikePendingOtpSendAction(label)) continue;
       await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 1500 });
       await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
@@ -749,6 +762,9 @@ async function chooseSmsOtpDeliveryIfPresent(page, flow) {
     await page.waitForTimeout(700);
   }
 
+  await writeOtpDiagnostics(page, 'brightrock-otp-send-action-missing', {
+    seenCandidates: uniqueWarnings(seenCandidates),
+  });
   throw new Error('BrightRock SMS OTP option was selected, but the Send OTP action was not visible or was still disabled.');
 }
 
