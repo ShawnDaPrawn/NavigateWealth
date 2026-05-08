@@ -27,10 +27,14 @@ interface ReportRunsListProps {
 export function ReportRunsList({ runs, reports }: ReportRunsListProps) {
   if (runs.length === 0) return null;
 
-  const handleDownload = (run: ReportRun) => {
-    const success = redownloadReport(run.id);
-    if (!success) {
-      toast.error('Report data is no longer in memory. Please run the report again.');
+  const handleDownload = async (run: ReportRun) => {
+    try {
+      const success = await redownloadReport(run.id);
+      if (!success) {
+        toast.error('Report data is no longer in memory. Please run the report again.');
+      }
+    } catch {
+      toast.error('Could not regenerate the Excel file. Please run the report again.');
     }
   };
 

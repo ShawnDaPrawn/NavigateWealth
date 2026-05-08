@@ -62,6 +62,7 @@
     "docx": "*",
     "dompurify": "*",
     "embla-carousel-react": "*",
+    "exceljs": "^4.4.0",
     "hono": "*",
     "input-otp": "*",
     "jspdf": "*",
