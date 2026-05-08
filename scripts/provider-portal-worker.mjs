@@ -352,6 +352,46 @@ function looksLikeOtpSentConfirmation(text) {
   return /otp\s+(has\s+been\s+)?sent|code\s+(has\s+been\s+)?sent|sms\s+(has\s+been\s+)?sent|enter\s+(the\s+)?(otp|code|pin|passcode)|verification\s+(otp|code|pin|passcode)/i.test(text || '');
 }
 
+async function hasVisibleOtpSendAction(page) {
+  const sendCandidates = [
+    page.getByRole('button', { name: /send\s+(otp|code|pin|passcode)/i }).first(),
+    page.locator('button, input[type="submit"], input[type="button"], [role="button"]')
+      .filter({ hasText: /send\s+(otp|code|pin|passcode)|send\s+sms/i })
+      .first(),
+    page.locator('input[type="submit"][value*="send" i], input[type="button"][value*="send" i]').first(),
+  ];
+
+  for (const candidate of sendCandidates) {
+    if (!(await candidate.isVisible({ timeout: 250 }).catch(() => false))) continue;
+    if (!(await candidate.isEnabled({ timeout: 250 }).catch(() => true))) continue;
+    return true;
+  }
+  return false;
+}
+
+async function clickVisibleOtpSendAction(page, flow) {
+  const sendCandidates = [
+    page.getByRole('button', { name: /send\s+(otp|code|pin|passcode)/i }).first(),
+    page.getByRole('button', { name: /\bsend\b/i }).first(),
+    page.locator('button, input[type="submit"], input[type="button"], [role="button"]')
+      .filter({ hasText: /send\s+(otp|code|pin|passcode)|send\s+sms|\bsend\b/i })
+      .first(),
+    page.locator('input[type="submit"][value*="send" i], input[type="button"][value*="send" i]').first(),
+  ];
+
+  for (const candidate of sendCandidates) {
+    if (!(await candidate.isVisible({ timeout: 500 }).catch(() => false))) continue;
+    if (!(await candidate.isEnabled({ timeout: 500 }).catch(() => true))) continue;
+    await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 1500 });
+    await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForTimeout(1000);
+    await waitForBrightRockOtpDeliveryProgress(page, flow, 20000);
+    return true;
+  }
+  return false;
+}
+
 async function findOtpEntryTarget(page, flow, preferredSelector, timeoutMs = 60000) {
   const selectors = preferredSelector ? [preferredSelector, ...getOtpSelectors(flow)] : getOtpSelectors(flow);
   const deadline = Date.now() + timeoutMs;
@@ -419,12 +459,13 @@ async function fillOtpTarget(target, code) {
 async function waitForBrightRockOtpDeliveryProgress(page, flow, timeoutMs = 20000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    const pendingSendAction = await hasVisibleOtpSendAction(page);
     const target = await findOtpEntryTarget(page, flow, undefined, 1000);
-    if (target) return true;
+    if (target && !pendingSendAction) return true;
 
     const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
-    if (looksLikeOtpSentConfirmation(bodyText)) return true;
-    if (!looksLikeOtpDeliveryChoice(bodyText) && looksLikeOtpPage(bodyText)) return true;
+    if (looksLikeOtpSentConfirmation(bodyText) && !pendingSendAction) return true;
+    if (!looksLikeOtpDeliveryChoice(bodyText) && looksLikeOtpPage(bodyText) && !pendingSendAction) return true;
 
     await page.waitForTimeout(1000);
   }
@@ -603,7 +644,7 @@ async function selectBrightRockSmsOtpOption(page) {
   return Boolean(strategy) && state !== 'unselected';
 }
 
-async function chooseSmsOtpDeliveryIfPresent(page) {
+async function chooseSmsOtpDeliveryIfPresent(page, flow) {
   const bodyText = await page.locator('body').innerText({ timeout: 2500 }).catch(() => '');
   if (!looksLikeOtpDeliveryChoice(bodyText)) {
     return false;
@@ -620,8 +661,10 @@ async function chooseSmsOtpDeliveryIfPresent(page) {
 
   const sendCandidates = [
     page.getByRole('button', { name: /send\s+otp/i }).first(),
+    page.getByRole('button', { name: /send\s+(code|pin|passcode)/i }).first(),
+    page.getByRole('button', { name: /resend\s+(otp|code|pin|passcode)/i }).first(),
     page.getByRole('button', { name: /\bsend\b/i }).first(),
-    page.locator('button, input[type="submit"], [role="button"]').filter({ hasText: /send\s+otp|\bsend\b/i }).first(),
+    page.locator('button, input[type="submit"], input[type="button"], [role="button"]').filter({ hasText: /send\s+(otp|code|pin|passcode)|resend\s+(otp|code|pin|passcode)|send\s+sms|\bsend\b/i }).first(),
     page.locator('input[type="submit"][value*="send" i], input[type="button"][value*="send" i]').first(),
   ];
   const sendDeadline = Date.now() + 10000;
@@ -633,7 +676,7 @@ async function chooseSmsOtpDeliveryIfPresent(page) {
       await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
       await page.waitForTimeout(1000);
-      await waitForBrightRockOtpDeliveryProgress(page, undefined, 20000);
+      await waitForBrightRockOtpDeliveryProgress(page, flow, 20000);
       return true;
     }
     await page.waitForTimeout(700);
@@ -797,14 +840,20 @@ async function assertPastAuthCheckpoint(page, flow, stageLabel) {
   const checkpoint = await detectAuthCheckpoint(page, flow);
   if (!checkpoint) return;
 
-  const handledOtp = await completeManualOtpIfPresent(page, flow, 5000);
-  if (handledOtp) return;
-
-  const requestedSmsOtp = await chooseSmsOtpDeliveryIfPresent(page);
+  const requestedSmsOtp = await chooseSmsOtpDeliveryIfPresent(page, flow);
   if (requestedSmsOtp) {
     await completeManualOtpAfterDelivery(page, flow);
     return;
   }
+
+  const sentVisibleOtp = await clickVisibleOtpSendAction(page, flow);
+  if (sentVisibleOtp) {
+    await completeManualOtpAfterDelivery(page, flow);
+    return;
+  }
+
+  const handledOtp = await completeManualOtpIfPresent(page, flow, 5000);
+  if (handledOtp) return;
 
   throw new Error(
     `Provider is still on a login verification step before ${stageLabel}. `
@@ -2774,10 +2823,11 @@ async function runJob(jobId, requestedMode = mode) {
     await (await visibleLocator(page, flow.login.passwordSelector)).fill(password);
     await (await visibleLocator(page, flow.login.submitSelector)).click();
 
-    const sentSmsOtp = await chooseSmsOtpDeliveryIfPresent(page);
+    const sentSmsOtp = await chooseSmsOtpDeliveryIfPresent(page, flow);
     if (sentSmsOtp) {
       await completeManualOtpAfterDelivery(page, flow);
     } else {
+      await clickVisibleOtpSendAction(page, flow);
       await completeManualOtpIfPresent(page, flow, 45000);
     }
     await assertPastAuthCheckpoint(page, flow, 'post-login navigation');

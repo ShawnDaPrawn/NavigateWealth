@@ -104,7 +104,10 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('async function completeManualOtpAfterDelivery');
     expect(workerSource).toContain('async function findOtpEntryTarget');
     expect(workerSource).toContain('async function waitForBrightRockOtpDeliveryProgress');
+    expect(workerSource).toContain('async function hasVisibleOtpSendAction');
+    expect(workerSource).toContain('async function clickVisibleOtpSendAction');
     expect(workerSource).toContain('BrightRock did not confirm that the SMS OTP was sent');
+    expect(workerSource).toContain('send\\s+(otp|code|pin|passcode)');
     expect(workerSource).toContain('async function selectBrightRockSmsOtpOption');
     expect(workerSource).toContain('forceSmsSelectionInDom');
     expect(workerSource).toContain('could not positively select SMS');
@@ -121,7 +124,8 @@ describe('provider portal golden flows', () => {
 
   it('does not hand login verification pages to smart assist search', () => {
     expect(workerSource).toContain('async function completeManualOtpIfPresent');
-    expect(workerSource).toContain('await chooseSmsOtpDeliveryIfPresent(page)');
+    expect(workerSource).toContain('await chooseSmsOtpDeliveryIfPresent(page, flow)');
+    expect(workerSource).toContain('await clickVisibleOtpSendAction(page, flow)');
     expect(workerSource).toContain('await completeManualOtpAfterDelivery(page, flow)');
     expect(workerSource).toContain('async function assertPastAuthCheckpoint');
     expect(workerSource).toContain('Provider is still on a login verification step before');
