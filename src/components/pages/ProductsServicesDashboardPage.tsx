@@ -43,7 +43,9 @@ import type { ProductHolding, PortfolioFinancialOverview } from './portfolio/api
 interface ServiceModule {
   id: string;
   title: string;
+  shortLabel: string;
   description: string;
+  focusAreas: string[];
   icon: React.ElementType;
   color: string;
   bgColor: string;
@@ -62,7 +64,9 @@ const SERVICE_MODULES: ServiceModule[] = [
   {
     id: 'risk-management',
     title: 'Risk Management',
+    shortLabel: 'Risk',
     description: 'Life insurance, disability cover, and income protection strategies.',
+    focusAreas: ['Life cover', 'Disability protection', 'Income protection'],
     icon: Shield,
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
@@ -75,7 +79,9 @@ const SERVICE_MODULES: ServiceModule[] = [
   {
     id: 'medical-aid',
     title: 'Medical Aid',
+    shortLabel: 'Medical',
     description: 'Medical scheme comparisons, gap cover, and health benefits.',
+    focusAreas: ['Scheme selection', 'Gap cover', 'Family healthcare benefits'],
     icon: Heart,
     color: 'text-rose-600',
     bgColor: 'bg-rose-50',
@@ -88,7 +94,9 @@ const SERVICE_MODULES: ServiceModule[] = [
   {
     id: 'investment-management',
     title: 'Investment Management',
+    shortLabel: 'Investments',
     description: 'Local and offshore investment portfolios and wealth creation.',
+    focusAreas: ['Investment portfolios', 'Wealth creation', 'Long-term growth'],
     icon: TrendingUp,
     color: 'text-emerald-600',
     bgColor: 'bg-emerald-50',
@@ -101,7 +109,9 @@ const SERVICE_MODULES: ServiceModule[] = [
   {
     id: 'retirement-planning',
     title: 'Retirement Planning',
+    shortLabel: 'Retirement',
     description: 'Retirement annuities, pension funds, and preservation strategies.',
+    focusAreas: ['Retirement annuities', 'Pension planning', 'Preservation strategies'],
     icon: PiggyBank,
     color: 'text-amber-600',
     bgColor: 'bg-amber-50',
@@ -114,7 +124,9 @@ const SERVICE_MODULES: ServiceModule[] = [
   {
     id: 'tax-planning',
     title: 'Tax Planning',
+    shortLabel: 'Tax',
     description: 'Tax optimisation, compliance, and SARS submission services.',
+    focusAreas: ['Tax optimisation', 'SARS submissions', 'Compliance support'],
     icon: Calculator,
     color: 'text-slate-600',
     bgColor: 'bg-slate-50',
@@ -127,7 +139,9 @@ const SERVICE_MODULES: ServiceModule[] = [
   {
     id: 'estate-planning',
     title: 'Estate Planning',
+    shortLabel: 'Estate',
     description: 'Wills, trusts, and estate duty planning for legacy protection.',
+    focusAreas: ['Wills', 'Trust structures', 'Estate duty planning'],
     icon: FileText,
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-50',
@@ -140,7 +154,9 @@ const SERVICE_MODULES: ServiceModule[] = [
   {
     id: 'employee-benefits',
     title: 'Employee Benefits',
+    shortLabel: 'Benefits',
     description: 'Group risk schemes and employee wellness programs for businesses.',
+    focusAreas: ['Group schemes', 'Wellness support', 'Business benefit planning'],
     icon: Briefcase,
     color: 'text-purple-600',
     bgColor: 'bg-purple-50',
@@ -163,6 +179,11 @@ interface DerivedServiceInfo {
   policyCount: number;
   statLabel: string;
   statValue: string;
+}
+
+interface ServiceGuidance {
+  title: string;
+  detail: string;
 }
 
 function deriveServiceInfo(
@@ -209,6 +230,32 @@ function deriveServiceInfo(
   };
 }
 
+function getServiceGuidance(service: ServiceModule, derived: DerivedServiceInfo): ServiceGuidance {
+  if (derived.status === 'active') {
+    return {
+      title: `You already have ${service.shortLabel.toLowerCase()} support in place`,
+      detail:
+        derived.policyCount === 1
+          ? 'Open this area to review your current policy details, benefits, and next review points.'
+          : 'Open this area to review your current products, benefits, and next review points.',
+    };
+  }
+
+  if (derived.status === 'assessed') {
+    return {
+      title: `${service.shortLabel} has already been reviewed`,
+      detail:
+        'This area has assessment activity on file. Open it to continue the review or see the latest outcome.',
+    };
+  }
+
+  return {
+    title: `Explore ${service.shortLabel.toLowerCase()} with your adviser`,
+    detail:
+      'Start here to understand this area, see what is available, and decide whether you would like guidance or a recommendation.',
+  };
+}
+
 // ── Status config (Guidelines §5.3, §8.3) ────────────────────────────────
 
 const STATUS_CONFIG: Record<ServiceStatus, {
@@ -241,6 +288,7 @@ export function ProductsServicesDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [selectedServiceId, setSelectedServiceId] = useState<string>('risk-management');
 
   // ── Fetch real portfolio data ──
   const { data: portfolioData, isLoading } = usePortfolioSummary(user?.id);
@@ -280,6 +328,19 @@ export function ProductsServicesDashboardPage() {
     };
   }, [enrichedServices]);
 
+  const selectedDesktopService = useMemo(() => {
+    return (
+      enrichedServices.find((service) => service.id === selectedServiceId) ??
+      enrichedServices[0] ??
+      null
+    );
+  }, [enrichedServices, selectedServiceId]);
+
+  const selectedDesktopGuidance = useMemo(() => {
+    if (!selectedDesktopService) return null;
+    return getServiceGuidance(selectedDesktopService, selectedDesktopService.derived);
+  }, [selectedDesktopService]);
+
   return (
     <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}>
       {/* Branded Page Header */}
@@ -291,6 +352,208 @@ export function ProductsServicesDashboardPage() {
       />
 
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <div className="hidden lg:block space-y-5">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {enrichedServices.map((service) => {
+                const isSelected = selectedDesktopService?.id === service.id;
+                const statusCfg = STATUS_CONFIG[service.derived.status];
+                return (
+                  <button
+                    key={service.id}
+                    type="button"
+                    onClick={() => setSelectedServiceId(service.id)}
+                    className={`group min-w-[148px] rounded-xl border px-4 py-3 text-left transition-all ${
+                      isSelected
+                        ? 'border-purple-200 bg-purple-50 shadow-sm'
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${service.bgColor}`}>
+                        <service.icon className={`h-5 w-5 ${service.iconColor}`} />
+                      </div>
+                      <span className={`mt-1 inline-flex h-2.5 w-2.5 rounded-full ${statusCfg.dotClass}`} />
+                    </div>
+                    <p className={`mt-3 text-sm font-semibold ${isSelected ? 'text-[#6d28d9]' : 'text-gray-900'}`}>
+                      {service.shortLabel}
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-500">{service.derived.statusLabel}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {selectedDesktopService && selectedDesktopGuidance && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-7 py-7 border-b border-gray-100">
+                <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
+                  <div className="flex items-start gap-4 min-w-0">
+                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${selectedDesktopService.bgColor}`}>
+                      <selectedDesktopService.icon className={`h-7 w-7 ${selectedDesktopService.iconColor}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <h2 className="text-2xl font-bold text-gray-900">
+                          {selectedDesktopService.title}
+                        </h2>
+                        <Badge
+                          variant="outline"
+                          className={`text-[11px] px-2.5 py-1 font-medium border ${STATUS_CONFIG[selectedDesktopService.derived.status].badgeClass}`}
+                        >
+                          {selectedDesktopService.derived.statusLabel}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
+                        {selectedDesktopService.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 xl:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => navigate(selectedDesktopService.path)}
+                      className="inline-flex items-center gap-2 rounded-lg bg-[#6d28d9] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#5b21b6]"
+                    >
+                      Open {selectedDesktopService.shortLabel}
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/ai-advisor')}
+                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                      <Sparkles className="h-4 w-4 text-[#6d28d9]" />
+                      Ask Vasco
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/transactions-documents')}
+                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                      <FileText className="h-4 w-4 text-gray-500" />
+                      Documents
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-7 py-6 space-y-6">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                  <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                      Current Position
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-gray-900">
+                      {selectedDesktopService.derived.statValue}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-gray-500">
+                      {selectedDesktopService.derived.policyCount > 0
+                        ? `${selectedDesktopService.derived.policyCount} ${
+                            selectedDesktopService.derived.policyCount === 1 ? 'product or policy is' : 'products or policies are'
+                          } currently linked to this area.`
+                        : 'No active product is currently linked to this area yet.'}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                      Service Area
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-gray-900">
+                      {selectedDesktopService.category}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-gray-500">
+                      This section focuses on {selectedDesktopService.focusAreas[0].toLowerCase()},
+                      {' '}{selectedDesktopService.focusAreas[1].toLowerCase()}, and
+                      {' '}{selectedDesktopService.focusAreas[2].toLowerCase()}.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-purple-100 bg-purple-50/60 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-purple-500">
+                      Best Next Step
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-gray-900">
+                      {selectedDesktopGuidance.title}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      {selectedDesktopGuidance.detail}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-4">
+                  <div className="rounded-xl border border-gray-200 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Zap className="h-4 w-4 text-[#6d28d9]" />
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        What This Area Covers
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {selectedDesktopService.focusAreas.map((area) => (
+                        <div
+                          key={area}
+                          className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-3"
+                        >
+                          <p className="text-sm font-medium text-gray-800">{area}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 p-5">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                      Helpful Actions
+                    </h3>
+                    <div className="space-y-3">
+                      <button
+                        type="button"
+                        onClick={() => navigate(selectedDesktopService.path)}
+                        className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Open this service area</p>
+                          <p className="text-xs text-gray-500 mt-0.5">View details, status, and next actions</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate('/ai-advisor')}
+                        className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Ask Vasco about this area</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Get simple guidance and explanations</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate('/communication')}
+                        className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Contact your adviser</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Message your team if you need help</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="lg:hidden">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
 
           {/* ═══ LEFT SIDEBAR ═══ */}
@@ -337,7 +600,7 @@ export function ProductsServicesDashboardPage() {
                 <div className="pt-3 mt-1 border-t border-gray-100">
                   <button
                     className="w-full flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm"
-                    onClick={() => navigate('/dashboard/ai-advisor')}
+                    onClick={() => navigate('/ai-advisor')}
                   >
                     <Sparkles className="h-4 w-4" />
                     Ask Vasco
@@ -598,6 +861,7 @@ export function ProductsServicesDashboardPage() {
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
     </div>
