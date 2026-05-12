@@ -367,7 +367,7 @@ export class AdminClientOnboardingService {
     clients: AdminAddClientInput[],
     adminUserId: string,
   ): Promise<BulkAddResult> {
-    const MAX_BATCH_SIZE = 50;
+    const MAX_BATCH_SIZE = 10_000;
 
     if (clients.length > MAX_BATCH_SIZE) {
       return {

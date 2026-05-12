@@ -62,8 +62,9 @@ const TEMPLATE_COLUMNS = [
   { header: 'Existing Products', field: 'existingProducts', required: false, hint: 'Comma-separated' },
 ];
 
-const MAX_BULK_IMPORT_ROWS = 50;
-const MAX_BULK_IMPORT_BYTES = 1024 * 1024;
+const MAX_BULK_IMPORT_ROWS = 10_000;
+const MAX_BULK_IMPORT_FILE_MB = 20;
+const MAX_BULK_IMPORT_BYTES = MAX_BULK_IMPORT_FILE_MB * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -161,7 +162,7 @@ function downloadTemplate() {
 function parseExcel(file: File): Promise<ParsedRow[]> {
   return new Promise((resolve, reject) => {
     if (file.size > MAX_BULK_IMPORT_BYTES) {
-      reject(new Error('The spreadsheet is too large. Please upload a file smaller than 1 MB.'));
+      reject(new Error(`The spreadsheet is too large. Please upload a file smaller than ${MAX_BULK_IMPORT_FILE_MB} MB.`));
       return;
     }
 
@@ -459,7 +460,7 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
               </div>
             ) : (
               <p className="text-xs text-gray-400 mt-0.5">
-                Maximum 50 clients per upload. Accepts <code className="text-[10px] bg-gray-100 px-1 py-0.5 rounded">.xlsx</code> files only.
+                Maximum {MAX_BULK_IMPORT_ROWS.toLocaleString()} clients per upload. Accepts <code className="text-[10px] bg-gray-100 px-1 py-0.5 rounded">.xlsx</code> files only.
               </p>
             )}
           </div>
