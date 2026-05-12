@@ -13,7 +13,7 @@ import { useState } from 'react';
 import {
   MessageSquare, FileText, Calculator, Calendar, Mail,
   ArrowLeft, Search, Eye, Trash2, RotateCcw,
-  UserPlus, MoreHorizontal,
+  UserPlus, MoreHorizontal, ClipboardList,
 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -54,6 +54,7 @@ function TypeIcon({ type, className }: { type: SubmissionType; className?: strin
     case 'consultation': return <Calendar className={c} />;
     case 'contact':      return <Mail className={c} />;
     case 'client_signup': return <UserPlus className={c} />;
+    case 'change_request': return <ClipboardList className={c} />;
     case 'quote':
     default:             return <MessageSquare className={c} />;
   }
@@ -66,6 +67,7 @@ const TYPE_ICON_BG: Record<SubmissionType, string> = {
   consultation: 'bg-amber-50 text-amber-600',
   contact: 'bg-sky-50 text-sky-600',
   client_signup: 'bg-violet-50 text-violet-600',
+  change_request: 'bg-fuchsia-50 text-fuchsia-600',
 };
 
 function formatDate(dateStr: string): string {

@@ -87,6 +87,11 @@ export const SUBMISSION_TYPE_CONFIG: Record<
     shortLabel: 'Signup',
     iconName: 'UserPlus',
   },
+  change_request: {
+    label: 'Change Request',
+    shortLabel: 'Change',
+    iconName: 'ClipboardList',
+  },
 };
 
 // ── Source Channel Config ─────────────────────────────────────────────────────

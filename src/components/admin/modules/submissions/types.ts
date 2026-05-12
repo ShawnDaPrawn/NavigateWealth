@@ -11,7 +11,14 @@
 
 // ── Enumerations ──────────────────────────────────────────────────────────────
 
-export type SubmissionType = 'quote' | 'will_draft' | 'tax_planning' | 'consultation' | 'contact' | 'client_signup';
+export type SubmissionType =
+  | 'quote'
+  | 'will_draft'
+  | 'tax_planning'
+  | 'consultation'
+  | 'contact'
+  | 'client_signup'
+  | 'change_request';
 export type SubmissionStatus = 'new' | 'pending' | 'completed' | 'archived';
 export type SubmissionSourceChannel = 'website_form' | 'admin' | 'client_portal';
 

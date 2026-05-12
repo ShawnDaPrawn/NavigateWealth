@@ -25,7 +25,14 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export type SubmissionType = 'quote' | 'will_draft' | 'tax_planning' | 'consultation' | 'contact' | 'client_signup';
+export type SubmissionType =
+  | 'quote'
+  | 'will_draft'
+  | 'tax_planning'
+  | 'consultation'
+  | 'contact'
+  | 'client_signup'
+  | 'change_request';
 export type SubmissionStatus = 'new' | 'pending' | 'completed' | 'archived';
 
 export interface Submission {

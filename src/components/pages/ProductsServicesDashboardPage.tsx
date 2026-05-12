@@ -7,11 +7,37 @@
  * §7 (presentation), §8.3 (UI standards), §8.4 (AI builder)
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../ui/table';
+import { Textarea } from '../ui/textarea';
 import {
   Package,
   Shield,
@@ -23,7 +49,6 @@ import {
   FileText,
   Search,
   ChevronRight,
-  Zap,
   LayoutGrid,
   List as ListIcon,
   ArrowRight,
@@ -31,12 +56,18 @@ import {
   Clock,
   AlertCircle,
   Sparkles,
-  X,
+  ClipboardList,
+  Loader2,
+  MessageSquare,
 } from 'lucide-react';
+import { toast } from 'sonner@2.0.3';
+import { ConsultationModal } from '../modals/ConsultationModal';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { ACTIVE_THEME } from '../portal/portal-theme';
 import { usePortfolioSummary } from './portfolio/hooks';
 import type { ProductHolding, PortfolioFinancialOverview } from './portfolio/api';
+import { formatCurrency } from './portfolio/utils';
+import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -186,6 +217,57 @@ interface ServiceGuidance {
   detail: string;
 }
 
+interface ChangeOption {
+  id: string;
+  label: string;
+  description: string;
+}
+
+const SUBMISSIONS_API = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/submissions`;
+
+const CHANGE_OPTIONS_BY_SERVICE: Record<ServiceModule['id'], ChangeOption[]> = {
+  'risk-management': [
+    { id: 'beneficiary_change', label: 'Beneficiary change', description: 'Update or replace the nominated beneficiary on this policy.' },
+    { id: 'debit_order_date_change', label: 'Debit order date change', description: 'Request a new debit order collection date.' },
+    { id: 'bank_account_change', label: 'Bank account change', description: 'Change the bank account linked to this premium collection.' },
+    { id: 'cover_review', label: 'Cover review', description: 'Ask us to review whether this cover still matches your needs.' },
+  ],
+  'medical-aid': [
+    { id: 'plan_change', label: 'Plan option change', description: 'Request help changing the medical aid plan option.' },
+    { id: 'dependant_update', label: 'Dependant update', description: 'Add or remove a dependant on this plan.' },
+    { id: 'bank_account_change', label: 'Bank account change', description: 'Change the bank account used for monthly collections.' },
+    { id: 'membership_update', label: 'Membership detail change', description: 'Update contact or membership details linked to this plan.' },
+  ],
+  'investment-management': [
+    { id: 'contribution_change', label: 'Contribution change', description: 'Increase, reduce, or pause regular contributions.' },
+    { id: 'bank_account_change', label: 'Bank account change', description: 'Update the bank account used for recurring investments.' },
+    { id: 'withdrawal_request', label: 'Withdrawal request', description: 'Ask for help with a withdrawal or access request.' },
+    { id: 'switch_instruction', label: 'Switch instruction', description: 'Request a review or switch instruction on this investment.' },
+  ],
+  'retirement-planning': [
+    { id: 'contribution_change', label: 'Contribution change', description: 'Adjust the monthly contribution on this retirement plan.' },
+    { id: 'beneficiary_change', label: 'Beneficiary change', description: 'Update the beneficiary details attached to this plan.' },
+    { id: 'bank_account_change', label: 'Bank account change', description: 'Change the bank account used for contributions.' },
+    { id: 'retirement_review', label: 'Retirement review', description: 'Request a review of this retirement policy or fund.' },
+  ],
+  'tax-planning': [
+    { id: 'document_request', label: 'Document request', description: 'Request tax documents or supporting records for this service.' },
+    { id: 'submission_support', label: 'Submission support', description: 'Ask for help with a tax filing or submission-related change.' },
+    { id: 'detail_update', label: 'Detail update', description: 'Update the information we should use for this tax service.' },
+  ],
+  'estate-planning': [
+    { id: 'beneficiary_change', label: 'Beneficiary change', description: 'Request a beneficiary-related update connected to this planning area.' },
+    { id: 'document_update', label: 'Document update', description: 'Ask us to update or review a will, trust, or estate document.' },
+    { id: 'planning_review', label: 'Planning review', description: 'Request an estate planning review meeting for this arrangement.' },
+  ],
+  'employee-benefits': [
+    { id: 'member_update', label: 'Member detail change', description: 'Update employee or membership information on this benefit plan.' },
+    { id: 'beneficiary_change', label: 'Beneficiary change', description: 'Update the nominated beneficiary for this benefit.' },
+    { id: 'bank_account_change', label: 'Bank account change', description: 'Update the banking details linked to this arrangement.' },
+    { id: 'benefit_review', label: 'Benefit review', description: 'Request a review of the benefits or cover attached to this plan.' },
+  ],
+};
+
 function deriveServiceInfo(
   module: ServiceModule,
   holdings: ProductHolding[],
@@ -256,6 +338,53 @@ function getServiceGuidance(service: ServiceModule, derived: DerivedServiceInfo)
   };
 }
 
+function getQuotePath(serviceId: ServiceModule['id']): string {
+  return `/get-quote/${serviceId}/contact`;
+}
+
+function getCoverageValueLabel(holding: ProductHolding): string {
+  if (holding.value > 0) return formatCurrency(holding.value);
+  if (holding.premium > 0) return formatCurrency(holding.premium);
+  return 'On file';
+}
+
+function holdingStatusClass(status: string): string {
+  const lower = status.toLowerCase();
+  if (lower === 'active') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  if (lower === 'lapsed' || lower === 'cancelled') return 'bg-red-50 text-red-700 border-red-200';
+  if (lower === 'archived') return 'bg-gray-50 text-gray-600 border-gray-200';
+  if (lower.includes('review') || lower.includes('progress')) return 'bg-amber-50 text-amber-700 border-amber-200';
+  return 'bg-blue-50 text-blue-700 border-blue-200';
+}
+
+function getChangeOptionsForHolding(
+  service: ServiceModule,
+  holding: ProductHolding | null,
+): ChangeOption[] {
+  const defaults = CHANGE_OPTIONS_BY_SERVICE[service.id] ?? [];
+  if (!holding) return defaults;
+
+  const productText = `${holding.provider} ${holding.product}`.toLowerCase();
+
+  if (service.id === 'medical-aid' && productText.includes('gap')) {
+    return [
+      { id: 'bank_account_change', label: 'Bank account change', description: 'Change the bank account used for this gap cover premium.' },
+      { id: 'benefit_review', label: 'Benefit review', description: 'Request a review of the benefit structure on this gap cover plan.' },
+      { id: 'membership_update', label: 'Membership detail change', description: 'Update the member details linked to this gap cover policy.' },
+    ];
+  }
+
+  if (service.id === 'investment-management' && productText.includes('offshore')) {
+    return [
+      { id: 'contribution_change', label: 'Contribution change', description: 'Adjust the ongoing contribution into this offshore investment.' },
+      { id: 'switch_instruction', label: 'Switch instruction', description: 'Request guidance on switching or rebalancing this offshore investment.' },
+      { id: 'withdrawal_request', label: 'Withdrawal request', description: 'Ask for help with a withdrawal or access request on this investment.' },
+    ];
+  }
+
+  return defaults;
+}
+
 // ── Status config (Guidelines §5.3, §8.3) ────────────────────────────────
 
 const STATUS_CONFIG: Record<ServiceStatus, {
@@ -289,6 +418,12 @@ export function ProductsServicesDashboardPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [selectedServiceId, setSelectedServiceId] = useState<string>('risk-management');
+  const [consultationOpen, setConsultationOpen] = useState(false);
+  const [changeDialogOpen, setChangeDialogOpen] = useState(false);
+  const [selectedHoldingId, setSelectedHoldingId] = useState<string>('');
+  const [selectedChangeType, setSelectedChangeType] = useState<string>('');
+  const [changeRequestNotes, setChangeRequestNotes] = useState('');
+  const [submittingChangeRequest, setSubmittingChangeRequest] = useState(false);
 
   // ── Fetch real portfolio data ──
   const { data: portfolioData, isLoading } = usePortfolioSummary(user?.id);
@@ -341,6 +476,131 @@ export function ProductsServicesDashboardPage() {
     return getServiceGuidance(selectedDesktopService, selectedDesktopService.derived);
   }, [selectedDesktopService]);
 
+  const selectedServiceHoldings = useMemo(() => {
+    if (!selectedDesktopService) return [];
+    return holdings.filter(
+      (holding) =>
+        holding.category === selectedDesktopService.holdingCategory &&
+        holding.status !== 'Archived',
+    );
+  }, [holdings, selectedDesktopService]);
+
+  const selectedHolding = useMemo(
+    () => selectedServiceHoldings.find((holding) => holding.id === selectedHoldingId) ?? null,
+    [selectedHoldingId, selectedServiceHoldings],
+  );
+
+  const availableChangeOptions = useMemo(() => {
+    if (!selectedDesktopService) return [];
+    return getChangeOptionsForHolding(selectedDesktopService, selectedHolding);
+  }, [selectedDesktopService, selectedHolding]);
+
+  useEffect(() => {
+    if (!changeDialogOpen) return;
+    if (selectedServiceHoldings.length === 0) {
+      setSelectedHoldingId('');
+      setSelectedChangeType('');
+      return;
+    }
+
+    const stillValid = selectedServiceHoldings.some((holding) => holding.id === selectedHoldingId);
+    if (!stillValid) {
+      setSelectedHoldingId(selectedServiceHoldings[0].id);
+    }
+  }, [changeDialogOpen, selectedHoldingId, selectedServiceHoldings]);
+
+  useEffect(() => {
+    if (!changeDialogOpen) return;
+    if (availableChangeOptions.length === 0) {
+      setSelectedChangeType('');
+      return;
+    }
+
+    const hasSelectedType = availableChangeOptions.some((option) => option.id === selectedChangeType);
+    if (!hasSelectedType) {
+      setSelectedChangeType(availableChangeOptions[0].id);
+    }
+  }, [availableChangeOptions, changeDialogOpen, selectedChangeType]);
+
+  const clientDisplayName = useMemo(() => {
+    const firstName = portfolioData?.clientData?.firstName?.trim();
+    const lastName = portfolioData?.clientData?.lastName?.trim();
+    const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+    return fullName || user?.email || 'Navigate Wealth Client';
+  }, [portfolioData?.clientData?.firstName, portfolioData?.clientData?.lastName, user?.email]);
+
+  const openChangeDialog = () => {
+    if (selectedServiceHoldings.length === 0) return;
+    setChangeDialogOpen(true);
+  };
+
+  const resetChangeRequestForm = () => {
+    setChangeDialogOpen(false);
+    setSelectedHoldingId('');
+    setSelectedChangeType('');
+    setChangeRequestNotes('');
+    setSubmittingChangeRequest(false);
+  };
+
+  const submitChangeRequest = async () => {
+    if (!selectedDesktopService || !selectedHolding) {
+      toast.error('Select a plan before submitting a change request.');
+      return;
+    }
+
+    const selectedOption = availableChangeOptions.find((option) => option.id === selectedChangeType);
+    if (!selectedOption) {
+      toast.error('Choose the type of change you would like to request.');
+      return;
+    }
+
+    setSubmittingChangeRequest(true);
+
+    try {
+      const response = await fetch(SUBMISSIONS_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${publicAnonKey}`,
+        },
+        body: JSON.stringify({
+          type: 'change_request',
+          sourceChannel: 'client_portal',
+          submitterName: clientDisplayName,
+          submitterEmail: user?.email,
+          payload: {
+            clientId: user?.id,
+            clientName: clientDisplayName,
+            service: selectedDesktopService.id,
+            serviceLabel: selectedDesktopService.title,
+            provider: selectedHolding.provider,
+            productName: selectedHolding.product,
+            policyNumber: selectedHolding.policyNumber,
+            holdingId: selectedHolding.id,
+            currentStatus: selectedHolding.status,
+            changeType: selectedOption.id,
+            changeTypeLabel: selectedOption.label,
+            changeSummary: selectedOption.description,
+            additionalNotes: changeRequestNotes.trim(),
+            submittedFrom: 'products-services-dashboard',
+          },
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error || 'Unable to submit your change request right now.');
+      }
+
+      toast.success('Your change request has been sent to our team.');
+      resetChangeRequestForm();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to submit your change request right now.';
+      toast.error(message);
+      setSubmittingChangeRequest(false);
+    }
+  };
+
   return (
     <div className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}>
       {/* Branded Page Header */}
@@ -353,32 +613,28 @@ export function ProductsServicesDashboardPage() {
 
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="hidden lg:block space-y-5">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-2.5">
             <div className="flex gap-2 overflow-x-auto pb-1">
               {enrichedServices.map((service) => {
                 const isSelected = selectedDesktopService?.id === service.id;
-                const statusCfg = STATUS_CONFIG[service.derived.status];
                 return (
                   <button
                     key={service.id}
                     type="button"
                     onClick={() => setSelectedServiceId(service.id)}
-                    className={`group min-w-[148px] rounded-xl border px-4 py-3 text-left transition-all ${
+                    className={`group min-w-[118px] rounded-xl border px-3 py-2.5 text-left transition-all ${
                       isSelected
                         ? 'border-purple-200 bg-purple-50 shadow-sm'
                         : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${service.bgColor}`}>
-                        <service.icon className={`h-5 w-5 ${service.iconColor}`} />
-                      </div>
-                      <span className={`mt-1 inline-flex h-2.5 w-2.5 rounded-full ${statusCfg.dotClass}`} />
+                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${service.bgColor}`}>
+                      <service.icon className={`h-4.5 w-4.5 ${service.iconColor}`} />
                     </div>
-                    <p className={`mt-3 text-sm font-semibold ${isSelected ? 'text-[#6d28d9]' : 'text-gray-900'}`}>
+                    <p className={`mt-2.5 text-sm font-semibold ${isSelected ? 'text-[#6d28d9]' : 'text-gray-900'}`}>
                       {service.shortLabel}
                     </p>
-                    <p className="mt-0.5 text-xs text-gray-500">{service.derived.statusLabel}</p>
+                    <p className="mt-0.5 text-[11px] text-gray-500">{service.derived.statusLabel}</p>
                   </button>
                 );
               })}
@@ -406,148 +662,174 @@ export function ProductsServicesDashboardPage() {
                         </Badge>
                       </div>
                       <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
-                        {selectedDesktopService.description}
+                        {selectedServiceHoldings.length > 0
+                          ? `Here are the policies and plan details we currently hold for ${selectedDesktopService.title.toLowerCase()}.`
+                          : selectedDesktopService.description}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2 xl:justify-end">
-                    <button
+                    <Button
                       type="button"
-                      onClick={() => navigate(selectedDesktopService.path)}
+                      onClick={() => navigate(getQuotePath(selectedDesktopService.id))}
                       className="inline-flex items-center gap-2 rounded-lg bg-[#6d28d9] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#5b21b6]"
                     >
-                      Open {selectedDesktopService.shortLabel}
+                      Get a Quote
                       <ArrowRight className="h-4 w-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      onClick={() => navigate('/ai-advisor')}
+                      variant="outline"
+                      onClick={() => setConsultationOpen(true)}
                       className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                     >
-                      <Sparkles className="h-4 w-4 text-[#6d28d9]" />
-                      Ask Vasco
-                    </button>
-                    <button
+                      <MessageSquare className="h-4 w-4 text-[#6d28d9]" />
+                      Speak to Adviser
+                    </Button>
+                    <Button
                       type="button"
-                      onClick={() => navigate('/transactions-documents')}
-                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                      variant="outline"
+                      onClick={openChangeDialog}
+                      disabled={selectedServiceHoldings.length === 0}
+                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <FileText className="h-4 w-4 text-gray-500" />
-                      Documents
-                    </button>
+                      <ClipboardList className="h-4 w-4 text-gray-500" />
+                      Make a Change
+                    </Button>
                   </div>
                 </div>
               </div>
 
               <div className="px-7 py-6 space-y-6">
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                  <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                      Current Position
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-gray-900">
-                      {selectedDesktopService.derived.statValue}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-gray-500">
-                      {selectedDesktopService.derived.policyCount > 0
-                        ? `${selectedDesktopService.derived.policyCount} ${
-                            selectedDesktopService.derived.policyCount === 1 ? 'product or policy is' : 'products or policies are'
-                          } currently linked to this area.`
-                        : 'No active product is currently linked to this area yet.'}
-                    </p>
-                  </div>
+                {selectedServiceHoldings.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                      <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                          Policies In This Area
+                        </p>
+                        <p className="mt-2 text-lg font-semibold text-gray-900">
+                          {selectedServiceHoldings.length}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-gray-500">
+                          {selectedServiceHoldings.length === 1
+                            ? '1 active plan is linked to this service area.'
+                            : `${selectedServiceHoldings.length} active plans are linked to this service area.`}
+                        </p>
+                      </div>
 
-                  <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                      Service Area
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-gray-900">
-                      {selectedDesktopService.category}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-gray-500">
-                      This section focuses on {selectedDesktopService.focusAreas[0].toLowerCase()},
-                      {' '}{selectedDesktopService.focusAreas[1].toLowerCase()}, and
-                      {' '}{selectedDesktopService.focusAreas[2].toLowerCase()}.
-                    </p>
-                  </div>
+                      <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                          Service Area
+                        </p>
+                        <p className="mt-2 text-lg font-semibold text-gray-900">
+                          {selectedDesktopService.category}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-gray-500">
+                          This tab focuses on {selectedDesktopService.focusAreas[0].toLowerCase()},
+                          {' '}{selectedDesktopService.focusAreas[1].toLowerCase()}, and
+                          {' '}{selectedDesktopService.focusAreas[2].toLowerCase()}.
+                        </p>
+                      </div>
 
-                  <div className="rounded-xl border border-purple-100 bg-purple-50/60 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-purple-500">
-                      Best Next Step
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-gray-900">
-                      {selectedDesktopGuidance.title}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      <div className="rounded-xl border border-purple-100 bg-purple-50/60 p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-purple-500">
+                          Next Best Action
+                        </p>
+                        <p className="mt-2 text-lg font-semibold text-gray-900">
+                          {selectedDesktopGuidance.title}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-gray-600">
+                          {selectedDesktopGuidance.detail}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-gray-200 overflow-hidden">
+                      <div className="flex items-center justify-between gap-4 border-b border-gray-100 bg-gray-50/70 px-5 py-4">
+                        <div>
+                          <h3 className="text-base font-semibold text-gray-900">
+                            Policy Schedule
+                          </h3>
+                          <p className="mt-1 text-sm text-gray-500">
+                            Review your current plans, status, and key policy details in this area.
+                          </p>
+                        </div>
+                      </div>
+
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-white">
+                            <TableHead className="text-xs font-medium text-gray-600">Provider</TableHead>
+                            <TableHead className="text-xs font-medium text-gray-600">Plan</TableHead>
+                            <TableHead className="text-xs font-medium text-gray-600">Policy No.</TableHead>
+                            <TableHead className="text-xs font-medium text-gray-600 text-right">Cover / Value</TableHead>
+                            <TableHead className="text-xs font-medium text-gray-600 text-right">Monthly Premium</TableHead>
+                            <TableHead className="text-xs font-medium text-gray-600 text-center">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedServiceHoldings.map((holding) => (
+                            <TableRow key={holding.id}>
+                              <TableCell className="text-sm font-medium text-gray-900">
+                                {holding.provider}
+                              </TableCell>
+                              <TableCell className="text-sm text-gray-700">
+                                {holding.product}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs text-gray-500">
+                                {holding.policyNumber || 'On file'}
+                              </TableCell>
+                              <TableCell className="text-right text-sm text-gray-900">
+                                {getCoverageValueLabel(holding)}
+                              </TableCell>
+                              <TableCell className="text-right text-sm text-gray-900">
+                                {holding.premium > 0 ? formatCurrency(holding.premium) : 'On file'}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[11px] px-2.5 py-1 font-medium border ${holdingStatusClass(holding.status)}`}
+                                >
+                                  {holding.status}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/50 px-8 py-12 text-center">
+                    <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${selectedDesktopService.bgColor}`}>
+                      <selectedDesktopService.icon className={`h-7 w-7 ${selectedDesktopService.iconColor}`} />
+                    </div>
+                    <h3 className="mt-5 text-xl font-semibold text-gray-900">
+                      No policies in {selectedDesktopService.shortLabel.toLowerCase()} yet
+                    </h3>
+                    <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-gray-500">
                       {selectedDesktopGuidance.detail}
                     </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-4">
-                  <div className="rounded-xl border border-gray-200 p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Zap className="h-4 w-4 text-[#6d28d9]" />
-                      <h3 className="text-sm font-semibold text-gray-900">
-                        What This Area Covers
-                      </h3>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {selectedDesktopService.focusAreas.map((area) => (
-                        <div
-                          key={area}
-                          className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-3"
-                        >
-                          <p className="text-sm font-medium text-gray-800">{area}</p>
-                        </div>
-                      ))}
+                    <div className="mt-6 flex flex-wrap justify-center gap-3">
+                      <Button
+                        type="button"
+                        onClick={() => navigate(getQuotePath(selectedDesktopService.id))}
+                        className="bg-[#6d28d9] text-white hover:bg-[#5b21b6]"
+                      >
+                        Get a Quote
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setConsultationOpen(true)}
+                      >
+                        Speak to Adviser
+                      </Button>
                     </div>
                   </div>
-
-                  <div className="rounded-xl border border-gray-200 p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">
-                      Helpful Actions
-                    </h3>
-                    <div className="space-y-3">
-                      <button
-                        type="button"
-                        onClick={() => navigate(selectedDesktopService.path)}
-                        className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Open this service area</p>
-                          <p className="text-xs text-gray-500 mt-0.5">View details, status, and next actions</p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => navigate('/ai-advisor')}
-                        className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Ask Vasco about this area</p>
-                          <p className="text-xs text-gray-500 mt-0.5">Get simple guidance and explanations</p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => navigate('/communication')}
-                        className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Contact your adviser</p>
-                          <p className="text-xs text-gray-500 mt-0.5">Message your team if you need help</p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           )}
@@ -864,6 +1146,104 @@ export function ProductsServicesDashboardPage() {
         </div>
         </div>
       </div>
+
+      <ConsultationModal open={consultationOpen} onOpenChange={setConsultationOpen} />
+
+      <Dialog
+        open={changeDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            resetChangeRequestForm();
+            return;
+          }
+          setChangeDialogOpen(true);
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Make a change</DialogTitle>
+            <DialogDescription>
+              Choose the plan you want to update, then tell us what should change. We will send it straight to our submissions inbox for follow-up.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="change-plan">Select a plan</Label>
+              <Select value={selectedHoldingId} onValueChange={setSelectedHoldingId}>
+                <SelectTrigger id="change-plan">
+                  <SelectValue placeholder="Choose a plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedServiceHoldings.map((holding) => (
+                    <SelectItem key={holding.id} value={holding.id}>
+                      {holding.provider} — {holding.product}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedHolding && (
+                <p className="text-xs text-gray-500">
+                  Policy number: {selectedHolding.policyNumber || 'On file'}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="change-type">What would you like changed?</Label>
+              <Select value={selectedChangeType} onValueChange={setSelectedChangeType}>
+                <SelectTrigger id="change-type">
+                  <SelectValue placeholder="Choose a request type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableChangeOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedChangeType && (
+                <p className="text-xs text-gray-500">
+                  {availableChangeOptions.find((option) => option.id === selectedChangeType)?.description}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="change-notes">Anything else we should know?</Label>
+              <Textarea
+                id="change-notes"
+                value={changeRequestNotes}
+                onChange={(event) => setChangeRequestNotes(event.target.value)}
+                placeholder="Add any extra detail that will help your adviser or administrator action this request."
+                rows={5}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={resetChangeRequestForm}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={submitChangeRequest}
+              disabled={!selectedHoldingId || !selectedChangeType || submittingChangeRequest}
+              className="bg-[#6d28d9] text-white hover:bg-[#5b21b6]"
+            >
+              {submittingChangeRequest ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending request
+                </>
+              ) : (
+                'Submit change request'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -80,6 +80,7 @@ function TypeIcon({ type, className }: { type: SubmissionType; className?: strin
     case 'consultation':   return <Calendar className={c} />;
     case 'contact':        return <Mail className={c} />;
     case 'client_signup':  return <UserPlus className={c} />;
+    case 'change_request': return <ClipboardList className={c} />;
     case 'quote':
     default:               return <MessageSquare className={c} />;
   }

@@ -470,6 +470,7 @@ export function SubmissionsModule() {
               <option value="consultation">{SUBMISSION_TYPE_CONFIG.consultation.label}</option>
               <option value="contact">{SUBMISSION_TYPE_CONFIG.contact.label}</option>
               <option value="client_signup">{SUBMISSION_TYPE_CONFIG.client_signup.label}</option>
+              <option value="change_request">{SUBMISSION_TYPE_CONFIG.change_request.label}</option>
             </select>
             <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 pointer-events-none" />
           </div>

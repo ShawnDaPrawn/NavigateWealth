@@ -13,7 +13,7 @@ import { z } from 'npm:zod';
 
 // ── Valid enum values (mirrors submissions-service.ts types) ────────────────
 
-const SUBMISSION_TYPES = ['quote', 'will_draft', 'tax_planning', 'consultation', 'contact', 'client_signup'] as const;
+const SUBMISSION_TYPES = ['quote', 'will_draft', 'tax_planning', 'consultation', 'contact', 'client_signup', 'change_request'] as const;
 const SUBMISSION_STATUSES = ['new', 'pending', 'completed', 'archived'] as const;
 const SOURCE_CHANNELS = ['website_form', 'admin', 'client_portal'] as const;
 

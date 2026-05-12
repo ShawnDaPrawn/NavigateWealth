@@ -16,7 +16,7 @@ import {
   MessageSquare, FileText, Calculator, Calendar, Mail,
   MoreHorizontal, Eye, Archive,
   Shield, Stethoscope, TrendingUp, Target, Building2, Briefcase,
-  UserPlus,
+  UserPlus, ClipboardList,
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import { Button } from '../../../../ui/button';
@@ -43,6 +43,7 @@ const TYPE_STRIP_COLOR: Record<SubmissionType, string> = {
   consultation: 'bg-amber-500',
   contact: 'bg-sky-500',
   client_signup: 'bg-violet-500',
+  change_request: 'bg-fuchsia-500',
 };
 
 // ── Service icon for quote submissions ────────────────────────────────────────
@@ -50,6 +51,7 @@ const TYPE_STRIP_COLOR: Record<SubmissionType, string> = {
 function ServiceIcon({ service }: { service: string }) {
   const s = service.toLowerCase();
   const c = 'h-3 w-3';
+  if (s.includes('change')) return <ClipboardList className={c} />;
   if (s.includes('risk')) return <Shield className={c} />;
   if (s.includes('medical')) return <Stethoscope className={c} />;
   if (s.includes('investment')) return <TrendingUp className={c} />;
@@ -171,6 +173,11 @@ function extractPreview(submission: Submission): CardPreview {
       const status = String(p.applicationStatus);
       highlights.push(status.charAt(0).toUpperCase() + status.slice(1));
     }
+  }
+
+  if (submission.type === 'change_request') {
+    if (p.changeTypeLabel) highlights.push(String(p.changeTypeLabel));
+    if (p.policyNumber) highlights.push(String(p.policyNumber));
   }
 
   return { serviceName, stage, highlights: highlights.slice(0, 2) };
