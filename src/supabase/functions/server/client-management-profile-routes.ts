@@ -24,6 +24,7 @@ import {
   syncProfileToApplication,
   extractUserIdFromProfileKey,
 } from './profile-application-sync.ts';
+import { listAllAuthUsers } from './auth-admin-list-users.ts';
 
 const router = new Hono();
 const log = createModuleLogger('profile-routes');
@@ -247,14 +248,14 @@ router.get("/all-users", async (c) => {
     const page = pageParam ? Math.max(1, parseInt(pageParam, 10) || 1) : null;
     const perPage = perPageParam ? Math.min(100, Math.max(1, parseInt(perPageParam, 10) || 50)) : null;
 
-    // Get all users from Supabase Auth
-    const { data: { users }, error } = await supabase.auth.admin.listUsers();
-    
-    if (error) {
-      log.error('Error fetching users from Supabase Auth', error);
+    let users: Awaited<ReturnType<typeof listAllAuthUsers>>;
+    try {
+      users = await listAllAuthUsers(supabase);
+    } catch (authErr) {
+      log.error('Error fetching users from Supabase Auth', authErr);
       return c.json({ error: 'Failed to fetch users' }, 500);
     }
-    
+
     if (!users || users.length === 0) {
       log.info('No users found');
       return c.json({ success: true, users: [] });
@@ -268,10 +269,18 @@ router.get("/all-users", async (c) => {
     const personnelIds = new Set<string>(
       personnelProfiles.map((p: Record<string, unknown>) => p.id as string).filter(Boolean)
     );
+
+    /** Narrow listAllAuthUsers() results for visibility + profile enrichment */
+    type AuthUserBrief = {
+      id: string;
+      email?: string | null;
+      created_at?: string;
+      user_metadata?: Record<string, unknown>;
+    };
     
     // Get profiles AND security entries for all users from KV store
     const usersWithProfiles = await Promise.all(
-      users
+      (users as AuthUserBrief[])
         .filter(user => !isPersonnelAuthUser(user, personnelIds))
         .map(async (user) => {
           const profileKey = `user_profile:${user.id}:personal_info`;

@@ -10,6 +10,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { ValidationError, NotFoundError } from './error.middleware.ts';
 import type { Client, ClientFilters, ClientProfile, ClientSecurity, PaginatedClientResponse, GroupMatcherData, CommunicationRecord } from './client-management-types.ts';
 import { shouldIncludeInClientManagement } from './client-management-visibility.ts';
+import { listAllAuthUsers } from './auth-admin-list-users.ts';
 
 const log = createModuleLogger('clients-service');
 
@@ -96,16 +97,20 @@ export class ClientsService {
     
     const supabase = createServiceClient();
     
-    // Get all users from Supabase Auth
-    const { data: { users }, error } = await supabase.auth.admin.listUsers();
-    
-    if (error) {
-      log.error('Failed to fetch users', error);
+    let usersRaw: unknown[];
+    try {
+      usersRaw = await listAllAuthUsers(supabase);
+    } catch (err) {
+      log.error('Failed to fetch users', err as Error);
       throw new Error('Failed to fetch clients');
     }
-    
+
+    const users = usersRaw.filter(
+      (u): u is { id: string; email?: string | null; user_metadata?: Record<string, unknown>; created_at?: string } =>
+        typeof u === 'object' && u !== null && 'id' in u,
+    );
+
     // ── Personnel exclusion ─────────────────────────────────────────
-    // Batch-fetch personnel IDs to exclude staff from the client list.
     const personnelProfiles = await kv.getByPrefix('personnel:profile:');
     const personnelIds = new Set<string>(
       personnelProfiles.map((p: Record<string, unknown>) => p.id as string).filter(Boolean)
@@ -204,7 +209,7 @@ export class ClientsService {
     if (filters?.search) {
       const search = filters.search.toLowerCase();
       filteredClients = filteredClients.filter(c =>
-        c.email.toLowerCase().includes(search) ||
+        (c.email ?? '').toLowerCase().includes(search) ||
         c.firstName?.toLowerCase().includes(search) ||
         c.lastName?.toLowerCase().includes(search)
       );

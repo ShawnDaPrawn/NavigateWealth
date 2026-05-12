@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '../../ui/utils';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -26,6 +26,37 @@ import {
   Settings,
   Search
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/select';
+
+/** Numbered pagination buttons spanning up to maxButtons pages around currentPage (1-based). */
+function getPaginationButtonPages(
+  currentPage: number,
+  totalPages: number,
+  maxButtons: number,
+): number[] {
+  if (totalPages <= maxButtons) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const half = Math.floor(maxButtons / 2);
+  let start = currentPage - half;
+  let end = currentPage + half;
+
+  if (start < 1) {
+    start = 1;
+    end = maxButtons;
+  }
+  if (end > totalPages) {
+    end = totalPages;
+    start = totalPages - maxButtons + 1;
+  }
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
 
 export interface Column<T = Record<string, unknown>> {
   key: string;
@@ -46,6 +77,9 @@ export interface DataTableProps<T = Record<string, unknown>> {
   exportFilename?: string;
   onRowClick?: (row: T) => void;
   pageSize?: number;
+  /** When provided, pagination footer includes a rows-per-page selector */
+  rowSizeOptions?: readonly number[];
+  getRowKey?: (row: T) => React.Key;
   emptyState?: React.ReactNode;
   className?: string;
 }
@@ -60,16 +94,23 @@ export function DataTable<T extends Record<string, unknown>>({
   exportFilename = "data",
   onRowClick,
   pageSize = 10,
+  rowSizeOptions,
+  getRowKey,
   emptyState,
   className
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(pageSize);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [visibleColumns, setVisibleColumns] = useState<string[]>(
     columns.map(col => col.key)
   );
+
+  useEffect(() => {
+    setRowsPerPage(pageSize);
+  }, [pageSize]);
 
   // Filter data based on search query
   const filteredData = searchQuery
@@ -92,11 +133,16 @@ export function DataTable<T extends Record<string, unknown>>({
       })
     : filteredData;
 
+  useEffect(() => {
+    const totalPg = Math.max(1, Math.ceil(sortedData.length / rowsPerPage) || 1);
+    setCurrentPage(p => Math.min(p, totalPg));
+  }, [sortedData.length, rowsPerPage]);
+
   // Paginate data
-  const totalPages = Math.ceil(sortedData.length / pageSize);
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / rowsPerPage) || 1);
   const paginatedData = sortedData.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
   );
 
   const handleSort = (columnKey: string) => {
@@ -132,7 +178,7 @@ export function DataTable<T extends Record<string, unknown>>({
 
   const LoadingSkeleton = () => (
     <div className="space-y-0" role="status" aria-label="Loading table data">
-      {Array.from({ length: pageSize }).map((_, i) => (
+      {Array.from({ length: Math.min(rowsPerPage, 12) }).map((_, i) => (
         <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-border last:border-b-0">
           <Skeleton className="h-8 w-8 rounded-full shrink-0" />
           <div className="flex-1 space-y-1.5">
@@ -248,7 +294,7 @@ export function DataTable<T extends Record<string, unknown>>({
             ) : (
               paginatedData.map((row, index) => (
                 <TableRow 
-                  key={index}
+                  key={getRowKey ? getRowKey(row) : index}
                   className={cn(
                     onRowClick && "cursor-pointer hover:bg-muted/50"
                   )}
@@ -280,54 +326,86 @@ export function DataTable<T extends Record<string, unknown>>({
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <nav className="flex items-center justify-between" aria-label="Table pagination">
+      {!loading && sortedData.length > 0 && (
+        <nav
+          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          aria-label="Table pagination"
+        >
           <div className="text-sm text-muted-foreground" aria-live="polite">
-            Showing {((currentPage - 1) * pageSize) + 1} to{' '}
-            {Math.min(currentPage * pageSize, sortedData.length)} of{' '}
-            {sortedData.length} results
+            Showing {(currentPage - 1) * rowsPerPage + 1} to{' '}
+            {Math.min(currentPage * rowsPerPage, sortedData.length)} of {sortedData.length} results
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
-            
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const page = i + 1;
-                return (
-                  <Button
-                    key={page}
-                    variant={page === currentPage ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                    aria-label={`Go to page ${page}`}
-                    aria-current={page === currentPage ? "page" : undefined}
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
-            </div>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              aria-label="Next page"
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+
+          <div className="flex flex-wrap items-center gap-3 justify-end">
+            {rowSizeOptions && rowSizeOptions.length > 0 ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                  Rows per page
+                </span>
+                <Select
+                  value={String(rowsPerPage)}
+                  onValueChange={(v) => {
+                    const n = Number(v);
+                    if (!Number.isFinite(n)) return;
+                    setRowsPerPage(n);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[72px]" aria-label="Rows per page">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rowSizeOptions.map((opt) => (
+                      <SelectItem key={opt} value={String(opt)}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
+            {totalPages > 1 ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  {getPaginationButtonPages(currentPage, totalPages, 7).map((pageNum) => (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === currentPage ? 'default' : 'outline'}
+                      size="sm"
+                      className="min-w-9 px-2"
+                      onClick={() => setCurrentPage(pageNum)}
+                      aria-label={`Go to page ${pageNum}`}
+                      aria-current={pageNum === currentPage ? 'page' : undefined}
+                    >
+                      {pageNum}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  aria-label="Next page"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : null}
           </div>
         </nav>
       )}

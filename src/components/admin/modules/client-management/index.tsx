@@ -373,6 +373,8 @@ export function ClientManagementModule() {
             loading={loading}
             searchable={false}
             exportable={false}
+            rowSizeOptions={[10, 25, 50, 100] as const}
+            getRowKey={(row) => row.id}
           />
         </TabsContent>
         
