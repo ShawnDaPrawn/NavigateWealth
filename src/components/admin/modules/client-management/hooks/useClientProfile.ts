@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner@2.0.3';
 import { clientApi, getClientProfileQueryOptions } from '../api';
+import { clientKeys } from './queryKeys';
 import { 
   Client, 
   ProfileData, 
@@ -326,6 +327,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
 
       await clientApi.updateClientProfile(userId, profileData);
       queryClient.setQueryData(getClientProfileQueryOptions(userId).queryKey, profileData);
+      await queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
 
       toast.success('Profile updated successfully');
       // Update the snapshot to the current state so hasChanges resets correctly.

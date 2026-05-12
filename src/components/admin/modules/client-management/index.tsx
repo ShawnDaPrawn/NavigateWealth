@@ -70,6 +70,26 @@ export function ClientManagementModule() {
   // Defensive: ensure clients is always an array (§10 — never swallow errors silently)
   const safeClients = Array.isArray(clients) ? clients : [];
 
+  // Keep drawer header / table selection in sync when the client list refreshes (e.g. after name save).
+  React.useEffect(() => {
+    const id = selectedClient?.id;
+    if (!id) return;
+    const fresh = safeClients.find(c => c.id === id);
+    if (!fresh) return;
+    setSelectedClient((prev) => {
+      if (!prev || prev.id !== id) return prev;
+      if (
+        fresh.firstName === prev.firstName &&
+        fresh.lastName === prev.lastName &&
+        fresh.email === prev.email &&
+        fresh.applicationNumber === prev.applicationNumber
+      ) {
+        return prev;
+      }
+      return fresh;
+    });
+  }, [safeClients, selectedClient?.id]);
+
   // ── GlobalSearch deep-link: auto-open drawer for pending client selection ──
   React.useEffect(() => {
     if (
