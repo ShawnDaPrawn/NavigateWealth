@@ -325,16 +325,20 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
         return;
       }
 
-      await clientApi.updateClientProfile(userId, profileData);
-      queryClient.setQueryData(getClientProfileQueryOptions(userId).queryKey, profileData);
+      // Legacy KV rows may embed `personalInformation` alongside flat fields; saving both
+      // can leave stale nested first/last names in KV that override root edits elsewhere.
+      const dirty = profileData as ProfileData & { personalInformation?: unknown };
+      const { personalInformation: _legacyNestedRemoved, ...profilePayload } = dirty;
+
+      await clientApi.updateClientProfile(userId, profilePayload as ProfileData);
+      queryClient.setQueryData(getClientProfileQueryOptions(userId).queryKey, profilePayload as ProfileData);
+      setProfileData(profilePayload as ProfileData);
       await queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
 
       toast.success('Profile updated successfully');
-      // Update the snapshot to the current state so hasChanges resets correctly.
-      // This makes the just-saved state the new "clean" baseline.
-      setLoadedProfileSnapshot(createProfileSnapshot(profileData));
+      setLoadedProfileSnapshot(createProfileSnapshot(profilePayload as ProfileData));
       setHasChanges(false);
-      if (onSave) onSave(profileData);
+      if (onSave) onSave(profilePayload as ProfileData);
     } catch (error) {
       toast.error(`Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {

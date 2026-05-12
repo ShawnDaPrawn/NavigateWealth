@@ -11,6 +11,7 @@ import { clientApi } from '../modules/client-management/api';
 import { personnelApi } from '../modules/personnel/api';
 import { clientKeys, personnelKeys } from '../../../utils/queryKeys';
 import type { ApiUser } from '../modules/client-management/types';
+import { normalizeClientProfileKv } from '../modules/client-management/normalizeClientProfileKv';
 import { resolvePersonName } from '../../../utils/personName';
 
 // ============================================================================
@@ -32,16 +33,17 @@ export interface SearchableAccount {
 // ============================================================================
 
 function transformApiUserToSearchable(user: ApiUser): SearchableAccount {
+  const normalized = normalizeClientProfileKv(user.profile);
+  const pi = normalized?.personalInformation;
   const rawProfile = (user.profile ?? undefined) as Record<string, unknown> | undefined;
-  const personalInformation = rawProfile?.personalInformation as Record<string, unknown> | undefined;
 
   const { firstName, lastName } = resolvePersonName({
     profileFirstName:
-      (personalInformation?.firstName as string | undefined) ||
+      pi?.firstName ||
       (rawProfile?.firstName as string | undefined) ||
       (rawProfile?.first_name as string | undefined),
     profileLastName:
-      (personalInformation?.lastName as string | undefined) ||
+      pi?.lastName ||
       (rawProfile?.lastName as string | undefined) ||
       (rawProfile?.surname as string | undefined) ||
       (rawProfile?.last_name as string | undefined),

@@ -7,45 +7,15 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { Client, ApiUser, ClientProfile, ProfileData } from '../types';
+import { Client, ApiUser } from '../types';
 import { clientApi } from '../api';
 import { clientKeys } from './queryKeys';
+import { normalizeClientProfileKv } from '../normalizeClientProfileKv';
 import { resolvePersonName } from '../../../../../utils/personName';
-
-/**
- * Normalize profile data from the server response.
- *
- * The server returns `profile` as flat `ProfileData` (the raw KV value
- * from `user_profile:{userId}:personal_info`), but the `ClientProfile`
- * interface nests it under `personalInformation`. This function detects
- * the shape and normalizes to `ClientProfile` so downstream code that
- * accesses `profile.personalInformation.xxx` works regardless of the
- * server response shape.
- *
- * §9.3 — API response type synchronisation
- */
-function normalizeProfile(raw: unknown): ClientProfile | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const obj = raw as Record<string, unknown>;
-  // Merge flat profile fields with nested personalInformation. Some stored
-  // profiles contain root-level Personal Info values plus an empty nested object.
-  if (obj.personalInformation && typeof obj.personalInformation === 'object') {
-    const { personalInformation, ...flatProfileFields } = obj;
-    return {
-      ...obj,
-      personalInformation: {
-        ...flatProfileFields,
-        ...(personalInformation as Record<string, unknown>),
-      } as ProfileData,
-    } as ClientProfile;
-  }
-  // Flat ProfileData — wrap it
-  return { personalInformation: obj as ProfileData };
-}
 
 /** Transform raw API user into application-level Client model */
 function transformApiUser(user: ApiUser): Client {
-  const normalizedProfile = normalizeProfile(user.profile);
+  const normalizedProfile = normalizeClientProfileKv(user.profile);
   const pi = normalizedProfile?.personalInformation;
   const rawProfile = (user.profile ?? undefined) as Record<string, unknown> | undefined;
   const personalIdentifier = pi?.idNumber?.trim() || pi?.passportNumber?.trim() || 'Not provided';
