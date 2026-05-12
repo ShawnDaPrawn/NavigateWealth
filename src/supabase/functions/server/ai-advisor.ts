@@ -9,6 +9,8 @@ import * as kv from "./kv_store.tsx";
 import { createModuleLogger } from "./stderr-logger.ts";
 import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
 import { getPortfolioSummary } from './client-portal-service.ts';
+import { getAuthContext, AuthError } from "./auth-mw.ts";
+import { PERSONNEL_ROLES } from "./constants.ts";
 
 const app = new Hono();
 const log = createModuleLogger('ai-advisor');
@@ -212,6 +214,180 @@ async function requireAuth(c: Context, next: Next) {
     log.error('Auth middleware error:', error);
     return c.json({ error: 'Authentication failed' }, 500);
   }
+}
+
+function getAdviserIdFromClientProfile(profile: unknown): string | null {
+  if (!isRecord(profile)) return null;
+  const pi = isRecord(profile.personalInformation) ? profile.personalInformation : null;
+  const raw = profile.adviserId ?? pi?.adviserId;
+  return typeof raw === 'string' && raw.trim() ? raw : null;
+}
+
+/**
+ * Staff may open the client's portal Ask Vasco (same KV conversation) for oversight.
+ * Elevated roles see any client; advisers only their assigned book.
+ */
+async function assertCanProxyClientVasco(
+  c: Context,
+  staffUserId: string,
+  staffRole: string,
+  clientUserId: string,
+): Promise<Response | null> {
+  const profile = await kv.get(PROFILE_KEY(clientUserId));
+  const targetRole = isRecord(profile) && typeof profile.role === 'string' ? profile.role : null;
+  if (targetRole && (PERSONNEL_ROLES as readonly string[]).includes(targetRole)) {
+    return c.json({ error: 'Cannot open Ask Vasco for staff accounts' }, 403);
+  }
+
+  const elevated = new Set([
+    'admin',
+    'super_admin',
+    'super-admin',
+    'compliance',
+    'compliance_officer',
+    'paraplanner',
+    'viewer',
+  ]);
+  if (elevated.has(staffRole)) return null;
+
+  if (staffRole === 'adviser') {
+    const adviserId = getAdviserIdFromClientProfile(profile);
+    if (adviserId !== staffUserId) {
+      return c.json(
+        { error: 'Forbidden: you can only view Ask Vasco for clients assigned to you' },
+        403,
+      );
+    }
+    return null;
+  }
+
+  return c.json({ error: 'Forbidden: insufficient permissions' }, 403);
+}
+
+function normalizeAdvisorChatMessages(clientMessages: unknown): ChatMessage[] | null {
+  if (!clientMessages || !Array.isArray(clientMessages) || clientMessages.length === 0) {
+    return null;
+  }
+  return clientMessages
+    .filter((m: { role: string }) => ['user', 'assistant'].includes(m.role))
+    .map((m: { role: string; content: string }) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+}
+
+async function buildAdvisorSseResponse(
+  subjectUserId: string,
+  clientMessages: unknown,
+  sessionId: unknown,
+): Promise<Response> {
+  const chatMessages = normalizeAdvisorChatMessages(clientMessages);
+  if (!chatMessages) {
+    return new Response(JSON.stringify({ error: 'messages array is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const context = await getUserContext(subjectUserId);
+  await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, DEFAULT_PORTAL_PROMPT);
+  const activeBase =
+    (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? DEFAULT_PORTAL_PROMPT;
+  const systemPrompt = `${activeBase}\n\n${buildRuntimeContextPrompt(context)}`;
+
+  const openaiResponse = await callOpenAIStream(chatMessages, systemPrompt);
+  const reader = openaiResponse.body!.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+
+  const lastUserMsg = [...(clientMessages as { role: string; content: string }[])].reverse()
+    .find((m) => m.role === 'user');
+  if (lastUserMsg && typeof lastUserMsg.content === 'string') {
+    const conversationKey = `ai_advisor:${subjectUserId}:chat:${Date.now()}`;
+    getSupabase().from('kv_store_91ed8379').insert({
+      key: conversationKey,
+      value: {
+        role: 'user',
+        content: lastUserMsg.content,
+        timestamp: new Date().toISOString(),
+      },
+    }).then(() => {}).catch(() => {});
+  }
+
+  const finalSessionId =
+    typeof sessionId === 'string' && sessionId.length > 0 ? sessionId : crypto.randomUUID();
+  let fullReply = '';
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data: ')) continue;
+            const data = trimmed.slice(6);
+            if (data === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                fullReply += content;
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ type: 'chunk', content })}\n\n`),
+                );
+              }
+            } catch {
+              // Skip malformed chunks
+            }
+          }
+        }
+
+        if (fullReply) {
+          const replyKey = `ai_advisor:${subjectUserId}:chat:${Date.now() + 1}`;
+          getSupabase().from('kv_store_91ed8379').insert({
+            key: replyKey,
+            value: {
+              role: 'assistant',
+              content: fullReply,
+              timestamp: new Date().toISOString(),
+            },
+          }).then(() => {}).catch(() => {});
+        }
+
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({ type: 'done', sessionId: finalSessionId, citations: [] })}\n\n`,
+          ),
+        );
+        controller.close();
+      } catch (err) {
+        log.error('Stream processing error', err);
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'Stream interrupted' })}\n\n`),
+        );
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    },
+  });
 }
 
 /**
@@ -477,124 +653,97 @@ app.post('/chat/stream', requireAuth, async (c) => {
     const user = c.get('user');
     const body = await c.req.json();
     const { messages: clientMessages, sessionId } = body;
-
-    if (!clientMessages || !Array.isArray(clientMessages) || clientMessages.length === 0) {
-      return c.json({ error: 'messages array is required' }, 400);
-    }
-
-    // Get context and build system prompt (Phase 3 KV-backed base prompt + context overlay)
-    const context = await getUserContext(user.id);
-    await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, DEFAULT_PORTAL_PROMPT);
-    const activeBase =
-      (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? DEFAULT_PORTAL_PROMPT;
-    const systemPrompt = `${activeBase}\n\n${buildRuntimeContextPrompt(context)}`;
-
-    // Build chat messages from history
-    const chatMessages: ChatMessage[] = clientMessages
-      .filter((m: { role: string }) => ['user', 'assistant'].includes(m.role))
-      .map((m: { role: string; content: string }) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      }));
-
-    // Call OpenAI with streaming
-    const openaiResponse = await callOpenAIStream(chatMessages, systemPrompt);
-    const reader = openaiResponse.body!.getReader();
-    const decoder = new TextDecoder();
-    const encoder = new TextEncoder();
-
-    // Save user message to history (non-blocking)
-    const lastUserMsg = [...clientMessages].reverse().find((m: { role: string }) => m.role === 'user');
-    if (lastUserMsg) {
-      const conversationKey = `ai_advisor:${user.id}:chat:${Date.now()}`;
-      getSupabase().from('kv_store_91ed8379').insert({
-        key: conversationKey,
-        value: {
-          role: 'user',
-          content: lastUserMsg.content,
-          timestamp: new Date().toISOString()
-        }
-      }).then(() => {}).catch(() => {});
-    }
-
-    const finalSessionId = sessionId || crypto.randomUUID();
-    let fullReply = '';
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        let buffer = '';
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed || !trimmed.startsWith('data: ')) continue;
-              const data = trimmed.slice(6);
-              if (data === '[DONE]') continue;
-
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-                if (content) {
-                  fullReply += content;
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: 'chunk', content })}\n\n`)
-                  );
-                }
-              } catch {
-                // Skip malformed chunks
-              }
-            }
-          }
-
-          // Save assistant reply to history (non-blocking)
-          if (fullReply) {
-            const replyKey = `ai_advisor:${user.id}:chat:${Date.now() + 1}`;
-            getSupabase().from('kv_store_91ed8379').insert({
-              key: replyKey,
-              value: {
-                role: 'assistant',
-                content: fullReply,
-                timestamp: new Date().toISOString()
-              }
-            }).then(() => {}).catch(() => {});
-          }
-
-          // Send done event (no citations for ai-advisor, but maintaining interface parity)
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ type: 'done', sessionId: finalSessionId, citations: [] })}\n\n`
-            )
-          );
-          controller.close();
-        } catch (err) {
-          log.error('Stream processing error', err);
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'Stream interrupted' })}\n\n`)
-          );
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
+    return await buildAdvisorSseResponse(user.id, clientMessages, sessionId);
   } catch (error: unknown) {
     log.error('Streaming chat error:', error);
     return c.json({ error: error instanceof Error ? error.message : 'Chat failed' }, 500);
+  }
+});
+
+/**
+ * GET /admin/history — fetch portal Ask Vasco history for a client (staff only)
+ */
+app.get('/admin/history', async (c) => {
+  try {
+    const { userId, role } = await getAuthContext(c);
+    const clientUserId = c.req.query('clientUserId')?.trim();
+    if (!clientUserId) {
+      return c.json({ error: 'clientUserId query parameter is required' }, 400);
+    }
+    const denied = await assertCanProxyClientVasco(c, userId, role, clientUserId);
+    if (denied) return denied;
+
+    const { data } = await getSupabase()
+      .from('kv_store_91ed8379')
+      .select('*')
+      .like('key', `ai_advisor:${clientUserId}:chat:%`)
+      .order('key', { ascending: true })
+      .limit(50);
+
+    const messages = (data || []).map((d) => ({
+      role: d.value.role,
+      content: d.value.content,
+      timestamp: d.value.timestamp,
+    }));
+
+    return c.json({ messages });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
+    }
+    return c.json({ error: 'Failed to fetch history' }, 500);
+  }
+});
+
+/**
+ * POST /admin/chat/stream — same SSE contract as /chat/stream but for a client's user id
+ */
+app.post('/admin/chat/stream', async (c) => {
+  try {
+    const { userId, role } = await getAuthContext(c);
+    const body = await c.req.json();
+    const { messages: clientMessages, sessionId, clientUserId } = body;
+    const uid = typeof clientUserId === 'string' ? clientUserId.trim() : '';
+    if (!uid) {
+      return c.json({ error: 'clientUserId is required' }, 400);
+    }
+    const denied = await assertCanProxyClientVasco(c, userId, role, uid);
+    if (denied) return denied;
+    return await buildAdvisorSseResponse(uid, clientMessages, sessionId);
+  } catch (error: unknown) {
+    if (error instanceof AuthError) {
+      const ae = error as AuthError;
+      return c.json({ error: ae.message, code: ae.code }, ae.statusCode);
+    }
+    log.error('Admin streaming chat error:', error);
+    return c.json({ error: error instanceof Error ? error.message : 'Chat failed' }, 500);
+  }
+});
+
+/**
+ * DELETE /admin/history — clear portal Ask Vasco history for a client (staff only)
+ */
+app.delete('/admin/history', async (c) => {
+  try {
+    const { userId, role } = await getAuthContext(c);
+    const clientUserId = c.req.query('clientUserId')?.trim();
+    if (!clientUserId) {
+      return c.json({ error: 'clientUserId query parameter is required' }, 400);
+    }
+    const denied = await assertCanProxyClientVasco(c, userId, role, clientUserId);
+    if (denied) return denied;
+
+    await getSupabase()
+      .from('kv_store_91ed8379')
+      .delete()
+      .like('key', `ai_advisor:${clientUserId}:chat:%`);
+
+    return c.json({ success: true });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
+    }
+    return c.json({ error: 'Failed to clear history' }, 500);
   }
 });
 

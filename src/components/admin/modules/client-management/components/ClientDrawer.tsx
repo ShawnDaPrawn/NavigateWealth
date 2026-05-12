@@ -20,6 +20,7 @@ import { noteKeys } from '../../../../../utils/queryKeys';
 import { esignApi } from '../../esign/api';
 import { QUERY_GC_TIME, QUERY_STALE_TIME } from '../../esign/constants';
 import { esignKeys } from '../../esign/hooks/useEnvelopesQuery';
+import { AskVascoPortalTab } from './AskVascoPortalTab';
 
 const loadClientProfileViewerFull = () =>
   import('../../../ClientProfileViewerFull').then((m) => ({ default: m.ClientProfileViewerFull }));
@@ -30,9 +31,6 @@ const PolicyDetailsSection = React.lazy(loadPolicyDetailsSection);
 const loadDocumentsTab = () =>
   import('./DocumentsTab').then((m) => ({ default: m.DocumentsTab }));
 const DocumentsTab = React.lazy(loadDocumentsTab);
-const loadAskVascoPortalTab = () =>
-  import('./AskVascoPortalTab').then((m) => ({ default: m.AskVascoPortalTab }));
-const AskVascoPortalTab = React.lazy(loadAskVascoPortalTab);
 const loadSecurityTab = () =>
   import('./SecurityTab').then((m) => ({ default: m.SecurityTab }));
 const SecurityTab = React.lazy(loadSecurityTab);
@@ -172,7 +170,6 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
       async () => {
         await loadDocumentsTab();
       },
-      () => loadAskVascoPortalTab(),
       () => queryClient.prefetchQuery({
         queryKey: noteKeys.clientNotes(client.id),
         queryFn: () => NotesAPI.getClientNotes(client.id),
@@ -321,9 +318,7 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
 
           {/* 5. Ask Vasco Section */}
           <TabsContent value="askVasco" className="space-y-4">
-            <Suspense fallback={<TabPanelFallback />}>
-              <AskVascoPortalTab selectedClient={client} />
-            </Suspense>
+            <AskVascoPortalTab selectedClient={client} />
           </TabsContent>
 
           {/* 6. E-Sign Section */}

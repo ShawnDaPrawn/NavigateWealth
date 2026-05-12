@@ -143,6 +143,9 @@ export const advisorKeys = {
   all: ['advisor'] as const,
   status: () => [...advisorKeys.all, 'status'] as const,
   history: (userId: string | undefined) => [...advisorKeys.all, 'history', userId] as const,
+  /** Admin client drawer — same KV history as the client's portal Ask Vasco */
+  adminClientHistory: (clientUserId: string) =>
+    [...advisorKeys.all, 'admin-client-history', clientUserId] as const,
 } as const;
 
 // ============================================================================

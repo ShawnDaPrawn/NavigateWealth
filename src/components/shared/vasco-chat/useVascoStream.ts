@@ -24,6 +24,8 @@ export interface UseVascoStreamOptions {
   endpoint: string;
   /** Auth token — defaults to publicAnonKey */
   authToken?: string;
+  /** Merged into the JSON POST body (e.g. `{ clientUserId }` for admin proxy) */
+  extraBody?: Record<string, unknown>;
 }
 
 export interface StreamResult {
@@ -50,6 +52,7 @@ export interface UseVascoStreamReturn {
 export function useVascoStream({
   endpoint,
   authToken,
+  extraBody,
 }: UseVascoStreamOptions): UseVascoStreamReturn {
   const [streamingContent, setStreamingContent] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -86,6 +89,7 @@ export function useVascoStream({
         body: JSON.stringify({
           messages: chatHistory,
           sessionId,
+          ...(extraBody ?? {}),
         }),
         signal: controller.signal,
       });
@@ -94,10 +98,14 @@ export function useVascoStream({
         setIsStreaming(false);
         const errorBody = await response.json().catch(() => ({}));
         const isRateLimited = response.status === 429;
+        const bodyError =
+          typeof (errorBody as { error?: string }).error === 'string'
+            ? (errorBody as { error: string }).error
+            : undefined;
         const errorMsg = isRateLimited
-          ? (errorBody as { error?: string }).error ||
-            "You've reached the message limit. Please try again later."
-          : 'I apologise, but I encountered a temporary issue. Please try again.';
+          ? bodyError || "You've reached the message limit. Please try again later."
+          : bodyError ||
+            'I apologise, but I encountered a temporary issue. Please try again.';
         throw new Error(errorMsg);
       }
 
@@ -165,7 +173,7 @@ export function useVascoStream({
         remaining,
       };
     },
-    [endpoint, authToken]
+    [endpoint, authToken, extraBody]
   );
 
   return { streamingContent, isStreaming, sendStream, abort };
