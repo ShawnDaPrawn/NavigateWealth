@@ -96,15 +96,15 @@ export function ClientManagementModule() {
     setDrawerOpen(true);
   };
 
-  // Filter clients, then alphabetical by family name → first name (en-ZA, case-insensitive)
+  // Filter clients, then alphabetical by first name → surname (en-ZA, case-insensitive)
   const filteredSortedClients = useMemo(() => {
     const filtered = filterClients(safeClients, filters);
     return [...filtered].sort((a, b) => {
-      const ln = (a.lastName || '').trim().localeCompare((b.lastName || '').trim(), 'en-ZA', {
+      const fn = (a.firstName || '').trim().localeCompare((b.firstName || '').trim(), 'en-ZA', {
         sensitivity: 'base',
       });
-      if (ln !== 0) return ln;
-      return (a.firstName || '').trim().localeCompare((b.firstName || '').trim(), 'en-ZA', {
+      if (fn !== 0) return fn;
+      return (a.lastName || '').trim().localeCompare((b.lastName || '').trim(), 'en-ZA', {
         sensitivity: 'base',
       });
     });

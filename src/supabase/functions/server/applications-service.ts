@@ -33,7 +33,6 @@ import type {
 import {
   DATABASE_SCHEMA,
   ERROR_MESSAGES,
-  SUPER_ADMIN_EMAIL,
 } from './constants.ts';
 
 import { createModuleLogger } from './stderr-logger.ts';
@@ -44,7 +43,6 @@ import {
 } from './profile-application-sync.ts';
 import type {
   SupabaseAdminClient,
-  SupabaseAuthUser,
   KvApplication,
   KvTask,
   KvRequest,
@@ -905,40 +903,18 @@ export class AdminApplicationsService {
       log.error('getStats: Failed to fetch task stats', taskError as Error);
     }
 
-    // Simplified user count - just count unique user_ids from applications
+    // Client count MUST match Client Management (same eligibility as ClientsService.getAllClients)
     let activeUsers = 0;
-    
+
     try {
-      // Get real user count from Auth to match Client Management
-      const supabase = createServiceClient();
-      const listResult = await supabase.auth.admin.listUsers({ perPage: 1000 });
-      const users = listResult?.data?.users;
-      const usersError = listResult?.error;
-
-      if (!usersError && Array.isArray(users)) {
-        // Filter out admin users (except super admin)
-        const clients = users.filter((user: SupabaseAuthUser) => {
-          const email = user.email?.toLowerCase();
-          const isSuperAdmin = email === SUPER_ADMIN_EMAIL.toLowerCase();
-          const role = (user.user_metadata as Record<string, unknown> | undefined)?.role;
-          
-          if (role === 'admin' && !isSuperAdmin) {
-            return false;
-          }
-          return true;
-        });
-        
-        activeUsers = clients.length;
-      } else {
-        // If Auth fetch fails, fall back to application data
-        log.error('getStats: listUsers returned error, falling back to application count', usersError);
-        const uniqueUserIds = new Set(applications.map((a) => a.user_id).filter(Boolean));
-        activeUsers = uniqueUserIds.size;
-      }
-
+      const { ClientsService } = await import('./client-management-service.ts');
+      const allEligible = await new ClientsService().getAllClients();
+      activeUsers = allEligible.length;
     } catch (criticalError) {
-      log.error('getStats: listUsers threw, falling back to application count', criticalError as Error);
-      // Fallback to application count
+      log.error(
+        'getStats: ClientsService eligible count failed; falling back to application user IDs',
+        criticalError as Error,
+      );
       const uniqueUserIds = new Set(applications.map((a) => a.user_id).filter(Boolean));
       activeUsers = uniqueUserIds.size;
     }
