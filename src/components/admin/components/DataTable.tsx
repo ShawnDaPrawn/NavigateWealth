@@ -82,6 +82,8 @@ export interface DataTableProps<T = Record<string, unknown>> {
   getRowKey?: (row: T) => React.Key;
   emptyState?: React.ReactNode;
   className?: string;
+  /** When false, all rows render in one scrollable list (document scroll). Defaults to true. */
+  paginate?: boolean;
 }
 
 export function DataTable<T extends Record<string, unknown>>({
@@ -97,7 +99,8 @@ export function DataTable<T extends Record<string, unknown>>({
   rowSizeOptions,
   getRowKey,
   emptyState,
-  className
+  className,
+  paginate = true,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -134,16 +137,16 @@ export function DataTable<T extends Record<string, unknown>>({
     : filteredData;
 
   useEffect(() => {
+    if (!paginate) return;
     const totalPg = Math.max(1, Math.ceil(sortedData.length / rowsPerPage) || 1);
     setCurrentPage(p => Math.min(p, totalPg));
-  }, [sortedData.length, rowsPerPage]);
+  }, [paginate, sortedData.length, rowsPerPage]);
 
-  // Paginate data
-  const totalPages = Math.max(1, Math.ceil(sortedData.length / rowsPerPage) || 1);
-  const paginatedData = sortedData.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
+  // Paginate data (optional — Client Management prefers one long alphabetical list)
+  const totalPages = paginate ? Math.max(1, Math.ceil(sortedData.length / rowsPerPage) || 1) : 1;
+  const paginatedData = paginate
+    ? sortedData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
+    : sortedData;
 
   const handleSort = (columnKey: string) => {
     if (sortColumn === columnKey) {
@@ -326,7 +329,7 @@ export function DataTable<T extends Record<string, unknown>>({
       </div>
 
       {/* Pagination */}
-      {!loading && sortedData.length > 0 && (
+      {!loading && sortedData.length > 0 && paginate && (
         <nav
           className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           aria-label="Table pagination"

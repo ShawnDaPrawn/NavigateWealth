@@ -96,10 +96,20 @@ export function ClientManagementModule() {
     setDrawerOpen(true);
   };
 
-  // Filter clients using utility
-  const filteredClients = filterClients(safeClients, filters);
-  
-  // Calculate base stats (all non-admin clients, no search applied)
+  // Filter clients, then alphabetical by family name → first name (en-ZA, case-insensitive)
+  const filteredSortedClients = useMemo(() => {
+    const filtered = filterClients(safeClients, filters);
+    return [...filtered].sort((a, b) => {
+      const ln = (a.lastName || '').trim().localeCompare((b.lastName || '').trim(), 'en-ZA', {
+        sensitivity: 'base',
+      });
+      if (ln !== 0) return ln;
+      return (a.firstName || '').trim().localeCompare((b.firstName || '').trim(), 'en-ZA', {
+        sensitivity: 'base',
+      });
+    });
+  }, [safeClients, filters]);
+
   const baseClients = filterClients(safeClients, {});
   const totalStats = calculateGrowthStats(baseClients);
 
@@ -112,7 +122,7 @@ export function ClientManagementModule() {
     ACCOUNT_STATUS_FILTER_OPTIONS.find(o => o.value === activeStatusFilter)?.label || 'All Statuses';
 
   const handleExport = () => {
-    generateClientCSV(filteredClients);
+    generateClientCSV(filteredSortedClients);
   };
 
   // Personal clients table columns configuration
@@ -120,7 +130,6 @@ export function ClientManagementModule() {
     {
       key: 'name',
       title: 'Name',
-      sortable: true,
       render: (_, client) => {
         const status = deriveAccountStatus(client);
         const cfg = ACCOUNT_STATUS_CONFIG[status];
@@ -166,7 +175,6 @@ export function ClientManagementModule() {
     {
       key: 'createdAt',
       title: 'Date Joined',
-      sortable: true,
       render: (date) => new Date(date).toLocaleDateString('en-ZA', {
         day: '2-digit',
         month: 'short',
@@ -368,12 +376,12 @@ export function ClientManagementModule() {
         <TabsContent value="personal" className="space-y-4">
           <DataTable 
             columns={personalColumns} 
-            data={filteredClients} 
+            data={filteredSortedClients} 
             onRowClick={handleRowClick}
             loading={loading}
             searchable={false}
             exportable={false}
-            rowSizeOptions={[10, 25, 50, 100] as const}
+            paginate={false}
             getRowKey={(row) => row.id}
           />
         </TabsContent>
