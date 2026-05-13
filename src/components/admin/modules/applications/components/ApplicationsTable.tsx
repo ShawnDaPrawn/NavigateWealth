@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { Application, TabStatus } from '../types';
-import { formatDate } from '../utils';
+import { formatDate, normalizeApplicationData } from '../utils';
 import { StatusBadge } from './StatusBadge';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
@@ -144,7 +144,7 @@ export function ApplicationsTable({
     if (!searchQuery.trim()) return true;
 
     const q = searchQuery.toLowerCase();
-    const data = app.application_data;
+    const data = normalizeApplicationData(app.application_data);
     const fullName = `${data.firstName || ''} ${data.lastName || ''}`.toLowerCase();
     const email = (data.emailAddress || app.user_email || '').toLowerCase();
     const phone = (data.cellphoneNumber || '').toLowerCase();
@@ -180,11 +180,11 @@ export function ApplicationsTable({
   };
 
   const getServicesCount = (app: Application) => {
-    return (app.application_data.accountReasons || []).length;
+    return normalizeApplicationData(app.application_data).accountReasons.length;
   };
 
   const getExistingProductsCount = (app: Application) => {
-    return (app.application_data.existingProducts || []).filter(p => p !== 'None of the above').length;
+    return normalizeApplicationData(app.application_data).existingProducts.filter((p) => p !== 'None of the above').length;
   };
 
   const isPendingLike = activeTab === 'pending' || activeTab === 'invited' || activeTab === 'incomplete';
@@ -323,7 +323,7 @@ export function ApplicationsTable({
               </TableRow>
             ) : (
               filteredApplications.map((app) => {
-                const data = app.application_data;
+                const data = normalizeApplicationData(app.application_data);
                 const originBadge = getOriginBadge(app);
                 const servicesCount = getServicesCount(app);
                 const productsCount = getExistingProductsCount(app);

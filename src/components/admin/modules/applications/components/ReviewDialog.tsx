@@ -77,7 +77,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { Application, ApplicationData } from '../types';
-import { formatDate } from '../utils';
+import { formatDate, normalizeApplicationData, normalizeApplicationStringArray } from '../utils';
 import { StatusBadge } from './StatusBadge';
 import { applicationsApi } from '../api';
 import {
@@ -315,7 +315,7 @@ export function ReviewDialog({
   const [originalSnapshot, setOriginalSnapshot] = useState<Record<string, unknown>>({});
   const [showFieldMap, setShowFieldMap] = useState(false);
 
-  const data = selectedApplication?.application_data ?? null;
+  const data = selectedApplication ? normalizeApplicationData(selectedApplication.application_data) : null;
 
   // ── Edit helpers (must be above early return to satisfy Rules of Hooks) ──
   const enterEditMode = useCallback(() => {
@@ -421,10 +421,10 @@ export function ReviewDialog({
 
   // External providers (FSPs)
   const currentExternalProviders: string[] = isEditing
-    ? (editData.externalProviders as string[] ?? data?.externalProviders ?? [])
+    ? normalizeApplicationStringArray(editData.externalProviders)
     : (data?.externalProviders ?? []);
   const currentCustomProviders: string[] = isEditing
-    ? (editData.customProviders as string[] ?? data?.customProviders ?? [])
+    ? normalizeApplicationStringArray(editData.customProviders)
     : (data?.customProviders ?? []);
   const hasExternalProviders = currentExternalProviders.length > 0 || currentCustomProviders.length > 0;
 

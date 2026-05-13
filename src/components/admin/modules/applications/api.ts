@@ -2,6 +2,7 @@ import { api } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
 import { Application, ApplicationsResponse, StatsResponse, TabStatus } from './types';
 import { ENDPOINTS, STATUS_MAP } from './constants';
+import { normalizeApplication } from './utils';
 
 export const applicationsApi = {
   getApplications: async (activeTab: TabStatus): Promise<Application[]> => {
@@ -14,7 +15,7 @@ export const applicationsApi = {
         const combined = [
           ...(draftData.applications || []),
           ...(inProgressData.applications || []),
-        ];
+        ].map(normalizeApplication);
         combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         return combined;
       } catch (error) {
@@ -30,7 +31,7 @@ export const applicationsApi = {
     
     try {
       const data = await api.get<ApplicationsResponse>(url);
-      return data.applications || [];
+      return (data.applications || []).map(normalizeApplication);
     } catch (error) {
       logger.error('Failed to fetch applications', error, { activeTab });
       throw error;
@@ -50,7 +51,7 @@ export const applicationsApi = {
   getApplicationDetail: async (applicationId: string): Promise<Application> => {
     try {
       const data = await api.get<{ application: Application }>(`/${ENDPOINTS.APPLICATION_DETAIL(applicationId)}`);
-      return data.application;
+      return normalizeApplication(data.application);
     } catch (error) {
       logger.error('Failed to fetch application detail', error, { applicationId });
       throw error;
