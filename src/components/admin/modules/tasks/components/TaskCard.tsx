@@ -15,7 +15,7 @@ import { useState } from 'react';
 import type { Task, TaskStatus } from '../types';
 import { PRIORITY_LABELS, PRIORITY_COLORS } from '../constants';
 import { useUpdateTask, useDeleteTask, useDuplicateTask } from '../hooks';
-import { getOverdueDays } from '../utils';
+import { getOverdueDays, getTaskDescriptionPreview, isIssueManagerTask } from '../utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +63,8 @@ export function TaskCard({ task, index, onEdit, onViewDetails, canEdit = true, c
   const deleteTask = useDeleteTask();
   const duplicateTask = useDuplicateTask();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const descriptionPreview = getTaskDescriptionPreview(task);
+  const issueManagerTask = isIssueManagerTask(task);
 
   // Calculate overdue days using utility
   const overdueDays = getOverdueDays(task);
@@ -145,6 +147,11 @@ export function TaskCard({ task, index, onEdit, onViewDetails, canEdit = true, c
                     <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${PRIORITY_COLORS[task.priority]} bg-opacity-10`}>
                       {PRIORITY_LABELS[task.priority]}
                     </span>
+                    {issueManagerTask && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                        Issue Manager
+                      </span>
+                    )}
                     {task.is_template && (
                       <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
                         Template
@@ -198,9 +205,9 @@ export function TaskCard({ task, index, onEdit, onViewDetails, canEdit = true, c
               </div>
 
               {/* Description Preview */}
-              {task.description && (
-                <p className="text-xs text-gray-500 mb-3 line-clamp-2 leading-relaxed">
-                  {task.description}
+              {descriptionPreview && (
+                <p className="text-xs text-gray-500 mb-3 line-clamp-2 leading-relaxed break-words">
+                  {descriptionPreview}
                 </p>
               )}
 

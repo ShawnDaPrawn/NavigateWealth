@@ -19,6 +19,55 @@ import type {
   TaskFilters,
 } from './types';
 
+const ISSUE_MANAGER_TASK_HEADING_PATTERN = /^(Security Issue|Issue Manager Task|Affected Dependency|Why This Matters|Required Remediation|References|Context|Required Response)$/i;
+
+function cleanPreviewLine(value: string): string {
+  return value
+    .replace(/^\-\s*/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function isIssueManagerTask(task: Pick<Task, 'title' | 'tags'>): boolean {
+  return task.title.startsWith('[Issue Manager]') || task.tags?.includes('issue-manager') || false;
+}
+
+export function getTaskDescriptionPreview(task: Pick<Task, 'title' | 'description' | 'tags'>): string | null {
+  const description = String(task.description || '').trim();
+  if (!description) return null;
+
+  const lines = description
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return null;
+
+  if (!isIssueManagerTask(task)) {
+    return cleanPreviewLine(lines[0]);
+  }
+
+  const highlightedLines = [
+    lines.find((line) => line.startsWith('Impact:')),
+    lines.find((line) => line.startsWith('- Package:')),
+    lines.find((line) => line.startsWith('- Priority:')),
+    lines.find((line) => line.startsWith('- Location:')),
+    lines.find((line) => line.startsWith('Automation signal:')),
+    lines.find((line) => /^Affected range:/i.test(line)),
+    lines.find((line) => /^Action:/i.test(line)),
+  ].filter((line): line is string => Boolean(line));
+
+  if (highlightedLines.length > 0) {
+    return highlightedLines
+      .slice(0, 3)
+      .map(cleanPreviewLine)
+      .join(' | ');
+  }
+
+  const fallbackLine = lines.find((line) => !ISSUE_MANAGER_TASK_HEADING_PATTERN.test(line));
+  return fallbackLine ? cleanPreviewLine(fallbackLine) : null;
+}
+
 // ============================================================================
 // DATE & TIME UTILITIES
 // ============================================================================
