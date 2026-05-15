@@ -81,6 +81,11 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('const providerAdapter = getProviderAdapter({ job, flow });');
     expect(workerSource).toContain('providerAdapter?.extractSnapshot');
     expect(workerSource).toContain('providerAdapter?.findDocumentClickTarget');
+    expect(workerSource).toContain("NW_PLAYWRIGHT_RECORD_VIDEO");
+    expect(workerSource).toContain("NW_PLAYWRIGHT_RECORD_TRACE");
+    expect(workerSource).toContain("recordVideo: {");
+    expect(workerSource).toContain("context.tracing.start");
+    expect(workerSource).toContain("context.tracing.stop");
     expect(workerSource).not.toContain('async function extractAllanGraySnapshot');
     expect(workerSource).not.toContain('async function findAllanGrayDownloadAction');
   });
@@ -96,6 +101,15 @@ describe('provider portal golden flows', () => {
     expect(portalDefaultFlowsSource).toContain(": `${providerName} portal policy extraction`");
     expect(portalDefaultFlowsSource).toContain("extraction: { fields: [] }");
     expect(portalDefaultFlowsSource).toContain("notes: ['Configure login, policy search, and field labels before running this provider in production.']");
+  });
+
+  it('documents local watching and hosted replay for portal automation', () => {
+    expect(readRepoFile('.github/workflows/provider-portal-worker.yml')).toContain('NW_PLAYWRIGHT_RECORD_VIDEO: "1"');
+    expect(readRepoFile('.github/workflows/provider-portal-worker.yml')).toContain('NW_PLAYWRIGHT_RECORD_TRACE: "1"');
+    expect(readRepoFile('docs/provider-portal-worker.md')).toContain('Watching automation');
+    expect(readRepoFile('docs/provider-portal-worker.md')).toContain('Local live watching on this machine');
+    expect(readRepoFile('docs/provider-portal-worker.md')).toContain('Hosted replay through GitHub Actions artifacts');
+    expect(readRepoFile('docs/provider-portal-worker.md')).toContain('provider-portal-worker-<run id>');
   });
 
   it('provides a BrightRock risk portal flow without document download', () => {

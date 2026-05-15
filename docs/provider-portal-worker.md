@@ -151,6 +151,8 @@ NW_API_BASE=https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91
 NW_PORTAL_WORKER_SECRET=<same value configured on the Supabase Edge Function>
 NW_PORTAL_POLL=1
 NW_PLAYWRIGHT_HEADED=0
+NW_PLAYWRIGHT_RECORD_VIDEO=1
+NW_PLAYWRIGHT_RECORD_TRACE=1
 ```
 
 The Supabase Edge Function must also have:
@@ -168,6 +170,30 @@ npm run provider:worker
 ```
 
 The worker polls `/integrations/portal-worker/jobs/claim`. When an admin clicks **Create Portal Job**, the next poll claims the job and starts the Playwright flow.
+
+## Watching automation
+
+There are now two supported debugging modes for portal automation:
+
+1. Local live watching on this machine.
+
+```bash
+NW_PLAYWRIGHT_HEADED=1 NW_PORTAL_DEBUG_DIR=tmp/provider-portal-worker npm run provider:sync -- --job-id <portal-job-id> --worker-secret <portal-worker-secret>
+```
+
+This launches a visible Chromium window so you can watch the automation move through the provider flow in real time.
+
+2. Hosted replay through GitHub Actions artifacts.
+
+The hosted workflow runs headless, but it now records Playwright video plus a Playwright trace under `tmp/provider-portal-worker` and uploads them as the `provider-portal-worker-<run id>` artifact.
+
+When a job fails, download that artifact from the GitHub Actions run and inspect:
+
+- `videos/` for the browser recording
+- `*.zip` trace files for Playwright Trace Viewer
+- `*.png` and `*.json` debug artifacts for targeted snapshots and messages
+
+For OTP failures such as BrightRock, this is the fastest way to see whether the worker selected the right delivery option, whether the provider actually showed a sent confirmation, and which screen the automation was on when it paused or timed out.
 
 ## How policy-detail logic is defined
 

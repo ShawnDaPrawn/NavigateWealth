@@ -55,6 +55,8 @@ Environment:
   NW_PROVIDER_BRIGHTROCK_USERNAME      BrightRock username
   NW_PROVIDER_BRIGHTROCK_PASSWORD      BrightRock password
   NW_PLAYWRIGHT_HEADED=1               Optional visible browser mode
+  NW_PLAYWRIGHT_RECORD_VIDEO=1         Optional Playwright video capture
+  NW_PLAYWRIGHT_RECORD_TRACE=1         Optional Playwright trace capture
 `);
   process.exit(0);
 }
@@ -70,6 +72,16 @@ const forceStage = Boolean(args['force-stage'] || process.env.NW_PORTAL_FORCE_ST
 const poll = Boolean(args.poll || process.env.NW_PORTAL_POLL === '1');
 const workerId = String(args['worker-id'] || process.env.NW_PORTAL_WORKER_ID || `worker-${process.pid}`);
 const debugDir = String(args['debug-dir'] || process.env.NW_PORTAL_DEBUG_DIR || '').trim();
+const recordVideo = Boolean(
+  args['record-video']
+  || process.env.NW_PLAYWRIGHT_RECORD_VIDEO === '1'
+  || debugDir,
+);
+const recordTrace = Boolean(
+  args['record-trace']
+  || process.env.NW_PLAYWRIGHT_RECORD_TRACE === '1'
+  || debugDir,
+);
 
 if (!['run', 'discover', 'dry-run'].includes(mode)) {
   throw new Error('--mode must be run, discover, or dry-run.');
@@ -140,9 +152,23 @@ function safeDebugFilePart(value) {
     .slice(0, 120) || 'debug';
 }
 
+async function ensureDir(path) {
+  if (!path) return;
+  await mkdir(path, { recursive: true }).catch(() => undefined);
+}
+
+async function ensureDebugDir() {
+  await ensureDir(debugDir);
+}
+
+function buildDebugAssetPath(name, extension) {
+  if (!debugDir) return '';
+  return `${debugDir}/${safeDebugFilePart(activeJobId)}-${safeDebugFilePart(name)}.${extension}`;
+}
+
 async function writeDebugArtifact(item, name, payload) {
   if (!debugDir) return;
-  await mkdir(debugDir, { recursive: true }).catch(() => undefined);
+  await ensureDebugDir();
   const fileName = [
     safeDebugFilePart(activeJobId),
     safeDebugFilePart(item?.policyNumber || item?.id),
@@ -157,7 +183,7 @@ async function writeDebugArtifact(item, name, payload) {
 
 async function writeDebugScreenshot(page, item, name) {
   if (!debugDir) return;
-  await mkdir(debugDir, { recursive: true }).catch(() => undefined);
+  await ensureDebugDir();
   const fileName = [
     safeDebugFilePart(activeJobId),
     safeDebugFilePart(item?.policyNumber || item?.id),
@@ -2906,6 +2932,7 @@ async function runJob(jobId, requestedMode = mode) {
   jobWarnings.splice(0, jobWarnings.length);
   itemWarnings.clear();
   let browser;
+  let context;
   try {
     const { job, flow, config, items, credentials, brain } = await loadRuntime(jobId);
     const providerAdapter = getProviderAdapter({ job, flow });
@@ -2926,7 +2953,28 @@ async function runJob(jobId, requestedMode = mode) {
     await updateJob('running', { currentStep: 'opening_login', message: 'Opening provider login page.' });
     const { chromium } = await import('@playwright/test');
     browser = await chromium.launch({ headless: !headed });
-    const page = await browser.newPage();
+    const contextOptions = {
+      viewport: { width: 1440, height: 900 },
+      ...(recordVideo && debugDir
+        ? {
+          recordVideo: {
+            dir: `${debugDir}/videos`,
+            size: { width: 1440, height: 900 },
+          },
+        }
+        : {}),
+    };
+    if (recordVideo && debugDir) {
+      await ensureDir(`${debugDir}/videos`);
+    }
+    if (recordTrace && debugDir) {
+      await ensureDir(`${debugDir}/traces`);
+    }
+    context = await browser.newContext(contextOptions);
+    if (recordTrace && debugDir) {
+      await context.tracing.start({ screenshots: true, snapshots: true });
+    }
+    const page = await context.newPage();
 
     await page.goto(flow.loginUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await updateJob('running', { currentStep: 'submitting_credentials', message: 'Submitting provider credentials.' });
@@ -2997,6 +3045,12 @@ async function runJob(jobId, requestedMode = mode) {
     }).catch(() => undefined);
     throw error;
   } finally {
+    if (context && recordTrace && debugDir) {
+      await context.tracing.stop({
+        path: buildDebugAssetPath(`trace-${Date.now()}`, 'zip'),
+      }).catch(() => undefined);
+    }
+    if (context) await context.close().catch(() => undefined);
     if (browser) await browser.close();
   }
 }

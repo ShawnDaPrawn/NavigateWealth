@@ -43,6 +43,8 @@ jobs:
       NW_PORTAL_MODE: ${{ inputs.run_mode }}
       NW_PORTAL_WORKER_ID: github-actions-${{ github.run_id }}
       NW_PLAYWRIGHT_HEADED: "0"
+      NW_PLAYWRIGHT_RECORD_VIDEO: "1"
+      NW_PLAYWRIGHT_RECORD_TRACE: "1"
       NW_PORTAL_DEBUG_DIR: tmp/provider-portal-worker
       PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
