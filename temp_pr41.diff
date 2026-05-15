@@ -1,0 +1,174 @@
+﻿diff --git a/scripts/provider-portal-runtime-validation.mjs b/scripts/provider-portal-runtime-validation.mjs
+new file mode 100644
+index 00000000..39e3ec33
+--- /dev/null
++++ b/scripts/provider-portal-runtime-validation.mjs
+@@ -0,0 +1,67 @@
++export class PortalConfigurationError extends Error {
++  constructor(message, issues = []) {
++    super(message);
++    this.name = 'PortalConfigurationError';
++    this.issues = issues;
++  }
++}
++
++export function isPortalConfigurationError(error) {
++  return error instanceof PortalConfigurationError || error?.name === 'PortalConfigurationError';
++}
++
++export function isHttpUrl(value) {
++  const rawValue = String(value || '').trim();
++  if (!rawValue) return false;
++
++  try {
++    const parsed = new URL(rawValue);
++    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
++  } catch {
++    return false;
++  }
++}
++
++function hasValue(value) {
++  return String(value || '').trim().length > 0;
++}
++
++function hasCredentialProfile(flow) {
++  return Array.isArray(flow?.credentialProfiles) && flow.credentialProfiles.some((profile) => hasValue(profile?.id));
++}
++
++export function getPortalRuntimeConfigurationIssues(flow) {
++  const issues = [];
++
++  if (!isHttpUrl(flow?.loginUrl)) {
++    issues.push('Portal login URL is not configured as a valid http(s) URL.');
++  }
++
++  if (!hasCredentialProfile(flow)) {
++    issues.push('Portal credential profile is not configured.');
++  }
++
++  if (!hasValue(flow?.login?.usernameSelector)) {
++    issues.push('Portal username selector is not configured.');
++  }
++
++  if (!hasValue(flow?.login?.passwordSelector)) {
++    issues.push('Portal password selector is not configured.');
++  }
++
++  if (!hasValue(flow?.login?.submitSelector)) {
++    issues.push('Portal login submit selector is not configured.');
++  }
++
++  return issues;
++}
++
++export function assertPortalRuntimeConfigured(flow) {
++  const issues = getPortalRuntimeConfigurationIssues(flow);
++  if (issues.length === 0) return;
++
++  throw new PortalConfigurationError(
++    `Portal flow is not ready for automation: ${issues.join(' ')}`,
++    issues,
++  );
++}
+diff --git a/scripts/provider-portal-worker.mjs b/scripts/provider-portal-worker.mjs
+index 2106c5fb..c00b6afd 100644
+--- a/scripts/provider-portal-worker.mjs
++++ b/scripts/provider-portal-worker.mjs
+@@ -1,5 +1,9 @@
+ import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+ import { getProviderAdapter } from './provider-adapters/index.mjs';
++import {
++  assertPortalRuntimeConfigured,
++  isPortalConfigurationError,
++} from './provider-portal-runtime-validation.mjs';
+ import {
+   getFallbackValueForField,
+   getFieldSemanticKind,
+@@ -2279,6 +2283,7 @@ async function runJob(jobId, requestedMode = mode) {
+   let browser;
+   try {
+     const { job, flow, config, items, credentials, brain } = await loadRuntime(jobId);
++    assertPortalRuntimeConfigured(flow);
+     const providerAdapter = getProviderAdapter({ job, flow });
+     const jobMode = job.runMode || requestedMode;
+     if (jobMode === 'run' && job.status !== 'dry_run_ready' && !forceStage && authToken) {
+@@ -2371,11 +2376,18 @@ async function runJob(jobId, requestedMode = mode) {
+       body: JSON.stringify({ rows }),
+     });
+   } catch (error) {
++    const configurationError = isPortalConfigurationError(error);
+     await updateJob('failed', {
+       currentStep: 'failed',
+-      message: 'Portal worker failed.',
++      message: configurationError
++        ? 'Portal flow is not configured for automation.'
++        : 'Portal worker failed.',
+       error: error instanceof Error ? error.message : String(error),
+     }).catch(() => undefined);
++    if (configurationError) {
++      console.warn(error instanceof Error ? error.message : String(error));
++      return;
++    }
+     throw error;
+   } finally {
+     if (browser) await browser.close();
+diff --git a/src/shared/integrations/__tests__/providerPortalWorkerValidation.test.ts b/src/shared/integrations/__tests__/providerPortalWorkerValidation.test.ts
+new file mode 100644
+index 00000000..ef70b057
+--- /dev/null
++++ b/src/shared/integrations/__tests__/providerPortalWorkerValidation.test.ts
+@@ -0,0 +1,52 @@
++import { describe, expect, it } from 'vitest';
++import {
++  PortalConfigurationError,
++  assertPortalRuntimeConfigured,
++  getPortalRuntimeConfigurationIssues,
++  isHttpUrl,
++} from '../../../../scripts/provider-portal-runtime-validation.mjs';
++
++const readyFlow = {
++  loginUrl: 'https://login.example.com',
++  credentialProfiles: [{ id: 'example-profile' }],
++  login: {
++    usernameSelector: 'input[name="username"]',
++    passwordSelector: 'input[type="password"]',
++    submitSelector: 'button[type="submit"]',
++  },
++};
++
++describe('provider portal worker runtime validation', () => {
++  it('accepts http and https login URLs only', () => {
++    expect(isHttpUrl('https://login.example.com')).toBe(true);
++    expect(isHttpUrl('http://localhost:3000/login')).toBe(true);
++    expect(isHttpUrl('')).toBe(false);
++    expect(isHttpUrl('ftp://login.example.com')).toBe(false);
++    expect(isHttpUrl('not a url')).toBe(false);
++  });
++
++  it('reports missing portal flow configuration before Playwright navigation', () => {
++    const issues = getPortalRuntimeConfigurationIssues({
++      ...readyFlow,
++      loginUrl: '',
++      login: {
++        ...readyFlow.login,
++        usernameSelector: '',
++      },
++    });
++
++    expect(issues).toContain('Portal login URL is not configured as a valid http(s) URL.');
++    expect(issues).toContain('Portal username selector is not configured.');
++  });
++
++  it('throws a configuration error for invalid runtime flow', () => {
++    expect(() => assertPortalRuntimeConfigured({
++      ...readyFlow,
++      loginUrl: '',
++    })).toThrow(PortalConfigurationError);
++  });
++
++  it('allows a complete runtime flow', () => {
++    expect(() => assertPortalRuntimeConfigured(readyFlow)).not.toThrow();
++  });
++});
+

@@ -611,11 +611,23 @@ async function fillOtpTarget(target, code) {
     const digits = String(code || '').trim().split('');
     const count = Math.min(digits.length, target.locators.length);
     for (let index = 0; index < count; index += 1) {
-      await target.locators[index].fill(digits[index]);
+      await target.locators[index].click({ timeout: 2000 }).catch(() => undefined);
+      await target.locators[index].fill('');
+      await target.locators[index].type(digits[index], { delay: 60 }).catch(async () => {
+        await target.locators[index].fill(digits[index]);
+      });
     }
     return;
   }
-  await target.locator.fill(String(code || '').trim());
+  const value = String(code || '').trim();
+  await target.locator.click({ timeout: 2000 }).catch(() => undefined);
+  await target.locator.fill('');
+  await target.locator.type(value, { delay: 60 }).catch(async () => {
+    await target.locator.fill(value);
+  });
+  await target.locator.dispatchEvent('input').catch(() => undefined);
+  await target.locator.dispatchEvent('change').catch(() => undefined);
+  await target.locator.press('Tab').catch(() => undefined);
 }
 
 async function waitForBrightRockOtpDeliveryProgress(page, flow, timeoutMs = 20000) {
@@ -668,6 +680,20 @@ async function waitForManualOtp(timeoutMs) {
   throw new Error('Timed out waiting for manual OTP.');
 }
 
+async function waitForAuthCheckpointToClear(page, flow, timeoutMs = 20000) {
+  const deadline = Date.now() + timeoutMs;
+  let latestCheckpoint = '';
+  while (Date.now() < deadline) {
+    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+    const checkpoint = await detectAuthCheckpoint(page, flow);
+    if (!checkpoint) return '';
+    latestCheckpoint = checkpoint;
+    await page.waitForTimeout(1000);
+  }
+  return latestCheckpoint;
+}
+
 async function fillManualOtp(page, flow, code, preferredSelector, existingTarget) {
   const otp = flow?.otp || {};
   const target = existingTarget || await findOtpEntryTarget(page, flow, preferredSelector, 90000);
@@ -695,6 +721,17 @@ async function fillManualOtp(page, flow, code, preferredSelector, existingTarget
   await page.waitForLoadState('domcontentloaded', { timeout: 45000 }).catch(() => undefined);
   await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
   await page.waitForTimeout(1500);
+  const remainingCheckpoint = await waitForAuthCheckpointToClear(page, flow, 15000);
+  if (remainingCheckpoint) {
+    await publishLiveView(page, {
+      force: true,
+      note: 'OTP was submitted, but BrightRock stayed on the verification screen.',
+    }).catch(() => undefined);
+    throw new Error(
+      'The SMS OTP was submitted, but BrightRock stayed on the verification screen instead of continuing into the portal. '
+      + `Visible page sample: ${remainingCheckpoint}`,
+    );
+  }
   return true;
 }
 
@@ -2035,12 +2072,36 @@ async function processDocumentArtifacts(page, flow, item, jobMode, providerAdapt
 async function findInputByIntent(page, selector, labels = [], rememberedSelectors = []) {
   if (selector) {
     const locator = page.locator(selector).first();
-    if (await locator.isVisible({ timeout: 1500 }).catch(() => false)) return locator;
+    if (await locator.isVisible({ timeout: 1500 }).catch(() => false)) {
+      const meta = await locator.evaluate((el) => ({
+        type: el.getAttribute('type') || '',
+        name: el.getAttribute('name') || '',
+        id: el.getAttribute('id') || '',
+        placeholder: el.getAttribute('placeholder') || '',
+        ariaLabel: el.getAttribute('aria-label') || '',
+        title: el.getAttribute('title') || '',
+        className: el.getAttribute('class') || '',
+        maxLength: Number(el.getAttribute('maxlength') || el.maxLength || 0),
+      })).catch(() => ({}));
+      if (!isOtpishControl(meta)) return locator;
+    }
   }
 
   for (const rememberedSelector of rememberedSelectors) {
     const locator = page.locator(rememberedSelector).first();
-    if (await locator.isVisible({ timeout: 1200 }).catch(() => false)) return locator;
+    if (await locator.isVisible({ timeout: 1200 }).catch(() => false)) {
+      const meta = await locator.evaluate((el) => ({
+        type: el.getAttribute('type') || '',
+        name: el.getAttribute('name') || '',
+        id: el.getAttribute('id') || '',
+        placeholder: el.getAttribute('placeholder') || '',
+        ariaLabel: el.getAttribute('aria-label') || '',
+        title: el.getAttribute('title') || '',
+        className: el.getAttribute('class') || '',
+        maxLength: Number(el.getAttribute('maxlength') || el.maxLength || 0),
+      })).catch(() => ({}));
+      if (!isOtpishControl(meta)) return locator;
+    }
   }
 
   await page.waitForTimeout(1500);
@@ -2057,7 +2118,18 @@ async function findInputByIntent(page, selector, labels = [], rememberedSelector
       page.locator(`input[placeholder*="${label}" i], input[name*="${label}" i], input[id*="${label}" i], input[aria-label*="${label}" i], input[title*="${label}" i], textarea[placeholder*="${label}" i], textarea[aria-label*="${label}" i], select[name*="${label}" i], [role="textbox"][aria-label*="${label}" i], [role="searchbox"][aria-label*="${label}" i], [role="combobox"][aria-label*="${label}" i], [contenteditable="true"][aria-label*="${label}" i], [contenteditable="true"][title*="${label}" i]`).first(),
     ];
     for (const locator of candidates) {
-      if (await locator.isVisible({ timeout: 800 }).catch(() => false)) return locator;
+      if (!(await locator.isVisible({ timeout: 800 }).catch(() => false))) continue;
+      const meta = await locator.evaluate((el) => ({
+        type: el.getAttribute('type') || '',
+        name: el.getAttribute('name') || '',
+        id: el.getAttribute('id') || '',
+        placeholder: el.getAttribute('placeholder') || '',
+        ariaLabel: el.getAttribute('aria-label') || '',
+        title: el.getAttribute('title') || '',
+        className: el.getAttribute('class') || '',
+        maxLength: Number(el.getAttribute('maxlength') || el.maxLength || 0),
+      })).catch(() => ({}));
+      if (!isOtpishControl(meta)) return locator;
     }
   }
 
@@ -2090,7 +2162,18 @@ async function findInputByIntent(page, selector, labels = [], rememberedSelector
   const genericCount = Math.min(await genericCandidates.count().catch(() => 0), 20);
   for (let index = 0; index < genericCount; index += 1) {
     const candidate = genericCandidates.nth(index);
-    if (await candidate.isVisible({ timeout: 500 }).catch(() => false)) return candidate;
+    if (!(await candidate.isVisible({ timeout: 500 }).catch(() => false))) continue;
+    const meta = await candidate.evaluate((el) => ({
+      type: el.getAttribute('type') || '',
+      name: el.getAttribute('name') || '',
+      id: el.getAttribute('id') || '',
+      placeholder: el.getAttribute('placeholder') || '',
+      ariaLabel: el.getAttribute('aria-label') || '',
+      title: el.getAttribute('title') || '',
+      className: el.getAttribute('class') || '',
+      maxLength: Number(el.getAttribute('maxlength') || el.maxLength || 0),
+    })).catch(() => ({}));
+    if (!isOtpishControl(meta)) return candidate;
   }
 
   const visibleInputs = page.locator('input, textarea, select, [role="textbox"], [role="searchbox"], [role="combobox"], [contenteditable="true"]');
@@ -2100,6 +2183,17 @@ async function findInputByIntent(page, selector, labels = [], rememberedSelector
   for (let index = 0; index < visibleCount; index += 1) {
     const candidate = visibleInputs.nth(index);
     if (!(await candidate.isVisible({ timeout: 500 }).catch(() => false))) continue;
+    const meta = await candidate.evaluate((el) => ({
+      type: el.getAttribute('type') || '',
+      name: el.getAttribute('name') || '',
+      id: el.getAttribute('id') || '',
+      placeholder: el.getAttribute('placeholder') || '',
+      ariaLabel: el.getAttribute('aria-label') || '',
+      title: el.getAttribute('title') || '',
+      className: el.getAttribute('class') || '',
+      maxLength: Number(el.getAttribute('maxlength') || el.maxLength || 0),
+    })).catch(() => ({}));
+    if (isOtpishControl(meta)) continue;
     firstVisibleCount += 1;
     if (!firstVisible) firstVisible = candidate;
     if (firstVisibleCount > 1) break;
@@ -2291,6 +2385,10 @@ async function searchPolicyByNumber(page, flow, item, brain) {
     }
   }
   await assertPastAuthCheckpoint(page, flow, 'policy search');
+  await publishLiveView(page, {
+    force: true,
+    note: `Starting policy search for ${item.policyNumber}.`,
+  }).catch(() => undefined);
 
   const smartAssist = brainAssistConfig(flow);
   const rememberedInputSelectors = rememberedSelectorsForStage(brain, 'search_input');
@@ -3052,6 +3150,7 @@ async function runJob(jobId, requestedMode = mode) {
   liveViewUploadPromise = null;
   let browser;
   let context;
+  let page;
   let liveViewTicker;
   try {
     const { job, flow, config, items, credentials, brain } = await loadRuntime(jobId);
@@ -3095,7 +3194,7 @@ async function runJob(jobId, requestedMode = mode) {
     if (recordTrace && debugDir) {
       await context.tracing.start({ screenshots: true, snapshots: true });
     }
-    const page = await context.newPage();
+    page = await context.newPage();
     liveViewTicker = setInterval(() => {
       publishLiveView(page).catch(() => undefined);
     }, liveViewIntervalMs);
@@ -3170,6 +3269,12 @@ async function runJob(jobId, requestedMode = mode) {
       body: JSON.stringify({ rows }),
     });
   } catch (error) {
+    if (page) {
+      await publishLiveView(page, {
+        force: true,
+        note: `Worker failed: ${sampleText(error instanceof Error ? error.message : String(error), 400)}`,
+      }).catch(() => undefined);
+    }
     const configurationError = isPortalConfigurationError(error);
     await updateJob('failed', {
       currentStep: 'failed',
@@ -3184,6 +3289,12 @@ async function runJob(jobId, requestedMode = mode) {
     }
     throw error;
   } finally {
+    if (page) {
+      await publishLiveView(page, {
+        force: true,
+        note: 'Worker session ended on this provider screen.',
+      }).catch(() => undefined);
+    }
     if (liveViewTicker) clearInterval(liveViewTicker);
     if (context && recordTrace && debugDir) {
       await context.tracing.stop({

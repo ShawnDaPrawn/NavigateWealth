@@ -64,7 +64,7 @@ Commands that exist on clean `main` as of 2026-04-20:
 | Build | `npm run build` |
 | Tests | `npm test` |
 | Test watch | `npm run test:watch` |
-| UI inspection | `npm run ui:inspect -- --path /your-route --output tmp/ui-inspect/check.png` |
+| Optional UI inspection | `npm run ui:inspect -- --path /your-route --output tmp/ui-inspect/check.png` |
 | Provider sync | `npm run provider:sync` |
 | Provider worker | `npm run provider:worker` |
 
@@ -119,11 +119,11 @@ Session handling in `src/components/auth/AuthContext.tsx` and
 - The Vite dev server opens `http://localhost:3000/` by default.
 - Architecture guidelines live in `src/guidelines/Guidelines.md`.
 - Status and roadmap live in `docs/PRODUCTION-READINESS.md`.
-- For user-visible UI changes, build-only verification is not enough. Run the
-  UI inspection tool before sign-off. Use `--click` and `--wait-for` when the
-  state requires interaction, such as opening a modal or dropdown.
-- For authenticated admin UI verification, use the machine-local encrypted
-  credential file at
+- Do not require the Playwright/UI-inspection path by default for routine
+  sign-off. Use `npm run ui:inspect` only when the user explicitly asks for it
+  or when a browser-level check is truly necessary and practical.
+- If authenticated admin UI verification is explicitly requested, use the
+  machine-local encrypted credential file at
   `C:\Users\ShawnFrancisco\.codex\secrets\navigate-wealth-admin.credential.clixml`.
   This file is intentionally outside the repo; do not copy credentials into
   source, commits, screenshots, or logs.

@@ -3,6 +3,10 @@ dist
 build
 tmp
 supabase/.temp
+.env.local
+.env.*.local
+.openclaw*.local
+*.secret.local
 
 .vercel
 

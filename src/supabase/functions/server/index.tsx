@@ -66,7 +66,7 @@ app.use('*', cors({
     return allowedOrigins.includes(origin) ? origin : null;
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'x-client-info', 'apikey', 'x-request-id'],
+  allowHeaders: ['Content-Type', 'Authorization', 'x-client-info', 'apikey', 'x-request-id', 'X-OpenClaw-Secret'],
   exposeHeaders: ['x-request-id'],
   credentials: false,
   maxAge: 86400,
