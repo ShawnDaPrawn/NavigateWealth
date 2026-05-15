@@ -458,9 +458,20 @@ export interface PortalSyncJob {
   currentItemId?: string;
   currentClientName?: string;
   currentPolicyNumber?: string;
+  liveView?: PortalJobLiveView;
   policySchedule?: PortalPolicyScheduleConfig;
   documentArtifacts?: PortalDocumentArtifactConfig[];
   queueSummary?: PortalJobQueueSummary;
+}
+
+export interface PortalJobLiveView {
+  storageKey?: string;
+  signedUrl?: string;
+  contentType?: string;
+  capturedAt: string;
+  pageUrl?: string;
+  pageTitle?: string;
+  note?: string;
 }
 
 export interface PortalJobQueueSummary {

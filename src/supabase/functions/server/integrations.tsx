@@ -315,6 +315,16 @@ interface PortalDocumentArtifactStatus {
   updatedAt: string;
 }
 
+interface PortalJobLiveView {
+  storageKey?: string;
+  signedUrl?: string;
+  contentType?: string;
+  capturedAt: string;
+  pageUrl?: string;
+  pageTitle?: string;
+  note?: string;
+}
+
 interface PortalProviderFlow {
   id: string;
   providerId: string;
@@ -394,6 +404,7 @@ interface PortalSyncJob {
   currentItemId?: string;
   currentClientName?: string;
   currentPolicyNumber?: string;
+  liveView?: PortalJobLiveView;
   policySchedule?: PortalPolicyScheduleConfig;
   documentArtifacts?: PortalDocumentArtifactConfig[];
   queueSummary?: PortalJobQueueSummary;
@@ -936,6 +947,97 @@ async function persistPortalJobItems(job: PortalSyncJob, items: PortalJobPolicyI
   await kv.set(`portal-job:${job.id}`, updatedJob);
   await kv.set(`portal-job:latest:${job.providerId}:${job.categoryId}`, { jobId: job.id, updatedAt: now });
   return updatedJob;
+}
+
+const PORTAL_LIVE_VIEW_BUCKET = 'make-91ed8379-portal-live-view';
+let portalLiveViewBucketInitialized = false;
+
+async function ensurePortalLiveViewBucket(): Promise<void> {
+  if (portalLiveViewBucketInitialized) return;
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some((bucket) => bucket.name === PORTAL_LIVE_VIEW_BUCKET);
+    if (!bucketExists) {
+      const { error } = await supabase.storage.createBucket(PORTAL_LIVE_VIEW_BUCKET, {
+        public: false,
+        fileSizeLimit: 5242880,
+        allowedMimeTypes: ['image/jpeg', 'image/png'],
+      });
+      if (error && !error.message?.includes('already exists')) {
+        throw error;
+      }
+    }
+    portalLiveViewBucketInitialized = true;
+  } catch (error) {
+    const message = getErrMsg(error);
+    if (message.includes('already exists')) {
+      portalLiveViewBucketInitialized = true;
+      return;
+    }
+    throw error;
+  }
+}
+
+function sanitisePortalLiveViewValue(value: unknown, maxLength: number): string | undefined {
+  const text = String(value || '').trim().slice(0, maxLength);
+  return text || undefined;
+}
+
+async function uploadPortalLiveView(job: PortalSyncJob, file: File, metadata: {
+  pageUrl?: unknown;
+  pageTitle?: unknown;
+  note?: unknown;
+} = {}): Promise<PortalJobLiveView> {
+  await ensurePortalLiveViewBucket();
+
+  const contentType = String(file.type || 'image/jpeg').trim().toLowerCase();
+  if (!['image/jpeg', 'image/png'].includes(contentType)) {
+    throw new Error('Portal live view must be a JPEG or PNG screenshot.');
+  }
+  if (file.size > 5242880) {
+    throw new Error('Portal live view exceeds the 5MB limit.');
+  }
+
+  const bytes = await file.arrayBuffer();
+  const extension = contentType === 'image/png' ? 'png' : 'jpg';
+  const storageKey = `portal-jobs/${job.id}/live-view.${extension}`;
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
+
+  const { error: uploadError } = await supabase.storage
+    .from(PORTAL_LIVE_VIEW_BUCKET)
+    .upload(storageKey, bytes, {
+      contentType,
+      upsert: true,
+    });
+
+  if (uploadError) {
+    throw new Error(`Portal live view upload failed: ${uploadError.message}`);
+  }
+
+  const { data: signed, error: signedError } = await supabase.storage
+    .from(PORTAL_LIVE_VIEW_BUCKET)
+    .createSignedUrl(storageKey, 3600);
+
+  if (signedError || !signed?.signedUrl) {
+    throw new Error(`Portal live view signed URL failed: ${signedError?.message || 'missing signed URL'}`);
+  }
+
+  return {
+    storageKey,
+    signedUrl: signed.signedUrl,
+    contentType,
+    capturedAt: new Date().toISOString(),
+    pageUrl: sanitisePortalLiveViewValue(metadata.pageUrl, 1000),
+    pageTitle: sanitisePortalLiveViewValue(metadata.pageTitle, 240),
+    note: sanitisePortalLiveViewValue(metadata.note, 500),
+  };
 }
 
 function normaliseRunMode(value: unknown): PortalJobRunMode {
@@ -2927,6 +3029,33 @@ app.get("/portal-jobs/:jobId/items", requireAuth, async (c) => {
   }
 });
 
+async function persistPortalLiveViewUpdate(jobId: string, formData: Record<string, string | File>) {
+  const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+  if (!job) {
+    return { error: 'Portal job not found', status: 404 as const };
+  }
+
+  const file = formData.file;
+  if (!file || !(file instanceof File)) {
+    return { error: 'No screenshot file provided', status: 400 as const };
+  }
+
+  const liveView = await uploadPortalLiveView(job, file, {
+    pageUrl: formData.pageUrl,
+    pageTitle: formData.pageTitle,
+    note: formData.note,
+  });
+
+  const updatedJob: PortalSyncJob = {
+    ...job,
+    liveView,
+    updatedAt: new Date().toISOString(),
+  };
+  await kv.set(`portal-job:${jobId}`, updatedJob);
+  await kv.set(`portal-job:latest:${job.providerId}:${job.categoryId}`, { jobId: job.id, updatedAt: updatedJob.updatedAt });
+  return { job: updatedJob };
+}
+
 // POST /portal-jobs/:jobId/items/:itemId/retry
 app.post("/portal-jobs/:jobId/items/:itemId/retry", requireAuth, async (c) => {
   try {
@@ -3008,6 +3137,28 @@ app.post("/portal-jobs/:jobId/status", requireAuth, async (c) => {
   } catch (e) {
     log.error("Portal job status update error:", e);
     return c.json({ error: `Failed to update portal job: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// POST /portal-jobs/:jobId/live-view
+app.post("/portal-jobs/:jobId/live-view", requireAuth, async (c) => {
+  try {
+    let formData: Record<string, string | File>;
+    try {
+      formData = await c.req.parseBody();
+    } catch (parseErr) {
+      log.error("Portal live view parse error:", parseErr);
+      return c.json({ error: "Invalid form data. Expected multipart/form-data with a screenshot file." }, 400);
+    }
+
+    const result = await persistPortalLiveViewUpdate(c.req.param("jobId"), formData);
+    if ('error' in result) {
+      return c.json({ error: result.error }, result.status);
+    }
+    return c.json({ success: true, job: result.job });
+  } catch (e) {
+    log.error("Portal live view upload error:", e);
+    return c.json({ error: `Failed to upload portal live view: ${getErrMsg(e)}` }, 500);
   }
 });
 
@@ -3735,6 +3886,31 @@ app.post("/portal-worker/jobs/:jobId/status", async (c) => {
   } catch (e) {
     log.error("Portal worker status error:", e);
     return c.json({ error: `Failed to update portal job: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// POST /portal-worker/jobs/:jobId/live-view
+app.post("/portal-worker/jobs/:jobId/live-view", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    let formData: Record<string, string | File>;
+    try {
+      formData = await c.req.parseBody();
+    } catch (parseErr) {
+      log.error("Portal worker live view parse error:", parseErr);
+      return c.json({ error: "Invalid form data. Expected multipart/form-data with a screenshot file." }, 400);
+    }
+
+    const result = await persistPortalLiveViewUpdate(c.req.param("jobId"), formData);
+    if ('error' in result) {
+      return c.json({ error: result.error }, result.status);
+    }
+    return c.json({ success: true, job: result.job });
+  } catch (e) {
+    log.error("Portal worker live view upload error:", e);
+    return c.json({ error: `Failed to upload portal live view: ${getErrMsg(e)}` }, 500);
   }
 });
 

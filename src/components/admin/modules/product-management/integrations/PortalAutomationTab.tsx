@@ -337,6 +337,9 @@ export function PortalAutomationTab({
     flow?.policySchedule?.enabled
   );
   const localWatchCommand = `npm run provider:watch -- --job-id ${job?.id || '<portal-job-id>'} --worker-secret <portal-worker-secret>`;
+  const liveViewCapturedLabel = job?.liveView?.capturedAt
+    ? new Date(job.liveView.capturedAt).toLocaleTimeString()
+    : '';
 
   const updateFieldSelector = (index: number, selector: string) => {
     setFieldSelectors(prev => prev.map((field, currentIndex) => (
@@ -1127,7 +1130,7 @@ export function PortalAutomationTab({
                   <div className="space-y-1">
                     <p className="font-medium text-purple-950">Watch automation</p>
                     <p className="text-purple-900">
-                      Open the GitHub Actions run for live worker progress, then use its replay artifacts if you need the browser trace and video afterwards.
+                      The GitHub Actions link shows run logs. The live provider screen appears below on the current job card while the worker is active.
                     </p>
                   </div>
                   {job?.actionsRunUrl ? (
@@ -1244,6 +1247,51 @@ export function PortalAutomationTab({
                 </p>
               )}
               {job.actionsDispatchError && <p className="text-red-700">{job.actionsDispatchError}</p>}
+            </div>
+
+            <div className="rounded-lg border bg-white p-4 space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h4 className="font-medium text-gray-900">Live Portal View</h4>
+                  <p className="text-sm text-gray-500">
+                    This refreshes while the worker is running so you can see the actual provider page it is on.
+                  </p>
+                </div>
+                {job.liveView?.signedUrl ? (
+                  <Button asChild variant="outline" size="sm">
+                    <a href={job.liveView.signedUrl} target="_blank" rel="noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                      Open image
+                    </a>
+                  </Button>
+                ) : null}
+              </div>
+
+              {job.liveView?.signedUrl ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-2 text-xs text-gray-600 md:grid-cols-3">
+                    <p><span className="font-medium text-gray-900">Captured:</span> {liveViewCapturedLabel || '-'}</p>
+                    <p><span className="font-medium text-gray-900">Page:</span> {job.liveView.pageTitle || '-'}</p>
+                    <p className="truncate"><span className="font-medium text-gray-900">URL:</span> {job.liveView.pageUrl || '-'}</p>
+                  </div>
+                  <div className="overflow-hidden rounded-lg border bg-gray-50">
+                    <img
+                      src={job.liveView.signedUrl}
+                      alt={`Live provider portal screen for ${provider.name}`}
+                      className="w-full object-contain"
+                    />
+                  </div>
+                  {job.liveView.note && (
+                    <p className="text-xs text-gray-500">{job.liveView.note}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed bg-gray-50 px-3 py-4 text-sm text-gray-500">
+                  {['queued'].includes(job.status)
+                    ? 'Live portal screenshots will appear after the worker opens the provider site.'
+                    : 'Waiting for the worker to publish the first provider screenshot.'}
+                </div>
+              )}
             </div>
 
             <p className="text-sm text-gray-600">{job.message || 'Waiting for worker status.'}</p>

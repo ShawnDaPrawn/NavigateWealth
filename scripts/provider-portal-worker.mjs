@@ -195,6 +195,51 @@ async function writeDebugScreenshot(page, item, name) {
   }).catch(() => undefined);
 }
 
+const liveViewIntervalMs = Math.max(3000, Number(process.env.NW_PORTAL_LIVE_VIEW_INTERVAL_MS || 6000));
+let liveViewUploadPromise = null;
+let lastLiveViewUploadAt = 0;
+
+async function publishLiveView(page, options = {}) {
+  if (!page || typeof page.isClosed === 'function' && page.isClosed()) return;
+  const force = options.force === true;
+  const now = Date.now();
+  if (!force && now - lastLiveViewUploadAt < liveViewIntervalMs) return;
+  if (liveViewUploadPromise && !force) return liveViewUploadPromise.catch(() => undefined);
+
+  liveViewUploadPromise = (async () => {
+    const imageBytes = await page.screenshot({
+      type: 'jpeg',
+      quality: 55,
+      fullPage: false,
+      animations: 'disabled',
+    }).catch(() => null);
+    if (!imageBytes) return;
+
+    const formData = new FormData();
+    formData.append('file', new File(
+      [imageBytes],
+      `${safeDebugFilePart(activeJobId || 'portal-job')}-live-view.jpg`,
+      { type: 'image/jpeg' },
+    ));
+    formData.append('pageUrl', String(page.url() || '').slice(0, 1000));
+
+    const pageTitle = await page.title().catch(() => '');
+    if (pageTitle) {
+      formData.append('pageTitle', pageTitle.slice(0, 240));
+    }
+    if (options.note) {
+      formData.append('note', String(options.note).slice(0, 500));
+    }
+
+    await apiUpload(jobPath('/live-view'), formData).catch(() => undefined);
+    lastLiveViewUploadAt = Date.now();
+  })().finally(() => {
+    liveViewUploadPromise = null;
+  });
+
+  return liveViewUploadPromise;
+}
+
 function sanitiseWarning(value) {
   return String(value || '').trim().slice(0, 500);
 }
@@ -615,6 +660,10 @@ async function promptForManualOtp(page, flow, preferredSelector, existingTarget)
   await updateJob('waiting_for_otp', {
     currentStep: 'manual_sms_otp',
     message: otp.instructions || 'Waiting for manual SMS OTP.',
+  });
+  await publishLiveView(page, {
+    force: true,
+    note: otp.instructions || 'Waiting for manual SMS OTP.',
   });
   let code;
   try {
@@ -2796,12 +2845,24 @@ async function processPolicyQueue(page, flow, config, jobMode, brain, providerAd
         currentStep: 'searching_policy',
         message: `Searching provider portal for ${item.clientName} / ${item.policyNumber}.`,
       });
+      await publishLiveView(page, {
+        force: true,
+        note: `Searching provider portal for ${item.clientName} / ${item.policyNumber}.`,
+      });
 
       await searchPolicyByNumber(page, flow, item, brain);
+      await publishLiveView(page, {
+        force: true,
+        note: `Policy search landed on ${item.clientName} / ${item.policyNumber}.`,
+      });
 
       await updatePolicyItem(item.id, 'in_progress', {
         currentStep: 'extracting_policy',
         message: `Extracting values for ${item.clientName} / ${item.policyNumber}.`,
+      });
+      await publishLiveView(page, {
+        force: true,
+        note: `Extracting values for ${item.clientName} / ${item.policyNumber}.`,
       });
 
       const { rawData, extractedData, extractedFieldNames } = await extractPolicyRecord(page, flow, config, item, providerAdapter);
@@ -2840,6 +2901,10 @@ async function processPolicyQueue(page, flow, config, jobMode, brain, providerAd
           ? artifactFailures.map((status) => `${status.label}: ${status.error}`).join(' ')
           : undefined,
       });
+      await publishLiveView(page, {
+        force: true,
+        note: `Completed ${item.clientName} / ${item.policyNumber}.`,
+      });
       completed += 1;
     } catch (error) {
       failed += 1;
@@ -2852,6 +2917,10 @@ async function processPolicyQueue(page, flow, config, jobMode, brain, providerAd
         message: `Could not complete ${item.clientName} / ${item.policyNumber}.`,
         error: errorMessage,
         matchConfidence: 'low',
+      }).catch(() => undefined);
+      await publishLiveView(page, {
+        force: true,
+        note: `Failed ${item.clientName} / ${item.policyNumber}: ${errorMessage}`.slice(0, 500),
       }).catch(() => undefined);
     }
   }
@@ -2880,6 +2949,10 @@ async function processPolicyQueue(page, flow, config, jobMode, brain, providerAd
     currentStep: 'staging_completed_policy_items',
     message: `Staging ${completed} completed policy update${completed === 1 ? '' : 's'} for review.`,
     extractedRows: completed,
+  });
+  await publishLiveView(page, {
+    force: true,
+    note: `Staging ${completed} completed policy update${completed === 1 ? '' : 's'} for review.`,
   });
   await stageCompletedPolicyItems();
 }
@@ -2931,8 +3004,11 @@ async function runJob(jobId, requestedMode = mode) {
   activeJobId = jobId;
   jobWarnings.splice(0, jobWarnings.length);
   itemWarnings.clear();
+  lastLiveViewUploadAt = 0;
+  liveViewUploadPromise = null;
   let browser;
   let context;
+  let liveViewTicker;
   try {
     const { job, flow, config, items, credentials, brain } = await loadRuntime(jobId);
     const providerAdapter = getProviderAdapter({ job, flow });
@@ -2975,12 +3051,18 @@ async function runJob(jobId, requestedMode = mode) {
       await context.tracing.start({ screenshots: true, snapshots: true });
     }
     const page = await context.newPage();
+    liveViewTicker = setInterval(() => {
+      publishLiveView(page).catch(() => undefined);
+    }, liveViewIntervalMs);
+    liveViewTicker.unref?.();
 
     await page.goto(flow.loginUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await publishLiveView(page, { force: true, note: 'Provider login page opened.' });
     await updateJob('running', { currentStep: 'submitting_credentials', message: 'Submitting provider credentials.' });
     await (await visibleLocator(page, flow.login.usernameSelector)).fill(username);
     await (await visibleLocator(page, flow.login.passwordSelector)).fill(password);
     await (await visibleLocator(page, flow.login.submitSelector)).click();
+    await publishLiveView(page, { force: true, note: 'Provider credentials submitted.' });
 
     await waitForManualOtpCheckpointIfPresent(page, flow, 12000);
     await assertPastAuthCheckpoint(page, flow, 'post-login navigation');
@@ -3001,10 +3083,12 @@ async function runJob(jobId, requestedMode = mode) {
     if (Array.isArray(flow.navigation?.policyListSteps) && flow.navigation.policyListSteps.length > 0) {
       await updateJob('running', { currentStep: 'following_policy_list_steps', message: 'Following configured provider policy navigation steps.' });
       await runPolicyListSteps(page, flow.navigation.policyListSteps);
+      await publishLiveView(page, { force: true, note: 'Provider policy navigation steps completed.' });
     }
 
     if (jobMode === 'discover') {
       await updateJob('discovering', { currentStep: 'capturing_discovery_report', message: 'Capturing selector discovery report. No policy data will be staged.' });
+      await publishLiveView(page, { force: true, note: 'Capturing selector discovery report.' });
       const report = await captureDiscoveryReport(page, flow, { mode: 'discover' });
       await postDiscoveryReport(report);
       return;
@@ -3015,14 +3099,17 @@ async function runJob(jobId, requestedMode = mode) {
         currentStep: 'processing_policy_queue',
         message: `Processing ${items.length} Navigate Wealth polic${items.length === 1 ? 'y' : 'ies'} one by one.`,
       });
+      await publishLiveView(page, { force: true, note: 'Processing policy queue.' });
       await processPolicyQueue(page, flow, config, jobMode, brain, providerAdapter);
       return;
     }
 
     await updateJob('extracting', { currentStep: jobMode === 'dry-run' ? 'dry_run_extracting_policy_rows' : 'extracting_policy_rows', message: 'Extracting provider policy rows.' });
+    await publishLiveView(page, { force: true, note: 'Extracting provider policy rows.' });
     const rows = await extractRows(page, flow);
 
     if (jobMode === 'dry-run') {
+      await publishLiveView(page, { force: true, note: `Dry run extracted ${rows.length} provider row${rows.length === 1 ? '' : 's'}.` });
       const report = await captureDiscoveryReport(page, flow, { mode: 'dry-run', extractedRowCount: rows.length });
       await postDiscoveryReport(report);
       return;
@@ -3045,6 +3132,7 @@ async function runJob(jobId, requestedMode = mode) {
     }).catch(() => undefined);
     throw error;
   } finally {
+    if (liveViewTicker) clearInterval(liveViewTicker);
     if (context && recordTrace && debugDir) {
       await context.tracing.stop({
         path: buildDebugAssetPath(`trace-${Date.now()}`, 'zip'),

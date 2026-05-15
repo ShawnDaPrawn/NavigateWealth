@@ -114,7 +114,12 @@ describe('provider portal golden flows', () => {
     expect(readRepoFile('docs/provider-portal-worker.md')).toContain('provider-portal-worker-<run id>');
     expect(portalAutomationTabSource).toContain('Watch automation');
     expect(portalAutomationTabSource).toContain('Watch current run');
+    expect(portalAutomationTabSource).toContain('Live Portal View');
+    expect(portalAutomationTabSource).toContain('This refreshes while the worker is running');
     expect(portalAutomationTabSource).toContain('npm run provider:watch -- --job-id');
+    expect(workerSource).toContain("jobPath('/live-view')");
+    expect(integrationsSource).toContain('app.post("/portal-worker/jobs/:jobId/live-view"');
+    expect(integrationsSource).toContain('app.post("/portal-jobs/:jobId/live-view"');
   });
 
   it('provides a BrightRock risk portal flow without document download', () => {

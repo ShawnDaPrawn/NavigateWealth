@@ -193,6 +193,8 @@ NW_PLAYWRIGHT_HEADED=1 NW_PORTAL_DEBUG_DIR=tmp/provider-portal-worker npm run pr
 
 The hosted workflow runs headless, but it now records Playwright video plus a Playwright trace under `tmp/provider-portal-worker` and uploads them as the `provider-portal-worker-<run id>` artifact.
 
+The admin Portal Automation screen also shows a live provider screenshot feed while a job is active. That feed updates from the running worker and is the quickest way to see what page the automation is currently on inside the provider portal.
+
 When a job fails, download that artifact from the GitHub Actions run and inspect:
 
 - `videos/` for the browser recording
