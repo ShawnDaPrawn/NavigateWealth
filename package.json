@@ -116,6 +116,7 @@
     "optimize:images": "node ./scripts/optimize-images.mjs",
     "ui:inspect": "node ./scripts/ui-inspect.mjs",
     "provider:sync": "node ./scripts/provider-portal-worker.mjs",
+    "provider:watch": "set NW_PLAYWRIGHT_HEADED=1&& set NW_PLAYWRIGHT_RECORD_VIDEO=1&& set NW_PLAYWRIGHT_RECORD_TRACE=1&& set NW_PORTAL_DEBUG_DIR=tmp/provider-portal-worker&& node ./scripts/provider-portal-worker.mjs",
     "provider:worker": "node ./scripts/provider-portal-worker.mjs --poll",
     "test": "vitest run",
     "test:watch": "vitest",

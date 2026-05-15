@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from '../../../../ui/separator';
 import { Switch } from '../../../../ui/switch';
 import { Textarea } from '../../../../ui/textarea';
-import { AlertCircle, Bot, CheckCircle2, Clock, FileText, KeyRound, ListChecks, Loader2, Play, RefreshCw, RotateCcw, Search, Settings2 } from 'lucide-react';
+import { AlertCircle, Bot, CheckCircle2, Clock, ExternalLink, FileText, KeyRound, ListChecks, Loader2, Play, RefreshCw, RotateCcw, Search, Settings2 } from 'lucide-react';
 import {
   IntegrationFieldBinding,
   IntegrationProvider,
@@ -336,6 +336,7 @@ export function PortalAutomationTab({
     job?.documentArtifacts?.some((artifact) => artifact.enabled !== false) ||
     flow?.policySchedule?.enabled
   );
+  const localWatchCommand = `npm run provider:watch -- --job-id ${job?.id || '<portal-job-id>'} --worker-secret <portal-worker-secret>`;
 
   const updateFieldSelector = (index: number, selector: string) => {
     setFieldSelectors(prev => prev.map((field, currentIndex) => (
@@ -1120,6 +1121,38 @@ export function PortalAutomationTab({
                   Refresh Job
                 </Button>
               </div>
+
+              <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 text-sm text-purple-950">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1">
+                    <p className="font-medium text-purple-950">Watch automation</p>
+                    <p className="text-purple-900">
+                      Open the GitHub Actions run for live worker progress, then use its replay artifacts if you need the browser trace and video afterwards.
+                    </p>
+                  </div>
+                  {job?.actionsRunUrl ? (
+                    <Button asChild size="sm" className="bg-purple-600 hover:bg-purple-700">
+                      <a href={job.actionsRunUrl} target="_blank" rel="noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                        Watch current run
+                      </a>
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-purple-800">
+                      Start a job and the GitHub watch link will appear here.
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 rounded-md border border-purple-200 bg-white/90 px-3 py-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-purple-800">Visible browser on this machine</p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    Use the headed worker when you want to literally watch the browser move through the provider steps.
+                  </p>
+                  <code className="mt-2 block overflow-x-auto rounded bg-gray-950 px-3 py-2 text-xs text-gray-100">
+                    {localWatchCommand}
+                  </code>
+                </div>
+              </div>
             </>
           ) : (
             <p className="text-sm text-gray-500">No portal flow is available for this provider yet.</p>
@@ -1206,7 +1239,7 @@ export function PortalAutomationTab({
                 <p>
                   <span className="font-medium text-gray-900">GitHub run:</span>{' '}
                   <a className="text-purple-700 hover:underline" href={job.actionsRunUrl} target="_blank" rel="noreferrer">
-                    Open workflow
+                    Watch run logs
                   </a>
                 </p>
               )}

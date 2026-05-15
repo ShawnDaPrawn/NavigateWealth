@@ -20,6 +20,7 @@ describe('provider portal golden flows', () => {
   const integrationHeaderSource = readRepoFile('src/components/admin/modules/product-management/integrations/IntegrationHeader.tsx');
   const portalAutomationTabSource = readRepoFile('src/components/admin/modules/product-management/integrations/PortalAutomationTab.tsx');
   const goldenDocs = readRepoFile('docs/provider-automation-golden-flows.md');
+  const packageJsonSource = readRepoFile('package.json');
 
   it('documents Allan Gray RA as a protected golden flow', () => {
     expect(goldenDocs).toContain('## Allan Gray RA');
@@ -106,10 +107,14 @@ describe('provider portal golden flows', () => {
   it('documents local watching and hosted replay for portal automation', () => {
     expect(readRepoFile('.github/workflows/provider-portal-worker.yml')).toContain('NW_PLAYWRIGHT_RECORD_VIDEO: "1"');
     expect(readRepoFile('.github/workflows/provider-portal-worker.yml')).toContain('NW_PLAYWRIGHT_RECORD_TRACE: "1"');
+    expect(packageJsonSource).toContain('"provider:watch":');
     expect(readRepoFile('docs/provider-portal-worker.md')).toContain('Watching automation');
     expect(readRepoFile('docs/provider-portal-worker.md')).toContain('Local live watching on this machine');
     expect(readRepoFile('docs/provider-portal-worker.md')).toContain('Hosted replay through GitHub Actions artifacts');
     expect(readRepoFile('docs/provider-portal-worker.md')).toContain('provider-portal-worker-<run id>');
+    expect(portalAutomationTabSource).toContain('Watch automation');
+    expect(portalAutomationTabSource).toContain('Watch current run');
+    expect(portalAutomationTabSource).toContain('npm run provider:watch -- --job-id');
   });
 
   it('provides a BrightRock risk portal flow without document download', () => {

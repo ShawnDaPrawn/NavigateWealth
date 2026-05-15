@@ -178,10 +178,16 @@ There are now two supported debugging modes for portal automation:
 1. Local live watching on this machine.
 
 ```bash
-NW_PLAYWRIGHT_HEADED=1 NW_PORTAL_DEBUG_DIR=tmp/provider-portal-worker npm run provider:sync -- --job-id <portal-job-id> --worker-secret <portal-worker-secret>
+npm run provider:watch -- --job-id <portal-job-id> --worker-secret <portal-worker-secret>
 ```
 
 This launches a visible Chromium window so you can watch the automation move through the provider flow in real time.
+
+If you prefer the explicit environment form, this is equivalent to:
+
+```bash
+NW_PLAYWRIGHT_HEADED=1 NW_PORTAL_DEBUG_DIR=tmp/provider-portal-worker npm run provider:sync -- --job-id <portal-job-id> --worker-secret <portal-worker-secret>
+```
 
 2. Hosted replay through GitHub Actions artifacts.
 
