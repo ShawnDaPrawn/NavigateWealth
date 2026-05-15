@@ -44,7 +44,8 @@ import {
   Check,
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { projectId } from '../../../../../utils/supabase/info';
+import { getEstatePlanningAuthToken } from '../utils/auth';
 
 // ── Extracted modules ──────────────────────────────────────────────
 import type {
@@ -127,9 +128,10 @@ export function WillDraftingWizard({
       setIsLoadingDraft(true);
       try {
         const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+        const token = await getEstatePlanningAuthToken();
         const resp = await fetch(`${API_BASE}/estate-planning-fna/wills/${existingWillId}`, {
           headers: {
-            Authorization: `Bearer ${publicAnonKey}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         });
@@ -162,9 +164,10 @@ export function WillDraftingWizard({
       setIsLoadingProfile(true);
       try {
         const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+        const token = await getEstatePlanningAuthToken();
         const response = await fetch(`${API_BASE}/estate-planning-fna/wills/client/${clientId}/profile-prefill`, {
           headers: {
-            Authorization: `Bearer ${publicAnonKey}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         });
@@ -476,6 +479,7 @@ export function WillDraftingWizard({
     try {
       const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
       const dataPayload = isLivingWill ? livingWillData : willData;
+      const token = await getEstatePlanningAuthToken();
 
       const url = isUpdate
         ? `${API_BASE}/estate-planning-fna/wills/${existingWillId}`
@@ -484,7 +488,7 @@ export function WillDraftingWizard({
       const response = await fetch(url, {
         method: isUpdate ? 'PUT' : 'POST',
         headers: {
-          Authorization: `Bearer ${publicAnonKey}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(

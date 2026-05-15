@@ -67,9 +67,11 @@ import {
   TooltipTrigger,
 } from '../../../../ui/tooltip';
 import { toast } from 'sonner@2.0.3';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { projectId } from '../../../../../utils/supabase/info';
+import { getEstatePlanningAuthToken } from '../utils/auth';
 import { downloadWillPdf, type WillRecord } from '../utils/will-pdf-generator';
 import { WillChatInterface } from './WillChatInterface';
+import { EstateDocumentsSection } from './EstateDocumentsSection';
 
 interface WillSummary {
   id: string;
@@ -145,10 +147,11 @@ export function WillManagementView({
     try {
       setIsLoading(true);
       const url = `${API_BASE}/estate-planning-fna/wills/client/${clientId}`;
+      const token = await getEstatePlanningAuthToken();
       
       const response = await fetch(url, {
         headers: {
-          Authorization: `Bearer ${publicAnonKey}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -189,9 +192,10 @@ export function WillManagementView({
   const handleDownload = async (willId: string): Promise<void> => {
     setDownloadingWillId(willId);
     try {
+      const token = await getEstatePlanningAuthToken();
       const resp = await fetch(`${API_BASE}/estate-planning-fna/wills/${willId}`, {
         headers: {
-          Authorization: `Bearer ${publicAnonKey}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -217,6 +221,7 @@ export function WillManagementView({
 
     setIsAttaching(true);
     try {
+      const token = await getEstatePlanningAuthToken();
       const formData = new FormData();
       formData.append('file', attachFile);
 
@@ -224,7 +229,7 @@ export function WillManagementView({
         `${API_BASE}/estate-planning-fna/wills/${attachTarget.id}/attach-signed`,
         {
           method: 'POST',
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
+          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         }
       );
@@ -262,10 +267,11 @@ export function WillManagementView({
   const handleDownloadSignedDocument = async (will: WillSummary): Promise<void> => {
     setDownloadingSignedId(will.id);
     try {
+      const token = await getEstatePlanningAuthToken();
       const resp = await fetch(
         `${API_BASE}/estate-planning-fna/wills/${will.id}/signed-document`,
         {
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -288,11 +294,12 @@ export function WillManagementView({
 
     setIsRemovingSigned(true);
     try {
+      const token = await getEstatePlanningAuthToken();
       const resp = await fetch(
         `${API_BASE}/estate-planning-fna/wills/${removeSignedTarget.id}/signed-document`,
         {
           method: 'DELETE',
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -359,10 +366,11 @@ export function WillManagementView({
     if (!discardTarget) return;
     setIsDiscarding(true);
     try {
+      const token = await getEstatePlanningAuthToken();
       const resp = await fetch(`${API_BASE}/estate-planning-fna/wills/${discardTarget.id}`, {
         method: 'DELETE',
         headers: {
-          Authorization: `Bearer ${publicAnonKey}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -789,6 +797,13 @@ export function WillManagementView({
           </Card>
         </div>
       )}
+
+      {/* Existing will and legal document uploads */}
+      <EstateDocumentsSection
+        clientId={clientId}
+        clientName={clientName}
+        defaultDocumentType="last_will_scanned"
+      />
 
       {/* ── Attach Signed Document Dialog ──────────────────────────── */}
       <Dialog

@@ -65,7 +65,8 @@ import {
   TableRow,
 } from '../../../../ui/table';
 import { toast } from 'sonner@2.0.3';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { projectId } from '../../../../../utils/supabase/info';
+import { getEstatePlanningAuthToken } from '../utils/auth';
 
 // ── Constants ────────────────────────────────────────────────────
 
@@ -112,6 +113,7 @@ interface EstateDocument {
 interface EstateDocumentsSectionProps {
   clientId: string;
   clientName: string;
+  defaultDocumentType?: EstateDocumentType;
 }
 
 // ── API Base ─────────────────────────────────────────────────────
@@ -120,7 +122,11 @@ const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed
 
 // ── Component ────────────────────────────────────────────────────
 
-export function EstateDocumentsSection({ clientId, clientName }: EstateDocumentsSectionProps) {
+export function EstateDocumentsSection({
+  clientId,
+  clientName,
+  defaultDocumentType,
+}: EstateDocumentsSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [documents, setDocuments] = useState<EstateDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -131,7 +137,7 @@ export function EstateDocumentsSection({ clientId, clientName }: EstateDocuments
   // Upload form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
-  const [documentType, setDocumentType] = useState<EstateDocumentType | ''>('');
+  const [documentType, setDocumentType] = useState<EstateDocumentType | ''>(defaultDocumentType || '');
   const [notes, setNotes] = useState('');
   const [signingDate, setSigningDate] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -147,8 +153,9 @@ export function EstateDocumentsSection({ clientId, clientName }: EstateDocuments
   const loadDocuments = async () => {
     try {
       setIsLoading(true);
+      const token = await getEstatePlanningAuthToken();
       const response = await fetch(`${API_BASE}/estate-docs/${clientId}`, {
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) {
@@ -175,6 +182,7 @@ export function EstateDocumentsSection({ clientId, clientName }: EstateDocuments
 
     try {
       setIsUploading(true);
+      const token = await getEstatePlanningAuthToken();
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('title', title);
@@ -184,7 +192,7 @@ export function EstateDocumentsSection({ clientId, clientName }: EstateDocuments
 
       const response = await fetch(`${API_BASE}/estate-docs/${clientId}/upload`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
@@ -211,8 +219,9 @@ export function EstateDocumentsSection({ clientId, clientName }: EstateDocuments
   const handleDownload = async (doc: EstateDocument) => {
     try {
       setDownloadingDocId(doc.id);
+      const token = await getEstatePlanningAuthToken();
       const response = await fetch(`${API_BASE}/estate-docs/${clientId}/${doc.id}/download`, {
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) throw new Error('Failed to get download URL');
@@ -234,9 +243,10 @@ export function EstateDocumentsSection({ clientId, clientName }: EstateDocuments
 
     try {
       setIsDeleting(true);
+      const token = await getEstatePlanningAuthToken();
       const response = await fetch(`${API_BASE}/estate-docs/${clientId}/${deleteTarget.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) throw new Error('Failed to delete document');
@@ -255,7 +265,7 @@ export function EstateDocumentsSection({ clientId, clientName }: EstateDocuments
   const resetForm = () => {
     setSelectedFile(null);
     setTitle('');
-    setDocumentType('');
+    setDocumentType(defaultDocumentType || '');
     setNotes('');
     setSigningDate('');
     if (fileInputRef.current) fileInputRef.current.value = '';

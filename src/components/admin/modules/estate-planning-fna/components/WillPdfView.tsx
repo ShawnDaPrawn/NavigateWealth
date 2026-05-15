@@ -16,10 +16,11 @@ import {
 import { Button } from '../../../../ui/button';
 import { Loader2, Printer, X, Download } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { projectId } from '../../../../../utils/supabase/info';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
 import { BasePdfLayout, BASE_PDF_CSS } from '../../resources/templates/BasePdfLayout';
 import { downloadWillPdf, type WillRecord as WillRecordPdf } from '../utils/will-pdf-generator';
+import { getEstatePlanningAuthToken } from '../utils/auth';
 
 // ── Types ──────────────────────────────────────────────────────────
 interface WillDataPayload {
@@ -748,9 +749,10 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
     setIsLoading(true);
     try {
       const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+      const token = await getEstatePlanningAuthToken();
       const response = await fetch(`${API_BASE}/estate-planning-fna/wills/${willId}`, {
         headers: {
-          Authorization: `Bearer ${publicAnonKey}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
