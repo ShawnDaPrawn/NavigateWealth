@@ -200,6 +200,10 @@ async function writeDebugScreenshot(page, item, name) {
 }
 
 const liveViewIntervalMs = Math.max(3000, Number(process.env.NW_PORTAL_LIVE_VIEW_INTERVAL_MS || 6000));
+const cloudflareResolutionTimeoutMs = Math.max(
+  15000,
+  Number(process.env.NW_PORTAL_CLOUDFLARE_TIMEOUT_MS || (headed ? 300000 : 15000)),
+);
 let liveViewUploadPromise = null;
 let lastLiveViewUploadAt = 0;
 
@@ -468,7 +472,7 @@ function textContainsConfiguredLabel(text, labels) {
   return labels.some((label) => label && new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(text));
 }
 
-async function writeOtpDiagnostics(page, name, payload = {}) {
+async function writePageDiagnostics(page, name, payload = {}) {
   const snapshot = await capturePolicyConfirmationSnapshot(page).catch(() => ({
     currentUrl: page.url(),
     title: '',
@@ -484,6 +488,10 @@ async function writeOtpDiagnostics(page, name, payload = {}) {
     createdAt: new Date().toISOString(),
   });
   await writeDebugScreenshot(page, null, name);
+}
+
+async function writeOtpDiagnostics(page, name, payload = {}) {
+  await writePageDiagnostics(page, name, payload);
 }
 
 async function getControlLabel(locator) {
@@ -785,6 +793,132 @@ async function isLoginFormVisible(page, flow) {
   return (
     await username.isVisible({ timeout: 500 }).catch(() => false)
     && await password.isVisible({ timeout: 500 }).catch(() => false)
+  );
+}
+
+function looksLikeCloudflareChallenge(text) {
+  return /cloudflare|verify\s+you\s+are\s+human|performing\s+security\s+verification|security\s+service\s+to\s+protect\s+against\s+malicious\s+bots|not\s+a\s+bot|ray\s+id/i.test(text || '');
+}
+
+async function detectCloudflareChallenge(page) {
+  const snapshot = await capturePolicyConfirmationSnapshot(page).catch(() => ({
+    currentUrl: page.url(),
+    title: '',
+    text: '',
+    sample: '',
+  }));
+  const text = [
+    snapshot.currentUrl,
+    snapshot.title,
+    snapshot.text,
+    snapshot.sample,
+  ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+  if (!looksLikeCloudflareChallenge(text)) return '';
+  return sampleText(snapshot.sample || snapshot.text || text, 260);
+}
+
+async function waitForLoginReady(page, flow, timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastCloudflareSample = '';
+  while (Date.now() < deadline) {
+    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+
+    if (await isLoginFormVisible(page, flow)) {
+      return { status: 'ready', checkpoint: '' };
+    }
+
+    const cloudflareCheckpoint = await detectCloudflareChallenge(page);
+    if (cloudflareCheckpoint) {
+      return { status: 'cloudflare', checkpoint: cloudflareCheckpoint };
+    }
+
+    await page.waitForTimeout(1000);
+  }
+
+  lastCloudflareSample = await detectCloudflareChallenge(page);
+  return {
+    status: lastCloudflareSample ? 'cloudflare' : 'timeout',
+    checkpoint: lastCloudflareSample,
+  };
+}
+
+async function resolveCloudflareChallenge(page, flow, initialCheckpoint = '') {
+  const checkpoint = initialCheckpoint || await detectCloudflareChallenge(page);
+  if (!checkpoint) return;
+
+  const message = headed
+    ? 'Cloudflare human verification is blocking the provider login. Complete it in the visible browser to continue.'
+    : 'Cloudflare human verification is blocking the provider login. The hosted headless worker cannot complete this step automatically.';
+  const warning = 'Cloudflare human verification detected before provider login.';
+
+  await updateJob('running', {
+    currentStep: 'manual_cloudflare_verification',
+    message,
+    warning,
+  });
+  await publishLiveView(page, {
+    force: true,
+    note: message,
+  }).catch(() => undefined);
+
+  if (!headed) {
+    await writePageDiagnostics(page, 'cloudflare-human-verification-required', {
+      checkpoint,
+      headed,
+    });
+    throw new Error(
+      'Cloudflare human verification blocked the provider login. '
+      + 'The hosted headless worker cannot complete this step automatically. '
+      + 'Run the job locally in watch mode so a person can complete the verification, '
+      + 'or ask Capital Legacy to allowlist the worker path or provide an automation-safe access route. '
+      + `Visible page sample: ${checkpoint}`,
+    );
+  }
+
+  const deadline = Date.now() + cloudflareResolutionTimeoutMs;
+  let latestCheckpoint = checkpoint;
+  while (Date.now() < deadline) {
+    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+
+    if (await isLoginFormVisible(page, flow)) {
+      await updateJob('running', {
+        currentStep: 'opening_login',
+        message: 'Cloudflare verification completed. Resuming provider login.',
+      });
+      await publishLiveView(page, {
+        force: true,
+        note: 'Cloudflare verification completed. Provider login form is visible again.',
+      }).catch(() => undefined);
+      return;
+    }
+
+    latestCheckpoint = await detectCloudflareChallenge(page);
+    if (!latestCheckpoint) {
+      const readiness = await waitForLoginReady(page, flow, 15000);
+      if (readiness.status === 'ready') {
+        await updateJob('running', {
+          currentStep: 'opening_login',
+          message: 'Cloudflare verification completed. Resuming provider login.',
+        });
+        return;
+      }
+      latestCheckpoint = readiness.checkpoint || '';
+    }
+
+    await page.waitForTimeout(1000);
+  }
+
+  await writePageDiagnostics(page, 'cloudflare-human-verification-timeout', {
+    checkpoint: latestCheckpoint || checkpoint,
+    headed,
+    timeoutMs: cloudflareResolutionTimeoutMs,
+  });
+  throw new Error(
+    'Timed out waiting for manual Cloudflare verification before provider login could continue. '
+    + 'Complete the verification in the visible browser and rerun the job if needed. '
+    + `Visible page sample: ${latestCheckpoint || checkpoint || 'none'}`,
   );
 }
 
@@ -3290,8 +3424,19 @@ async function submitProviderCredentials(page, flow, username, password, options
   const message = options.message || 'Submitting provider credentials.';
   const note = options.note || 'Provider credentials submitted.';
   await updateJob('running', { currentStep: 'submitting_credentials', message });
-  await (await visibleLocator(page, flow.login.usernameSelector)).fill(username);
-  await (await visibleLocator(page, flow.login.passwordSelector)).fill(password);
+
+  const loginReady = await waitForLoginReady(page, flow, 30000);
+  if (loginReady.status === 'cloudflare') {
+    await resolveCloudflareChallenge(page, flow, loginReady.checkpoint);
+  } else if (loginReady.status === 'timeout') {
+    throw new Error(
+      'Provider login form did not become visible before credentials could be submitted. '
+      + `Current URL: ${page.url()}`,
+    );
+  }
+
+  await (await visibleLocator(page, flow.login.usernameSelector, 10000)).fill(username);
+  await (await visibleLocator(page, flow.login.passwordSelector, 10000)).fill(password);
   await (await visibleLocator(page, flow.login.submitSelector)).click();
   await publishLiveView(page, { force: true, note });
 }
