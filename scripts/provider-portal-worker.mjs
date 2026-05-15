@@ -423,6 +423,11 @@ function looksLikeOtpSentConfirmation(text) {
   return /otp\s+(has\s+been\s+)?sent|code\s+(has\s+been\s+)?sent|sms\s+(has\s+been\s+)?sent|sent\s+(to|via)\s+(your\s+)?(mobile|cell|phone|sms)|message\s+(has\s+been\s+)?sent/i.test(text || '');
 }
 
+function looksLikeBrightRockOtpInfoModal(text) {
+  return /information[\s\S]*an\s+sms\s+will\s+be\s+sent\s+containing\s+your\s+otp/i.test(text || '')
+    || /if\s+you\s+have\s+a\s+registered\s+account\s+with\s+a\s+contact\s+number\s+linked\s+to\s+it,\s+an\s+sms\s+will\s+be\s+sent\s+containing\s+your\s+otp/i.test(text || '');
+}
+
 function looksLikeOtpEntryPrompt(text) {
   return /enter\s+(the\s+)?(otp|code|pin|passcode)|verification\s+(otp|code|pin|passcode)/i.test(text || '');
 }
@@ -520,6 +525,31 @@ async function clickVisibleOtpSendAction(page, flow) {
   return false;
 }
 
+async function dismissBrightRockOtpInfoModal(page) {
+  const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
+  if (!looksLikeBrightRockOtpInfoModal(bodyText)) return false;
+
+  const okCandidates = [
+    page.getByRole('button', { name: /^ok$/i }).first(),
+    page.locator('button, input[type="button"], input[type="submit"], [role="button"]')
+      .filter({ hasText: /^\s*ok\s*$/i })
+      .first(),
+    page.locator('input[type="button"][value="OK" i], input[type="submit"][value="OK" i]').first(),
+  ];
+
+  for (const candidate of okCandidates) {
+    if (!(await candidate.isVisible({ timeout: 500 }).catch(() => false))) continue;
+    if (!(await candidate.isEnabled({ timeout: 500 }).catch(() => true))) continue;
+    await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 1200 });
+    await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForTimeout(1000);
+    return true;
+  }
+
+  return false;
+}
+
 async function findOtpEntryTarget(page, flow, preferredSelector, timeoutMs = 60000) {
   const selectors = preferredSelector ? [preferredSelector, ...getOtpSelectors(flow)] : getOtpSelectors(flow);
   const deadline = Date.now() + timeoutMs;
@@ -588,6 +618,14 @@ async function waitForBrightRockOtpDeliveryProgress(page, flow, timeoutMs = 2000
   const deadline = Date.now() + timeoutMs;
   let latest = null;
   while (Date.now() < deadline) {
+    const dismissedInfoModal = await dismissBrightRockOtpInfoModal(page);
+    if (dismissedInfoModal) {
+      await publishLiveView(page, {
+        force: true,
+        note: 'BrightRock confirmed SMS delivery in an information popup. Waiting for the OTP entry screen.',
+      }).catch(() => undefined);
+    }
+
     const pendingSendAction = await hasVisibleOtpSendAction(page, flow);
     const target = await findOtpEntryTarget(page, flow, undefined, 1000);
     const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
@@ -596,11 +634,13 @@ async function waitForBrightRockOtpDeliveryProgress(page, flow, timeoutMs = 2000
       hasOtpInput: Boolean(target),
       hasDeliveryChoice: looksLikeOtpDeliveryChoice(bodyText),
       hasSentConfirmation: looksLikeOtpSentConfirmation(bodyText),
+      hasInfoModal: looksLikeBrightRockOtpInfoModal(bodyText),
       hasEntryPrompt: looksLikeOtpEntryPrompt(bodyText),
       sample: sampleText(bodyText),
     };
 
-    if (latest.hasSentConfirmation && !pendingSendAction) return true;
+    if ((latest.hasOtpInput || latest.hasEntryPrompt) && !pendingSendAction) return true;
+    if ((latest.hasSentConfirmation || dismissedInfoModal) && !pendingSendAction) return true;
 
     await page.waitForTimeout(1000);
   }

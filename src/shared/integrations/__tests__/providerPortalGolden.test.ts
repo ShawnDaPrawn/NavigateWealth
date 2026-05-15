@@ -135,6 +135,8 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('async function waitForBrightRockOtpDeliveryProgress');
     expect(workerSource).toContain('async function hasVisibleOtpSendAction');
     expect(workerSource).toContain('function looksLikePendingOtpSendAction');
+    expect(workerSource).toContain('function looksLikeBrightRockOtpInfoModal');
+    expect(workerSource).toContain('async function dismissBrightRockOtpInfoModal');
     expect(workerSource).toContain('function getOtpSendActionCandidates');
     expect(workerSource).toContain('/^(go|continue|next|submit)$/i');
     expect(workerSource).toContain('async function clickVisibleOtpSendAction');
@@ -146,6 +148,7 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('brightrock-otp-send-action-missing');
     expect(workerSource).toContain('/\\bresend\\b/i.test(value)');
     expect(workerSource).toContain('send\\s+(otp|code|pin|passcode)');
+    expect(workerSource).toContain('an\\s+sms\\s+will\\s+be\\s+sent\\s+containing\\s+your\\s+otp');
     expect(workerSource).toContain('async function selectBrightRockSmsOtpOption');
     expect(workerSource).toContain('forceSmsSelectionInDom');
     expect(workerSource).toContain('could not positively select SMS');
