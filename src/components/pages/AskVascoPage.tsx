@@ -884,7 +884,7 @@ export function AskVascoPage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mx-auto">
                   {SUGGESTED_STARTERS.map((starter, index) => (
                     <button
                       key={index}
