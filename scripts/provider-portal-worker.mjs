@@ -2125,6 +2125,30 @@ async function uploadPolicyDocumentArtifact(item, artifact, downloaded) {
   return apiUpload(workerJobPath(`/items/${item.id}/policy-document`), formData);
 }
 
+async function uploadEstateDocumentArtifact(item, artifact, downloaded) {
+  if (!workerSecret) {
+    throw new Error('Estate document attachment requires NW_PORTAL_WORKER_SECRET live worker mode.');
+  }
+
+  const buffer = await readFile(downloaded.filePath);
+  const signature = buffer.subarray(0, 5).toString('utf8');
+  if (!signature.startsWith('%PDF-')) {
+    throw new Error(`Downloaded ${artifact.label} is not a valid PDF.`);
+  }
+
+  const formData = new FormData();
+  formData.append('file', new Blob([buffer], { type: 'application/pdf' }), downloaded.fileName);
+  formData.append('fileName', downloaded.fileName);
+  formData.append('documentType', artifact.documentType || 'other');
+  formData.append('artifactId', artifact.id || 'estate_document');
+  formData.append('artifactLabel', artifact.label || 'Estate document');
+  formData.append('title', artifact.documentType === 'last_will_scanned'
+    ? `Last Will & Testament - ${item.clientName}`
+    : `${artifact.label || 'Estate document'} - ${item.clientName}`);
+
+  return apiUpload(workerJobPath(`/items/${item.id}/estate-document`), formData);
+}
+
 async function processDocumentArtifacts(page, flow, item, jobMode, providerAdapter) {
   const artifacts = buildDocumentArtifacts(flow);
   const statuses = artifacts.length > 0
@@ -2158,7 +2182,9 @@ async function processDocumentArtifacts(page, flow, item, jobMode, providerAdapt
         continue;
       }
 
-      const upload = await uploadPolicyDocumentArtifact(item, artifact, downloaded);
+      const upload = artifact.attachTo === 'estate_documents'
+        ? await uploadEstateDocumentArtifact(item, artifact, downloaded)
+        : await uploadPolicyDocumentArtifact(item, artifact, downloaded);
       const document = upload.document || null;
       statuses.splice(0, statuses.length, ...mergeArtifactStatus(statuses, artifactStatus(artifact, 'attached', {
         fileName: document?.fileName || downloaded.fileName,

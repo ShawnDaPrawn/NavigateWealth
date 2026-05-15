@@ -33,6 +33,11 @@ export function getDefaultPortalFlow(
     || providerName.toLowerCase().includes('bright rock')
     || providerId.toLowerCase().includes('brightrock')
     || providerId.toLowerCase().includes('bright-rock');
+  const isCapitalLegacy = providerName.toLowerCase().includes('capital legacy')
+    || providerName.toLowerCase().includes('legacylink')
+    || providerId.toLowerCase().includes('capital-legacy')
+    || providerId.toLowerCase().includes('capital_legacy')
+    || providerId.toLowerCase().includes('legacylink');
   const categoryLabel = CATEGORY_LABELS[options.categoryId || ''] || 'portal';
   const categorySuffix = options.categoryId ? `${providerId}:${options.categoryId}:default` : `${providerId}:default`;
   const now = new Date().toISOString();
@@ -236,6 +241,136 @@ export function getDefaultPortalFlow(
         'Extract Severe Illness from Additional Expenses / Additional expense needs using the lump-sum amount.',
         'Extract temporary ICB / Income Protection from That you can recover from using the monthly amount.',
         'BrightRock does not currently offer a direct cover-summary PDF download in this flow; leave document download disabled.',
+      ],
+      needsDiscovery: true,
+      updatedAt: now,
+    };
+  }
+
+  if (isCapitalLegacy) {
+    return {
+      id: categorySuffix,
+      providerId,
+      name: options.categoryId
+        ? `Capital Legacy ${categoryLabel} portal extraction`
+        : 'Capital Legacy portal policy extraction',
+      loginUrl: 'https://legacylink.co.za/login',
+      credentialProfiles: [
+        {
+          id: 'capital-legacy-env',
+          label: 'Capital Legacy Supabase credentials',
+          source: 'supabase_kv',
+          usernameEnvVar: 'NW_PROVIDER_CAPITAL_LEGACY_USERNAME',
+          passwordEnvVar: 'NW_PROVIDER_CAPITAL_LEGACY_PASSWORD',
+        },
+      ],
+      login: {
+        usernameSelector: 'input[name="email"], input[type="email"], input[autocomplete="username"], input[name*="user" i]',
+        passwordSelector: 'input[name="password"], input[type="password"], input[autocomplete="current-password"]',
+        submitSelector: 'button[type="submit"], button:has-text("LOGIN"), button:has-text("Login"), input[type="submit"]',
+      },
+      otp: {
+        mode: 'manual_sms',
+        detectionSelectors: [
+          'input[autocomplete="one-time-code"]',
+          'input[name*="otp" i]',
+          'input[name*="code" i]',
+          'text=/verification code/i',
+          'text=/one-time password/i',
+        ],
+        inputSelector: 'input[autocomplete="one-time-code"], input[name*="otp" i], input[name*="code" i]',
+        submitSelector: 'button[type="submit"], button:has-text("Verify"), button:has-text("Continue"), button:has-text("Submit")',
+        timeoutMs: 600000,
+        instructions: 'Capital Legacy OTP or verification prompts should be completed in Navigate Wealth if they appear.',
+      },
+      navigation: {
+        postLoginUrl: 'https://legacylink.co.za/intermediary/clients?page=1&items=10',
+        policyListSteps: [],
+        clientListSelector: 'table tbody tr',
+        clientRowSelector: 'table tbody tr',
+      },
+      search: {
+        mode: 'policy_number',
+        searchPageUrl: 'https://legacylink.co.za/intermediary/clients?page=1&items=10',
+        searchInputLabels: ['Search', 'Policy Number', 'Clients'],
+        searchInputSelector: 'input[type="search"], input[placeholder*="Search" i], input[name*="search" i], input[id*="search" i]',
+        submitSelector: 'button:has-text("Search"), button[type="submit"], input[type="submit"]',
+        resultContainerSelector: 'table tbody tr',
+        resultLinkSelector: 'a, button, [role="link"], [role="button"], td',
+        noResultsText: ['No results', 'No clients found', 'No policies found'],
+        instructions: 'Search the LegacyLink clients table by Navigate Wealth policy number, then open the matching client policy.',
+        brain: {
+          enabled: true,
+          goal: options.defaultPortalBrainGoal(providerName),
+          maxDecisionsPerItem: 2,
+          rememberSelectors: true,
+        },
+      },
+      extraction: {
+        policyRowSelector: 'body',
+        fields: [
+          { sourceHeader: 'Policy Number', columnName: 'Policy Number', targetFieldName: 'Policy Number', labels: ['Code', 'Policy Number'], attribute: 'text', required: true, transform: 'trim' },
+          { sourceHeader: 'Date of Inception', columnName: 'Date of Inception', targetFieldName: 'Date of Inception', labels: ['Commencement date', 'Date of Inception'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Last Will & Testament', columnName: 'Last Will & Testament', targetFieldName: 'Last Will & Testament', labels: ['Signed Copy of Will', 'Signed Original of Will', 'Last Will & Testament'], attribute: 'text', transform: 'trim' },
+          { sourceHeader: 'Premium', columnName: 'Premium', targetFieldName: 'Premium', labels: ['Premium', 'Plan Premium'], attribute: 'text', transform: 'trim' },
+        ],
+      },
+      policySchedule: {
+        enabled: false,
+        downloadLabels: ['View Current Plan Schedule', 'Current Plan Schedule'],
+        documentType: 'policy_schedule',
+        required: false,
+        waitForDownloadMs: 45000,
+      },
+      documentArtifacts: [
+        {
+          id: 'policy_schedule',
+          label: 'Policy schedule',
+          enabled: true,
+          required: false,
+          attachTo: 'matched_policy',
+          documentType: 'policy_schedule',
+          fileType: 'pdf',
+          steps: [
+            {
+              action: 'click',
+              target: 'download_button',
+              labels: ['View Current Plan Schedule', 'Current Plan Schedule'],
+              timeoutMs: 10000,
+            },
+            {
+              action: 'wait_for_download',
+              timeoutMs: 45000,
+            },
+          ],
+        },
+        {
+          id: 'last_signed_will',
+          label: 'Last signed will',
+          enabled: true,
+          required: false,
+          attachTo: 'estate_documents',
+          documentType: 'last_will_scanned',
+          fileType: 'pdf',
+          steps: [
+            {
+              action: 'click',
+              target: 'download_button',
+              labels: ['View Last Signed Will', 'Last Signed Will'],
+              timeoutMs: 10000,
+            },
+            {
+              action: 'wait_for_download',
+              timeoutMs: 45000,
+            },
+          ],
+        },
+      ],
+      notes: [
+        'Capital Legacy extraction starts from the LegacyLink clients table and searches by policy number.',
+        'Policy info values come from Code, Premium, Plan, and Commencement date on the policy screen.',
+        'The worker downloads View Current Plan Schedule as the matched policy document.',
+        'The worker downloads View Last Signed Will separately and uploads it into Estate Documents as Last Will & Testament (Scanned).',
       ],
       needsDiscovery: true,
       updatedAt: now,

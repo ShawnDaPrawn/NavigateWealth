@@ -299,8 +299,8 @@ interface PortalDocumentArtifactConfig {
   label: string;
   enabled?: boolean;
   required?: boolean;
-  attachTo?: 'matched_policy';
-  documentType?: 'policy_schedule' | 'amendment' | 'statement' | 'benefit_summary' | 'other';
+  attachTo?: 'matched_policy' | 'estate_documents';
+  documentType?: 'policy_schedule' | 'amendment' | 'statement' | 'benefit_summary' | 'last_will_scanned' | 'living_will_scanned' | 'trust_deed' | 'power_of_attorney' | 'codicil' | 'letter_of_executorship' | 'other';
   fileType?: 'pdf';
   steps: PortalDocumentArtifactStep[];
 }
@@ -1528,19 +1528,30 @@ function normaliseDocumentArtifactSteps(value: unknown, fallback: PortalDocument
   });
 }
 
+const PORTAL_POLICY_DOCUMENT_TYPES = ['policy_schedule', 'amendment', 'statement', 'benefit_summary', 'other'] as const;
+const PORTAL_ESTATE_DOCUMENT_TYPES = ['last_will_scanned', 'living_will_scanned', 'trust_deed', 'power_of_attorney', 'codicil', 'letter_of_executorship', 'other'] as const;
+
 function normaliseDocumentArtifactConfigs(value: unknown, fallback: PortalDocumentArtifactConfig[] = []): PortalDocumentArtifactConfig[] {
-  if (!Array.isArray(value)) return fallback;
+  if (!Array.isArray(value) || value.length === 0) return fallback;
   return value.slice(0, 20).map((artifact, index) => {
     const entry = (artifact || {}) as Record<string, unknown>;
-    const documentType = ['policy_schedule', 'amendment', 'statement', 'benefit_summary', 'other'].includes(String(entry.documentType))
+    const attachTo = String(entry.attachTo || '') === 'estate_documents'
+      ? 'estate_documents'
+      : 'matched_policy';
+    const allowedDocumentTypes = attachTo === 'estate_documents'
+      ? PORTAL_ESTATE_DOCUMENT_TYPES
+      : PORTAL_POLICY_DOCUMENT_TYPES;
+    const documentType = allowedDocumentTypes.includes(String(entry.documentType) as typeof allowedDocumentTypes[number])
       ? entry.documentType as PortalDocumentArtifactConfig['documentType']
-      : 'policy_schedule';
+      : attachTo === 'estate_documents'
+        ? 'other'
+        : 'policy_schedule';
     return {
       id: String(entry.id || `document_${index + 1}`).trim().replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || `document_${index + 1}`,
       label: String(entry.label || entry.id || `Document ${index + 1}`).trim().slice(0, 120) || `Document ${index + 1}`,
       enabled: entry.enabled !== false,
       required: entry.required === true,
-      attachTo: 'matched_policy',
+      attachTo,
       documentType,
       fileType: 'pdf',
       steps: normaliseDocumentArtifactSteps(entry.steps, []),
@@ -3851,6 +3862,101 @@ app.post("/portal-worker/jobs/:jobId/items/:itemId/policy-document", async (c) =
   }
 });
 
+// POST /portal-worker/jobs/:jobId/items/:itemId/estate-document
+app.post("/portal-worker/jobs/:jobId/items/:itemId/estate-document", async (c) => {
+  const authError = requirePortalWorker(c);
+  if (authError) return authError;
+
+  try {
+    const jobId = c.req.param("jobId");
+    const itemId = c.req.param("itemId");
+    const workerId = c.req.header("X-Portal-Worker-Id") || "portal-worker";
+    const job = (await kv.get(`portal-job:${jobId}`)) as PortalSyncJob | null;
+    if (!job) {
+      return c.json({ error: "Portal job not found" }, 404);
+    }
+
+    const items = await loadPortalJobItems(jobId);
+    const itemIndex = items.findIndex((item) => item.id === itemId);
+    if (itemIndex === -1) {
+      return c.json({ error: "Portal job policy item not found" }, 404);
+    }
+
+    const item = items[itemIndex];
+    if (item.jobId !== jobId || item.providerId !== job.providerId) {
+      return c.json({ error: "Policy item does not belong to this job" }, 400);
+    }
+
+    let formData: Record<string, string | File>;
+    try {
+      formData = await c.req.parseBody();
+    } catch (parseErr) {
+      log.error("Failed to parse portal estate document form data:", parseErr);
+      return c.json({ error: "Invalid form data. Expected multipart/form-data with a PDF file." }, 400);
+    }
+
+    const file = formData.file;
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: "No file provided" }, 400);
+    }
+
+    const requestedType = String(formData.documentType || "other");
+    const documentType = PORTAL_ESTATE_DOCUMENT_TYPES.includes(requestedType as typeof PORTAL_ESTATE_DOCUMENT_TYPES[number])
+      ? requestedType as 'last_will_scanned' | 'living_will_scanned' | 'trust_deed' | 'power_of_attorney' | 'codicil' | 'letter_of_executorship' | 'other'
+      : 'other';
+    const artifactId = String(formData.artifactId || 'estate_document').trim().replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'estate_document';
+    const artifactLabel = String(formData.artifactLabel || 'Estate document').trim().slice(0, 120) || 'Estate document';
+    const title = String(formData.title || artifactLabel || file.name).trim().slice(0, 200) || artifactLabel;
+    const notes = typeof formData.notes === 'string' ? formData.notes.slice(0, 1000) : '';
+    const signingDate = typeof formData.signingDate === 'string' ? formData.signingDate.slice(0, 40) : '';
+
+    const document = await uploadEstateDocumentForClient({
+      clientId: item.clientId,
+      file,
+      documentType,
+      uploadedBy: `portal-worker:${workerId.slice(0, 80)}`,
+      fileName: typeof formData.fileName === 'string' ? formData.fileName.slice(0, 240) : file.name,
+      title,
+      notes,
+      signingDate,
+    });
+
+    const now = new Date().toISOString();
+    items[itemIndex] = {
+      ...item,
+      documentAttached: true,
+      documentFileName: document.fileName,
+      documentUpdatedAt: document.uploadedAt,
+      artifactStatuses: normaliseDocumentArtifactStatuses([
+        ...(item.artifactStatuses || []).filter((status) => status.id !== artifactId),
+        {
+          id: artifactId,
+          label: artifactLabel,
+          status: 'attached',
+          fileName: document.fileName,
+          documentId: document.id,
+          updatedAt: document.uploadedAt,
+        },
+      ]),
+      message: `${artifactLabel} uploaded to estate documents.`,
+      updatedAt: now,
+    };
+    const updatedJob = await persistPortalJobItems(job, items, {
+      status: 'extracting',
+      currentStep: 'estate_document_attached',
+      currentItemId: item.id,
+      currentClientName: item.clientName,
+      currentPolicyNumber: item.policyNumber,
+      message: `${artifactLabel} attached for ${item.clientName} / ${item.policyNumber}.`,
+    });
+
+    return c.json({ success: true, document, item: items[itemIndex], job: updatedJob });
+  } catch (e) {
+    log.error("Portal worker estate document upload error:", e);
+    return c.json({ error: `Failed to attach estate document: ${getErrMsg(e)}` }, 500);
+  }
+});
+
 // POST /portal-worker/jobs/:jobId/status
 app.post("/portal-worker/jobs/:jobId/status", async (c) => {
   const authError = requirePortalWorker(c);
@@ -4939,10 +5045,54 @@ app.get("/policy-renewals", requireAuth, async (c) => {
 // POLICY DOCUMENT ENDPOINTS
 // ============================================================================
 
+const LEGAL_DOCS_BUCKET = 'make-91ed8379-legal-docs';
 const POLICY_DOC_BUCKET = 'make-91ed8379-policy-documents';
 
 // Lazy bucket initialization — called on first document request, not at module load time.
+let legalDocBucketInitialized = false;
 let policyDocBucketInitialized = false;
+
+async function ensureLegalDocsBucket(): Promise<void> {
+  if (legalDocBucketInitialized) return;
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === LEGAL_DOCS_BUCKET);
+
+    if (!bucketExists) {
+      log.info(`Creating legal document storage bucket: ${LEGAL_DOCS_BUCKET}`);
+      const { error } = await supabase.storage.createBucket(LEGAL_DOCS_BUCKET, {
+        public: false,
+        fileSizeLimit: 52428800,
+        allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png'],
+      });
+
+      if (error) {
+        if (error.message?.includes('already exists')) {
+          log.info('Legal document bucket already exists');
+        } else {
+          log.error('Error creating legal document bucket:', error);
+          return;
+        }
+      } else {
+        log.info('Legal document bucket created successfully');
+      }
+    } else {
+      log.info('Legal document bucket already exists');
+    }
+    legalDocBucketInitialized = true;
+  } catch (error) {
+    const errorMessage = getErrMsg(error);
+    if (errorMessage.includes('already exists')) {
+      legalDocBucketInitialized = true;
+    } else {
+      log.error('Error initializing legal document bucket (non-critical):', { error });
+    }
+  }
+}
 
 async function ensurePolicyDocBucket(): Promise<void> {
   if (policyDocBucketInitialized) return;
@@ -5005,6 +5155,69 @@ const POLICY_CATEGORY_LABELS: Record<string, string> = {
 function safeStorageFileName(fileName: string, fallback = 'policy_schedule.pdf'): string {
   const cleaned = fileName.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/^_+|_+$/g, '');
   return cleaned || fallback;
+}
+
+async function uploadEstateDocumentForClient(params: {
+  clientId: string;
+  file: File;
+  documentType: 'last_will_scanned' | 'living_will_scanned' | 'trust_deed' | 'power_of_attorney' | 'codicil' | 'letter_of_executorship' | 'other';
+  uploadedBy: string;
+  fileName?: string;
+  title?: string;
+  notes?: string;
+  signingDate?: string;
+}) {
+  await ensureLegalDocsBucket();
+
+  const { clientId, file, documentType, uploadedBy } = params;
+  const allowedTypes = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+  if (file.type && !allowedTypes.has(file.type)) {
+    throw new Error('Only PDF, JPEG, and PNG files are accepted');
+  }
+  if (file.size > 52428800) {
+    throw new Error('File exceeds maximum size of 50MB');
+  }
+
+  const fileExtension = (params.fileName || file.name || 'document.pdf').split('.').pop() || 'pdf';
+  const docId = `edoc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const storagePath = `estate-docs/${clientId}/${docId}.${fileExtension}`;
+  const fileBuffer = await file.arrayBuffer();
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
+
+  const { error: uploadError } = await supabase.storage
+    .from(LEGAL_DOCS_BUCKET)
+    .upload(storagePath, fileBuffer, {
+      contentType: file.type || 'application/pdf',
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(`Upload failed: ${uploadError.message}`);
+  }
+
+  const timestamp = new Date().toISOString();
+  const document = {
+    id: docId,
+    clientId,
+    title: String(params.title || params.fileName || file.name || 'Estate document').trim().slice(0, 200) || 'Estate document',
+    documentType,
+    notes: String(params.notes || '').slice(0, 1000),
+    signingDate: typeof params.signingDate === 'string' && params.signingDate.trim() ? params.signingDate.trim().slice(0, 40) : null,
+    fileName: params.fileName || file.name,
+    fileSize: file.size,
+    filePath: storagePath,
+    mimeType: file.type || 'application/pdf',
+    uploadedBy,
+    uploadedAt: timestamp,
+    updatedAt: timestamp,
+  };
+
+  await kv.set(`estate_doc:${clientId}:${docId}`, document);
+  return document;
 }
 
 async function replacePolicyDocumentForPolicy(params: {

@@ -363,8 +363,8 @@ export interface PortalDocumentArtifactConfig {
   label: string;
   enabled?: boolean;
   required?: boolean;
-  attachTo?: 'matched_policy';
-  documentType?: 'policy_schedule' | 'amendment' | 'statement' | 'benefit_summary' | 'other';
+  attachTo?: 'matched_policy' | 'estate_documents';
+  documentType?: 'policy_schedule' | 'amendment' | 'statement' | 'benefit_summary' | 'last_will_scanned' | 'living_will_scanned' | 'trust_deed' | 'power_of_attorney' | 'codicil' | 'letter_of_executorship' | 'other';
   fileType?: 'pdf';
   steps: PortalDocumentArtifactStep[];
 }

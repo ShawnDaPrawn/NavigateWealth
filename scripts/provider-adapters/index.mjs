@@ -1,9 +1,11 @@
 import { allanGrayAdapter } from './allan-gray.mjs';
 import { brightRockAdapter } from './brightrock.mjs';
+import { capitalLegacyAdapter } from './capital-legacy.mjs';
 
 const providerAdapters = [
   allanGrayAdapter,
   brightRockAdapter,
+  capitalLegacyAdapter,
 ];
 
 export function getProviderAdapter(context = {}) {

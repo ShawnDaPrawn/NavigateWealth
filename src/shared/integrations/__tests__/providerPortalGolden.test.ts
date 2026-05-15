@@ -12,6 +12,7 @@ describe('provider portal golden flows', () => {
   const adapterRegistrySource = readRepoFile('scripts/provider-adapters/index.mjs');
   const allanGrayAdapterSource = readRepoFile('scripts/provider-adapters/allan-gray.mjs');
   const brightRockAdapterSource = readRepoFile('scripts/provider-adapters/brightrock.mjs');
+  const capitalLegacyAdapterSource = readRepoFile('scripts/provider-adapters/capital-legacy.mjs');
   const integrationsSource = readRepoFile('src/supabase/functions/server/integrations.tsx');
   const portalDefaultFlowsSource = readRepoFile('src/supabase/functions/server/portal-default-flows.ts');
   const productManagementApiSource = readRepoFile('src/components/admin/modules/product-management/api.ts');
@@ -80,11 +81,40 @@ describe('provider portal golden flows', () => {
     expect(brightRockAdapterSource).toContain('return result;');
   });
 
+  it('provides a Capital Legacy estate portal flow with policy schedule and signed will downloads', () => {
+    expect(portalDefaultFlowsSource).toContain('Capital Legacy portal policy extraction');
+    expect(portalDefaultFlowsSource).toContain("loginUrl: 'https://legacylink.co.za/login'");
+    expect(portalDefaultFlowsSource).toContain("id: 'capital-legacy-env'");
+    expect(portalDefaultFlowsSource).toContain("usernameEnvVar: 'NW_PROVIDER_CAPITAL_LEGACY_USERNAME'");
+    expect(portalDefaultFlowsSource).toContain("passwordEnvVar: 'NW_PROVIDER_CAPITAL_LEGACY_PASSWORD'");
+    expect(portalDefaultFlowsSource).toContain("searchPageUrl: 'https://legacylink.co.za/intermediary/clients?page=1&items=10'");
+    expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Last Will & Testament'");
+    expect(portalDefaultFlowsSource).toContain("attachTo: 'estate_documents'");
+    expect(portalDefaultFlowsSource).toContain("documentType: 'last_will_scanned'");
+    expect(portalDefaultFlowsSource).toContain('View Last Signed Will');
+    expect(portalDefaultFlowsSource).toContain('View Current Plan Schedule');
+  });
+
+  it('keeps Capital Legacy extraction and download navigation behind its provider adapter boundary', () => {
+    expect(adapterRegistrySource).toContain("import { capitalLegacyAdapter } from './capital-legacy.mjs'");
+    expect(adapterRegistrySource).toContain('capitalLegacyAdapter');
+    expect(capitalLegacyAdapterSource).toContain("id: 'capital-legacy'");
+    expect(capitalLegacyAdapterSource).toContain("defaultLoginUrl: 'https://legacylink.co.za/login'");
+    expect(capitalLegacyAdapterSource).toContain('async function extractCapitalLegacySnapshot');
+    expect(capitalLegacyAdapterSource).toContain('async function findCapitalLegacyDocumentAction');
+    expect(capitalLegacyAdapterSource).toContain('ensureCapitalLegacySection');
+    expect(capitalLegacyAdapterSource).toContain('View Last Signed Will');
+    expect(capitalLegacyAdapterSource).toContain('View Current Plan Schedule');
+    expect(capitalLegacyAdapterSource).toContain('capital_legacy_snapshot');
+  });
+
   it('keeps the shared worker routed through the provider adapter registry', () => {
     expect(workerSource).toContain("import { getProviderAdapter } from './provider-adapters/index.mjs'");
     expect(workerSource).toContain('const providerAdapter = getProviderAdapter({ job, flow });');
     expect(workerSource).toContain('providerAdapter?.extractSnapshot');
     expect(workerSource).toContain('providerAdapter?.findDocumentClickTarget');
+    expect(workerSource).toContain('async function uploadEstateDocumentArtifact');
+    expect(workerSource).toContain("artifact.attachTo === 'estate_documents'");
     expect(workerSource).toContain("NW_PLAYWRIGHT_RECORD_VIDEO");
     expect(workerSource).toContain("NW_PLAYWRIGHT_RECORD_TRACE");
     expect(workerSource).toContain("recordVideo: {");
@@ -195,6 +225,15 @@ describe('provider portal golden flows', () => {
   it('does not let blank saved login URLs mask provider defaults', () => {
     expect(integrationsSource).toContain("loginUrl: String(configured.loginUrl || '').trim() || defaultFlow.loginUrl");
     expect(integrationsSource).toContain("loginUrl: String(body?.loginUrl || '').trim() || defaultFlow.loginUrl");
+  });
+
+  it('lets portal artifacts attach to estate documents as well as matched policies', () => {
+    expect(productTypesSource).toContain("attachTo?: 'matched_policy' | 'estate_documents'");
+    expect(integrationsSource).toContain("attachTo?: 'matched_policy' | 'estate_documents'");
+    expect(integrationsSource).toContain('const PORTAL_ESTATE_DOCUMENT_TYPES =');
+    expect(integrationsSource).toContain('app.post("/portal-worker/jobs/:jobId/items/:itemId/estate-document"');
+    expect(integrationsSource).toContain('uploadEstateDocumentForClient');
+    expect(integrationsSource).toContain('LEGAL_DOCS_BUCKET');
   });
 
   it('keeps portal flow configuration isolated by provider and category', () => {
