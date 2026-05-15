@@ -5,7 +5,6 @@ import { User } from '@supabase/supabase-js@2.39.3';
 import { AuthUser, SignUpResult, SignInResult, AuthCallback } from './types';
 import { AuthError, parseAuthError } from './errorHandler';
 import { AUTH_ERRORS, AUTH_ROUTES } from './constants';
-import { createDefaultProfile } from './profileService';
 import { projectId, publicAnonKey } from '../supabase/info';
 import { 
   validateSignupData, 
@@ -507,35 +506,6 @@ export async function updatePassword(newPassword: string): Promise<void> {
 }
 
 /**
- * Sign in with Google OAuth
- */
-export async function signInWithGoogle(): Promise<void> {
-  const supabase = getSupabaseClient();
-  
-  try {
-    console.log('🔐 Starting Google OAuth sign in...');
-    
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}${AUTH_ROUTES.DASHBOARD}`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      },
-    });
-
-    if (error) {
-      console.error('❌ Google sign in error:', error);
-      throw parseAuthError(error);
-    }
-  } catch (error) {
-    throw parseAuthError(error);
-  }
-}
-
-/**
  * Listen to auth state changes
  */
 export function onAuthStateChange(callback: AuthCallback) {
@@ -546,15 +516,6 @@ export function onAuthStateChange(callback: AuthCallback) {
       console.log('🔐 Auth state changed:', event);
       
       if (session?.user) {
-        // Handle Google OAuth profile creation
-        if (event === 'SIGNED_IN' && session.user.app_metadata.provider === 'google') {
-          try {
-            await createDefaultProfile(session.user.id, session.user.email || '');
-          } catch (error) {
-            console.error('❌ Error creating profile for Google OAuth user:', error);
-          }
-        }
-        
         await callback(mapSupabaseUserToAuthUser(session.user), {
           event,
           supabaseUser: session.user,
