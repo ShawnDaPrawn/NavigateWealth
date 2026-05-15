@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
-import { Provider, SaveProviderRequest } from './types';
+import { Provider, SaveProviderRequest, getPortalAutomationCategoryOptions, getProductCategoryLabel } from './types';
 import { useProviders } from './hooks/useProviders';
 import { ProviderList } from './components/ProviderList';
 import { ProviderFormDialog } from './components/ProviderFormDialog';
@@ -27,7 +27,8 @@ export function ProviderManagementTab() {
   const filteredProviders = providers.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (p.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.supportedProducts.some((product) => product.toLowerCase().includes(searchQuery.toLowerCase()))
+    getPortalAutomationCategoryOptions(p.categoryIds)
+      .some((categoryId) => getProductCategoryLabel(categoryId).toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleOpenModal = (provider?: Provider) => {

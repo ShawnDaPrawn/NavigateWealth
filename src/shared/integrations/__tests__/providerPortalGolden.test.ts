@@ -222,12 +222,12 @@ describe('provider portal golden flows', () => {
     expect(productTypesSource).toContain('function isPortalAutomationCategory');
     expect(productTypesSource).toContain('function getPortalAutomationCategoryOptions');
     expect(providerFormSource).toContain('formData.categoryIds.filter(isPortalAutomationCategory)');
-    expect(productManagementApiSource).toContain("product-management/products?active=true");
-    expect(productManagementApiSource).toContain('supportedProducts: (productsByProvider.get(p.id) || []).sort');
     expect(productProviderListSource).toContain('<TableHead>Products</TableHead>');
-    expect(productProviderListSource).toContain('provider.supportedProducts.map');
-    expect(productProviderListSource).toContain('No exact products configured');
-    expect(productProviderListSource).not.toContain('Group only:');
+    expect(productProviderListSource).not.toContain('<TableHead>Description</TableHead>');
+    expect(productProviderListSource).toContain('getPortalAutomationCategoryOptions(provider.categoryIds)');
+    expect(productProviderListSource).toContain('No products configured');
+    expect(productProviderListSource).not.toContain('Retirement Planning');
+    expect(productProviderListSource).not.toContain('Investments');
     expect(integrationHeaderSource).toContain('getPortalAutomationCategoryOptions(provider.categoryIds)');
     expect(portalAutomationTabSource).toContain('Portal automation is only available for specific product categories');
     expect(portalAutomationTabSource).toContain('disabled={!automationCategorySelected');

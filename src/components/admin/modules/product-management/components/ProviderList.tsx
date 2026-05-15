@@ -13,6 +13,7 @@ import { Badge } from '../../../../ui/badge';
 import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
 import {
   Provider,
+  getPortalAutomationCategoryOptions,
   getProductCategoryLabel,
 } from '../types';
 
@@ -36,7 +37,6 @@ export function ProviderList({
           <TableRow>
             <TableHead className="w-[100px]">Logo</TableHead>
             <TableHead>Provider Name</TableHead>
-            <TableHead>Description</TableHead>
             <TableHead>Products</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -44,13 +44,13 @@ export function ProviderList({
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+              <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
                 Loading providers...
               </TableCell>
             </TableRow>
           ) : providers.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+              <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
                 No providers found.
               </TableCell>
             </TableRow>
@@ -71,25 +71,19 @@ export function ProviderList({
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">{provider.name}</TableCell>
-                <TableCell className="max-w-md truncate text-muted-foreground">
-                  {provider.description}
-                </TableCell>
                 <TableCell>
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap gap-1">
-                      {provider.supportedProducts.map((productName, productIndex) => (
-                        <Badge key={`${provider.id}-${productName}-${productIndex}`} variant="secondary" className="text-xs font-normal">
-                          {productName}
+                  <div className="flex flex-wrap gap-1">
+                    {[...new Set(getPortalAutomationCategoryOptions(provider.categoryIds))].map((categoryId, categoryIndex) => (
+                        <Badge
+                          key={`${provider.id}-${categoryId}-${categoryIndex}`}
+                          variant="secondary"
+                          className="text-xs font-normal"
+                        >
+                          {getProductCategoryLabel(categoryId)}
                         </Badge>
-                      ))}
-                      {provider.supportedProducts.length === 0 && (
-                        <span className="text-xs text-muted-foreground">No exact products configured</span>
-                      )}
-                    </div>
-                    {provider.categoryIds.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Categories: {provider.categoryIds.map((categoryId) => getProductCategoryLabel(categoryId)).join(', ')}
-                      </p>
+                    ))}
+                    {getPortalAutomationCategoryOptions(provider.categoryIds).length === 0 && (
+                      <span className="text-xs text-muted-foreground">No products configured</span>
                     )}
                   </div>
                 </TableCell>
