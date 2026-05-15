@@ -182,9 +182,9 @@ export function IntegrationsTab() {
   }, [portalFlow]);
 
   const { data: portalCredentialStatus } = useQuery({
-    queryKey: integrationsKeys.portalCredentialStatus(selectedProviderId, selectedPortalCredentialProfileId),
-    enabled: !!selectedProviderId && !!selectedPortalCredentialProfileId,
-    queryFn: () => productManagementApi.fetchPortalCredentialStatus(selectedProviderId!, selectedPortalCredentialProfileId)
+    queryKey: integrationsKeys.portalCredentialStatus(selectedProviderId, `${selectedCategoryId}:${selectedPortalCredentialProfileId}`),
+    enabled: !!selectedProviderId && !!selectedCategoryId && !!selectedPortalCredentialProfileId,
+    queryFn: () => productManagementApi.fetchPortalCredentialStatus(selectedProviderId!, selectedPortalCredentialProfileId, selectedCategoryId)
   });
 
   const portalJobForSelection = portalJob?.providerId === selectedProviderId && portalJob.categoryId === selectedCategoryId
@@ -550,15 +550,15 @@ export function IntegrationsTab() {
 
   const savePortalCredentialsMutation = useMutation({
     mutationFn: async (params: { profileId: string; username: string; password?: string }) => {
-        if (!selectedProviderId) throw new Error("No provider selected");
-        return productManagementApi.savePortalCredentials(selectedProviderId, params.profileId, {
+        if (!selectedProviderId || !selectedCategoryId) throw new Error("No provider or category selected");
+        return productManagementApi.savePortalCredentials(selectedProviderId, params.profileId, selectedCategoryId, {
             username: params.username,
             password: params.password,
         });
     },
     onSuccess: (_, variables) => {
         toast.success("Provider portal credentials saved in Supabase.");
-        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalCredentialStatus(selectedProviderId, variables.profileId) });
+        queryClient.invalidateQueries({ queryKey: integrationsKeys.portalCredentialStatus(selectedProviderId, `${selectedCategoryId}:${variables.profileId}`) });
         queryClient.invalidateQueries({ queryKey: integrationsKeys.portalFlow(selectedProviderId, selectedCategoryId) });
     },
     onError: (err: Error) => {

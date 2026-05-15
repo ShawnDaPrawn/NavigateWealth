@@ -257,7 +257,7 @@ export function getDefaultPortalFlow(
       loginUrl: 'https://legacylink.co.za/login',
       credentialProfiles: [
         {
-          id: 'capital-legacy-env',
+          id: 'capital_legacy-env',
           label: 'Capital Legacy Supabase credentials',
           source: 'supabase_kv',
           usernameEnvVar: 'NW_PROVIDER_CAPITAL_LEGACY_USERNAME',

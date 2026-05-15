@@ -411,13 +411,18 @@ export const productManagementApi = {
     return response.flow;
   },
 
-  fetchPortalCredentialStatus: async (providerId: string, profileId: string): Promise<PortalCredentialStatus> => {
-    const response = await api.get<{ success: boolean; status: PortalCredentialStatus }>(`integrations/portal-flows/${providerId}/credentials/${profileId}`);
+  fetchPortalCredentialStatus: async (providerId: string, profileId: string, categoryId: string): Promise<PortalCredentialStatus> => {
+    const response = await api.get<{ success: boolean; status: PortalCredentialStatus }>(
+      `integrations/portal-flows/${providerId}/credentials/${profileId}?categoryId=${encodeURIComponent(categoryId)}`
+    );
     return response.status;
   },
 
-  savePortalCredentials: async (providerId: string, profileId: string, credentials: { username: string; password?: string }): Promise<PortalCredentialStatus> => {
-    const response = await api.put<{ success: boolean; status: PortalCredentialStatus }>(`integrations/portal-flows/${providerId}/credentials/${profileId}`, credentials);
+  savePortalCredentials: async (providerId: string, profileId: string, categoryId: string, credentials: { username: string; password?: string }): Promise<PortalCredentialStatus> => {
+    const response = await api.put<{ success: boolean; status: PortalCredentialStatus }>(
+      `integrations/portal-flows/${providerId}/credentials/${profileId}?categoryId=${encodeURIComponent(categoryId)}`,
+      credentials
+    );
     return response.status;
   },
 

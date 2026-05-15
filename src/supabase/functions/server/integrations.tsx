@@ -697,10 +697,51 @@ function portalCredentialKey(providerId: string, profileId: string): string {
   return `portal-credential:${providerId}:${profileId}`;
 }
 
+const CAPITAL_LEGACY_CANONICAL_CREDENTIAL_PROFILE_ID = 'capital_legacy-env';
+const CAPITAL_LEGACY_LEGACY_CREDENTIAL_PROFILE_ID = 'capital-legacy-env';
+
+function normalisePortalCredentialProfileId(profileId: string): string {
+  return profileId === CAPITAL_LEGACY_LEGACY_CREDENTIAL_PROFILE_ID
+    ? CAPITAL_LEGACY_CANONICAL_CREDENTIAL_PROFILE_ID
+    : profileId;
+}
+
+function portalCredentialProfileAliases(profileId: string): string[] {
+  const canonical = normalisePortalCredentialProfileId(String(profileId || '').trim());
+  if (!canonical) return [];
+  if (canonical === CAPITAL_LEGACY_CANONICAL_CREDENTIAL_PROFILE_ID) {
+    return [CAPITAL_LEGACY_CANONICAL_CREDENTIAL_PROFILE_ID, CAPITAL_LEGACY_LEGACY_CREDENTIAL_PROFILE_ID];
+  }
+  return [canonical];
+}
+
+async function loadPortalCredentialRecord(providerId: string, profileId: string): Promise<PortalCredentialRecord | null> {
+  for (const alias of portalCredentialProfileAliases(profileId)) {
+    const record = (await kv.get(portalCredentialKey(providerId, alias))) as PortalCredentialRecord | null;
+    if (record?.username || record?.password) {
+      return {
+        ...record,
+        profileId: normalisePortalCredentialProfileId(String(record.profileId || alias)),
+      };
+    }
+  }
+  return null;
+}
+
+async function savePortalCredentialRecord(record: PortalCredentialRecord): Promise<void> {
+  const canonicalRecord = {
+    ...record,
+    profileId: normalisePortalCredentialProfileId(String(record.profileId || '')),
+  };
+  for (const alias of portalCredentialProfileAliases(canonicalRecord.profileId)) {
+    await kv.set(portalCredentialKey(canonicalRecord.providerId, alias), canonicalRecord);
+  }
+}
+
 function portalCredentialStatus(record: PortalCredentialRecord | null, providerId: string, profileId: string): PortalCredentialStatus {
   return {
     providerId,
-    profileId,
+    profileId: normalisePortalCredentialProfileId(profileId),
     hasUsername: !!record?.username,
     hasPassword: !!record?.password,
     updatedAt: record?.updatedAt,
@@ -1609,6 +1650,30 @@ function normaliseDocumentArtifactStatuses(value: unknown, fallback: PortalDocum
   });
 }
 
+function normalisePortalCredentialProfiles(value: unknown, fallback: PortalCredentialProfile[] = []): PortalCredentialProfile[] {
+  const source = Array.isArray(value) && value.length > 0 ? value : fallback;
+  const seen = new Set<string>();
+  return source
+    .map((profile, index) => {
+      const entry = (profile || {}) as Record<string, unknown>;
+      const id = normalisePortalCredentialProfileId(String(entry.id || `credential_${index + 1}`).trim());
+      if (!id || seen.has(id)) return null;
+      seen.add(id);
+      return {
+        id,
+        label: String(entry.label || id).trim().slice(0, 120) || id,
+        source: ['environment', 'supabase_kv', 'supabase_vault'].includes(String(entry.source))
+          ? entry.source as PortalCredentialProfile['source']
+          : 'supabase_kv',
+        usernameEnvVar: typeof entry.usernameEnvVar === 'string' ? entry.usernameEnvVar.trim().slice(0, 160) : undefined,
+        passwordEnvVar: typeof entry.passwordEnvVar === 'string' ? entry.passwordEnvVar.trim().slice(0, 160) : undefined,
+        usernameSecretName: typeof entry.usernameSecretName === 'string' ? entry.usernameSecretName.trim().slice(0, 160) : undefined,
+        passwordSecretName: typeof entry.passwordSecretName === 'string' ? entry.passwordSecretName.trim().slice(0, 160) : undefined,
+      };
+    })
+    .filter((profile): profile is PortalCredentialProfile => Boolean(profile));
+}
+
 function getDefaultPortalFlow(provider: KvProvider, providerId: string, categoryId?: string): PortalProviderFlow {
   return buildDefaultPortalFlow(provider, providerId, {
     defaultPortalBrainGoal,
@@ -1672,6 +1737,7 @@ async function getPortalFlow(provider: KvProvider, providerId: string, categoryI
     ...defaultFlow,
     ...configured,
     loginUrl: String(configured.loginUrl || '').trim() || defaultFlow.loginUrl,
+    credentialProfiles: normalisePortalCredentialProfiles(configured.credentialProfiles, defaultFlow.credentialProfiles),
     navigation: {
       ...(defaultFlow.navigation || {}),
       ...(configured.navigation || {}),
@@ -2707,7 +2773,7 @@ app.put("/portal-flows/:providerId", requireAuth, async (c) => {
       providerId,
       id: categoryId ? `${providerId}:${categoryId}:default` : body?.id || `${providerId}:default`,
       loginUrl: String(body?.loginUrl || '').trim() || defaultFlow.loginUrl,
-      credentialProfiles: Array.isArray(body?.credentialProfiles) ? body.credentialProfiles : defaultFlow.credentialProfiles,
+      credentialProfiles: normalisePortalCredentialProfiles(body?.credentialProfiles, defaultFlow.credentialProfiles),
       navigation: {
         ...(defaultFlow.navigation || {}),
         ...(body?.navigation || {}),
@@ -2800,18 +2866,19 @@ app.get("/portal-flows/:providerId/brain-memory", requireAuth, async (c) => {
 app.get("/portal-flows/:providerId/credentials/:profileId", requireAuth, async (c) => {
   try {
     const providerId = c.req.param("providerId");
-    const profileId = c.req.param("profileId");
+    const profileId = normalisePortalCredentialProfileId(c.req.param("profileId"));
+    const categoryId = String(c.req.query("categoryId") || '').trim();
     const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
     if (!provider) {
       return c.json({ error: "Invalid provider ID" }, 400);
     }
 
-    const flow = await getPortalFlow(provider, providerId);
+    const flow = await getPortalFlow(provider, providerId, categoryId || undefined);
     if (!flow.credentialProfiles.some((profile) => profile.id === profileId)) {
       return c.json({ error: "Invalid credential profile" }, 400);
     }
 
-    const record = (await kv.get(portalCredentialKey(providerId, profileId))) as PortalCredentialRecord | null;
+    const record = await loadPortalCredentialRecord(providerId, profileId);
     return c.json({ success: true, status: portalCredentialStatus(record, providerId, profileId) });
   } catch (e) {
     log.error("Portal credential status error:", e);
@@ -2823,19 +2890,20 @@ app.get("/portal-flows/:providerId/credentials/:profileId", requireAuth, async (
 app.put("/portal-flows/:providerId/credentials/:profileId", requireAuth, async (c) => {
   try {
     const providerId = c.req.param("providerId");
-    const profileId = c.req.param("profileId");
+    const profileId = normalisePortalCredentialProfileId(c.req.param("profileId"));
+    const categoryId = String(c.req.query("categoryId") || '').trim();
     const provider = (await kv.get(`provider:${providerId}`)) as KvProvider | null;
     if (!provider) {
       return c.json({ error: "Invalid provider ID" }, 400);
     }
 
-    const flow = await getPortalFlow(provider, providerId);
+    const flow = await getPortalFlow(provider, providerId, categoryId || undefined);
     if (!flow.credentialProfiles.some((profile) => profile.id === profileId)) {
       return c.json({ error: "Invalid credential profile" }, 400);
     }
 
     const body = await c.req.json();
-    const current = (await kv.get(portalCredentialKey(providerId, profileId))) as PortalCredentialRecord | null;
+    const current = await loadPortalCredentialRecord(providerId, profileId);
     const username = typeof body?.username === 'string' && body.username.trim()
       ? body.username.trim()
       : current?.username || '';
@@ -2855,7 +2923,7 @@ app.put("/portal-flows/:providerId/credentials/:profileId", requireAuth, async (
       updatedAt: new Date().toISOString(),
       updatedBy: String(c.get('userId') || 'admin'),
     };
-    await kv.set(portalCredentialKey(providerId, profileId), record);
+    await savePortalCredentialRecord(record);
 
     const profile = flow.credentialProfiles.find((item) => item.id === profileId);
     if (profile && profile.source !== 'supabase_kv') {
@@ -2866,7 +2934,7 @@ app.put("/portal-flows/:providerId/credentials/:profileId", requireAuth, async (
         ),
         updatedAt: new Date().toISOString(),
       };
-      await kv.set(portalFlowKey(providerId), updatedFlow);
+      await kv.set(portalFlowKey(providerId, categoryId || undefined), updatedFlow);
     }
 
     return c.json({ success: true, status: portalCredentialStatus(record, providerId, profileId) });
@@ -2898,11 +2966,11 @@ app.post("/portal-jobs", requireAuth, async (c) => {
     }
 
     const flow = await getPortalFlow(provider, providerId, categoryId);
-    const credentialProfileId = String(body?.credentialProfileId || flow.credentialProfiles[0]?.id || '');
+    const credentialProfileId = normalisePortalCredentialProfileId(String(body?.credentialProfileId || flow.credentialProfiles[0]?.id || ''));
     if (!credentialProfileId || !flow.credentialProfiles.some((profile) => profile.id === credentialProfileId)) {
       return c.json({ error: "Invalid credential profile" }, 400);
     }
-    const credentialRecord = (await kv.get(portalCredentialKey(providerId, credentialProfileId))) as PortalCredentialRecord | null;
+    const credentialRecord = await loadPortalCredentialRecord(providerId, credentialProfileId);
     if (!credentialRecord?.username || !credentialRecord?.password) {
       return c.json({ error: "Save the provider portal username and password before creating a portal job" }, 400);
     }
@@ -3448,7 +3516,7 @@ app.get("/portal-worker/jobs/:jobId/runtime", async (c) => {
     const items = await loadPortalJobItems(jobId);
     const brainConfig = getPortalBrainConfig();
     const brainMemory = await loadPortalBrainMemory(job.providerId, job.categoryId);
-    const credentialRecord = (await kv.get(portalCredentialKey(job.providerId, job.credentialProfileId))) as PortalCredentialRecord | null;
+    const credentialRecord = await loadPortalCredentialRecord(job.providerId, job.credentialProfileId);
     if (!credentialRecord?.username || !credentialRecord?.password) {
       return c.json({ error: "Provider credentials are not saved for this job" }, 400);
     }

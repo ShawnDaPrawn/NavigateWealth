@@ -84,7 +84,7 @@ describe('provider portal golden flows', () => {
   it('provides a Capital Legacy estate portal flow with policy schedule and signed will downloads', () => {
     expect(portalDefaultFlowsSource).toContain('Capital Legacy portal policy extraction');
     expect(portalDefaultFlowsSource).toContain("loginUrl: 'https://legacylink.co.za/login'");
-    expect(portalDefaultFlowsSource).toContain("id: 'capital-legacy-env'");
+    expect(portalDefaultFlowsSource).toContain("id: 'capital_legacy-env'");
     expect(portalDefaultFlowsSource).toContain("usernameEnvVar: 'NW_PROVIDER_CAPITAL_LEGACY_USERNAME'");
     expect(portalDefaultFlowsSource).toContain("passwordEnvVar: 'NW_PROVIDER_CAPITAL_LEGACY_PASSWORD'");
     expect(portalDefaultFlowsSource).toContain("searchPageUrl: 'https://legacylink.co.za/intermediary/clients?page=1&items=10'");
@@ -234,6 +234,16 @@ describe('provider portal golden flows', () => {
     expect(integrationsSource).toContain('app.post("/portal-worker/jobs/:jobId/items/:itemId/estate-document"');
     expect(integrationsSource).toContain('uploadEstateDocumentForClient');
     expect(integrationsSource).toContain('LEGAL_DOCS_BUCKET');
+  });
+
+  it('keeps Capital Legacy credential ids backward compatible and category-scoped', () => {
+    expect(integrationsSource).toContain("const CAPITAL_LEGACY_CANONICAL_CREDENTIAL_PROFILE_ID = 'capital_legacy-env'");
+    expect(integrationsSource).toContain("const CAPITAL_LEGACY_LEGACY_CREDENTIAL_PROFILE_ID = 'capital-legacy-env'");
+    expect(integrationsSource).toContain('normalisePortalCredentialProfileId');
+    expect(integrationsSource).toContain('loadPortalCredentialRecord');
+    expect(integrationsSource).toContain('savePortalCredentialRecord');
+    expect(integrationsSource).toContain('const categoryId = String(c.req.query("categoryId") || \'\').trim();');
+    expect(readRepoFile('src/components/admin/modules/product-management/api.ts')).toContain('credentials/${profileId}?categoryId=');
   });
 
   it('keeps portal flow configuration isolated by provider and category', () => {
