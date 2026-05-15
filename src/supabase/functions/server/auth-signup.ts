@@ -11,6 +11,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { recalculateAllGroupMemberships } from './communication-repo.ts';
 import { generateApplicationNumber } from './application-number-utils.ts';
 import { submissionsService } from './submissions-service.ts';
+import { autoSubscribeClient } from './newsletter-service.ts';
 import {
   getBlockedClientIp,
   getBlockedIpAddressWarning,
@@ -196,6 +197,11 @@ app.post('/signup', async (c) => {
     // Save to the profile key used by the system
     await kv.set(`user_profile:${userId}:personal_info`, defaultProfile);
     log.info('✅ User profile created with application number in Other tab');
+
+    // Auto-subscribe client to newsletter (fire-and-forget, §12.3)
+    autoSubscribeClient(email, firstName, surname).catch((err) => {
+      log.warn('Auto-subscribe newsletter failed (non-blocking)', err);
+    });
     
     // Create a submission to notify admin of the new signup (appears in Submissions inbox)
     try {

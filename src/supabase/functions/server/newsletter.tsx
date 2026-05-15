@@ -44,6 +44,7 @@ import {
   resubscribeByEmail,
   updateSubscriberDetails,
   getStats,
+  reconcileClientsToSubscribers,
 } from './newsletter-service.ts';
 
 const app = new Hono();
@@ -626,6 +627,46 @@ app.post('/admin/backfill-group', requireAuth, requireAdmin, asyncHandler(async 
       ? `Backfilled ${result.subscriberCount} legacy subscriber(s) into Newsletter Contacts`
       : 'Newsletter Contacts legacy backfill already completed',
     data: result,
+  });
+}));
+
+/**
+ * POST /admin/reconcile-clients — One-time reconciliation of clients → subscribers.
+ *
+ * Fetches every client profile and creates newsletter entries for those
+ * not already subscribed.  Explicitly unsubscribed users are skipped.
+ *
+ * Admin-only.  Returns an audit summary.
+ */
+app.post('/admin/reconcile-clients', requireAuth, requireAdmin, asyncHandler(async (c) => {
+  log.info('Admin: Starting client-to-subscriber reconciliation');
+
+  const result = await reconcileClientsToSubscribers();
+
+  const adminUserId = c.get('userId') || 'unknown';
+  AdminAuditService.record({
+    actorId: adminUserId,
+    actorRole: 'admin',
+    category: 'bulk_operation',
+    action: 'newsletter_client_reconciliation',
+    summary: `Client reconciliation: ${result.added} added, ${result.skippedUnsubscribed} skipped (unsubscribed), ${result.alreadySubscribed} already subscribed`,
+    severity: 'info',
+    entityType: 'newsletter',
+    metadata: {
+      added: result.added,
+      skippedUnsubscribed: result.skippedUnsubscribed,
+      alreadySubscribed: result.alreadySubscribed,
+      errors: result.errors.length,
+      totalClients: result.totalClients,
+      totalSubscribersBefore: result.totalSubscribersBefore,
+      totalSubscribersAfter: result.totalSubscribersAfter,
+    },
+  }).catch(() => {});
+
+  return c.json({
+    success: true,
+    message: `Reconciliation complete: ${result.added} added, ${result.skippedUnsubscribed} skipped (unsubscribed), ${result.alreadySubscribed} already subscribed`,
+    ...result,
   });
 }));
 

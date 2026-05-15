@@ -363,6 +363,197 @@ export async function updateSubscriberDetails(
 }
 
 /**
+ * Auto-subscribe a client by email.  Fire-and-forget, non-blocking.
+ * Used by auth-signup.ts and admin-client-onboarding-service.ts.
+ *
+ * Bypasses double opt-in (the user already opted into the platform).
+ * If a newsletter entry already exists (confirmed + active), skips.
+ * If a newsletter entry exists but is inactive (unsubscribed), respects
+ * the unsubscribe and does NOT re-subscribe.
+ */
+export async function autoSubscribeClient(
+  email: string,
+  firstName?: string,
+  surname?: string,
+): Promise<void> {
+  try {
+    const normEmail = email.trim().toLowerCase();
+    const subscriptionKey = `newsletter:${normEmail}`;
+
+    const existing: SubscriberEntry | null = await kv.get(subscriptionKey);
+
+    // Respect explicit unsubscribes — never auto-re-subscribe
+    if (existing && existing.active === false) {
+      return;
+    }
+
+    // Already active and confirmed
+    if (existing && existing.confirmed && existing.active) {
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const normFirstName = firstName?.trim() || existing?.firstName || '';
+    const normSurname = surname?.trim() || existing?.surname || '';
+    const composedName = composeName(normFirstName, normSurname, existing?.name);
+
+    const entry: SubscriberEntry = {
+      ...(existing || {}),
+      email: normEmail,
+      firstName: normFirstName,
+      surname: normSurname,
+      name: composedName || existing?.name || '',
+      subscribedAt: existing?.subscribedAt || timestamp,
+      confirmedAt: timestamp,
+      source: 'Client Signup Auto-Subscribe',
+      confirmed: true,
+      active: true,
+    };
+
+    await kv.set(subscriptionKey, entry);
+    await addNewsletterSubscriber(normEmail, composedName);
+
+    log.info('Auto-subscribed client to newsletter', { email: normEmail });
+  } catch (error) {
+    log.error('Auto-subscribe client failed (non-blocking)', error as Error);
+    // Non-blocking — signup/onboarding must not fail on newsletter error
+  }
+}
+
+/**
+ * Reconcile all platform clients into the newsletter subscriber list.
+ *
+ * Fetches every client profile and every existing newsletter entry,
+ * then creates newsletter entries for clients that aren't already
+ * subscribed.  Explicitly unsubscribed clients (active: false) are
+ * skipped to honour their opt-out.
+ *
+ * Returns { added, skipped, alreadySubscribed, errors } for audit.
+ */
+export async function reconcileClientsToSubscribers(): Promise<{
+  added: number;
+  skippedUnsubscribed: number;
+  alreadySubscribed: number;
+  errors: string[];
+  totalClients: number;
+  totalSubscribersBefore: number;
+  totalSubscribersAfter: number;
+}> {
+  const errors: string[] = [];
+  const timestamp = new Date().toISOString();
+
+  // 1. Fetch all existing newsletter entries
+  const newsletterEntries: SubscriberEntry[] = await kv.getByPrefix('newsletter:');
+  const subscriptionMap = new Map<string, SubscriberEntry>();
+  for (const entry of newsletterEntries) {
+    if (entry && entry.email) {
+      subscriptionMap.set(entry.email.toLowerCase(), entry);
+    }
+  }
+  const totalSubscribersBefore = subscriptionMap.size;
+
+  // 2. Fetch all client profiles
+  const profiles = await kv.getByPrefix('user_profile:');
+  const clientEmails = new Map<string, { email: string; firstName: string; surname: string }>();
+
+  for (const profile of profiles) {
+    if (!profile) continue;
+    const profileEmail = (
+      profile.email ||
+      profile.personalInformation?.email ||
+      profile.contactDetails?.email
+    )?.trim().toLowerCase();
+
+    if (!profileEmail) continue;
+
+    const firstName = (
+      profile.personalInformation?.firstName ||
+      profile.firstName ||
+      ''
+    ).trim();
+
+    const surname = (
+      profile.personalInformation?.lastName ||
+      profile.lastName ||
+      profile.surname ||
+      ''
+    ).trim();
+
+    // De-duplicate by email
+    if (!clientEmails.has(profileEmail)) {
+      clientEmails.set(profileEmail, { email: profileEmail, firstName, surname });
+    }
+  }
+
+  const totalClients = clientEmails.size;
+  let added = 0;
+  let skippedUnsubscribed = 0;
+  let alreadySubscribed = 0;
+
+  // 3. Create missing newsletter entries
+  for (const [, client] of clientEmails) {
+    try {
+      const existing = subscriptionMap.get(client.email);
+
+      // Explicitly unsubscribed — skip
+      if (existing && existing.active === false) {
+        skippedUnsubscribed++;
+        continue;
+      }
+
+      // Already active and confirmed
+      if (existing && existing.confirmed && existing.active) {
+        alreadySubscribed++;
+        continue;
+      }
+
+      // Create or re-activate
+      const subscriptionKey = `newsletter:${client.email}`;
+      const composedName = composeName(client.firstName, client.surname, existing?.name);
+
+      await kv.set(subscriptionKey, {
+        ...(existing || {}),
+        email: client.email,
+        firstName: client.firstName || existing?.firstName || '',
+        surname: client.surname || existing?.surname || '',
+        name: composedName || existing?.name || '',
+        subscribedAt: existing?.subscribedAt || timestamp,
+        confirmedAt: timestamp,
+        source: 'Client Reconciliation',
+        confirmed: true,
+        active: true,
+      });
+
+      await addNewsletterSubscriber(client.email, composedName);
+      added++;
+    } catch (err) {
+      errors.push(`${client.email}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  }
+
+  const totalSubscribersAfter = subscriptionMap.size - skippedUnsubscribed + added;
+
+  log.info('Client-to-subscriber reconciliation complete', {
+    totalClients,
+    totalSubscribersBefore,
+    added,
+    skippedUnsubscribed,
+    alreadySubscribed,
+    errors: errors.length,
+  });
+
+  return {
+    added,
+    skippedUnsubscribed,
+    alreadySubscribed,
+    errors,
+    totalClients,
+    totalSubscribersBefore,
+    totalSubscribersAfter,
+  };
+}
+
+/**
  * Newsletter KPI summary for admin dashboard.
  */
 export async function getStats(): Promise<{

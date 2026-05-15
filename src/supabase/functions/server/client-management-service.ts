@@ -11,6 +11,7 @@ import { ValidationError, NotFoundError } from './error.middleware.ts';
 import type { Client, ClientFilters, ClientProfile, ClientSecurity, PaginatedClientResponse, GroupMatcherData, CommunicationRecord } from './client-management-types.ts';
 import { shouldIncludeInClientManagement } from './client-management-visibility.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
+import { autoSubscribeClient, removeSubscriberByEmail } from './newsletter-service.ts';
 
 const log = createModuleLogger('clients-service');
 
@@ -361,6 +362,11 @@ export class ClientsService {
     // lifecycle state.
     await this.cascadeDeprecateApplications(clientId, 'Client soft-deleted');
     
+    // Auto-unsubscribe from newsletter (fire-and-forget, §12.3)
+    this.syncNewsletterState(clientId, profile, 'delete').catch((err) =>
+      log.error('Newsletter sync failed during client deletion', err)
+    );
+
     log.warn('Client deleted (soft)', { clientId });
   }
 
@@ -422,6 +428,11 @@ export class ClientsService {
     // Trigger group recalculation — closed clients must be excluded
     this.triggerGroupRecalculation().catch(err =>
       log.error('Background group recalculation failed after account closure', err)
+    );
+
+    // Auto-unsubscribe from newsletter (fire-and-forget, §12.3)
+    this.syncNewsletterState(clientId, profile, 'close').catch((err) =>
+      log.error('Newsletter sync failed during account closure', err)
     );
 
     return { success: true, message: 'Account closed successfully' };
@@ -486,6 +497,11 @@ export class ClientsService {
     // Trigger group recalculation — reinstated client may rejoin groups
     this.triggerGroupRecalculation().catch(err =>
       log.error('Background group recalculation failed after account reinstatement', err)
+    );
+
+    // Re-subscribe to newsletter on reinstatement (fire-and-forget, §12.3)
+    this.syncNewsletterState(clientId, profile, 'reinstate').catch((err) =>
+      log.error('Newsletter sync failed during account reinstatement', err)
     );
 
     return { success: true, message: 'Account reinstated successfully' };
@@ -645,6 +661,59 @@ export class ClientsService {
       success: true,
       message: 'Client account unsuspended',
     };
+  }
+
+  /**
+   * Sync newsletter subscription state with client lifecycle events.
+   *
+   * Per Guidelines §12.3: downstream data (newsletter subscriptions) must
+   * reflect the entity's lifecycle state.  Operations are fire-and-forget;
+   * newsletter sync must never block or fail the parent operation.
+   */
+  private async syncNewsletterState(
+    clientId: string,
+    profile: Record<string, unknown> | null,
+    action: 'delete' | 'close' | 'reinstate',
+  ): Promise<void> {
+    try {
+      const email = (
+        profile?.email ||
+        profile?.personalInformation?.email ||
+        profile?.contactDetails?.email
+      )?.trim().toLowerCase();
+
+      if (!email) {
+        log.warn('No email found on profile, skipping newsletter sync', { clientId, action });
+        return;
+      }
+
+      if (action === 'delete' || action === 'close') {
+        const result = await removeSubscriberByEmail(email);
+        log.info('Newsletter subscription synced on client lifecycle event', {
+          clientId,
+          action,
+          email,
+          result,
+        });
+      } else if (action === 'reinstate') {
+        const firstName = (
+          profile?.personalInformation?.firstName ||
+          profile?.firstName ||
+          ''
+        ).trim();
+        const surname = (
+          profile?.personalInformation?.lastName ||
+          profile?.lastName ||
+          profile?.surname ||
+          ''
+        ).trim();
+        await autoSubscribeClient(email, firstName, surname);
+        log.info('Newsletter subscription synced on reinstatement', { clientId, email });
+      }
+    } catch (err) {
+      log.error('Failed to sync newsletter state', { clientId, action, err });
+      // Non-blocking: newsletter sync failure must not prevent client lifecycle operations
+    }
   }
 
   /**
