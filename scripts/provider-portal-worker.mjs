@@ -432,6 +432,11 @@ function looksLikeBrightRockOtpInfoModal(text) {
     || /if\s+you\s+have\s+a\s+registered\s+account\s+with\s+a\s+contact\s+number\s+linked\s+to\s+it,\s+an\s+sms\s+will\s+be\s+sent\s+containing\s+your\s+otp/i.test(text || '');
 }
 
+function looksLikeBrightRockRegistrationSuccess(text) {
+  return /you\s+have\s+been\s+successfully\s+registered/i.test(text || '')
+    || /you\s+will\s+be\s+redirected\s+to\s+the\s+login\s+page/i.test(text || '');
+}
+
 function looksLikeOtpEntryPrompt(text) {
   return /enter\s+(the\s+)?(otp|code|pin|passcode)|verification\s+(otp|code|pin|passcode)/i.test(text || '');
 }
@@ -623,6 +628,31 @@ async function dismissBrightRockOtpInfoModal(page) {
   return false;
 }
 
+async function dismissBrightRockRegistrationSuccessModal(page) {
+  const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
+  if (!looksLikeBrightRockRegistrationSuccess(bodyText)) return false;
+
+  const okCandidates = [
+    page.getByRole('button', { name: /^ok$/i }).first(),
+    page.locator('button, input[type="button"], input[type="submit"], [role="button"]')
+      .filter({ hasText: /^\s*ok\s*$/i })
+      .first(),
+    page.locator('input[type="button"][value="OK" i], input[type="submit"][value="OK" i]').first(),
+  ];
+
+  for (const candidate of okCandidates) {
+    if (!(await candidate.isVisible({ timeout: 500 }).catch(() => false))) continue;
+    if (!(await candidate.isEnabled({ timeout: 500 }).catch(() => true))) continue;
+    await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 1200 });
+    await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForTimeout(1000);
+    return true;
+  }
+
+  return false;
+}
+
 async function findOtpEntryTarget(page, flow, preferredSelector, timeoutMs = 60000) {
   const selectors = preferredSelector ? [preferredSelector, ...getOtpSelectors(flow)] : getOtpSelectors(flow);
   const deadline = Date.now() + timeoutMs;
@@ -749,18 +779,39 @@ async function waitForManualOtp(timeoutMs) {
   throw new Error('Timed out waiting for manual OTP.');
 }
 
+async function isLoginFormVisible(page, flow) {
+  const username = page.locator(flow?.login?.usernameSelector || 'input[type="email"], input[type="text"], input[name*="user" i]').first();
+  const password = page.locator(flow?.login?.passwordSelector || 'input[type="password"]').first();
+  return (
+    await username.isVisible({ timeout: 500 }).catch(() => false)
+    && await password.isVisible({ timeout: 500 }).catch(() => false)
+  );
+}
+
 async function waitForAuthCheckpointToClear(page, flow, timeoutMs = 20000) {
   const deadline = Date.now() + timeoutMs;
   let latestCheckpoint = '';
+  let sawRegistrationSuccess = false;
   while (Date.now() < deadline) {
     await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
     await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+    const dismissedRegistrationSuccess = await dismissBrightRockRegistrationSuccessModal(page);
+    if (dismissedRegistrationSuccess) {
+      sawRegistrationSuccess = true;
+      await publishLiveView(page, {
+        force: true,
+        note: 'BrightRock completed registration and is returning to the login page.',
+      }).catch(() => undefined);
+    }
+    if (await isLoginFormVisible(page, flow)) {
+      return { checkpoint: '', requiresCredentialResubmit: sawRegistrationSuccess };
+    }
     const checkpoint = await detectAuthCheckpoint(page, flow);
-    if (!checkpoint) return '';
+    if (!checkpoint) return { checkpoint: '', requiresCredentialResubmit: false };
     latestCheckpoint = checkpoint;
     await page.waitForTimeout(1000);
   }
-  return latestCheckpoint;
+  return { checkpoint: latestCheckpoint, requiresCredentialResubmit: false };
 }
 
 async function fillManualOtp(page, flow, code, preferredSelector, existingTarget) {
@@ -783,18 +834,20 @@ async function fillManualOtp(page, flow, code, preferredSelector, existingTarget
   await page.waitForLoadState('domcontentloaded', { timeout: 45000 }).catch(() => undefined);
   await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
   await page.waitForTimeout(1500);
-  const remainingCheckpoint = await waitForAuthCheckpointToClear(page, flow, 15000);
-  if (remainingCheckpoint) {
+  const transition = await waitForAuthCheckpointToClear(page, flow, 15000);
+  if (transition.checkpoint) {
     await publishLiveView(page, {
       force: true,
       note: 'OTP was submitted, but BrightRock stayed on the verification screen.',
     }).catch(() => undefined);
     throw new Error(
       'The SMS OTP was submitted, but BrightRock stayed on the verification screen instead of continuing into the portal. '
-      + `Visible page sample: ${remainingCheckpoint}`,
+      + `Visible page sample: ${transition.checkpoint}`,
     );
   }
-  return true;
+  return {
+    requiresCredentialResubmit: transition.requiresCredentialResubmit === true,
+  };
 }
 
 async function promptForManualOtp(page, flow, preferredSelector, existingTarget) {
@@ -1137,18 +1190,21 @@ async function detectAuthCheckpoint(page, flow) {
 async function handleManualOtpCheckpoint(page, flow) {
   const requestedSmsOtp = await chooseSmsOtpDeliveryIfPresent(page, flow);
   if (requestedSmsOtp) {
-    await completeManualOtpAfterDelivery(page, flow);
-    return true;
+    const result = await completeManualOtpAfterDelivery(page, flow);
+    return { handled: true, requiresCredentialResubmit: result?.requiresCredentialResubmit === true };
   }
 
   const sentVisibleOtp = await clickVisibleOtpSendAction(page, flow);
   if (sentVisibleOtp) {
-    await completeManualOtpAfterDelivery(page, flow);
-    return true;
+    const result = await completeManualOtpAfterDelivery(page, flow);
+    return { handled: true, requiresCredentialResubmit: result?.requiresCredentialResubmit === true };
   }
 
   const handledOtp = await completeManualOtpIfPresent(page, flow, 5000);
-  return Boolean(handledOtp);
+  return {
+    handled: Boolean(handledOtp),
+    requiresCredentialResubmit: Boolean(handledOtp && handledOtp?.requiresCredentialResubmit === true),
+  };
 }
 
 async function waitForManualOtpCheckpointIfPresent(page, flow, timeoutMs = 12000) {
@@ -1159,30 +1215,30 @@ async function waitForManualOtpCheckpointIfPresent(page, flow, timeoutMs = 12000
 
     const checkpoint = await detectAuthCheckpoint(page, flow);
     if (checkpoint) {
-      const handled = await handleManualOtpCheckpoint(page, flow);
-      if (!handled) {
-        return { handled: false, checkpoint };
+      const outcome = await handleManualOtpCheckpoint(page, flow);
+      if (!outcome.handled) {
+        return { handled: false, checkpoint, requiresCredentialResubmit: false };
       }
-      return { handled: true, checkpoint };
+      return { handled: true, checkpoint, requiresCredentialResubmit: outcome.requiresCredentialResubmit === true };
     }
 
     const bodyText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
     if (textContainsConfiguredLabel([page.url(), bodyText].join(' '), getSearchReadyLabels(flow))) {
-      return { handled: false, checkpoint: '' };
+      return { handled: false, checkpoint: '', requiresCredentialResubmit: false };
     }
 
     await page.waitForTimeout(1000);
   }
 
-  return { handled: false, checkpoint: '' };
+  return { handled: false, checkpoint: '', requiresCredentialResubmit: false };
 }
 
 async function assertPastAuthCheckpoint(page, flow, stageLabel) {
   const checkpoint = await detectAuthCheckpoint(page, flow);
   if (!checkpoint) return;
 
-  const handledOtp = await handleManualOtpCheckpoint(page, flow);
-  if (handledOtp) return;
+  const outcome = await handleManualOtpCheckpoint(page, flow);
+  if (outcome.handled && !outcome.requiresCredentialResubmit) return;
 
   throw new Error(
     `Provider is still on a login verification step before ${stageLabel}. `
@@ -3204,6 +3260,16 @@ async function loadRuntime(jobId) {
   return { job, flow, credentials: null, brain: { available: false, configured: false, model: '', memory: null } };
 }
 
+async function submitProviderCredentials(page, flow, username, password, options = {}) {
+  const message = options.message || 'Submitting provider credentials.';
+  const note = options.note || 'Provider credentials submitted.';
+  await updateJob('running', { currentStep: 'submitting_credentials', message });
+  await (await visibleLocator(page, flow.login.usernameSelector)).fill(username);
+  await (await visibleLocator(page, flow.login.passwordSelector)).fill(password);
+  await (await visibleLocator(page, flow.login.submitSelector)).click();
+  await publishLiveView(page, { force: true, note });
+}
+
 async function runJob(jobId, requestedMode = mode) {
   activeJobId = jobId;
   jobWarnings.splice(0, jobWarnings.length);
@@ -3264,13 +3330,16 @@ async function runJob(jobId, requestedMode = mode) {
 
     await page.goto(flow.loginUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await publishLiveView(page, { force: true, note: 'Provider login page opened.' });
-    await updateJob('running', { currentStep: 'submitting_credentials', message: 'Submitting provider credentials.' });
-    await (await visibleLocator(page, flow.login.usernameSelector)).fill(username);
-    await (await visibleLocator(page, flow.login.passwordSelector)).fill(password);
-    await (await visibleLocator(page, flow.login.submitSelector)).click();
-    await publishLiveView(page, { force: true, note: 'Provider credentials submitted.' });
+    await submitProviderCredentials(page, flow, username, password);
 
-    await waitForManualOtpCheckpointIfPresent(page, flow, 12000);
+    const otpCheckpoint = await waitForManualOtpCheckpointIfPresent(page, flow, 12000);
+    if (otpCheckpoint.requiresCredentialResubmit) {
+      await submitProviderCredentials(page, flow, username, password, {
+        message: 'Re-submitting provider credentials after BrightRock registration redirect.',
+        note: 'Provider credentials re-submitted after BrightRock registration redirect.',
+      });
+      await waitForManualOtpCheckpointIfPresent(page, flow, 12000);
+    }
     await assertPastAuthCheckpoint(page, flow, 'post-login navigation');
 
     if (flow.navigation?.postLoginUrl) {

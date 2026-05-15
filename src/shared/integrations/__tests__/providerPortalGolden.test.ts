@@ -138,8 +138,11 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('function looksLikeOtpSubmitAction');
     expect(workerSource).toContain('async function clickVisibleOtpSubmitAction');
     expect(workerSource).toContain('function looksLikeBrightRockOtpInfoModal');
+    expect(workerSource).toContain('function looksLikeBrightRockRegistrationSuccess');
     expect(workerSource).toContain('async function dismissBrightRockOtpInfoModal');
+    expect(workerSource).toContain('async function dismissBrightRockRegistrationSuccessModal');
     expect(workerSource).toContain('async function waitForAuthCheckpointToClear');
+    expect(workerSource).toContain('async function isLoginFormVisible');
     expect(workerSource).toContain('function getOtpSendActionCandidates');
     expect(workerSource).toContain('/^(go|continue|next|submit)$/i');
     expect(workerSource).toContain('async function clickVisibleOtpSendAction');
@@ -153,6 +156,7 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('send\\s+(otp|code|pin|passcode)');
     expect(workerSource).toContain('request\\s+new\\s+otp');
     expect(workerSource).toContain('an\\s+sms\\s+will\\s+be\\s+sent\\s+containing\\s+your\\s+otp');
+    expect(workerSource).toContain('you\\s+have\\s+been\\s+successfully\\s+registered');
     expect(workerSource).toContain('BrightRock stayed on the verification screen instead of continuing into the portal');
     expect(workerSource).toContain('async function selectBrightRockSmsOtpOption');
     expect(workerSource).toContain('forceSmsSelectionInDom');
@@ -175,6 +179,7 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('await clickVisibleOtpSendAction(page, flow)');
     expect(workerSource).toContain('await completeManualOtpAfterDelivery(page, flow)');
     expect(workerSource).toContain('await waitForManualOtpCheckpointIfPresent(page, flow, 12000)');
+    expect(workerSource).toContain('Re-submitting provider credentials after BrightRock registration redirect.');
     expect(workerSource).not.toContain('completeManualOtpIfPresent(page, flow, 45000)');
     expect(workerSource).toContain('async function waitForAuthCheckpointToClear');
     expect(workerSource).toContain('Send OTP');
