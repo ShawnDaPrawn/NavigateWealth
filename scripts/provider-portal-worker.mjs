@@ -443,6 +443,16 @@ function looksLikePendingOtpSendAction(text) {
     || /^(send|go|continue|next|submit)$/i.test(value);
 }
 
+function looksLikeOtpSubmitAction(text) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!value) return false;
+  if (/\b(back|request\s+new\s+otp|new\s+otp|resend|send\s+otp|send\s+code|send\s+pin)\b/i.test(value)) {
+    return false;
+  }
+  return /^(confirm|verify|continue|submit|go|next)$/i.test(value)
+    || /\b(confirm|verify|continue|submit)\b/i.test(value);
+}
+
 function getSearchReadyLabels(flow) {
   return splitLabels(flow?.search?.searchInputLabels)
     .filter((label) => label.length >= 8 && !/^search$/i.test(label))
@@ -500,6 +510,65 @@ function getOtpSendActionCandidates(page, flow) {
   }
 
   return candidates;
+}
+
+function getOtpSubmitActionCandidates(scope, flow) {
+  const candidates = [
+    scope.getByRole('button', { name: /^(confirm|verify|continue|submit|go|next)$/i }).first(),
+    scope.locator('button, input[type="submit"], input[type="button"], [role="button"]')
+      .filter({ hasText: /^(confirm|verify|continue|submit|go|next)$/i })
+      .first(),
+    scope.locator('input[type="submit"][value="Confirm" i], input[type="button"][value="Confirm" i]').first(),
+    scope.locator('input[type="submit"][value="Verify" i], input[type="button"][value="Verify" i]').first(),
+    scope.locator('input[type="submit"][value="Continue" i], input[type="button"][value="Continue" i]').first(),
+    scope.locator('input[type="submit"][value="Submit" i], input[type="button"][value="Submit" i]').first(),
+    scope.locator('input[type="submit"][value="GO" i], input[type="button"][value="GO" i]').first(),
+  ];
+
+  const submitSelector = String(flow?.otp?.submitSelector || '').trim();
+  if (submitSelector) {
+    for (const selector of submitSelector.split(',').map((part) => part.trim()).filter(Boolean)) {
+      candidates.push(scope.locator(selector).first());
+    }
+  }
+
+  return candidates;
+}
+
+async function clickVisibleOtpSubmitAction(page, scope, flow) {
+  const visibleLabels = [];
+  const disabledLabels = [];
+
+  for (const candidate of getOtpSubmitActionCandidates(scope, flow)) {
+    if (!(await candidate.isVisible({ timeout: 500 }).catch(() => false))) continue;
+    const label = sampleText(await getControlLabel(candidate), 120);
+    if (!looksLikeOtpSubmitAction(label)) continue;
+    visibleLabels.push(label);
+
+    if (!(await candidate.isEnabled({ timeout: 500 }).catch(() => true))) {
+      disabledLabels.push(label);
+      continue;
+    }
+
+    await publishLiveView(page, {
+      force: true,
+      note: `Submitting provider OTP with ${label || 'the visible confirmation action'}.`,
+    }).catch(() => undefined);
+    await clickWithOverlayFallback(page, candidate, { timeout: 5000, settleMs: 1500 });
+    await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
+    await page.waitForTimeout(1000);
+    return { clicked: true, label };
+  }
+
+  if (disabledLabels.length > 0) {
+    throw new Error(
+      `BrightRock OTP entry was visible, but the provider confirmation action stayed disabled after code entry. `
+      + `Visible actions: ${uniqueWarnings(disabledLabels).join(', ')}`,
+    );
+  }
+
+  return { clicked: false, visibleLabels: uniqueWarnings(visibleLabels) };
 }
 
 async function hasVisibleOtpSendAction(page) {
@@ -706,16 +775,9 @@ async function fillManualOtp(page, flow, code, preferredSelector, existingTarget
   }
 
   await fillOtpTarget(target, code);
-  const submitSelector = String(otp.submitSelector || '').trim();
-  if (submitSelector) {
-    const submitScope = target.scope || page;
-    const submit = submitScope.locator(submitSelector).first();
-    if (await submit.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await clickWithOverlayFallback(page, submit, { timeout: 5000, settleMs: 1500 });
-    } else {
-      await page.keyboard.press('Enter');
-    }
-  } else {
+  const submitScope = target.scope || page;
+  const submitResult = await clickVisibleOtpSubmitAction(page, submitScope, flow);
+  if (!submitResult.clicked) {
     await page.keyboard.press('Enter');
   }
   await page.waitForLoadState('domcontentloaded', { timeout: 45000 }).catch(() => undefined);

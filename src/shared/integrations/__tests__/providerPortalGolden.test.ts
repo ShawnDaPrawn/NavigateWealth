@@ -135,6 +135,8 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('async function waitForBrightRockOtpDeliveryProgress');
     expect(workerSource).toContain('async function hasVisibleOtpSendAction');
     expect(workerSource).toContain('function looksLikePendingOtpSendAction');
+    expect(workerSource).toContain('function looksLikeOtpSubmitAction');
+    expect(workerSource).toContain('async function clickVisibleOtpSubmitAction');
     expect(workerSource).toContain('function looksLikeBrightRockOtpInfoModal');
     expect(workerSource).toContain('async function dismissBrightRockOtpInfoModal');
     expect(workerSource).toContain('async function waitForAuthCheckpointToClear');
@@ -149,6 +151,7 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain('brightrock-otp-send-action-missing');
     expect(workerSource).toContain('/\\bresend\\b/i.test(value)');
     expect(workerSource).toContain('send\\s+(otp|code|pin|passcode)');
+    expect(workerSource).toContain('request\\s+new\\s+otp');
     expect(workerSource).toContain('an\\s+sms\\s+will\\s+be\\s+sent\\s+containing\\s+your\\s+otp');
     expect(workerSource).toContain('BrightRock stayed on the verification screen instead of continuing into the portal');
     expect(workerSource).toContain('async function selectBrightRockSmsOtpOption');
@@ -157,6 +160,7 @@ describe('provider portal golden flows', () => {
     expect(workerSource).toContain("kind: 'digits'");
     expect(workerSource).toContain("page.getByRole('radio', { name: /\\bSMS\\b/i })");
     expect(portalDefaultFlowsSource).toContain("Search by reference number");
+    expect(portalDefaultFlowsSource).toContain('button:has-text("Confirm")');
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Premium'");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Life Cover'");
     expect(portalDefaultFlowsSource).toContain("sourceHeader: 'Capital Disability'");
