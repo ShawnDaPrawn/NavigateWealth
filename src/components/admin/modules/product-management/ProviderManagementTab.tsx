@@ -26,7 +26,8 @@ export function ProviderManagementTab() {
 
   const filteredProviders = providers.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+    (p.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.supportedProducts.some((product) => product.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleOpenModal = (provider?: Provider) => {

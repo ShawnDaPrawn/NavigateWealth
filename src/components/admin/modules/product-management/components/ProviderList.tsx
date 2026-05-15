@@ -13,9 +13,7 @@ import { Badge } from '../../../../ui/badge';
 import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
 import {
   Provider,
-  getPortalAutomationCategoryOptions,
   getProductCategoryLabel,
-  isProductCategoryGroup,
 } from '../types';
 
 interface ProviderListProps {
@@ -39,7 +37,7 @@ export function ProviderList({
             <TableHead className="w-[100px]">Logo</TableHead>
             <TableHead>Provider Name</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead>Product Categories</TableHead>
+            <TableHead>Products</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -77,19 +75,21 @@ export function ProviderList({
                   {provider.description}
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {getPortalAutomationCategoryOptions(provider.categoryIds).map((category, categoryIndex) => (
-                      <Badge key={`${provider.id}-${category.id}-${categoryIndex}`} variant="secondary" className="text-xs font-normal">
-                        {category.name}
-                      </Badge>
-                    ))}
-                    {provider.categoryIds.filter(isProductCategoryGroup).map((catId, index) => (
-                      <Badge key={`${provider.id}-${catId}-${index}`} variant="outline" className="text-xs font-normal text-amber-700 border-amber-300 bg-amber-50">
-                        Group only: {getProductCategoryLabel(catId)}
-                      </Badge>
-                    ))}
-                    {getPortalAutomationCategoryOptions(provider.categoryIds).length === 0 && (
-                      <span className="text-xs text-muted-foreground">No automation categories</span>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-1">
+                      {provider.supportedProducts.map((productName, productIndex) => (
+                        <Badge key={`${provider.id}-${productName}-${productIndex}`} variant="secondary" className="text-xs font-normal">
+                          {productName}
+                        </Badge>
+                      ))}
+                      {provider.supportedProducts.length === 0 && (
+                        <span className="text-xs text-muted-foreground">No exact products configured</span>
+                      )}
+                    </div>
+                    {provider.categoryIds.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Categories: {provider.categoryIds.map((categoryId) => getProductCategoryLabel(categoryId)).join(', ')}
+                      </p>
                     )}
                   </div>
                 </TableCell>

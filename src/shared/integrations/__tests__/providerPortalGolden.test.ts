@@ -14,6 +14,7 @@ describe('provider portal golden flows', () => {
   const brightRockAdapterSource = readRepoFile('scripts/provider-adapters/brightrock.mjs');
   const integrationsSource = readRepoFile('src/supabase/functions/server/integrations.tsx');
   const portalDefaultFlowsSource = readRepoFile('src/supabase/functions/server/portal-default-flows.ts');
+  const productManagementApiSource = readRepoFile('src/components/admin/modules/product-management/api.ts');
   const productTypesSource = readRepoFile('src/components/admin/modules/product-management/types.ts');
   const providerFormSource = readRepoFile('src/components/admin/modules/product-management/components/ProviderFormDialog.tsx');
   const productProviderListSource = readRepoFile('src/components/admin/modules/product-management/components/ProviderList.tsx');
@@ -75,6 +76,8 @@ describe('provider portal golden flows', () => {
     expect(brightRockAdapterSource).toContain("that's\\s+permanent");
     expect(brightRockAdapterSource).toContain("that's\\s+caused\\s+by\\s+death");
     expect(brightRockAdapterSource).toContain('additional\\s+expense\\s+needs');
+    expect(brightRockAdapterSource).toContain('confirmedPolicyPage');
+    expect(brightRockAdapterSource).toContain('return result;');
   });
 
   it('keeps the shared worker routed through the provider adapter registry', () => {
@@ -219,8 +222,12 @@ describe('provider portal golden flows', () => {
     expect(productTypesSource).toContain('function isPortalAutomationCategory');
     expect(productTypesSource).toContain('function getPortalAutomationCategoryOptions');
     expect(providerFormSource).toContain('formData.categoryIds.filter(isPortalAutomationCategory)');
-    expect(productProviderListSource).toContain('getPortalAutomationCategoryOptions(provider.categoryIds)');
-    expect(productProviderListSource).toContain('Group only: {getProductCategoryLabel(catId)}');
+    expect(productManagementApiSource).toContain("product-management/products?active=true");
+    expect(productManagementApiSource).toContain('supportedProducts: (productsByProvider.get(p.id) || []).sort');
+    expect(productProviderListSource).toContain('<TableHead>Products</TableHead>');
+    expect(productProviderListSource).toContain('provider.supportedProducts.map');
+    expect(productProviderListSource).toContain('No exact products configured');
+    expect(productProviderListSource).not.toContain('Group only:');
     expect(integrationHeaderSource).toContain('getPortalAutomationCategoryOptions(provider.categoryIds)');
     expect(portalAutomationTabSource).toContain('Portal automation is only available for specific product categories');
     expect(portalAutomationTabSource).toContain('disabled={!automationCategorySelected');

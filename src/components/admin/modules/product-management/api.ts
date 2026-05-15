@@ -35,6 +35,15 @@ interface SchemaResponse {
   categoryId: string;
 }
 
+interface ProductDTO {
+  id: string;
+  provider_id?: string;
+  providerId?: string;
+  name: string;
+  is_active?: boolean;
+  isActive?: boolean;
+}
+
 interface IntegrationHistoryItem {
   status: string;
   uploadedAt: string;
@@ -93,11 +102,23 @@ export const productManagementApi = {
   // -- Providers --
 
   fetchProviders: async (): Promise<Provider[]> => {
-    // Switch to canonical ProductManagement API
-    const response = await api.get<{ providers: ProviderDTO[] }>('product-management/providers');
-    
-    // Handle response wrapper { providers: [...] }
-    const rawProviders = response.providers || [];
+    const [providerResponse, productsResponse] = await Promise.all([
+      api.get<{ providers: ProviderDTO[] }>('product-management/providers'),
+      api.get<{ products: ProductDTO[] }>('product-management/products?active=true').catch(() => ({ products: [] })),
+    ]);
+
+    const rawProviders = providerResponse.providers || [];
+    const rawProducts = productsResponse.products || [];
+    const productsByProvider = new Map<string, string[]>();
+
+    for (const product of rawProducts) {
+      const providerId = String(product.provider_id || product.providerId || '').trim();
+      const productName = String(product.name || '').trim();
+      if (!providerId || !productName) continue;
+      const existing = productsByProvider.get(providerId) || [];
+      if (!existing.includes(productName)) existing.push(productName);
+      productsByProvider.set(providerId, existing);
+    }
 
     // Map backend snake_case (ProviderDTO) to frontend camelCase (ProductProvider/Provider)
     return rawProviders.map((p: ProviderDTO) => ({
@@ -116,9 +137,9 @@ export const productManagementApi = {
       active: p.is_active !== undefined ? p.is_active : ((p as Record<string, unknown>).isActive !== undefined ? (p as Record<string, unknown>).isActive as boolean : true),
       categoryIds: p.category_ids || (p as Record<string, unknown>).categoryIds as string[] || [],
       
-      // Enriched / UI-specific (defaults for now)
+      // Enriched / UI-specific
       brokerConsultants: [],
-      supportedProducts: [],
+      supportedProducts: (productsByProvider.get(p.id) || []).sort((a, b) => a.localeCompare(b)),
       
       // Metadata
       createdAt: p.created_at,

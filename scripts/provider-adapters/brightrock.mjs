@@ -54,9 +54,20 @@ async function extractBrightRockSnapshot(page, item, runtime) {
         hasPolicyDetails: /\bpolicy details\b/i.test(bodyText),
         hasPolicyStructure: /\bpolicy structure\b/i.test(bodyText),
         hasPolicyNumber: Boolean(policyNumber && bodyText.includes(policyNumber)),
+        confirmedPolicyPage: false,
         textSnippets: [],
       },
     };
+
+    result.diagnostics.confirmedPolicyPage = Boolean(
+      result.diagnostics.hasPolicyNumber
+      && (result.diagnostics.hasPolicyDetails || result.diagnostics.hasPolicyStructure)
+    );
+
+    if (!result.diagnostics.confirmedPolicyPage) {
+      result.diagnostics.textSnippets.push(bodyText.slice(0, 240));
+      return result;
+    }
 
     const extractMoney = (value) => {
       const match = normalise(value).match(moneyRegex);

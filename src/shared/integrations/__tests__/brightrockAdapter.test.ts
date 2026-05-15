@@ -86,4 +86,42 @@ describe('brightRockAdapter', () => {
       source: 'brightrock_policy_structure',
     });
   });
+
+  it('fails closed when the page does not confirm the requested BrightRock policy details', async () => {
+    document.body.innerHTML = `
+      <main>
+        <h1>Policy details</h1>
+        <div>Policy number</div>
+        <div>999999999</div>
+        <section>
+          <h2>Cover summary</h2>
+          <div>Current monthly premium</div>
+          <div>R 3,888.29</div>
+        </section>
+      </main>
+    `;
+
+    const snapshot = await brightRockAdapter.extractSnapshot(
+      { url: () => 'https://flint.brightrock.co.za/policy-details' },
+      { policyNumber: '700056377' },
+      {
+        evaluateWithNavigationRetry: async (_page: unknown, callback: (policyNumber: string) => unknown, policyNumber: string) =>
+          callback(policyNumber),
+      },
+    );
+
+    expect(snapshot).toMatchObject({
+      policyNumber: '700056377',
+      premium: '',
+      lifeCover: '',
+      disability: '',
+      severeIllness: '',
+      temporaryIcb: '',
+      source: 'brightrock_policy_structure',
+      diagnostics: {
+        hasPolicyNumber: false,
+        confirmedPolicyPage: false,
+      },
+    });
+  });
 });
