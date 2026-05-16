@@ -103,6 +103,11 @@ const latestPortalWarning = (value?: string, warnings?: string[]) => {
   return value || '';
 };
 
+const isCloudflareVerificationStep = (job?: PortalSyncJob | null) =>
+  job?.currentStep === 'manual_cloudflare_verification'
+  || /cloudflare human verification/i.test(String(job?.message || ''))
+  || /cloudflare human verification/i.test(String(job?.error || ''));
+
 const isPortalMetadataColumn = (key: string) => key.trim().startsWith('_NW ');
 
 const formatExtractedValue = (value: unknown) => {
@@ -340,6 +345,7 @@ export function PortalAutomationTab({
   const liveViewCapturedLabel = job?.liveView?.capturedAt
     ? new Date(job.liveView.capturedAt).toLocaleTimeString()
     : '';
+  const cloudflareCheckpointActive = isCloudflareVerificationStep(job);
 
   const updateFieldSelector = (index: number, selector: string) => {
     setFieldSelectors(prev => prev.map((field, currentIndex) => (
@@ -1375,6 +1381,36 @@ export function PortalAutomationTab({
                   </div>
                 </AlertDescription>
               </Alert>
+            )}
+
+            {cloudflareCheckpointActive && (
+              <>
+                <Separator />
+                <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+                  <Clock className="h-4 w-4" />
+                  <AlertTitle>Manual Cloudflare verification is required</AlertTitle>
+                  <AlertDescription className="space-y-3">
+                    <p>
+                      This GitHub-hosted browser session cannot be taken over in place. When Capital Legacy shows a Cloudflare challenge,
+                      the worker can only stop, publish the screenshot, and wait for you to rerun the same job locally in watch mode.
+                    </p>
+                    <p>
+                      Use the live portal screenshot above to confirm the challenge, then start a local headed replay on your machine and
+                      complete the verification in that visible browser window.
+                    </p>
+                    <div className="rounded-md border border-amber-200 bg-white/90 p-3 text-xs text-slate-700">
+                      <p className="font-medium text-slate-900">Local takeover command</p>
+                      <code className="mt-2 block whitespace-pre-wrap break-all rounded bg-slate-950 px-3 py-2 text-slate-100">
+                        {localWatchCommand}
+                      </code>
+                    </div>
+                    <p className="text-xs text-amber-900">
+                      If this provider keeps triggering Cloudflare in hosted runs, ask Capital Legacy to allowlist the worker path or provide
+                      an automation-safe login route.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              </>
             )}
 
             {job.status === 'waiting_for_otp' && (

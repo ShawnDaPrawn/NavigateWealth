@@ -869,8 +869,8 @@ async function resolveCloudflareChallenge(page, flow, initialCheckpoint = '') {
     });
     throw new Error(
       'Cloudflare human verification blocked the provider login. '
-      + 'The hosted headless worker cannot complete this step automatically. '
-      + 'Run the job locally in watch mode so a person can complete the verification, '
+      + 'The hosted headless worker cannot complete this step automatically or be taken over in place. '
+      + 'Run the job locally in watch mode so a person can complete the verification in a visible browser, '
       + 'or ask Capital Legacy to allowlist the worker path or provide an automation-safe access route. '
       + `Visible page sample: ${checkpoint}`,
     );
