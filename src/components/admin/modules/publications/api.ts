@@ -101,6 +101,21 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   }
 }
 
+async function getMultipartAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    const supabase = createClient();
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token || publicAnonKey;
+    return {
+      'Authorization': `Bearer ${token}`,
+    };
+  } catch {
+    return {
+      'Authorization': `Bearer ${publicAnonKey}`,
+    };
+  }
+}
+
 // ============================================================================
 // ERROR HANDLING
 // ============================================================================
@@ -224,7 +239,7 @@ export const ArticlesAPI = {
   async createArticle(input: CreateArticleInput): Promise<Article> {
     const response = await fetch(`${BASE_URL}/articles`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(input),
     });
     return handleResponse<Article>(response);
@@ -248,7 +263,7 @@ export const ArticlesAPI = {
     const { id, ...updates } = input;
     const response = await fetch(`${BASE_URL}/articles/${id}`, {
       method: 'PUT',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(updates),
     });
     return handleResponse<Article>(response);
@@ -290,12 +305,25 @@ export const ArticlesAPI = {
   async publishArticle(id: string, options?: { notify_subscribers?: boolean }): Promise<ArticlePublishResponse> {
     const response = await fetch(`${BASE_URL}/articles/${id}/publish`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify({ notify_subscribers: options?.notify_subscribers ?? true }),
     });
     const result = await handleResponse<ArticlePublishResponse>(response);
     notifyEmailEngagementChanged(result.article.id, 'published');
     return result;
+  },
+
+  async uploadImage(file: File): Promise<{ url: string; path: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${BASE_URL}/upload-image`, {
+      method: 'POST',
+      headers: await getMultipartAuthHeaders(),
+      body: formData,
+    });
+
+    return handleResponse<{ url: string; path: string }>(response);
   },
 
   /**

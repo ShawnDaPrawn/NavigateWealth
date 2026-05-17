@@ -154,6 +154,8 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   const [publishCampaign, setPublishCampaign] = useState<ArticleNotificationCampaign | null>(null);
   const [isPublishingNow, setIsPublishingNow] = useState(false);
   const [publishActivityStep, setPublishActivityStep] = useState<'preparing' | 'saving' | 'publishing' | 'queueing'>('preparing');
+  const [isHeroImageUploading, setIsHeroImageUploading] = useState(false);
+  const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
   const [autoSlug, setAutoSlug] = useState(!isEditMode);
   const [scheduledDate, setScheduledDate] = useState('');
 
@@ -271,8 +273,15 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
     }
   }, [aiGeneratedResult, isEditMode, updateMultipleFields]);
 
+  const imageUploadInProgress = isHeroImageUploading || isThumbnailUploading;
+
   const handleSave = async () => {
     setError(null);
+
+    if (imageUploadInProgress) {
+      setError('Please wait for image uploads to finish before saving.');
+      return;
+    }
 
     if (!validate()) {
       setError('Please fix validation errors before saving');
@@ -287,6 +296,10 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   };
 
   const handlePublishClick = () => {
+    if (imageUploadInProgress) {
+      setError('Please wait for image uploads to finish before publishing.');
+      return;
+    }
     if (!validate()) {
       setError('Please fix validation errors before publishing');
       return;
@@ -508,6 +521,10 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
   };
 
   const handleScheduleClick = () => {
+    if (imageUploadInProgress) {
+      setError('Please wait for image uploads to finish before scheduling.');
+      return;
+    }
     if (!validate()) {
       setError('Please fix validation errors before scheduling');
       return;
@@ -638,27 +655,27 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
           <Button
             variant="outline"
             onClick={handleScheduleClick}
-            disabled={isProcessing || isSaving}
+            disabled={isProcessing || isSaving || imageUploadInProgress}
           >
             <Clock className="h-4 w-4 mr-2" />
-            Schedule
+            {imageUploadInProgress ? 'Uploading image...' : 'Schedule'}
           </Button>
           {article?.status !== 'published' && (
             <Button
               onClick={handlePublishClick}
-              disabled={isProcessing || isSaving}
+              disabled={isProcessing || isSaving || imageUploadInProgress}
               className="bg-green-600 hover:bg-green-700"
             >
               <Calendar className="h-4 w-4 mr-2" />
-              Publish Now
+              {imageUploadInProgress ? 'Uploading image...' : 'Publish Now'}
             </Button>
           )}
           <Button
             onClick={handleSave}
-            disabled={isProcessing || isSaving || !isDirty}
+            disabled={isProcessing || isSaving || imageUploadInProgress || !isDirty}
           >
             <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Saving...' : article?.status === 'published' ? 'Update Article' : 'Save Draft'}
+            {isSaving ? 'Saving...' : imageUploadInProgress ? 'Uploading image...' : article?.status === 'published' ? 'Update Article' : 'Save Draft'}
           </Button>
         </div>
       </div>
@@ -836,6 +853,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                   value={formData.feature_image_url || ''}
                   onChange={(value) => updateField('feature_image_url', value)}
                   description="Main image displayed at the top of the article (1200x630px recommended)"
+                  onUploadStateChange={setIsHeroImageUploading}
                 />
 
                 <ImageUploader
@@ -843,6 +861,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                   value={formData.thumbnail_image_url || ''}
                   onChange={(value) => updateField('thumbnail_image_url', value)}
                   description="Smaller image for lists and cards (400x300px recommended)"
+                  onUploadStateChange={setIsThumbnailUploading}
                 />
               </CardContent>
             </Card>

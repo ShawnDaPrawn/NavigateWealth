@@ -1,13 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import { Badge } from '../../../../ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../../../../ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/alert';
 import { Switch } from '../../../../ui/switch';
 import { Separator } from '../../../../ui/separator';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '../../../../ui/accordion';
 import {
   Dialog,
   DialogContent,
@@ -30,23 +36,18 @@ import {
 import { ActivityLogTable } from '../../../ActivityLogTable';
 import { VerificationCodeField } from '../../../../security/VerificationCodeField';
 import {
-  Shield,
-  Lock,
-  Key,
   AlertTriangle,
-  CheckCircle,
-  XCircle,
   Ban,
   CheckCircle2,
-  RefreshCw,
-  Activity,
-  Info,
-  UserX,
-  UserCheck,
-  Smartphone,
   Eye,
   EyeOff,
-  Mail
+  Key,
+  Lock,
+  Mail,
+  RefreshCw,
+  Shield,
+  Smartphone,
+  UserCheck,
 } from 'lucide-react';
 import { api } from '../../../../../utils/api/client';
 import { toast } from 'sonner@2.0.3';
@@ -83,13 +84,50 @@ interface ActivityLogEntry {
   metadata?: Record<string, unknown>;
 }
 
+type SecurityAction =
+  | 'suspend'
+  | 'unsuspend'
+  | 'password'
+  | 'twoFactor'
+  | 'emailRequest'
+  | 'emailVerify'
+  | 'emailResend'
+  | null;
+
+function formatRelativeDate(dateString?: string) {
+  if (!dateString) return 'Never';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 30) return `${diffDays} days ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+  return date.toLocaleDateString();
+}
+
+function formatDateTime(dateString?: string) {
+  if (!dateString) return 'Not available';
+  return new Date(dateString).toLocaleString();
+}
+
+function formatEventType(type: string) {
+  return type.split('_').map((word) => {
+    if (word.toLowerCase() === '2fa') return '2FA';
+    if (word.toLowerCase() === 'ip') return 'IP';
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }).join(' ');
+}
+
 export function SecurityTab({ selectedClient }: SecurityTabProps) {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [activeAction, setActiveAction] = useState<SecurityAction>(null);
   const [securityStatus, setSecurityStatus] = useState<SecurityStatus>({
     suspended: false,
-    twoFactorEnabled: false
+    twoFactorEnabled: false,
   });
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
@@ -102,11 +140,12 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
   const [currentAuthEmail, setCurrentAuthEmail] = useState(selectedClient.email);
   const [newEmail, setNewEmail] = useState('');
   const [newEmailCode, setNewEmailCode] = useState('');
+  const hasPendingEmailChange = Boolean(securityStatus.pendingEmailChange);
 
   useEffect(() => {
     if (selectedClient?.id) {
-      fetchSecurityStatus();
-      fetchActivityLogs();
+      void fetchSecurityStatus();
+      void fetchActivityLogs();
     }
   }, [selectedClient?.id]);
 
@@ -120,7 +159,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     if (!selectedClient?.id) return;
 
     try {
-      setLoading(true);
+      setStatusLoading(true);
       const data = await api.get<{ success: boolean; status?: SecurityStatus }>(
         `/security/${selectedClient.id}/status`
       );
@@ -128,10 +167,10 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
         setSecurityStatus(data.status);
       }
     } catch (error) {
-      console.error('❌ Error fetching security status:', error);
+      console.error('Failed to fetch security status:', error);
       toast.error('Failed to load security status');
     } finally {
-      setLoading(false);
+      setStatusLoading(false);
     }
   };
 
@@ -147,7 +186,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
         setActivityLogs(data.logs || []);
       }
     } catch (error) {
-      console.error('❌ Error fetching activity logs:', error);
+      console.error('Failed to fetch activity logs:', error);
     } finally {
       setActivityLoading(false);
     }
@@ -157,13 +196,13 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     if (!selectedClient?.id || !user?.id) return;
 
     try {
-      setLoading(true);
+      setActiveAction('suspend');
       const data = await api.post<{ success: boolean; error?: string; status?: SecurityStatus }>(
         `/security/${selectedClient.id}/suspend`,
         {
           suspended: true,
           reason: suspensionReason,
-          adminId: user.id
+          adminId: user.id,
         }
       );
 
@@ -175,14 +214,12 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
       toast.success('Account suspended successfully');
       setSuspendDialogOpen(false);
       setSuspensionReason('');
-      
-      // Refresh activity logs
-      fetchActivityLogs();
+      void fetchActivityLogs();
     } catch (error) {
-      console.error('❌ Failed to suspend account:', error);
+      console.error('Failed to suspend account:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to suspend account');
     } finally {
-      setLoading(false);
+      setActiveAction(null);
     }
   };
 
@@ -190,12 +227,12 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     if (!selectedClient?.id || !user?.id) return;
 
     try {
-      setLoading(true);
+      setActiveAction('unsuspend');
       const data = await api.post<{ success: boolean; error?: string; status?: SecurityStatus }>(
         `/security/${selectedClient.id}/suspend`,
         {
           suspended: false,
-          adminId: user.id
+          adminId: user.id,
         }
       );
 
@@ -206,14 +243,12 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
       setSecurityStatus(data.status);
       toast.success('Account unsuspended successfully');
       setUnsuspendDialogOpen(false);
-      
-      // Refresh activity logs
-      fetchActivityLogs();
+      void fetchActivityLogs();
     } catch (error) {
-      console.error('❌ Failed to unsuspend account:', error);
+      console.error('Failed to unsuspend account:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to unsuspend account');
     } finally {
-      setLoading(false);
+      setActiveAction(null);
     }
   };
 
@@ -226,13 +261,13 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     }
 
     try {
-      setLoading(true);
+      setActiveAction('password');
       const data = await api.post<{ success: boolean; error?: string }>(
         `/security/${selectedClient.id}/password`,
         {
           currentPassword: 'admin-override',
           newPassword,
-          emailPassword: emailPasswordToClient
+          emailPassword: emailPasswordToClient,
         }
       );
 
@@ -244,15 +279,13 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
       setResetPasswordDialogOpen(false);
       setNewPassword('');
       setShowPassword(false);
-      
-      // Refresh activity logs and status
-      fetchActivityLogs();
-      fetchSecurityStatus();
+      void fetchActivityLogs();
+      void fetchSecurityStatus();
     } catch (error) {
-      console.error('❌ Failed to reset password:', error);
+      console.error('Failed to reset password:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to reset password');
     } finally {
-      setLoading(false);
+      setActiveAction(null);
     }
   };
 
@@ -260,12 +293,12 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     if (!selectedClient?.id) return;
 
     try {
-      setLoading(true);
+      setActiveAction('twoFactor');
       const data = await api.post<{ success: boolean; error?: string; status?: SecurityStatus }>(
         `/security/${selectedClient.id}/2fa`,
         {
           enabled,
-          method: 'email'
+          method: 'email',
         }
       );
 
@@ -275,14 +308,12 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
 
       setSecurityStatus(data.status);
       toast.success(`Two-factor authentication ${enabled ? 'enabled' : 'disabled'} for ${selectedClient.firstName} ${selectedClient.lastName}`);
-      
-      // Refresh activity logs
-      fetchActivityLogs();
+      void fetchActivityLogs();
     } catch (error) {
-      console.error('❌ Failed to toggle 2FA:', error);
+      console.error('Failed to toggle 2FA:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to toggle 2FA');
     } finally {
-      setLoading(false);
+      setActiveAction(null);
     }
   };
 
@@ -303,23 +334,23 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     }
 
     try {
-      setLoading(true);
+      setActiveAction('emailRequest');
       const result = await securityService.requestEmailChange(selectedClient.id, {
         newEmail: normalizedNewEmail,
       });
 
-      setSecurityStatus(prev => ({
+      setSecurityStatus((prev) => ({
         ...prev,
         pendingEmailChange: result.pendingEmailChange ?? null,
       }));
       setNewEmailCode('');
       toast.success('Verification code sent to the new email address and a notice was sent to the current address');
-      fetchActivityLogs();
+      void fetchActivityLogs();
     } catch (error) {
-      console.error('❌ Failed to start email change:', error);
+      console.error('Failed to start email change:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to start email change');
     } finally {
-      setLoading(false);
+      setActiveAction(null);
     }
   };
 
@@ -331,7 +362,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     }
 
     try {
-      setLoading(true);
+      setActiveAction('emailVerify');
       const result = await securityService.verifyEmailChange(selectedClient.id, {
         requestId: securityStatus.pendingEmailChange.requestId,
         newEmailCode,
@@ -340,20 +371,21 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
       if (result.email) {
         setCurrentAuthEmail(result.email);
       }
-      setSecurityStatus(prev => ({
+
+      setSecurityStatus((prev) => ({
         ...prev,
         pendingEmailChange: null,
       }));
       setNewEmail('');
       setNewEmailCode('');
       toast.success('Client sign-in email updated successfully');
-      fetchActivityLogs();
-      fetchSecurityStatus();
+      void fetchActivityLogs();
+      void fetchSecurityStatus();
     } catch (error) {
-      console.error('❌ Failed to verify email change:', error);
+      console.error('Failed to verify email change:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to verify email change');
     } finally {
-      setLoading(false);
+      setActiveAction(null);
     }
   };
 
@@ -361,51 +393,64 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     if (!selectedClient?.id || !securityStatus.pendingEmailChange) return;
 
     try {
-      setLoading(true);
+      setActiveAction('emailResend');
       const result = await securityService.resendEmailChangeCodes(selectedClient.id, {
         requestId: securityStatus.pendingEmailChange.requestId,
         target: 'new',
       });
-      setSecurityStatus(prev => ({
+
+      setSecurityStatus((prev) => ({
         ...prev,
         pendingEmailChange: result.pendingEmailChange ?? prev.pendingEmailChange ?? null,
       }));
       toast.success('New email verification code resent');
     } catch (error) {
-      console.error('❌ Failed to resend email change code:', error);
+      console.error('Failed to resend email change code:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to resend verification code');
     } finally {
-      setLoading(false);
+      setActiveAction(null);
     }
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Never';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 30) return `${diffDays} days ago`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-    return date.toLocaleDateString();
   };
 
   if (!selectedClient) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
+      <div className="py-12 text-center text-muted-foreground">
         Select a client to view their security settings
       </div>
     );
   }
 
+  const sortedActivityLogs = [...activityLogs].sort((a, b) =>
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+  const latestActivityLog = sortedActivityLogs[0];
+  const failedActivityCount = activityLogs.filter((log) => !log.success).length;
+  const accountState = securityStatus.deleted
+    ? 'Closed'
+    : securityStatus.suspended
+      ? 'Suspended'
+      : 'Active';
+  const accountStateBadgeClass = securityStatus.deleted
+    ? 'border-slate-300 bg-slate-100 text-slate-700'
+    : securityStatus.suspended
+      ? 'border-red-200 bg-red-50 text-red-700'
+      : 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  const accountStateDescription = securityStatus.deleted
+    ? 'This account has been closed and should no longer be used for sign-in.'
+    : securityStatus.suspended
+      ? 'Access is currently restricted until an administrator restores the account.'
+      : 'Client can sign in and complete normal authenticated workflows.';
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-lg font-medium tracking-tight">Security Management</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-medium tracking-tight">Security Management</h3>
+            <Badge variant="outline" className={accountStateBadgeClass}>
+              {accountState}
+            </Badge>
+          </div>
           <p className="text-sm text-muted-foreground">
             Manage security settings for {selectedClient.firstName} {selectedClient.lastName}
           </p>
@@ -414,100 +459,158 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
           variant="outline"
           size="sm"
           onClick={() => {
-            fetchSecurityStatus();
-            fetchActivityLogs();
+            void fetchSecurityStatus();
+            void fetchActivityLogs();
           }}
-          disabled={loading}
+          disabled={statusLoading}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`mr-2 h-4 w-4 ${statusLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
 
-      {/* Account Status Alert */}
       {securityStatus.suspended && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Account Suspended</AlertTitle>
           <AlertDescription>
-             This account was suspended by admin on {formatDate(securityStatus.suspendedAt)}. 
-             Reason: {securityStatus.suspendedReason || 'No reason provided'}
+            This account was suspended on {formatDateTime(securityStatus.suspendedAt)}. Reason: {securityStatus.suspendedReason || 'No reason provided'}.
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Account Status
-            </CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {securityStatus.suspended ? 'Suspended' : 'Active'}
+      <Card>
+        <CardHeader>
+          <CardTitle>Security Snapshot</CardTitle>
+          <CardDescription>
+            A compact view of access, authentication, and sign-in details for this client.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Account Access
+              </span>
+              <Shield className="h-4 w-4 text-muted-foreground" />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {securityStatus.suspended 
-                ? 'Access is currently restricted' 
-                : 'Full access granted'
-              }
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              2FA Status
-            </CardTitle>
-            <Smartphone className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="mt-3 text-base font-semibold">{accountState}</div>
+            <p className="mt-1 text-xs text-muted-foreground">{accountStateDescription}</p>
+          </div>
+          <div className="rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Two-Factor Authentication
+              </span>
+              <Smartphone className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="mt-3 text-base font-semibold">
               {securityStatus.twoFactorEnabled ? 'Enabled' : 'Disabled'}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {securityStatus.twoFactorEnabled 
-                ? 'Via email verification' 
-                : 'Standard security only'
-              }
+            <p className="mt-1 text-xs text-muted-foreground">
+              {securityStatus.twoFactorEnabled
+                ? 'Login requires an email verification code.'
+                : 'Standard email and password sign-in only.'}
             </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Password Age
-            </CardTitle>
-            <Lock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatDate(securityStatus.passwordLastChanged)}
+          </div>
+          <div className="rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Sign-In Email
+              </span>
+              <Mail className="h-4 w-4 text-muted-foreground" />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Last updated
+            <div className="mt-3 break-all text-sm font-semibold">{currentAuthEmail}</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {hasPendingEmailChange
+                ? `Pending change to ${securityStatus.pendingEmailChange?.newEmail}`
+                : 'Current authenticated email address.'}
             </p>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+          <div className="rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Password Last Changed
+              </span>
+              <Lock className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="mt-3 text-base font-semibold">
+              {formatRelativeDate(securityStatus.passwordLastChanged)}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {securityStatus.passwordLastChanged
+                ? formatDateTime(securityStatus.passwordLastChanged)
+                : 'No password change date is currently recorded.'}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Access & Authentication</CardTitle>
+          <CardDescription>
+            Routine sign-in controls grouped separately from destructive account actions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Account status</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className={accountStateBadgeClass}>
+                {accountState}
+              </Badge>
+              {securityStatus.suspendedAt && (
+                <span className="text-xs text-muted-foreground">
+                  Updated {formatRelativeDate(securityStatus.suspendedAt)}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {securityStatus.suspended
+                ? `Suspended because: ${securityStatus.suspendedReason || 'No reason provided'}.`
+                : accountStateDescription}
+            </p>
+          </div>
+
+          <Separator />
+
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Two-factor authentication</p>
+              <p className="text-sm text-muted-foreground">
+                Require a one-time verification code sent to the client&apos;s registered email address during login.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge
+                variant="outline"
+                className={securityStatus.twoFactorEnabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}
+              >
+                {securityStatus.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+              </Badge>
+              <Switch
+                checked={!!securityStatus.twoFactorEnabled}
+                onCheckedChange={handleToggle2FA}
+                disabled={activeAction === 'twoFactor'}
+                className="shrink-0"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
           <CardTitle>Sign-In Email</CardTitle>
           <CardDescription>
-            Change the authentication email for this client. The current address is notified immediately and the new address must be verified before the change completes.
+            Update the client&apos;s authentication email while preserving the existing verification flow.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          <Alert className="border-amber-200 bg-amber-50">
-            <AlertTriangle className="h-4 w-4 text-amber-700" />
-            <AlertDescription className="text-amber-900">
-              Admin-initiated changes do not complete instantly. A security notice goes to the current email address, and the client must provide the OTP delivered to the new email address before sign-in is switched over.
-            </AlertDescription>
-          </Alert>
+          <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
+            Changes do not complete immediately. The current address receives a notice, and the client must provide the code sent to the new email before sign-in switches over.
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
@@ -526,19 +629,19 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
                 type="email"
                 value={securityStatus.pendingEmailChange?.newEmail || newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
-                disabled={Boolean(securityStatus.pendingEmailChange)}
+                disabled={hasPendingEmailChange || activeAction === 'emailRequest'}
                 placeholder="client@example.com"
               />
             </div>
           </div>
 
-          {securityStatus.pendingEmailChange && (
-            <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+          {hasPendingEmailChange && (
+            <div className="space-y-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-medium">Verification pending</p>
                   <p className="text-xs text-muted-foreground">
-                    Waiting for the code sent to {securityStatus.pendingEmailChange.newEmail}.
+                    Waiting for the code sent to {securityStatus.pendingEmailChange?.newEmail}.
                   </p>
                 </div>
                 <Badge variant="outline" className="w-fit border-amber-200 text-amber-700">
@@ -552,25 +655,36 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
                 description="Ask the client for the 6-digit code sent to the new email address."
                 value={newEmailCode}
                 onChange={setNewEmailCode}
-                disabled={loading}
+                disabled={activeAction === 'emailVerify' || activeAction === 'emailResend'}
               />
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2 justify-end">
-            {securityStatus.pendingEmailChange ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {hasPendingEmailChange ? (
               <>
-                <Button variant="outline" onClick={handleResendEmailChangeCode} disabled={loading}>
-                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <Button
+                  variant="outline"
+                  onClick={handleResendEmailChangeCode}
+                  disabled={activeAction === 'emailResend' || activeAction === 'emailVerify'}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${activeAction === 'emailResend' ? 'animate-spin' : ''}`} />
                   Resend Code
                 </Button>
-                <Button onClick={handleVerifyEmailChange} disabled={loading || !newEmailCode}>
+                <Button
+                  onClick={handleVerifyEmailChange}
+                  disabled={activeAction === 'emailVerify' || activeAction === 'emailResend' || !newEmailCode}
+                >
                   <CheckCircle2 className="mr-2 h-4 w-4" />
                   Confirm Email Change
                 </Button>
               </>
             ) : (
-              <Button variant="outline" onClick={handleRequestEmailChange} disabled={loading || !newEmail}>
+              <Button
+                variant="outline"
+                onClick={handleRequestEmailChange}
+                disabled={activeAction === 'emailRequest' || !newEmail}
+              >
                 <Mail className="mr-2 h-4 w-4" />
                 Start Email Change
               </Button>
@@ -579,104 +693,142 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
         </CardContent>
       </Card>
 
-      {/* Administrator Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Administrator Actions</CardTitle>
+          <CardTitle>Password</CardTitle>
           <CardDescription>
-            Perform sensitive administrative tasks for this client account.
+            Reset the client&apos;s password without changing the surrounding workflow.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6">
-          
-          {/* Action Row: Suspend/Unsuspend */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-muted rounded-full shrink-0">
-                <Ban className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium leading-none">Suspend Account</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Temporarily disable the client's access to the platform.
-                </p>
-              </div>
+        <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="shrink-0 rounded-full bg-muted p-2">
+              <Key className="h-5 w-5 text-muted-foreground" />
             </div>
-            <Button
-               variant={securityStatus.suspended ? "outline" : "destructive"}
-               onClick={() => securityStatus.suspended ? setUnsuspendDialogOpen(true) : setSuspendDialogOpen(true)}
-               disabled={loading}
-               className="shrink-0"
-            >
-              {securityStatus.suspended ? "Unsuspend Access" : "Suspend Access"}
-            </Button>
-          </div>
-
-          <Separator />
-
-          {/* Action Row: Reset Password */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-muted rounded-full shrink-0">
-                <Key className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium leading-none">Reset Password</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Force a password reset for the client's next login.
-                </p>
-              </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Reset password</p>
+              <p className="text-sm text-muted-foreground">
+                Set a new password for the client and optionally email it to them from the existing dialog flow.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Last changed: {securityStatus.passwordLastChanged ? formatDateTime(securityStatus.passwordLastChanged) : 'Not available'}
+              </p>
             </div>
-            <Button variant="outline" onClick={() => setResetPasswordDialogOpen(true)} className="shrink-0">
-              Reset Password
-            </Button>
           </div>
-
-          <Separator />
-
-          {/* Action Row: 2FA */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center space-x-4">
-               <div className="p-2 bg-muted rounded-full shrink-0">
-                <Shield className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium leading-none">Two-Factor Authentication (Email)</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  When enabled, a verification code is sent to the client's registered email address at login. Only email-based 2FA is currently supported.
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={!!securityStatus.twoFactorEnabled}
-              onCheckedChange={handleToggle2FA}
-              disabled={loading}
-              className="shrink-0"
-            />
-          </div>
-
+          <Button variant="outline" onClick={() => setResetPasswordDialogOpen(true)} className="shrink-0">
+            Reset Password
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Activity Log */}
-      <ActivityLogTable 
-        logs={activityLogs}
-        isLoading={activityLoading}
-        title="Security Audit Log"
-        description="Detailed history of security-related events for this account."
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Security Activity</CardTitle>
+          <CardDescription>
+            A quick summary of the latest account events, with the full audit log available on demand.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-lg border bg-muted/20 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Latest event</p>
+              <p className="mt-2 text-sm font-semibold">
+                {latestActivityLog ? formatEventType(latestActivityLog.type) : 'No activity recorded'}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {latestActivityLog ? formatDateTime(latestActivityLog.timestamp) : 'Nothing to review yet.'}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Failed events</p>
+              <p className="mt-2 text-sm font-semibold">{failedActivityCount}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Within the latest {activityLogs.length} loaded event{activityLogs.length === 1 ? '' : 's'}.
+              </p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Activity refresh</p>
+              <p className="mt-2 text-sm font-semibold">
+                {activityLoading ? 'Refreshing...' : 'Up to date'}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Pulls the latest security audit entries for this client.
+              </p>
+            </div>
+          </div>
 
-      {/* Dialogs */}
+          <Accordion type="single" collapsible className="rounded-lg border px-4">
+            <AccordionItem value="security-audit-log" className="border-b-0">
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <div>
+                  <p className="text-sm font-medium">Full security audit log</p>
+                  <p className="text-xs text-muted-foreground">
+                    Expand to review detailed security-related events for this account.
+                  </p>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-0">
+                <ActivityLogTable
+                  logs={activityLogs}
+                  isLoading={activityLoading}
+                  title="Security Audit Log"
+                  description="Detailed history of security-related events for this account."
+                />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </CardContent>
+      </Card>
+
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle>Danger Zone</CardTitle>
+          <CardDescription>
+            Destructive access controls are isolated here so they are harder to trigger accidentally.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="shrink-0 rounded-full bg-red-50 p-2">
+              <Ban className="h-5 w-5 text-red-600" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">
+                {securityStatus.suspended ? 'Restore client access' : 'Suspend client access'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {securityStatus.suspended
+                  ? 'This will allow the client to sign in again immediately.'
+                  : 'This will temporarily prevent the client from signing in until access is restored.'}
+              </p>
+              {securityStatus.suspended && securityStatus.suspendedReason && (
+                <p className="text-xs text-muted-foreground">
+                  Current suspension reason: {securityStatus.suspendedReason}
+                </p>
+              )}
+            </div>
+          </div>
+          <Button
+            variant={securityStatus.suspended ? 'outline' : 'destructive'}
+            onClick={() => securityStatus.suspended ? setUnsuspendDialogOpen(true) : setSuspendDialogOpen(true)}
+            disabled={activeAction === 'suspend' || activeAction === 'unsuspend'}
+            className="shrink-0"
+          >
+            {securityStatus.suspended ? 'Unsuspend Access' : 'Suspend Access'}
+          </Button>
+        </CardContent>
+      </Card>
+
       <Dialog open={suspendDialogOpen} onOpenChange={setSuspendDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Suspend Client Account</DialogTitle>
             <DialogDescription>
-              Are you sure you want to suspend {selectedClient.firstName} {selectedClient.lastName}'s account?
+              Are you sure you want to suspend {selectedClient.firstName} {selectedClient.lastName}&apos;s account?
               They will not be able to log in until the account is unsuspended.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="reason">Reason for Suspension</Label>
@@ -703,16 +855,16 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
             <Button
               variant="destructive"
               onClick={handleSuspendAccount}
-              disabled={loading || !suspensionReason.trim()}
+              disabled={activeAction === 'suspend' || !suspensionReason.trim()}
             >
-              {loading ? (
+              {activeAction === 'suspend' ? (
                 <div className="contents">
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Suspending...
                 </div>
               ) : (
                 <div className="contents">
-                  <Ban className="h-4 w-4 mr-2" />
+                  <Ban className="mr-2 h-4 w-4" />
                   Suspend Account
                 </div>
               )}
@@ -734,17 +886,17 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleUnsuspendAccount}
-              disabled={loading}
+              disabled={activeAction === 'unsuspend'}
               className="bg-green-600 hover:bg-green-700"
             >
-              {loading ? (
+              {activeAction === 'unsuspend' ? (
                 <div className="contents">
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Unsuspending...
                 </div>
               ) : (
                 <div className="contents">
-                  <UserCheck className="h-4 w-4 mr-2" />
+                  <UserCheck className="mr-2 h-4 w-4" />
                   Unsuspend Account
                 </div>
               )}
@@ -758,18 +910,17 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
           <DialogHeader>
             <DialogTitle>Reset Client Password</DialogTitle>
             <DialogDescription>
-              Set a new password for {selectedClient.firstName} {selectedClient.lastName}.
-              Make sure to securely communicate this password to the client.
+              Set a new password for {selectedClient.firstName} {selectedClient.lastName}. Make sure to securely communicate this password to the client.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="newPassword">New Password</Label>
               <div className="relative">
                 <Input
                   id="newPassword"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="Enter new password (min 8 characters)"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -794,10 +945,10 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
                 Password must be at least 8 characters long
               </p>
             </div>
-            
+
             <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="emailPassword" 
+              <Checkbox
+                id="emailPassword"
                 checked={emailPasswordToClient}
                 onCheckedChange={(checked) => setEmailPasswordToClient(checked as boolean)}
               />
@@ -820,16 +971,16 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
             </Button>
             <Button
               onClick={handleResetPassword}
-              disabled={loading || newPassword.length < 8}
+              disabled={activeAction === 'password' || newPassword.length < 8}
             >
-              {loading ? (
+              {activeAction === 'password' ? (
                 <div className="contents">
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Resetting...
                 </div>
               ) : (
                 <div className="contents">
-                  <Key className="h-4 w-4 mr-2" />
+                  <Key className="mr-2 h-4 w-4" />
                   Reset Password
                 </div>
               )}

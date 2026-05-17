@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router';
 import { toast } from 'sonner@2.0.3';
 import { InstallAppMenuItem } from './InstallAppMenuItem';
 import { InstallHelpDialog } from './InstallHelpDialog';
+import { usePWAInstall } from '../../../hooks/usePWAInstall';
 
 interface SidebarProps {
   activeModule: AdminModule;
@@ -50,8 +51,12 @@ export function Sidebar({
 }: SidebarProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const {
+    installApp,
+    isInstalling,
+    showInstallOption,
+  } = usePWAInstall();
 
   // Check if current user is super admin
   const isSuperAdmin = user?.role === 'super_admin';
@@ -94,6 +99,9 @@ export function Sidebar({
             user={user}
             onLogout={handleLogout}
             onSwitchToPersonal={handleSwitchToPersonal}
+            onInstallApp={installApp}
+            installOptionVisible={showInstallOption}
+            isInstallingApp={isInstalling}
             onShowInstallHelp={() => setShowInstallHelp(true)}
             isSuperAdmin={isSuperAdmin}
             isMobile={false}
@@ -121,6 +129,9 @@ export function Sidebar({
               user={user}
               onLogout={handleLogout}
               onSwitchToPersonal={handleSwitchToPersonal}
+              onInstallApp={installApp}
+              installOptionVisible={showInstallOption}
+              isInstallingApp={isInstalling}
               onShowInstallHelp={() => setShowInstallHelp(true)}
               isSuperAdmin={isSuperAdmin}
               isMobile={true}
@@ -147,6 +158,9 @@ interface SidebarContentProps {
   user: { id?: string; email?: string; user_metadata?: Record<string, unknown>; [key: string]: unknown } | null;
   onLogout: () => void;
   onSwitchToPersonal: () => void;
+  onInstallApp: () => Promise<'accepted' | 'dismissed' | null>;
+  installOptionVisible: boolean;
+  isInstallingApp: boolean;
   onShowInstallHelp: () => void;
   isSuperAdmin: boolean;
   isMobile: boolean;
@@ -162,6 +176,9 @@ function SidebarContent({
   user,
   onLogout,
   onSwitchToPersonal,
+  onInstallApp,
+  installOptionVisible,
+  isInstallingApp,
   onShowInstallHelp,
   isSuperAdmin,
   isMobile
@@ -339,7 +356,12 @@ function SidebarContent({
           >
             <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <InstallAppMenuItem onShowInstallHelp={onShowInstallHelp} />
+            <InstallAppMenuItem
+              isInstalling={isInstallingApp}
+              isVisible={installOptionVisible}
+              onInstallApp={onInstallApp}
+              onShowInstallHelp={onShowInstallHelp}
+            />
             <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" />
               Settings

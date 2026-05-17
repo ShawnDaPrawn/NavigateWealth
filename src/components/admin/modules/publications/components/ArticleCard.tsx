@@ -19,7 +19,7 @@ import React from 'react';
 import { Calendar, Clock, User, Eye, TrendingUp } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { StatusBadge } from './StatusBadge';
-import { formatDate } from '../utils';
+import { formatDate, getArticleImageUrl } from '../utils';
 import type { Article, ArticleStatus } from '../types';
 import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
 
@@ -52,7 +52,6 @@ export function ArticleCard({
   const {
     title,
     excerpt,
-    feature_image_url,
     category_name,
     author_name,
     reading_time_minutes,
@@ -63,6 +62,7 @@ export function ArticleCard({
     view_count,
     press_category,
   } = article;
+  const imageUrl = getArticleImageUrl(article);
 
   const displayDate = published_at || created_at || new Date().toISOString();
 
@@ -74,10 +74,10 @@ export function ArticleCard({
       } ${className || ''}`}
     >
       {/* Featured Image */}
-      {showImage && feature_image_url && (
+      {showImage && imageUrl && (
         <div className="relative h-48 overflow-hidden bg-gray-100">
           <ImageWithFallback
-            src={feature_image_url}
+            src={imageUrl}
             alt={title}
             className="w-full h-full object-cover"
           />

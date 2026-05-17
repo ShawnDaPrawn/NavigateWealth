@@ -252,6 +252,27 @@ export function shouldAutoPublish(article: Article): boolean {
   return scheduledDate <= now;
 }
 
+export function getArticleImageUrl(
+  article:
+    | (Partial<Article> & {
+        feature_image_url?: string | null;
+        featured_image_url?: string | null;
+      })
+    | null
+    | undefined,
+): string | null {
+  if (!article) return null;
+
+  return (
+    article.hero_image_url ||
+    article.feature_image_url ||
+    article.featured_image_url ||
+    article.featured_image ||
+    article.thumbnail_image_url ||
+    null
+  );
+}
+
 // ============================================================================
 // FILTERING UTILITIES
 // ============================================================================

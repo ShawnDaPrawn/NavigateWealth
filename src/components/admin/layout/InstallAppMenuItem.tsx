@@ -1,31 +1,37 @@
 import React from 'react';
 import { Download } from 'lucide-react';
 import { DropdownMenuItem } from '../../ui/dropdown-menu';
-import { usePWAInstall } from '../../../hooks/usePWAInstall';
 import { toast } from 'sonner@2.0.3';
 
 interface InstallAppMenuItemProps {
+  isInstalling?: boolean;
+  isVisible: boolean;
+  onInstallApp: () => Promise<'accepted' | 'dismissed' | null>;
   onShowInstallHelp: () => void;
 }
 
-export function InstallAppMenuItem({ onShowInstallHelp }: InstallAppMenuItemProps) {
-  const { isInstallable, installApp } = usePWAInstall();
+export function InstallAppMenuItem({
+  isInstalling = false,
+  isVisible,
+  onInstallApp,
+  onShowInstallHelp,
+}: InstallAppMenuItemProps) {
+  if (!isVisible) {
+    return null;
+  }
 
   const handleInstall = async (e: React.MouseEvent) => {
     e.preventDefault();
-    
-    // Create a loading toast
+
     const loadingToast = toast.loading('Preparing installation...');
 
     try {
-      // Attempt installation (waits up to 3s if needed)
-      const outcome = await installApp();
-      
+      const outcome = await onInstallApp();
+
       toast.dismiss(loadingToast);
 
-      // If still no prompt, show help
       if (!outcome) {
-        console.log('PWA: Install failed - deferredPrompt is null');
+        console.log('PWA: Install prompt unavailable');
         onShowInstallHelp();
         return;
       }
@@ -40,8 +46,9 @@ export function InstallAppMenuItem({ onShowInstallHelp }: InstallAppMenuItemProp
   };
 
   return (
-    <DropdownMenuItem 
+    <DropdownMenuItem
       onSelect={handleInstall}
+      disabled={isInstalling}
       className="text-purple-600 focus:text-purple-600 focus:bg-purple-50"
     >
       <Download className="mr-2 h-4 w-4" />

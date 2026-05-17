@@ -221,9 +221,9 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
             <Button
               variant="outline"
               onClick={onBulkSend}
-              className="min-w-[128px] whitespace-nowrap border-purple-300 text-purple-700 hover:bg-purple-50"
+              className="h-auto min-h-10 max-w-full border-purple-300 px-4 py-2 text-center whitespace-normal leading-snug text-purple-700 hover:bg-purple-50"
             >
-              Bulk send…
+              Bulk send from template
             </Button>
           )}
           <Button 

@@ -6,10 +6,15 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
+type NavigatorWithStandalone = Navigator & {
+  standalone?: boolean;
+};
+
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
+  const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
     // Handler for beforeinstallprompt event
@@ -27,73 +32,68 @@ export function usePWAInstall() {
       setIsInstallable(false);
       setDeferredPrompt(null);
       setIsAppInstalled(true);
-      // Optional: Clear the deferred prompt if it exists
-      setDeferredPrompt(null);
+      setIsInstalling(false);
     };
 
-    // Check if already in standalone mode
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    if (isStandalone) {
-      setIsAppInstalled(true);
-      setIsInstallable(false);
-    }
+    const displayModeMediaQuery = window.matchMedia('(display-mode: standalone)');
+
+    const syncInstalledState = () => {
+      const isStandalone = displayModeMediaQuery.matches;
+      const navigatorWithStandalone = window.navigator as NavigatorWithStandalone;
+      const isIosStandalone = navigatorWithStandalone.standalone === true;
+      const installed = isStandalone || isIosStandalone;
+      setIsAppInstalled(installed);
+
+      if (installed) {
+        setIsInstallable(false);
+        setDeferredPrompt(null);
+      }
+    };
+
+    syncInstalledState();
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
+    displayModeMediaQuery.addEventListener?.('change', syncInstalledState);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      displayModeMediaQuery.removeEventListener?.('change', syncInstalledState);
     };
   }, []);
 
   const installApp = async (): Promise<'accepted' | 'dismissed' | null> => {
-    // If we don't have the prompt yet, we can try to wait a short moment
-    // in case the browser is just slightly delayed (race condition).
     if (!deferredPrompt) {
-        return new Promise((resolve) => {
-            let timeout: ReturnType<typeof setTimeout>;
-            
-            const handleLatePrompt = (e: Event) => {
-                e.preventDefault();
-                clearTimeout(timeout);
-                window.removeEventListener('beforeinstallprompt', handleLatePrompt);
-                
-                // Prompt arrived! Trigger it immediately.
-                const promptEvent = e as BeforeInstallPromptEvent;
-                setDeferredPrompt(promptEvent);
-                
-                promptEvent.prompt().then(() => {
-                    promptEvent.userChoice.then((choice) => {
-                        setDeferredPrompt(null);
-                        setIsInstallable(false);
-                        resolve(choice.outcome);
-                    });
-                });
-            };
-
-            window.addEventListener('beforeinstallprompt', handleLatePrompt);
-
-            // Wait 3 seconds max
-            timeout = setTimeout(() => {
-                window.removeEventListener('beforeinstallprompt', handleLatePrompt);
-                resolve(null);
-            }, 3000);
-        });
+      return null;
     }
 
-    // Show the install prompt
-    await deferredPrompt.prompt();
+    setIsInstalling(true);
 
-    // Wait for the user to respond to the prompt
-    const choiceResult = await deferredPrompt.userChoice;
-    
-    // Reset the deferred prompt variable
-    setDeferredPrompt(null);
-    setIsInstallable(false);
-    
-    return choiceResult.outcome;
+    try {
+      await deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+
+      if (choiceResult.outcome === 'accepted') {
+        setIsAppInstalled(true);
+      }
+
+      return choiceResult.outcome;
+    } finally {
+      setIsInstalling(false);
+    }
   };
 
-  return { isInstallable, isAppInstalled, installApp };
+  const showInstallOption = isInstallable && !isAppInstalled;
+
+  return {
+    isInstallable,
+    isAppInstalled,
+    isInstalling,
+    showInstallOption,
+    installApp,
+  };
 }

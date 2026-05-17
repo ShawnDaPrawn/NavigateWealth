@@ -16,6 +16,7 @@ import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
 import { cn } from '../../../../ui/utils';
+import { getArticleImageUrl } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Local types
@@ -34,6 +35,9 @@ interface PreviewArticle {
   is_featured?: boolean;
   author_name?: string;
   feature_image_url?: string;
+  hero_image_url?: string | null;
+  thumbnail_image_url?: string | null;
+  featured_image_url?: string | null;
   featured_image?: string | null;
   reading_time_minutes?: number;
 }
@@ -249,6 +253,7 @@ export function ArticlePreview({
 }: ArticlePreviewProps) {
   const categoryName = categories.find((c) => c.id === article.category_id)?.name;
   const bodyContent = article.body || article.content || '';
+  const imageUrl = getArticleImageUrl(article);
 
   const previewHtml = useMemo(() => buildPreviewHtml(bodyContent), [bodyContent]);
 
@@ -347,11 +352,11 @@ export function ArticlePreview({
             </div>
 
             {/* Hero Image */}
-            {(article.feature_image_url || article.featured_image) && (
+            {imageUrl && (
               <div className="px-8 md:px-12 -mt-6">
                 <div className="aspect-[21/9] rounded-xl overflow-hidden shadow-lg ring-1 ring-black/5">
                   <ImageWithFallback
-                    src={(article.feature_image_url || article.featured_image)!}
+                    src={imageUrl}
                     alt={article.title}
                     className="w-full h-full object-cover"
                   />

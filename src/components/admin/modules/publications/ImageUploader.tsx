@@ -1,23 +1,32 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Loader2, Image as ImageIcon, Link } from 'lucide-react';
 import { Button } from '../../../ui/button';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { PublicationsAPI } from './api';
 
 interface ImageUploaderProps {
   value: string;
   onChange: (url: string) => void;
   label: string;
+  description?: string;
   previewHeight?: string;
+  disabled?: boolean;
+  onUploadStateChange?: (uploading: boolean) => void;
 }
 
-export function ImageUploader({ value, onChange, label, previewHeight = 'h-48' }: ImageUploaderProps) {
+export function ImageUploader({
+  value,
+  onChange,
+  label,
+  description,
+  previewHeight = 'h-48',
+  disabled = false,
+  onUploadStateChange,
+}: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const baseUrl = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/publications`;
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -36,39 +45,18 @@ export function ImageUploader({ value, onChange, label, previewHeight = 'h-48' }
     }
 
     setUploading(true);
+    onUploadStateChange?.(true);
     setError(null);
 
     try {
-      // Create form data
-      const formData = new FormData();
-      formData.append('file', file);
-
-      // Upload to server endpoint
-      const response = await fetch(`${baseUrl}/upload-image`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${publicAnonKey}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload image');
-      }
-
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to upload image');
-      }
-
-      onChange(data.data.url);
+      const data = await PublicationsAPI.Articles.uploadImage(file);
+      onChange(data.url);
     } catch (err) {
       console.error('Upload error:', err);
       setError(err instanceof Error ? err.message : 'Failed to upload image');
     } finally {
       setUploading(false);
+      onUploadStateChange?.(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -93,6 +81,9 @@ export function ImageUploader({ value, onChange, label, previewHeight = 'h-48' }
       <label className="block text-sm font-medium text-gray-700">
         {label}
       </label>
+      {description && (
+        <p className="text-xs text-gray-500 -mt-1">{description}</p>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">
@@ -143,12 +134,13 @@ export function ImageUploader({ value, onChange, label, previewHeight = 'h-48' }
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
                   placeholder="https://example.com/image.jpg"
+                  disabled={disabled || uploading}
                   className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
-                <Button onClick={handleUrlSubmit} size="sm">
+                <Button onClick={handleUrlSubmit} size="sm" disabled={disabled || uploading}>
                   Add
                 </Button>
-                <Button onClick={() => setShowUrlInput(false)} variant="outline" size="sm">
+                <Button onClick={() => setShowUrlInput(false)} variant="outline" size="sm" disabled={disabled || uploading}>
                   Cancel
                 </Button>
               </div>
@@ -163,7 +155,7 @@ export function ImageUploader({ value, onChange, label, previewHeight = 'h-48' }
                     variant="outline"
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
+                    disabled={disabled || uploading}
                   >
                     {uploading ? (
                       <div className="contents">
@@ -181,6 +173,7 @@ export function ImageUploader({ value, onChange, label, previewHeight = 'h-48' }
                     variant="outline"
                     size="sm"
                     onClick={() => setShowUrlInput(true)}
+                    disabled={disabled || uploading}
                   >
                     <Link className="h-4 w-4 mr-2" />
                     Add URL
