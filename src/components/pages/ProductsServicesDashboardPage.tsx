@@ -613,7 +613,7 @@ export function ProductsServicesDashboardPage() {
 
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="hidden lg:block space-y-5">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-2.5">
+          <div className="inline-flex max-w-full rounded-2xl border border-gray-200 bg-white p-2.5 shadow-sm">
             <div className="flex gap-2 overflow-x-auto pb-1">
               {enrichedServices.map((service) => {
                 const isSelected = selectedDesktopService?.id === service.id;
