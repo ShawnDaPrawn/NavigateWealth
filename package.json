@@ -63,7 +63,7 @@
     "dompurify": "*",
     "embla-carousel-react": "*",
     "exceljs": "^4.4.0",
-    "hono": "*",
+    "hono": "^4.12.19",
     "input-otp": "*",
     "jspdf": "*",
     "jspdf-autotable": "*",
