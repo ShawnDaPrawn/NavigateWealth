@@ -94,7 +94,6 @@ export function DashboardFooter() {
         open={legalViewer.viewerOpen}
         onOpenChange={legalViewer.setViewerOpen}
         document={legalViewer.viewerDocument}
-        onPrint={legalViewer.handlePrint}
       />
     </>
   );

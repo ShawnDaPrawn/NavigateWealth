@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BasePdfLayout, getPdfDimensions } from '../admin/modules/resources/templates/BasePdfLayout';
-import { PdfTemplateViewer } from '../admin/modules/resources/PdfTemplateViewer';
+import { PdfTemplateViewer, exportPdfFromPreview } from '../admin/modules/resources/PdfTemplateViewer';
 import {
   resolveLegalPdfRendererVersion,
   type LegalPdfRendererResolution,
@@ -12,6 +12,7 @@ import {
   getNormalizedLegalPdfDocument,
   LEGAL_PDF_CONTENT_CSS,
 } from './legalPdfPrintDocument';
+import { toast } from 'sonner@2.0.3';
 
 export type LegalPdfConfig = {
   pageSize: 'A4' | 'A3';
@@ -833,5 +834,109 @@ export function LegalDocumentPdfDialog({
         onPagedRendererStateChange={setPagedRenderState}
       />
     </PdfTemplateViewer>
+  );
+}
+
+export function LegalDocumentPdfDownloadSurface({
+  document,
+  requestId,
+  onDownloadStateChange,
+}: {
+  document: LegalPdfDocumentData | null;
+  requestId: number;
+  onDownloadStateChange?: (state: { active: boolean; completedRequestId?: number }) => void;
+}) {
+  const previewRootRef = useRef<HTMLDivElement | null>(null);
+  const lastHandledRequestIdRef = useRef(0);
+  const rendererResolution = resolveActiveLegalPdfRenderer();
+  const [pagedRenderState, setPagedRenderState] = useState<{
+    ready: boolean;
+    error: string | null;
+    activeRenderer: LegalPdfRendererVersion;
+  }>({
+    ready: rendererResolution.effectiveVersion !== 'paged',
+    error: null,
+    activeRenderer: rendererResolution.effectiveVersion,
+  });
+
+  useEffect(() => {
+    setPagedRenderState({
+      ready: rendererResolution.effectiveVersion !== 'paged',
+      error: null,
+      activeRenderer: rendererResolution.effectiveVersion,
+    });
+  }, [document, rendererResolution.effectiveVersion]);
+
+  useEffect(() => {
+    if (!document || requestId <= 0 || requestId === lastHandledRequestIdRef.current) {
+      return;
+    }
+
+    const pdfConfig = document.pdfConfig || DEFAULT_LEGAL_PDF_CONFIG;
+    const activePageSelector = rendererResolution.effectiveVersion === 'paged' ? '.pagedjs_page' : '.pdf-page';
+    const previewReady = rendererResolution.effectiveVersion === 'paged' ? pagedRenderState.ready : true;
+
+    if (!previewReady || !previewRootRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    lastHandledRequestIdRef.current = requestId;
+    onDownloadStateChange?.({ active: true });
+
+    const startDownload = async () => {
+      try {
+        await exportPdfFromPreview({
+          root: previewRootRef.current!,
+          title: document.title,
+          pageSize: pdfConfig.pageSize,
+          orientation: pdfConfig.orientation,
+          pageSelector: activePageSelector,
+        });
+      } catch (error) {
+        console.error('[LegalDocumentPdfDownloadSurface] PDF export failed:', error);
+        if (!cancelled) {
+          toast.error(
+            error instanceof Error
+              ? `PDF download failed: ${error.message}`
+              : 'PDF download failed. Please try again.',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          onDownloadStateChange?.({ active: false, completedRequestId: requestId });
+        }
+      }
+    };
+
+    void startDownload();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    document,
+    onDownloadStateChange,
+    pagedRenderState.ready,
+    rendererResolution.effectiveVersion,
+    requestId,
+  ]);
+
+  if (!document || requestId <= 0) {
+    return null;
+  }
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed left-[-100000px] top-0 opacity-0"
+      ref={previewRootRef}
+    >
+      <LegalDocumentPdfLayout
+        document={document}
+        rendererVersion={rendererResolution.effectiveVersion}
+        onPagedRendererStateChange={setPagedRenderState}
+      />
+    </div>
   );
 }

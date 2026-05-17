@@ -337,7 +337,6 @@ export function Step5Terms({ data, updateData }: StepProps) {
         open={legalViewer.viewerOpen}
         onOpenChange={legalViewer.setViewerOpen}
         document={legalViewer.viewerDocument}
-        onPrint={legalViewer.handlePrint}
       />
     </div>
   );

@@ -20,7 +20,7 @@ import { Card, CardContent } from '../ui/card';
 import { Separator } from '../ui/separator';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { LEGAL_DOCUMENTS_BY_SLUG, LEGAL_SECTION_LABELS } from '../../shared/legal-documents-registry';
-import { LegalDocumentPdfDialog } from './LegalDocumentPdf';
+import { LegalDocumentPdfDownloadSurface } from './LegalDocumentPdf';
 import {
   LEGAL_DOCUMENT_CONTENT_CLASS,
   LEGAL_DOCUMENT_CONTENT_STYLE,
@@ -209,10 +209,6 @@ export function useLegalDocumentViewer() {
     }
   }, []);
 
-  const handlePrint = useCallback(() => {
-    setViewerOpen(true);
-  }, []);
-
   return {
     openDocument: handleViewDocument,
     loadingSlug,
@@ -220,7 +216,6 @@ export function useLegalDocumentViewer() {
     setViewerOpen,
     viewerDocument,
     viewerLoading,
-    handlePrint,
   };
 }
 
@@ -228,7 +223,6 @@ interface LegalDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   document: LegalDocument | null;
-  onPrint?: () => void;
 }
 
 export function LegalDocumentDialog({
@@ -236,7 +230,8 @@ export function LegalDocumentDialog({
   onOpenChange,
   document,
 }: LegalDocumentDialogProps) {
-  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [pdfDownloadRequestId, setPdfDownloadRequestId] = useState(0);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
   const registryEntry = document?.slug ? LEGAL_DOCUMENTS_BY_SLUG[document.slug] : null;
@@ -302,6 +297,11 @@ export function LegalDocumentDialog({
     });
   }, []);
 
+  const handlePdfDownload = useCallback(() => {
+    if (!document) return;
+    setPdfDownloadRequestId((current) => current + 1);
+  }, [document]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -327,9 +327,13 @@ export function LegalDocumentDialog({
                   </div>
                 </div>
                 {document && (
-                  <Button onClick={() => setPdfPreviewOpen(true)} className="bg-sky-700 hover:bg-sky-800">
+                  <Button
+                    onClick={handlePdfDownload}
+                    disabled={pdfDownloading}
+                    className="bg-sky-700 hover:bg-sky-800 disabled:cursor-wait disabled:opacity-80"
+                  >
                     <Download className="mr-2 h-4 w-4" />
-                    Download PDF
+                    {pdfDownloading ? 'Preparing PDF...' : 'Download PDF'}
                   </Button>
                 )}
               </div>
@@ -486,10 +490,15 @@ export function LegalDocumentDialog({
         </DialogContent>
       </Dialog>
 
-      <LegalDocumentPdfDialog
-        open={pdfPreviewOpen}
-        onOpenChange={setPdfPreviewOpen}
+      <LegalDocumentPdfDownloadSurface
         document={pdfDocument}
+        requestId={pdfDownloadRequestId}
+        onDownloadStateChange={({ active, completedRequestId }) => {
+          setPdfDownloading(active);
+          if (!active && completedRequestId === pdfDownloadRequestId) {
+            setPdfDownloadRequestId(0);
+          }
+        }}
       />
     </>
   );
