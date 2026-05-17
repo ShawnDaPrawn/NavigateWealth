@@ -34,10 +34,13 @@ export function ContactDetailsSection({ profileData, handleInputChange }: Contac
               id="email"
               type="email"
               value={profileData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
+              readOnly
               placeholder="your@email.com"
-              className="mt-1.5"
+              className="mt-1.5 bg-gray-50 text-gray-600"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Your sign-in email is managed from Security Settings so authentication and notifications stay protected.
+            </p>
           </div>
 
           <div className="sm:col-span-2">

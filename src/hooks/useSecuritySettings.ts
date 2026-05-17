@@ -3,6 +3,7 @@ import { toast } from 'sonner@2.0.3';
 import { securityService } from '../utils/auth/securityService';
 import { 
   ActivityLogEntry, 
+  EmailChangeRequestData,
   SecurityStatus, 
   TwoFactorMethod,
   PasswordUpdateData 
@@ -18,12 +19,19 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
     newPassword: '',
     confirmPassword: ''
   });
+  const [emailChangeData, setEmailChangeData] = useState<EmailChangeRequestData>({
+    newEmail: '',
+    currentPassword: '',
+    currentEmailCode: '',
+    newEmailCode: ''
+  });
   
   const [securitySettings, setSecuritySettings] = useState<SecurityStatus>({
     twoFactorEnabled: false,
     twoFactorMethod: 'email',
     loginNotifications: true,
-    passwordLastChanged: null
+    passwordLastChanged: null,
+    pendingEmailChange: null,
   });
 
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
@@ -57,6 +65,11 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
     setSaveSuccess(false);
   };
 
+  const handleEmailChangeField = (field: keyof EmailChangeRequestData, value: string) => {
+    setEmailChangeData(prev => ({ ...prev, [field]: value }));
+    setSaveSuccess(false);
+  };
+
   const updatePassword = async () => {
     if (!userId) return;
     if (!passwordData.currentPassword || !passwordData.newPassword) return;
@@ -68,6 +81,11 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
     
     if (passwordData.newPassword.length < 8) {
       toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      toast.error('New password cannot be the same as your current password');
       return;
     }
 
@@ -130,18 +148,152 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
     return await securityService.sendTwoFactorCode(userId, userEmail);
   };
 
+  const requestEmailChange = async () => {
+    if (!userId || !userEmail) return null;
+
+    const normalizedNewEmail = emailChangeData.newEmail.trim().toLowerCase();
+    const normalizedCurrentEmail = userEmail.trim().toLowerCase();
+
+    if (!normalizedNewEmail) {
+      toast.error('Enter your new email address');
+      return null;
+    }
+
+    if (normalizedNewEmail === normalizedCurrentEmail) {
+      toast.error('New email must be different from your current email');
+      return null;
+    }
+
+    if (!emailChangeData.currentPassword) {
+      toast.error('Enter your current password to continue');
+      return null;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await securityService.requestEmailChange(userId, {
+        newEmail: normalizedNewEmail,
+        currentPassword: emailChangeData.currentPassword,
+      });
+
+      setSecuritySettings(prev => ({
+        ...prev,
+        pendingEmailChange: result.pendingEmailChange ?? null,
+      }));
+      setEmailChangeData(prev => ({
+        ...prev,
+        currentPassword: '',
+        currentEmailCode: '',
+        newEmailCode: '',
+      }));
+      toast.success('Verification codes sent to your current and new email addresses');
+      fetchActivityLogs();
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to start email change:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to start email change');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyEmailChange = async () => {
+    if (!userId) return null;
+
+    const pendingEmailChange = securitySettings.pendingEmailChange;
+    if (!pendingEmailChange) {
+      toast.error('No active email change request found');
+      return null;
+    }
+
+    if (!emailChangeData.newEmailCode) {
+      toast.error('Enter the code sent to your new email address');
+      return null;
+    }
+
+    if (pendingEmailChange.requiresCurrentEmailCode && !pendingEmailChange.currentEmailVerified && !emailChangeData.currentEmailCode) {
+      toast.error('Enter the code sent to your current email address');
+      return null;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await securityService.verifyEmailChange(userId, {
+        requestId: pendingEmailChange.requestId,
+        currentEmailCode: emailChangeData.currentEmailCode || undefined,
+        newEmailCode: emailChangeData.newEmailCode,
+      });
+
+      setSecuritySettings(prev => ({
+        ...prev,
+        pendingEmailChange: null,
+      }));
+      setEmailChangeData({
+        newEmail: '',
+        currentPassword: '',
+        currentEmailCode: '',
+        newEmailCode: '',
+      });
+      fetchActivityLogs();
+      fetchSecurityStatus();
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to verify email change:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to verify email change');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resendEmailChangeCodes = async (target: 'current' | 'new' | 'both' = 'both') => {
+    if (!userId) return null;
+    const pendingEmailChange = securitySettings.pendingEmailChange;
+    if (!pendingEmailChange) {
+      toast.error('No active email change request found');
+      return null;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await securityService.resendEmailChangeCodes(userId, {
+        requestId: pendingEmailChange.requestId,
+        target,
+      });
+
+      setSecuritySettings(prev => ({
+        ...prev,
+        pendingEmailChange: result.pendingEmailChange ?? prev.pendingEmailChange ?? null,
+      }));
+      toast.success('Verification code resent');
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to resend email change codes:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to resend verification code');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     activityLoading,
     saveSuccess,
     passwordData,
+    emailChangeData,
     securitySettings,
     activityLogs,
     handlePasswordChange,
+    handleEmailChangeField,
     updatePassword,
     toggleTwoFactor,
     verifyTwoFactorCode,
     sendTwoFactorCode,
+    requestEmailChange,
+    verifyEmailChange,
+    resendEmailChangeCodes,
     refreshLogs: fetchActivityLogs
   };
 }

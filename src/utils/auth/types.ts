@@ -84,5 +84,5 @@ export interface SignInResult {
 /** Second argument carries the Supabase auth event (INITIAL_SESSION, SIGNED_IN, etc.). */
 export type AuthCallback = (
   user: AuthUser | null,
-  details: { event: string; supabaseUser?: SupabaseUser },
+  details: { event: string; supabaseUser?: SupabaseUser; accessToken?: string },
 ) => void | Promise<void>;

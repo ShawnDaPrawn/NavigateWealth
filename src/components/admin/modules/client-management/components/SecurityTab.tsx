@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '../../../../ui/alert-dialog';
 import { ActivityLogTable } from '../../../ActivityLogTable';
+import { VerificationCodeField } from '../../../../security/VerificationCodeField';
 import {
   Shield,
   Lock,
@@ -44,11 +45,14 @@ import {
   UserCheck,
   Smartphone,
   Eye,
-  EyeOff
+  EyeOff,
+  Mail
 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api/client';
 import { toast } from 'sonner@2.0.3';
 import { useAuth } from '../../../../auth/AuthContext';
+import { securityService } from '../../../../../utils/auth/securityService';
+import type { PendingEmailChangeSummary } from '../../../../../utils/auth/securityTypes';
 
 interface SecurityTabProps {
   selectedClient: { id: string; firstName: string; lastName: string; email: string; accountStatus?: string };
@@ -65,6 +69,7 @@ interface SecurityStatus {
   closureReason?: string;
   twoFactorEnabled: boolean;
   passwordLastChanged?: string;
+  pendingEmailChange?: PendingEmailChangeSummary | null;
 }
 
 interface ActivityLogEntry {
@@ -94,6 +99,9 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
   const [newPassword, setNewPassword] = useState('');
   const [emailPasswordToClient, setEmailPasswordToClient] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [currentAuthEmail, setCurrentAuthEmail] = useState(selectedClient.email);
+  const [newEmail, setNewEmail] = useState('');
+  const [newEmailCode, setNewEmailCode] = useState('');
 
   useEffect(() => {
     if (selectedClient?.id) {
@@ -102,23 +110,20 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     }
   }, [selectedClient?.id]);
 
+  useEffect(() => {
+    setCurrentAuthEmail(selectedClient.email);
+    setNewEmail('');
+    setNewEmailCode('');
+  }, [selectedClient.email, selectedClient.id]);
+
   const fetchSecurityStatus = async () => {
     if (!selectedClient?.id) return;
 
     try {
       setLoading(true);
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${selectedClient.id}/status`,
-        {
-          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-        }
+      const data = await api.get<{ success: boolean; status?: SecurityStatus }>(
+        `/security/${selectedClient.id}/status`
       );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch security status');
-      }
-
-      const data = await response.json();
       if (data.success && data.status) {
         setSecurityStatus(data.status);
       }
@@ -135,18 +140,9 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
 
     try {
       setActivityLoading(true);
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${selectedClient.id}/activity?limit=50`,
-        {
-          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-        }
+      const data = await api.get<{ success: boolean; logs?: ActivityLogEntry[] }>(
+        `/security/${selectedClient.id}/activity?limit=50`
       );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch activity logs');
-      }
-
-      const data = await response.json();
       if (data.success) {
         setActivityLogs(data.logs || []);
       }
@@ -162,25 +158,16 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
 
     try {
       setLoading(true);
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${selectedClient.id}/suspend`,
+      const data = await api.post<{ success: boolean; error?: string; status?: SecurityStatus }>(
+        `/security/${selectedClient.id}/suspend`,
         {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            suspended: true,
-            reason: suspensionReason,
-            adminId: user.id
-          })
+          suspended: true,
+          reason: suspensionReason,
+          adminId: user.id
         }
       );
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
+      if (!data.success || !data.status) {
         throw new Error(data.error || 'Failed to suspend account');
       }
 
@@ -204,24 +191,15 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
 
     try {
       setLoading(true);
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${selectedClient.id}/suspend`,
+      const data = await api.post<{ success: boolean; error?: string; status?: SecurityStatus }>(
+        `/security/${selectedClient.id}/suspend`,
         {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            suspended: false,
-            adminId: user.id
-          })
+          suspended: false,
+          adminId: user.id
         }
       );
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
+      if (!data.success || !data.status) {
         throw new Error(data.error || 'Failed to unsuspend account');
       }
 
@@ -249,25 +227,16 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
 
     try {
       setLoading(true);
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${selectedClient.id}/password`,
+      const data = await api.post<{ success: boolean; error?: string }>(
+        `/security/${selectedClient.id}/password`,
         {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            currentPassword: 'admin-override',
-            newPassword: newPassword,
-            emailPassword: emailPasswordToClient
-          })
+          currentPassword: 'admin-override',
+          newPassword,
+          emailPassword: emailPasswordToClient
         }
       );
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || 'Failed to reset password');
       }
 
@@ -292,24 +261,15 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
 
     try {
       setLoading(true);
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${selectedClient.id}/2fa`,
+      const data = await api.post<{ success: boolean; error?: string; status?: SecurityStatus }>(
+        `/security/${selectedClient.id}/2fa`,
         {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            enabled,
-            method: 'email'
-          })
+          enabled,
+          method: 'email'
         }
       );
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
+      if (!data.success || !data.status) {
         throw new Error(data.error || 'Failed to toggle 2FA');
       }
 
@@ -321,6 +281,99 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     } catch (error) {
       console.error('❌ Failed to toggle 2FA:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to toggle 2FA');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestEmailChange = async () => {
+    if (!selectedClient?.id) return;
+
+    const normalizedNewEmail = newEmail.trim().toLowerCase();
+    const normalizedCurrentEmail = currentAuthEmail.trim().toLowerCase();
+
+    if (!normalizedNewEmail) {
+      toast.error('Enter the new email address');
+      return;
+    }
+
+    if (normalizedNewEmail === normalizedCurrentEmail) {
+      toast.error('New email must be different from the current email');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await securityService.requestEmailChange(selectedClient.id, {
+        newEmail: normalizedNewEmail,
+      });
+
+      setSecurityStatus(prev => ({
+        ...prev,
+        pendingEmailChange: result.pendingEmailChange ?? null,
+      }));
+      setNewEmailCode('');
+      toast.success('Verification code sent to the new email address and a notice was sent to the current address');
+      fetchActivityLogs();
+    } catch (error) {
+      console.error('❌ Failed to start email change:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to start email change');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyEmailChange = async () => {
+    if (!selectedClient?.id || !securityStatus.pendingEmailChange) return;
+    if (!newEmailCode) {
+      toast.error('Enter the code sent to the new email address');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await securityService.verifyEmailChange(selectedClient.id, {
+        requestId: securityStatus.pendingEmailChange.requestId,
+        newEmailCode,
+      });
+
+      if (result.email) {
+        setCurrentAuthEmail(result.email);
+      }
+      setSecurityStatus(prev => ({
+        ...prev,
+        pendingEmailChange: null,
+      }));
+      setNewEmail('');
+      setNewEmailCode('');
+      toast.success('Client sign-in email updated successfully');
+      fetchActivityLogs();
+      fetchSecurityStatus();
+    } catch (error) {
+      console.error('❌ Failed to verify email change:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to verify email change');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendEmailChangeCode = async () => {
+    if (!selectedClient?.id || !securityStatus.pendingEmailChange) return;
+
+    try {
+      setLoading(true);
+      const result = await securityService.resendEmailChangeCodes(selectedClient.id, {
+        requestId: securityStatus.pendingEmailChange.requestId,
+        target: 'new',
+      });
+      setSecurityStatus(prev => ({
+        ...prev,
+        pendingEmailChange: result.pendingEmailChange ?? prev.pendingEmailChange ?? null,
+      }));
+      toast.success('New email verification code resent');
+    } catch (error) {
+      console.error('❌ Failed to resend email change code:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to resend verification code');
     } finally {
       setLoading(false);
     }
@@ -440,6 +493,91 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Sign-In Email</CardTitle>
+          <CardDescription>
+            Change the authentication email for this client. The current address is notified immediately and the new address must be verified before the change completes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <Alert className="border-amber-200 bg-amber-50">
+            <AlertTriangle className="h-4 w-4 text-amber-700" />
+            <AlertDescription className="text-amber-900">
+              Admin-initiated changes do not complete instantly. A security notice goes to the current email address, and the client must provide the OTP delivered to the new email address before sign-in is switched over.
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="currentClientAuthEmail">Current sign-in email</Label>
+              <Input
+                id="currentClientAuthEmail"
+                value={currentAuthEmail}
+                readOnly
+                className="bg-muted"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newClientAuthEmail">New sign-in email</Label>
+              <Input
+                id="newClientAuthEmail"
+                type="email"
+                value={securityStatus.pendingEmailChange?.newEmail || newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                disabled={Boolean(securityStatus.pendingEmailChange)}
+                placeholder="client@example.com"
+              />
+            </div>
+          </div>
+
+          {securityStatus.pendingEmailChange && (
+            <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium">Verification pending</p>
+                  <p className="text-xs text-muted-foreground">
+                    Waiting for the code sent to {securityStatus.pendingEmailChange.newEmail}.
+                  </p>
+                </div>
+                <Badge variant="outline" className="w-fit border-amber-200 text-amber-700">
+                  Pending
+                </Badge>
+              </div>
+
+              <VerificationCodeField
+                id="adminNewEmailCode"
+                label="Verification code from the new email"
+                description="Ask the client for the 6-digit code sent to the new email address."
+                value={newEmailCode}
+                onChange={setNewEmailCode}
+                disabled={loading}
+              />
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2 justify-end">
+            {securityStatus.pendingEmailChange ? (
+              <>
+                <Button variant="outline" onClick={handleResendEmailChangeCode} disabled={loading}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  Resend Code
+                </Button>
+                <Button onClick={handleVerifyEmailChange} disabled={loading || !newEmailCode}>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Confirm Email Change
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" onClick={handleRequestEmailChange} disabled={loading || !newEmail}>
+                <Mail className="mr-2 h-4 w-4" />
+                Start Email Change
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Administrator Actions */}
       <Card>

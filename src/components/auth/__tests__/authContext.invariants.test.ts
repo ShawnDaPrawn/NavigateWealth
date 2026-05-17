@@ -21,7 +21,8 @@ describe('AuthContext structural invariants', () => {
 
   it('hydrates profile with supabase session user passed into loadUserProfile', () => {
     expect(authContextSrc).toContain('opts?.supabaseUser');
-    expect(authContextSrc).toMatch(/loadUserProfile\s*\(\s*authUser\.id\s*,\s*authUser\.email\s*,\s*opts\?\.supabaseUser\s*\)/);
+    expect(authContextSrc).toContain('opts?.accessToken');
+    expect(authContextSrc).toMatch(/loadUserProfile\s*\(\s*authUser\.id\s*,\s*authUser\.email\s*,\s*opts\?\.supabaseUser\s*,\s*opts\?\.accessToken\s*\)/);
   });
 
   it('documents single-pipeline auth via onAuthStateChange only', () => {

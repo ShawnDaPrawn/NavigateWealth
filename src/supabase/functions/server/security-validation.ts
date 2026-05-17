@@ -38,3 +38,19 @@ export const Send2FACodeSchema = z.object({
 export const Verify2FACodeSchema = z.object({
   code: z.string().min(4).max(10),
 });
+
+export const RequestEmailChangeSchema = z.object({
+  newEmail: z.string().email(),
+  currentPassword: z.string().min(1).optional(),
+});
+
+export const VerifyEmailChangeSchema = z.object({
+  requestId: z.string().min(1).optional(),
+  currentEmailCode: z.string().trim().length(6).optional(),
+  newEmailCode: z.string().trim().length(6),
+});
+
+export const ResendEmailChangeCodeSchema = z.object({
+  requestId: z.string().min(1).optional(),
+  target: z.enum(['current', 'new', 'both']).optional().default('both'),
+});

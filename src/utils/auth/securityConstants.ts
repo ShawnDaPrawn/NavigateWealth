@@ -5,6 +5,9 @@ export const SECURITY_API_ENDPOINTS = {
   TWO_FACTOR: (userId: string) => `/security/${userId}/2fa`,
   VERIFY_CODE: (userId: string) => `/security/${userId}/2fa/verify-code`,
   SEND_CODE: (userId: string) => `/security/${userId}/2fa/send-code`,
+  EMAIL_CHANGE_REQUEST: (userId: string) => `/security/${userId}/email-change/request`,
+  EMAIL_CHANGE_VERIFY: (userId: string) => `/security/${userId}/email-change/verify`,
+  EMAIL_CHANGE_RESEND: (userId: string) => `/security/${userId}/email-change/resend`,
 };
 
 export const PASSWORD_REQUIREMENTS = {

@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const resolveAuthSession = async (
       authUser: AuthUser | null,
-      opts?: { supabaseUser?: SupabaseSessionUser },
+      opts?: { supabaseUser?: SupabaseSessionUser; accessToken?: string },
     ) => {
       try {
         if (cancelled) return;
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               let userData: AppUser;
               try {
                 userData = await promiseWithTimeout(
-                  loadUserProfile(authUser.id, authUser.email, opts?.supabaseUser),
+                  loadUserProfile(authUser.id, authUser.email, opts?.supabaseUser, opts?.accessToken),
                   PROFILE_HYDRATION_TIMEOUT_MS,
                   'profile_hydration_timeout',
                 );
@@ -184,9 +184,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const subscription = onAuthStateChange(async (authUser, { event, supabaseUser }) => {
+    const subscription = onAuthStateChange(async (authUser, { event, supabaseUser, accessToken }) => {
       console.log('🔐 Auth pipeline event:', event);
-      await resolveAuthSession(authUser, supabaseUser ? { supabaseUser } : undefined);
+      await resolveAuthSession(
+        authUser,
+        supabaseUser || accessToken ? { supabaseUser, accessToken } : undefined,
+      );
     });
 
     return () => {

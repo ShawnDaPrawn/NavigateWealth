@@ -4,7 +4,12 @@
 import { projectId, publicAnonKey } from '../supabase/info';
 import { api } from '../api/client';
 import { SECURITY_API_ENDPOINTS } from './securityConstants';
-import { ActivityLogEntry, SecurityStatus, TwoFactorMethod } from './securityTypes';
+import {
+  ActivityLogEntry,
+  PendingEmailChangeSummary,
+  SecurityStatus,
+  TwoFactorMethod,
+} from './securityTypes';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/auth`;
 
@@ -366,5 +371,51 @@ export const securityService = {
       throw new Error(data.error || 'Invalid verification code');
     }
     return data;
-  }
+  },
+
+  requestEmailChange: async (userId: string, payload: { newEmail: string; currentPassword?: string }) => {
+    const data = await api.post<{
+      success: boolean;
+      error?: string;
+      pendingEmailChange?: PendingEmailChangeSummary | null;
+    }>(SECURITY_API_ENDPOINTS.EMAIL_CHANGE_REQUEST(userId), payload);
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to start email change');
+    }
+    return data;
+  },
+
+  verifyEmailChange: async (
+    userId: string,
+    payload: { requestId?: string; currentEmailCode?: string; newEmailCode: string },
+  ) => {
+    const data = await api.post<{
+      success: boolean;
+      error?: string;
+      email?: string;
+      requiresReauth?: boolean;
+    }>(SECURITY_API_ENDPOINTS.EMAIL_CHANGE_VERIFY(userId), payload);
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to verify email change');
+    }
+    return data;
+  },
+
+  resendEmailChangeCodes: async (
+    userId: string,
+    payload: { requestId?: string; target?: 'current' | 'new' | 'both' },
+  ) => {
+    const data = await api.post<{
+      success: boolean;
+      error?: string;
+      pendingEmailChange?: PendingEmailChangeSummary | null;
+    }>(SECURITY_API_ENDPOINTS.EMAIL_CHANGE_RESEND(userId), payload);
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to resend verification code');
+    }
+    return data;
+  },
 };

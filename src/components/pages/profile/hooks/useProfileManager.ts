@@ -534,7 +534,6 @@ export function useProfileManager({
       updateUser({
         firstName: profileData.firstName,
         lastName: profileData.lastName,
-        email: profileData.email,
       });
 
       setOriginalData({ ...profileData });

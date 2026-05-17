@@ -22,9 +22,11 @@ import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ActivityLogTable } from '../admin/ActivityLogTable';
 import { TwoFactorModal } from '../auth/TwoFactorModal';
+import { VerificationCodeField } from '../security/VerificationCodeField';
 import { useSecuritySettings } from '../../hooks/useSecuritySettings';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { ACTIVE_THEME } from '../portal/portal-theme';
+import { toast } from 'sonner@2.0.3';
 import {
   Shield,
   Lock,
@@ -49,6 +51,7 @@ import {
 const NAV_ITEMS = [
   { id: 'activity', label: 'System Activity', icon: Clock },
   { id: 'password', label: 'Change Password', icon: Lock },
+  { id: 'email', label: 'Email Address', icon: Mail },
   { id: 'two-factor', label: 'Two-Factor Auth', icon: Key },
 ] as const;
 
@@ -109,18 +112,23 @@ function getScoreConfig(score: number) {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export function SecuritySettingsPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const {
     isLoading,
     activityLoading,
     passwordData,
+    emailChangeData,
     securitySettings,
     activityLogs,
     handlePasswordChange,
+    handleEmailChangeField,
     updatePassword,
     toggleTwoFactor,
     verifyTwoFactorCode,
     sendTwoFactorCode,
+    requestEmailChange,
+    verifyEmailChange,
+    resendEmailChangeCodes,
   } = useSecuritySettings(user?.id, user?.email);
 
   const [activeSection, setActiveSection] = useState<SectionId>('activity');
@@ -150,6 +158,20 @@ export function SecuritySettingsPage() {
   const on2FAVerified = () => {
     toggleTwoFactor(true, securitySettings.twoFactorMethod);
     setShow2FAModal(false);
+  };
+
+  const pendingEmailChange = securitySettings.pendingEmailChange;
+
+  const handleConfirmEmailChange = async () => {
+    const result = await verifyEmailChange();
+    if (!result) return;
+
+    toast.success('Your sign-in email has been updated. Please sign in again with the new address.');
+    if (result.requiresReauth) {
+      setTimeout(() => {
+        logout().catch(() => undefined);
+      }, 900);
+    }
   };
 
   // ── Circumference for SVG ring (radius = 40) ─────────────────────────────
@@ -449,6 +471,182 @@ export function SecuritySettingsPage() {
             )}
 
             {/* ════════════════════ TWO-FACTOR AUTH ════════════════════ */}
+            {activeSection === 'email' && (
+              <Card className="border-gray-200">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-[#6d28d9]/10 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-[#6d28d9]" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold text-gray-900">Change Sign-In Email</CardTitle>
+                      <CardDescription className="text-sm text-gray-500">
+                        Update the email address used for authentication and security alerts.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <Alert className="border-amber-200 bg-amber-50">
+                    <AlertTriangle className="h-4 w-4 text-amber-700" />
+                    <AlertDescription className="text-sm text-amber-900">
+                      For security, we will email your current address immediately and require verification codes from both your current and new email addresses before the change is completed.
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="currentAuthEmail" className="text-sm font-medium text-gray-700">Current sign-in email</Label>
+                      <Input
+                        id="currentAuthEmail"
+                        value={user?.email || ''}
+                        readOnly
+                        className="bg-gray-50 text-gray-600"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newAuthEmail" className="text-sm font-medium text-gray-700">New sign-in email</Label>
+                      <Input
+                        id="newAuthEmail"
+                        type="email"
+                        value={pendingEmailChange?.newEmail || emailChangeData.newEmail}
+                        onChange={(e) => handleEmailChangeField('newEmail', e.target.value)}
+                        disabled={Boolean(pendingEmailChange)}
+                        placeholder="name@example.com"
+                      />
+                    </div>
+                  </div>
+
+                  {!pendingEmailChange && (
+                    <div className="max-w-md space-y-2">
+                      <Label htmlFor="emailChangePassword" className="text-sm font-medium text-gray-700">Current password</Label>
+                      <Input
+                        id="emailChangePassword"
+                        type="password"
+                        value={emailChangeData.currentPassword}
+                        onChange={(e) => handleEmailChangeField('currentPassword', e.target.value)}
+                        placeholder="Enter your current password"
+                      />
+                      <p className="text-xs text-gray-500">
+                        This confirms the request is really coming from you before we send verification codes.
+                      </p>
+                    </div>
+                  )}
+
+                  {pendingEmailChange && (
+                    <div className="space-y-5 rounded-xl border border-gray-200 bg-gray-50 p-5">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Verification in progress</p>
+                          <p className="text-xs text-gray-500">
+                            Complete the codes below to finish changing your sign-in email to {pendingEmailChange.newEmail}.
+                          </p>
+                        </div>
+                        <Badge className="w-fit border-amber-200 bg-amber-100 text-amber-800">
+                          Pending Verification
+                        </Badge>
+                      </div>
+
+                      {pendingEmailChange.requiresCurrentEmailCode && !pendingEmailChange.currentEmailVerified && (
+                        <VerificationCodeField
+                          id="currentEmailCode"
+                          label="Code sent to your current email"
+                          description={`Enter the 6-digit code we sent to ${user?.email}.`}
+                          value={emailChangeData.currentEmailCode}
+                          onChange={(value) => handleEmailChangeField('currentEmailCode', value)}
+                          disabled={isLoading}
+                        />
+                      )}
+
+                      {pendingEmailChange.currentEmailVerified && (
+                        <Alert className="border-green-200 bg-green-50">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <AlertDescription className="text-sm text-green-800">
+                            Your current email address has been verified.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      <VerificationCodeField
+                        id="newEmailCode"
+                        label="Code sent to your new email"
+                        description={`Enter the 6-digit code we sent to ${pendingEmailChange.newEmail}.`}
+                        value={emailChangeData.newEmailCode}
+                        onChange={(value) => handleEmailChangeField('newEmailCode', value)}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-gray-500">
+                      {pendingEmailChange
+                        ? 'Codes expire after 10 minutes. If one expires, request a fresh code below.'
+                        : 'We use the same security email template and audit trail as the rest of the platform.'}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {pendingEmailChange ? (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => resendEmailChangeCodes('both')}
+                            disabled={isLoading}
+                          >
+                            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                            Resend Codes
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={handleConfirmEmailChange}
+                            disabled={
+                              isLoading ||
+                              !emailChangeData.newEmailCode ||
+                              (pendingEmailChange.requiresCurrentEmailCode &&
+                                !pendingEmailChange.currentEmailVerified &&
+                                !emailChangeData.currentEmailCode)
+                            }
+                            className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white"
+                          >
+                            {isLoading ? (
+                              <div className="contents">
+                                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                Verifying...
+                              </div>
+                            ) : (
+                              <div className="contents">
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Confirm Email Change
+                              </div>
+                            )}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          type="button"
+                          onClick={requestEmailChange}
+                          disabled={isLoading || !emailChangeData.newEmail || !emailChangeData.currentPassword}
+                          className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white"
+                        >
+                          {isLoading ? (
+                            <div className="contents">
+                              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                              Sending Codes...
+                            </div>
+                          ) : (
+                            <div className="contents">
+                              <Mail className="mr-2 h-4 w-4" />
+                              Send Verification Codes
+                            </div>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {activeSection === 'two-factor' && (
               <Card className="border-gray-200">
                 <CardHeader>

@@ -3,12 +3,13 @@
  * Handles password reset, activity logs, and user suspension
  */
 
-import { Hono } from 'npm:hono';
+import { Hono, type Context } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { sendEmail, sendTwoFactorEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
+import { requireAuth } from './auth-mw.ts';
 import {
   LogActivitySchema,
   ChangePasswordSchema,
@@ -16,6 +17,9 @@ import {
   Toggle2FASchema,
   Send2FACodeSchema,
   Verify2FACodeSchema,
+  RequestEmailChangeSchema,
+  VerifyEmailChangeSchema,
+  ResendEmailChangeCodeSchema,
 } from './security-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 
@@ -30,6 +34,17 @@ app.get('', (c) => c.json({ service: 'security', status: 'active' }));
 const getSupabase = () => createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+);
+
+const getPasswordVerifier = () => createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_ANON_KEY')!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
 );
 
 /**
@@ -89,14 +104,314 @@ interface UserSecurityStatus {
   last2faVerifiedAt?: string;
 }
 
+interface PendingEmailChangeRequest {
+  id: string;
+  userId: string;
+  initiatedAt: string;
+  expiresAt: string;
+  requestedByUserId?: string;
+  requestedByRole?: string;
+  requiresCurrentEmailCode: boolean;
+  oldEmail: string;
+  newEmail: string;
+  currentEmailCodeHash?: string;
+  newEmailCodeHash: string;
+  currentEmailCodeExpiresAt?: string;
+  newEmailCodeExpiresAt: string;
+  currentEmailCodeAttempts: number;
+  newEmailCodeAttempts: number;
+  currentEmailVerifiedAt?: string;
+  newEmailVerifiedAt?: string;
+}
+
+interface EmailChangeSummary {
+  requestId: string;
+  newEmail: string;
+  initiatedAt: string;
+  expiresAt: string;
+  requiresCurrentEmailCode: boolean;
+  currentEmailVerified: boolean;
+  newEmailVerified: boolean;
+}
+
+const EMAIL_CHANGE_EXPIRY_MS = 15 * 60 * 1000;
+const EMAIL_CHANGE_CODE_EXPIRY_MS = 10 * 60 * 1000;
+const EMAIL_CHANGE_MAX_ATTEMPTS = 5;
+
+function isAdminRole(role: string | undefined): boolean {
+  return role === 'admin' || role === 'super_admin' || role === 'super-admin';
+}
+
+function ensureSelfOrAdmin(c: Context, targetUserId: string): Response | null {
+  const authUserId = c.get('userId') as string | undefined;
+  const role = c.get('userRole') as string | undefined;
+
+  if (authUserId === targetUserId || isAdminRole(role)) {
+    return null;
+  }
+
+  return c.json({ success: false, error: 'Forbidden' }, 403);
+}
+
+function ensureAdmin(c: Context): Response | null {
+  const role = c.get('userRole') as string | undefined;
+  if (isAdminRole(role)) {
+    return null;
+  }
+
+  return c.json({ success: false, error: 'Forbidden: Admin access required' }, 403);
+}
+
+async function verifyCurrentPassword(email: string, currentPassword: string): Promise<boolean> {
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!anonKey) {
+    throw new Error('SUPABASE_ANON_KEY is not configured');
+  }
+
+  const verifier = getPasswordVerifier();
+  const { error } = await verifier.auth.signInWithPassword({
+    email,
+    password: currentPassword,
+  });
+
+  await verifier.auth.signOut().catch(() => undefined);
+  return !error;
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function emailChangeKey(userId: string): string {
+  return `email_change:${userId}`;
+}
+
+function generateSixDigitCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function createCodePair() {
+  const code = generateSixDigitCode();
+  return {
+    code,
+    hash: await sha256Hex(code),
+    expiresAt: new Date(Date.now() + EMAIL_CHANGE_CODE_EXPIRY_MS).toISOString(),
+  };
+}
+
+function getEmailChangeSummary(request: PendingEmailChangeRequest | null): EmailChangeSummary | null {
+  if (!request) return null;
+  return {
+    requestId: request.id,
+    newEmail: request.newEmail,
+    initiatedAt: request.initiatedAt,
+    expiresAt: request.expiresAt,
+    requiresCurrentEmailCode: request.requiresCurrentEmailCode,
+    currentEmailVerified: Boolean(request.currentEmailVerifiedAt),
+    newEmailVerified: Boolean(request.newEmailVerifiedAt),
+  };
+}
+
+async function getPendingEmailChange(userId: string): Promise<PendingEmailChangeRequest | null> {
+  const request = await kv.get(emailChangeKey(userId)) as PendingEmailChangeRequest | null;
+  if (!request) return null;
+
+  if (new Date(request.expiresAt).getTime() < Date.now()) {
+    await kv.del(emailChangeKey(userId));
+    return null;
+  }
+
+  return request;
+}
+
+async function writeActivityLog(
+  userId: string,
+  type: string,
+  success: boolean,
+  metadata?: Record<string, unknown>,
+) {
+  const timestamp = new Date().toISOString();
+  const logId = `log_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+  await kv.set(`activity:${userId}:${logId}`, {
+    id: logId,
+    userId,
+    type,
+    timestamp,
+    success,
+    metadata,
+  });
+}
+
+async function updateStoredPrimaryEmail(userId: string, newEmail: string) {
+  const profileKey = `user_profile:${userId}:personal_info`;
+  const existingProfile = await kv.get(profileKey) as Record<string, unknown> | null;
+  if (!existingProfile) return;
+
+  const nextProfile: Record<string, unknown> = {
+    ...existingProfile,
+    email: newEmail,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const contactInformation =
+    existingProfile.contactInformation &&
+    typeof existingProfile.contactInformation === 'object' &&
+    !Array.isArray(existingProfile.contactInformation)
+      ? { ...(existingProfile.contactInformation as Record<string, unknown>), email: newEmail }
+      : null;
+
+  if (contactInformation) {
+    nextProfile.contactInformation = contactInformation;
+  }
+
+  await kv.set(profileKey, nextProfile);
+}
+
+async function sendEmailChangeInitiatedNotice(
+  currentEmail: string,
+  newEmail: string,
+  requesterLabel: string,
+) {
+  const footerSettings = await getFooterSettings();
+  const html = createEmailTemplate(
+    `
+      <p>A request was made to change the sign-in email address on your Navigate Wealth account.</p>
+      <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #e5e7eb;">
+        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Requested new email</p>
+        <p style="margin: 0; font-size: 18px; font-weight: 600; color: #111827;">${newEmail}</p>
+      </div>
+      <p>Request source: <strong>${requesterLabel}</strong></p>
+      <p>If this was not you, please contact Navigate Wealth support immediately so we can secure your account.</p>
+    `,
+    {
+      title: 'Security Notice',
+      subtitle: 'Email change requested',
+      footerNote: 'If you do not recognise this request, contact support immediately.',
+      footerSettings,
+    },
+  );
+
+  const text = [
+    'A request was made to change the sign-in email address on your Navigate Wealth account.',
+    `Requested new email: ${newEmail}`,
+    `Request source: ${requesterLabel}`,
+    'If this was not you, please contact Navigate Wealth support immediately.',
+  ].join('\n\n');
+
+  const sent = await sendEmail({
+    to: currentEmail,
+    subject: 'Navigate Wealth security notice: email change requested',
+    html,
+    text,
+  });
+  if (!sent) {
+    throw new Error('Failed to send current-email security notice');
+  }
+}
+
+async function sendEmailChangeCodeEmail(
+  targetEmail: string,
+  code: string,
+  destinationLabel: string,
+) {
+  const footerSettings = await getFooterSettings();
+  const html = createEmailTemplate(
+    `
+      <p>Use the verification code below to confirm the ${destinationLabel} email address for your Navigate Wealth account.</p>
+      <div style="background-color: #f3f4f6; padding: 24px; border-radius: 8px; margin: 24px 0; text-align: center;">
+        <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">Your verification code is:</p>
+        <p style="margin: 0; font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #111827;">${code}</p>
+      </div>
+      <p>This code expires in <strong>10 minutes</strong>.</p>
+      <p style="color: #d97706; background-color: #fffbeb; padding: 12px; border-radius: 6px; border: 1px solid #fcd34d;">
+        <strong>Security Tip:</strong> Never share this code with anyone. Navigate Wealth will never ask you for it by phone or chat.
+      </p>
+    `,
+    {
+      title: 'Email Change Verification',
+      subtitle: `Confirm your ${destinationLabel} address`,
+      footerNote: 'If you did not request this change, ignore this email and contact support.',
+      footerSettings,
+    },
+  );
+
+  const text = [
+    `Your Navigate Wealth verification code for the ${destinationLabel} email address is ${code}.`,
+    'This code expires in 10 minutes.',
+    'If you did not request this change, ignore this email and contact support.',
+  ].join('\n\n');
+
+  const sent = await sendEmail({
+    to: targetEmail,
+    subject: `Navigate Wealth email change code: ${destinationLabel}`,
+    html,
+    text,
+  });
+  if (!sent) {
+    throw new Error(`Failed to send ${destinationLabel} verification code`);
+  }
+}
+
+async function sendEmailChangeCompletedNotice(oldEmail: string, newEmail: string) {
+  const footerSettings = await getFooterSettings();
+  const recipients = [oldEmail, newEmail];
+
+  const html = createEmailTemplate(
+    `
+      <p>Your Navigate Wealth sign-in email address has been updated successfully.</p>
+      <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #e5e7eb;">
+        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">New sign-in email</p>
+        <p style="margin: 0; font-size: 18px; font-weight: 600; color: #111827;">${newEmail}</p>
+      </div>
+      <p>If you did not approve this change, contact support immediately.</p>
+    `,
+    {
+      title: 'Email Updated',
+      subtitle: 'Your sign-in email has changed',
+      footerNote: 'If this update was not authorised by you, contact support immediately.',
+      footerSettings,
+    },
+  );
+
+  const text = [
+    'Your Navigate Wealth sign-in email address has been updated successfully.',
+    `New sign-in email: ${newEmail}`,
+    'If you did not approve this change, contact support immediately.',
+  ].join('\n\n');
+
+  const results = await Promise.all(
+    recipients.map((to) =>
+      sendEmail({
+        to,
+        subject: 'Navigate Wealth sign-in email updated',
+        html,
+        text,
+      }),
+    ),
+  );
+  if (results.some((sent) => !sent)) {
+    throw new Error('Failed to send one or more email change completion notices');
+  }
+}
+
 /**
  * GET /security/:userId/activity
  * Get activity logs for a user
  */
-app.get('/:userId/activity', async (c) => {
+app.get('/:userId/activity', requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
     const limit = parseInt(c.req.query('limit') || '50');
+    const denied = ensureSelfOrAdmin(c, userId);
+    if (denied) return denied;
     
     log.info(`📊 Fetching activity logs for user: ${userId}`);
 
@@ -126,9 +441,11 @@ app.get('/:userId/activity', async (c) => {
  * POST /security/:userId/activity
  * Log a security activity
  */
-app.post('/:userId/activity', async (c) => {
+app.post('/:userId/activity', requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
+    const denied = ensureSelfOrAdmin(c, userId);
+    if (denied) return denied;
     const body = await c.req.json();
     
     const parsed = LogActivitySchema.safeParse(body);
@@ -177,9 +494,13 @@ app.post('/:userId/activity', async (c) => {
  * POST /security/:userId/password
  * Change user password
  */
-app.post('/:userId/password', async (c) => {
+app.post('/:userId/password', requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
+    const authUserId = c.get('userId') as string | undefined;
+    const userRole = c.get('userRole') as string | undefined;
+    const denied = ensureSelfOrAdmin(c, userId);
+    if (denied) return denied;
     const body = await c.req.json();
     
     const parsed = ChangePasswordSchema.safeParse(body);
@@ -196,6 +517,24 @@ app.post('/:userId/password', async (c) => {
     if (getUserError || !user) {
       log.error('❌ User not found:', getUserError);
       return c.json({ success: false, error: 'User not found' }, 404);
+    }
+
+    const isAdminReset = isAdminRole(userRole) && authUserId !== userId;
+
+    if (!isAdminReset) {
+      const userEmail = user.user.email;
+      if (!userEmail) {
+        return c.json({ success: false, error: 'User email is missing' }, 400);
+      }
+
+      const currentPasswordValid = await verifyCurrentPassword(userEmail, currentPassword);
+      if (!currentPasswordValid) {
+        return c.json({ success: false, error: 'Current password is incorrect' }, 400);
+      }
+
+      if (currentPassword === newPassword) {
+        return c.json({ success: false, error: 'New password cannot be the same as your current password' }, 400);
+      }
     }
 
     // Update password using admin API
@@ -311,7 +650,7 @@ Log In: ${buttonUrl}
 
     return c.json({
       success: true,
-      message: 'Password changed successfully'
+      message: isAdminReset ? 'Password reset successfully' : 'Password changed successfully'
     });
   } catch (error) {
     const errorMsg = logSafeError('Error changing password', error);
@@ -323,9 +662,11 @@ Log In: ${buttonUrl}
  * GET /security/:userId/status
  * Get user security status (including suspension status)
  */
-app.get('/:userId/status', async (c) => {
+app.get('/:userId/status', requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
+    const denied = ensureSelfOrAdmin(c, userId);
+    if (denied) return denied;
     
     log.info(`🔍 Fetching security status for user: ${userId}`);
 
@@ -333,12 +674,16 @@ app.get('/:userId/status', async (c) => {
       suspended: false,
       twoFactorEnabled: false
     };
+    const pendingEmailChange = getEmailChangeSummary(await getPendingEmailChange(userId));
     
     log.info(`✅ Security status retrieved for user ${userId}`);
     
     return c.json({
       success: true,
-      status: securityStatus
+      status: {
+        ...securityStatus,
+        pendingEmailChange,
+      }
     });
   } catch (error) {
     const errorMsg = logSafeError('Error fetching security status', error);
@@ -347,12 +692,312 @@ app.get('/:userId/status', async (c) => {
 });
 
 /**
+ * POST /security/:userId/email-change/request
+ * Initiate an auth email change with dual verification.
+ */
+app.post('/:userId/email-change/request', requireAuth, async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    const authUserId = c.get('userId') as string | undefined;
+    const userRole = c.get('userRole') as string | undefined;
+    const denied = ensureSelfOrAdmin(c, userId);
+    if (denied) return denied;
+
+    const body = await c.req.json();
+    const parsed = RequestEmailChangeSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
+
+    const isAdminInitiated = isAdminRole(userRole) && authUserId !== userId;
+    const { newEmail, currentPassword } = parsed.data;
+    const normalizedNewEmail = normalizeEmail(newEmail);
+
+    const { data: user, error: getUserError } = await getSupabase().auth.admin.getUserById(userId);
+    if (getUserError || !user?.user) {
+      return c.json({ success: false, error: 'User not found' }, 404);
+    }
+
+    const currentEmail = normalizeEmail(user.user.email || '');
+    if (!currentEmail) {
+      return c.json({ success: false, error: 'Current email address is missing' }, 400);
+    }
+
+    if (normalizedNewEmail === currentEmail) {
+      return c.json({ success: false, error: 'New email must be different from the current email' }, 400);
+    }
+
+    if (!isAdminInitiated) {
+      if (!currentPassword) {
+        return c.json({ success: false, error: 'Current password is required' }, 400);
+      }
+
+      const currentPasswordValid = await verifyCurrentPassword(currentEmail, currentPassword);
+      if (!currentPasswordValid) {
+        return c.json({ success: false, error: 'Current password is incorrect' }, 400);
+      }
+    }
+
+    const requestId = crypto.randomUUID();
+    const initiatedAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + EMAIL_CHANGE_EXPIRY_MS).toISOString();
+    const newEmailCodePair = await createCodePair();
+    const currentEmailCodePair = !isAdminInitiated ? await createCodePair() : null;
+
+    const request: PendingEmailChangeRequest = {
+      id: requestId,
+      userId,
+      initiatedAt,
+      expiresAt,
+      requestedByUserId: authUserId,
+      requestedByRole: userRole,
+      requiresCurrentEmailCode: !isAdminInitiated,
+      oldEmail: currentEmail,
+      newEmail: normalizedNewEmail,
+      currentEmailCodeHash: currentEmailCodePair?.hash,
+      newEmailCodeHash: newEmailCodePair.hash,
+      currentEmailCodeExpiresAt: currentEmailCodePair?.expiresAt,
+      newEmailCodeExpiresAt: newEmailCodePair.expiresAt,
+      currentEmailCodeAttempts: 0,
+      newEmailCodeAttempts: 0,
+    };
+
+    await kv.set(emailChangeKey(userId), request);
+
+    try {
+      await sendEmailChangeInitiatedNotice(
+        currentEmail,
+        normalizedNewEmail,
+        isAdminInitiated ? 'Navigate Wealth admin support' : 'Account owner',
+      );
+
+      if (currentEmailCodePair) {
+        await sendEmailChangeCodeEmail(currentEmail, currentEmailCodePair.code, 'current');
+      }
+
+      await sendEmailChangeCodeEmail(normalizedNewEmail, newEmailCodePair.code, 'new');
+    } catch (emailError) {
+      await kv.del(emailChangeKey(userId));
+      throw emailError;
+    }
+
+    await writeActivityLog(userId, 'email_change_requested', true, {
+      requestedByUserId: authUserId,
+      requestedByRole: userRole,
+      newEmail: normalizedNewEmail,
+      requiresCurrentEmailCode: !isAdminInitiated,
+    });
+
+    return c.json({
+      success: true,
+      message: 'Email change verification codes sent',
+      pendingEmailChange: getEmailChangeSummary(request),
+    });
+  } catch (error) {
+    const errorMsg = logSafeError('Error initiating email change', error);
+    return c.json({ success: false, error: errorMsg }, 500);
+  }
+});
+
+/**
+ * POST /security/:userId/email-change/resend
+ * Resend one or both email change verification codes.
+ */
+app.post('/:userId/email-change/resend', requireAuth, async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    const denied = ensureSelfOrAdmin(c, userId);
+    if (denied) return denied;
+
+    const body = await c.req.json();
+    const parsed = ResendEmailChangeCodeSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
+
+    const request = await getPendingEmailChange(userId);
+    if (!request) {
+      return c.json({ success: false, error: 'No active email change request found' }, 404);
+    }
+
+    if (parsed.data.requestId && parsed.data.requestId !== request.id) {
+      return c.json({ success: false, error: 'Email change request no longer matches the active session' }, 409);
+    }
+
+    const nextRequest = { ...request };
+
+    if (parsed.data.target === 'current' || parsed.data.target === 'both') {
+      if (request.requiresCurrentEmailCode && !request.currentEmailVerifiedAt) {
+        const pair = await createCodePair();
+        nextRequest.currentEmailCodeHash = pair.hash;
+        nextRequest.currentEmailCodeExpiresAt = pair.expiresAt;
+        nextRequest.currentEmailCodeAttempts = 0;
+        await sendEmailChangeCodeEmail(request.oldEmail, pair.code, 'current');
+      }
+    }
+
+    if (parsed.data.target === 'new' || parsed.data.target === 'both') {
+      if (!request.newEmailVerifiedAt) {
+        const pair = await createCodePair();
+        nextRequest.newEmailCodeHash = pair.hash;
+        nextRequest.newEmailCodeExpiresAt = pair.expiresAt;
+        nextRequest.newEmailCodeAttempts = 0;
+        await sendEmailChangeCodeEmail(request.newEmail, pair.code, 'new');
+      }
+    }
+
+    await kv.set(emailChangeKey(userId), nextRequest);
+    await writeActivityLog(userId, 'email_change_code_resent', true, {
+      target: parsed.data.target,
+    });
+
+    return c.json({
+      success: true,
+      message: 'Verification code resent',
+      pendingEmailChange: getEmailChangeSummary(nextRequest),
+    });
+  } catch (error) {
+    const errorMsg = logSafeError('Error resending email change codes', error);
+    return c.json({ success: false, error: errorMsg }, 500);
+  }
+});
+
+/**
+ * POST /security/:userId/email-change/verify
+ * Verify email change codes and update Supabase Auth.
+ */
+app.post('/:userId/email-change/verify', requireAuth, async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    const authUserId = c.get('userId') as string | undefined;
+    const denied = ensureSelfOrAdmin(c, userId);
+    if (denied) return denied;
+
+    const body = await c.req.json();
+    const parsed = VerifyEmailChangeSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
+
+    const request = await getPendingEmailChange(userId);
+    if (!request) {
+      return c.json({ success: false, error: 'No active email change request found' }, 404);
+    }
+
+    if (parsed.data.requestId && parsed.data.requestId !== request.id) {
+      return c.json({ success: false, error: 'Email change request no longer matches the active session' }, 409);
+    }
+
+    const nextRequest = { ...request };
+    const nowIso = new Date().toISOString();
+
+    if (request.requiresCurrentEmailCode && !request.currentEmailVerifiedAt) {
+      if (!parsed.data.currentEmailCode) {
+        return c.json({ success: false, error: 'Current email verification code is required' }, 400);
+      }
+
+      if (!request.currentEmailCodeHash || !request.currentEmailCodeExpiresAt) {
+        await kv.del(emailChangeKey(userId));
+        return c.json({ success: false, error: 'Current email verification has expired. Please start again.' }, 400);
+      }
+
+      if (new Date(request.currentEmailCodeExpiresAt).getTime() < Date.now()) {
+        await kv.del(emailChangeKey(userId));
+        return c.json({ success: false, error: 'Current email verification code has expired. Please start again.' }, 400);
+      }
+
+      const currentHash = await sha256Hex(parsed.data.currentEmailCode.trim());
+      if (currentHash !== request.currentEmailCodeHash) {
+        nextRequest.currentEmailCodeAttempts += 1;
+        if (nextRequest.currentEmailCodeAttempts >= EMAIL_CHANGE_MAX_ATTEMPTS) {
+          await kv.del(emailChangeKey(userId));
+          await writeActivityLog(userId, 'email_change_verification_failed', false, { stage: 'current_email', exhausted: true });
+          return c.json({ success: false, error: 'Too many incorrect current-email codes. Please start the email change again.' }, 400);
+        }
+
+        await kv.set(emailChangeKey(userId), nextRequest);
+        await writeActivityLog(userId, 'email_change_verification_failed', false, {
+          stage: 'current_email',
+          attempts: nextRequest.currentEmailCodeAttempts,
+        });
+        return c.json({ success: false, error: 'Current email verification code is incorrect' }, 400);
+      }
+
+      nextRequest.currentEmailVerifiedAt = nowIso;
+    }
+
+    if (!request.newEmailCodeHash || !request.newEmailCodeExpiresAt) {
+      await kv.del(emailChangeKey(userId));
+      return c.json({ success: false, error: 'New email verification has expired. Please start again.' }, 400);
+    }
+
+    if (new Date(request.newEmailCodeExpiresAt).getTime() < Date.now()) {
+      await kv.del(emailChangeKey(userId));
+      return c.json({ success: false, error: 'New email verification code has expired. Please start again.' }, 400);
+    }
+
+    const newHash = await sha256Hex(parsed.data.newEmailCode.trim());
+    if (newHash !== request.newEmailCodeHash) {
+      nextRequest.newEmailCodeAttempts += 1;
+      if (nextRequest.newEmailCodeAttempts >= EMAIL_CHANGE_MAX_ATTEMPTS) {
+        await kv.del(emailChangeKey(userId));
+        await writeActivityLog(userId, 'email_change_verification_failed', false, { stage: 'new_email', exhausted: true });
+        return c.json({ success: false, error: 'Too many incorrect new-email codes. Please start the email change again.' }, 400);
+      }
+
+      await kv.set(emailChangeKey(userId), nextRequest);
+      await writeActivityLog(userId, 'email_change_verification_failed', false, {
+        stage: 'new_email',
+        attempts: nextRequest.newEmailCodeAttempts,
+      });
+      return c.json({ success: false, error: 'New email verification code is incorrect' }, 400);
+    }
+
+    nextRequest.newEmailVerifiedAt = nowIso;
+
+    const { error: updateError } = await getSupabase().auth.admin.updateUserById(userId, {
+      email: request.newEmail,
+      email_confirm: true,
+    });
+    if (updateError) {
+      return c.json({ success: false, error: updateError.message || 'Failed to update auth email' }, 400);
+    }
+
+    await updateStoredPrimaryEmail(userId, request.newEmail);
+    await kv.del(emailChangeKey(userId));
+    await writeActivityLog(userId, 'email_changed', true, {
+      newEmail: request.newEmail,
+      requestedByUserId: request.requestedByUserId,
+      requestedByRole: request.requestedByRole,
+    });
+
+    try {
+      await sendEmailChangeCompletedNotice(request.oldEmail, request.newEmail);
+    } catch (emailError) {
+      log.error('⚠️ Failed to send email change completion notices:', emailError);
+    }
+
+    return c.json({
+      success: true,
+      message: 'Email address updated successfully',
+      email: request.newEmail,
+      requiresReauth: authUserId === userId,
+    });
+  } catch (error) {
+    const errorMsg = logSafeError('Error verifying email change', error);
+    return c.json({ success: false, error: errorMsg }, 500);
+  }
+});
+
+/**
  * POST /security/:userId/suspend
  * Suspend a user account (admin only)
  */
-app.post('/:userId/suspend', async (c) => {
+app.post('/:userId/suspend', requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
+    const denied = ensureAdmin(c);
+    if (denied) return denied;
     const body = await c.req.json();
     
     const parsed = SuspendUserSchema.safeParse(body);
@@ -416,9 +1061,11 @@ app.post('/:userId/suspend', async (c) => {
  * POST /security/:userId/2fa
  * Toggle two-factor authentication
  */
-app.post('/:userId/2fa', async (c) => {
+app.post('/:userId/2fa', requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
+    const denied = ensureSelfOrAdmin(c, userId);
+    if (denied) return denied;
     const body = await c.req.json();
     
     const parsed = Toggle2FASchema.safeParse(body);
@@ -466,9 +1113,11 @@ app.post('/:userId/2fa', async (c) => {
  * POST /security/:userId/2fa/send-code
  * Generate and send 2FA verification code via email
  */
-app.post('/:userId/2fa/send-code', async (c) => {
+app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
+    const denied = ensureSelfOrAdmin(c, userId);
+    if (denied) return denied;
     let email = '';
     
     // Try to get email from body
@@ -552,9 +1201,11 @@ app.post('/:userId/2fa/send-code', async (c) => {
  * security KV entry so the frontend can implement a grace-period
  * (e.g. skip 2FA if verified within the last 3 hours).
  */
-app.post('/:userId/2fa/verify-code', async (c) => {
+app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
+    const denied = ensureSelfOrAdmin(c, userId);
+    if (denied) return denied;
     const body = await c.req.json();
     
     const parsed = Verify2FACodeSchema.safeParse(body);

@@ -97,7 +97,10 @@ export function buildAppUserFromAuthSessionFallback(
 /**
  * Fetch security status including suspension info.
  */
-async function fetchSecurityStatus(userId: string): Promise<UserSuspensionStatus> {
+async function fetchSecurityStatus(
+  userId: string,
+  accessToken?: string,
+): Promise<UserSuspensionStatus> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -108,7 +111,7 @@ async function fetchSecurityStatus(userId: string): Promise<UserSuspensionStatus
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`,
+          'Authorization': `Bearer ${accessToken || publicAnonKey}`,
           'apikey': publicAnonKey,
         },
         signal: controller.signal,
@@ -188,6 +191,7 @@ export async function loadUserProfile(
   userId: string,
   email: string,
   supabaseUserHint?: SupabaseAuthUser | null,
+  authAccessTokenHint?: string,
 ): Promise<AppUser> {
   try {
     console.log('Loading user profile for:', userId, email);
@@ -208,7 +212,7 @@ export async function loadUserProfile(
 
     const [supabaseUserData, securityStatus, response] = await Promise.all([
       supabaseMetaPromise,
-      fetchSecurityStatus(userId),
+      fetchSecurityStatus(userId, authAccessTokenHint),
       fetchProfileResponse(encodedKey, encodedEmail),
     ]);
 

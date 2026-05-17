@@ -519,6 +519,7 @@ export function onAuthStateChange(callback: AuthCallback) {
         await callback(mapSupabaseUserToAuthUser(session.user), {
           event,
           supabaseUser: session.user,
+          accessToken: session.access_token,
         });
       } else {
         await callback(null, { event });

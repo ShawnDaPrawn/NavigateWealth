@@ -16,12 +16,30 @@ export interface SecurityStatus {
   twoFactorMethod: TwoFactorMethod; // Default to 'email' if not set
   loginNotifications: boolean;
   passwordLastChanged: string | null;
+  pendingEmailChange?: PendingEmailChangeSummary | null;
 }
 
 export interface PasswordUpdateData {
   currentPassword?: string;
   newPassword?: string;
   confirmPassword?: string;
+}
+
+export interface PendingEmailChangeSummary {
+  requestId: string;
+  newEmail: string;
+  initiatedAt: string;
+  expiresAt: string;
+  requiresCurrentEmailCode: boolean;
+  currentEmailVerified: boolean;
+  newEmailVerified: boolean;
+}
+
+export interface EmailChangeRequestData {
+  newEmail: string;
+  currentPassword: string;
+  currentEmailCode: string;
+  newEmailCode: string;
 }
 
 export interface TwoFactorToggleData {
