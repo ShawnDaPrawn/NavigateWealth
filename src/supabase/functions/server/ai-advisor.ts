@@ -34,6 +34,23 @@ import type { Context, Next } from 'npm:hono';
 
 interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string }
 interface KvRow { key: string; value: unknown }
+interface AdvisorMessageArtifact extends Record<string, unknown> {}
+interface AdvisorStoredMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  citations?: Array<{ title: string; slug: string; url: string }>;
+  artifacts?: AdvisorMessageArtifact[];
+}
+interface AdvisorSessionSummary {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  lastMessagePreview: string;
+  messageCount: number;
+  legacyImported?: boolean;
+}
 
 interface AdvisorUserContext {
   clientName: string;
@@ -69,6 +86,11 @@ const BENEFICIARY_PREFIX = (userId: string) => `client:${userId}:beneficiary:`;
 const COMMUNICATION_PREFIX = (userId: string) => `communication_log:${userId}:`;
 const DOCUMENT_PREFIXES = ['document:', 'doc:', 'tax_doc:', 'estate_doc:'] as const;
 const ESIGN_PREFIX = (userId: string) => `esign:client:${userId}:`;
+const LEGACY_CHAT_PREFIX = (userId: string) => `ai_advisor:${userId}:chat:`;
+const SESSION_META_PREFIX = (userId: string) => `ai_advisor:${userId}:session_meta:`;
+const SESSION_META_KEY = (userId: string, sessionId: string) => `${SESSION_META_PREFIX(userId)}${sessionId}`;
+const SESSION_MESSAGE_PREFIX = (userId: string, sessionId: string) =>
+  `ai_advisor:${userId}:session:${sessionId}:message:`;
 const FNA_PREFIXES = {
   riskPlanning: 'risk-planning-fna:client:',
   medical: 'medical-fna:client:',
@@ -77,6 +99,265 @@ const FNA_PREFIXES = {
   taxPlanning: 'tax-planning-fna:client:',
   estatePlanning: 'estate-planning-fna:client:',
 } as const;
+
+function toIsoTimestamp(value: unknown, fallback = new Date().toISOString()): string {
+  if (typeof value !== 'string' || !value.trim()) return fallback;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : fallback;
+}
+
+function toTimestampKey(timestamp: string): string {
+  const parsed = new Date(timestamp).getTime();
+  const numeric = Number.isFinite(parsed) ? parsed : Date.now();
+  return String(numeric).padStart(13, '0');
+}
+
+function stripMarkdownArtifacts(content: string): string {
+  return content
+    .replace(/[*_`#>\-]+/g, ' ')
+    .replace(/\[(.*?)\]\((.*?)\)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildSessionTitle(seed?: string): string {
+  const cleaned = seed ? stripMarkdownArtifacts(seed) : '';
+  if (!cleaned) return 'New chat';
+  return cleaned.length > 42 ? `${cleaned.slice(0, 42).trimEnd()}…` : cleaned;
+}
+
+function buildMessagePreview(content: string): string {
+  const cleaned = stripMarkdownArtifacts(content);
+  if (!cleaned) return '';
+  return cleaned.length > 72 ? `${cleaned.slice(0, 72).trimEnd()}…` : cleaned;
+}
+
+function normalizeAdvisorStoredMessage(value: unknown): AdvisorStoredMessage | null {
+  if (!isRecord(value)) return null;
+  if (value.role !== 'user' && value.role !== 'assistant') return null;
+  if (typeof value.content !== 'string') return null;
+
+  const citations = Array.isArray(value.citations) ? value.citations.filter(isRecord).map((citation) => ({
+    title: typeof citation.title === 'string' ? citation.title : '',
+    slug: typeof citation.slug === 'string' ? citation.slug : '',
+    url: typeof citation.url === 'string' ? citation.url : '',
+  })).filter((citation) => citation.title && citation.slug && citation.url) : undefined;
+
+  const artifacts = Array.isArray(value.artifacts)
+    ? value.artifacts.filter(isRecord) as AdvisorMessageArtifact[]
+    : undefined;
+
+  return {
+    role: value.role,
+    content: value.content,
+    timestamp: toIsoTimestamp(value.timestamp),
+    citations: citations && citations.length > 0 ? citations : undefined,
+    artifacts: artifacts && artifacts.length > 0 ? artifacts : undefined,
+  };
+}
+
+function normalizeAdvisorSessionSummary(value: unknown, sessionId?: string): AdvisorSessionSummary | null {
+  if (!isRecord(value)) return null;
+
+  const id = typeof value.id === 'string' && value.id.trim()
+    ? value.id.trim()
+    : (sessionId || '');
+  if (!id) return null;
+
+  const createdAt = toIsoTimestamp(value.createdAt);
+  const updatedAt = toIsoTimestamp(value.updatedAt, createdAt);
+  const messageCount = typeof value.messageCount === 'number' && Number.isFinite(value.messageCount)
+    ? Math.max(0, Math.floor(value.messageCount))
+    : 0;
+
+  return {
+    id,
+    title: typeof value.title === 'string' && value.title.trim()
+      ? value.title.trim()
+      : 'New chat',
+    createdAt,
+    updatedAt,
+    lastMessagePreview: typeof value.lastMessagePreview === 'string' ? value.lastMessagePreview : '',
+    messageCount,
+    legacyImported: value.legacyImported === true,
+  };
+}
+
+async function listAllKvRowsByPrefix(prefix: string): Promise<Array<{ key: string; value: unknown }>> {
+  const rows: Array<{ key: string; value: unknown }> = [];
+  let startAfter: string | undefined;
+
+  while (true) {
+    const batch = await kv.listByPrefix(prefix, { limit: 200, startAfter });
+    rows.push(...batch);
+    if (batch.length < 200) break;
+    startAfter = batch[batch.length - 1]?.key;
+    if (!startAfter) break;
+  }
+
+  return rows;
+}
+
+async function deleteKvKeys(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+
+  for (let index = 0; index < keys.length; index += 100) {
+    await kv.mdel(keys.slice(index, index + 100));
+  }
+}
+
+async function listAdvisorSessionSummaries(subjectUserId: string): Promise<AdvisorSessionSummary[]> {
+  const rows = await listAllKvRowsByPrefix(SESSION_META_PREFIX(subjectUserId));
+  return rows
+    .map((row) => normalizeAdvisorSessionSummary(row.value, row.key.slice(SESSION_META_PREFIX(subjectUserId).length)))
+    .filter((summary): summary is AdvisorSessionSummary => Boolean(summary))
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+}
+
+async function getAdvisorSessionSummary(subjectUserId: string, sessionId: string): Promise<AdvisorSessionSummary | null> {
+  const raw = await kv.get(SESSION_META_KEY(subjectUserId, sessionId));
+  return normalizeAdvisorSessionSummary(raw, sessionId);
+}
+
+async function upsertAdvisorSessionSummary(subjectUserId: string, summary: AdvisorSessionSummary): Promise<void> {
+  await kv.set(SESSION_META_KEY(subjectUserId, summary.id), summary);
+}
+
+async function ensureAdvisorSession(
+  subjectUserId: string,
+  sessionId?: string | null,
+  titleSeed?: string,
+): Promise<AdvisorSessionSummary> {
+  const requestedId = typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : crypto.randomUUID();
+  const existing = await getAdvisorSessionSummary(subjectUserId, requestedId);
+  if (existing) return existing;
+
+  const now = new Date().toISOString();
+  const summary: AdvisorSessionSummary = {
+    id: requestedId,
+    title: buildSessionTitle(titleSeed),
+    createdAt: now,
+    updatedAt: now,
+    lastMessagePreview: '',
+    messageCount: 0,
+  };
+  await upsertAdvisorSessionSummary(subjectUserId, summary);
+  return summary;
+}
+
+function advisorSessionMessageKey(
+  subjectUserId: string,
+  sessionId: string,
+  timestamp: string,
+  sequence: number,
+): string {
+  return `${SESSION_MESSAGE_PREFIX(subjectUserId, sessionId)}${toTimestampKey(timestamp)}:${String(sequence).padStart(4, '0')}:${crypto.randomUUID()}`;
+}
+
+async function loadAdvisorSessionMessages(subjectUserId: string, sessionId: string): Promise<AdvisorStoredMessage[]> {
+  const rows = await listAllKvRowsByPrefix(SESSION_MESSAGE_PREFIX(subjectUserId, sessionId));
+  return rows
+    .map((row) => normalizeAdvisorStoredMessage(row.value))
+    .filter((message): message is AdvisorStoredMessage => Boolean(message))
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+}
+
+async function appendAdvisorSessionMessages(
+  subjectUserId: string,
+  sessionId: string,
+  newMessages: AdvisorStoredMessage[],
+  titleSeed?: string,
+): Promise<AdvisorSessionSummary> {
+  const summary = await ensureAdvisorSession(subjectUserId, sessionId, titleSeed);
+  if (newMessages.length === 0) return summary;
+
+  const keys = newMessages.map((message, index) =>
+    advisorSessionMessageKey(subjectUserId, summary.id, message.timestamp, summary.messageCount + index),
+  );
+  await kv.mset(keys, newMessages);
+
+  const lastMessage = newMessages[newMessages.length - 1];
+  const updatedSummary: AdvisorSessionSummary = {
+    ...summary,
+    title:
+      summary.messageCount === 0 && newMessages[0]?.role === 'user'
+        ? buildSessionTitle(titleSeed || newMessages[0].content)
+        : summary.title,
+    updatedAt: lastMessage.timestamp,
+    lastMessagePreview: buildMessagePreview(lastMessage.content),
+    messageCount: summary.messageCount + newMessages.length,
+  };
+  await upsertAdvisorSessionSummary(subjectUserId, updatedSummary);
+  return updatedSummary;
+}
+
+async function clearAdvisorSessionMessages(subjectUserId: string, sessionId: string): Promise<AdvisorSessionSummary | null> {
+  const summary = await getAdvisorSessionSummary(subjectUserId, sessionId);
+  if (!summary) return null;
+
+  const rows = await listAllKvRowsByPrefix(SESSION_MESSAGE_PREFIX(subjectUserId, sessionId));
+  await deleteKvKeys(rows.map((row) => row.key));
+
+  const clearedSummary: AdvisorSessionSummary = {
+    ...summary,
+    updatedAt: new Date().toISOString(),
+    lastMessagePreview: '',
+    messageCount: 0,
+  };
+  await upsertAdvisorSessionSummary(subjectUserId, clearedSummary);
+  return clearedSummary;
+}
+
+async function deleteAdvisorSession(subjectUserId: string, sessionId: string): Promise<void> {
+  const rows = await listAllKvRowsByPrefix(SESSION_MESSAGE_PREFIX(subjectUserId, sessionId));
+  await deleteKvKeys(rows.map((row) => row.key));
+  await kv.del(SESSION_META_KEY(subjectUserId, sessionId));
+}
+
+async function deleteLegacyAdvisorHistory(subjectUserId: string): Promise<void> {
+  const rows = await listAllKvRowsByPrefix(LEGACY_CHAT_PREFIX(subjectUserId));
+  await deleteKvKeys(rows.map((row) => row.key));
+}
+
+async function migrateLegacyAdvisorHistory(subjectUserId: string): Promise<AdvisorSessionSummary[]> {
+  const existingSummaries = await listAdvisorSessionSummaries(subjectUserId);
+  if (existingSummaries.length > 0) return existingSummaries;
+
+  const legacyRows = await listAllKvRowsByPrefix(LEGACY_CHAT_PREFIX(subjectUserId));
+  const legacyMessages = legacyRows
+    .map((row) => normalizeAdvisorStoredMessage(row.value))
+    .filter((message): message is AdvisorStoredMessage => Boolean(message))
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  if (legacyMessages.length === 0) return existingSummaries;
+
+  const firstUserMessage = legacyMessages.find((message) => message.role === 'user');
+  const summary: AdvisorSessionSummary = {
+    id: crypto.randomUUID(),
+    title: buildSessionTitle(firstUserMessage?.content),
+    createdAt: legacyMessages[0].timestamp,
+    updatedAt: legacyMessages[legacyMessages.length - 1].timestamp,
+    lastMessagePreview: buildMessagePreview(legacyMessages[legacyMessages.length - 1].content),
+    messageCount: legacyMessages.length,
+    legacyImported: true,
+  };
+
+  await upsertAdvisorSessionSummary(subjectUserId, summary);
+  await kv.mset(
+    legacyMessages.map((message, index) =>
+      advisorSessionMessageKey(subjectUserId, summary.id, message.timestamp, index),
+    ),
+    legacyMessages,
+  );
+  await deleteLegacyAdvisorHistory(subjectUserId);
+
+  return [summary];
+}
+
+async function listEnsuredAdvisorSessions(subjectUserId: string): Promise<AdvisorSessionSummary[]> {
+  await migrateLegacyAdvisorHistory(subjectUserId);
+  return listAdvisorSessionSummaries(subjectUserId);
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -302,20 +583,27 @@ async function buildAdvisorSseResponse(
 
   const lastUserMsg = [...(clientMessages as { role: string; content: string }[])].reverse()
     .find((m) => m.role === 'user');
+  const finalSession = await ensureAdvisorSession(
+    subjectUserId,
+    typeof sessionId === 'string' ? sessionId : null,
+    typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : undefined,
+  );
+  const finalSessionId = finalSession.id;
+  const userMessageTimestamp = new Date().toISOString();
+
   if (lastUserMsg && typeof lastUserMsg.content === 'string') {
-    const conversationKey = `ai_advisor:${subjectUserId}:chat:${Date.now()}`;
-    getSupabase().from('kv_store_91ed8379').insert({
-      key: conversationKey,
-      value: {
+    await appendAdvisorSessionMessages(
+      subjectUserId,
+      finalSessionId,
+      [{
         role: 'user',
         content: lastUserMsg.content,
-        timestamp: new Date().toISOString(),
-      },
-    }).then(() => {}).catch(() => {});
+        timestamp: userMessageTimestamp,
+      }],
+      lastUserMsg.content,
+    );
   }
 
-  const finalSessionId =
-    typeof sessionId === 'string' && sessionId.length > 0 ? sessionId : crypto.randomUUID();
   let fullReply = '';
 
   const stream = new ReadableStream({
@@ -353,20 +641,18 @@ async function buildAdvisorSseResponse(
         }
 
         if (fullReply) {
-          const replyKey = `ai_advisor:${subjectUserId}:chat:${Date.now() + 1}`;
-          getSupabase().from('kv_store_91ed8379').insert({
-            key: replyKey,
-            value: {
-              role: 'assistant',
-              content: fullReply,
-              timestamp: new Date().toISOString(),
-            },
-          }).then(() => {}).catch(() => {});
+          await appendAdvisorSessionMessages(subjectUserId, finalSessionId, [{
+            role: 'assistant',
+            content: fullReply,
+            timestamp: new Date().toISOString(),
+            citations: [],
+            artifacts: [],
+          }]);
         }
 
         controller.enqueue(
           encoder.encode(
-            `data: ${JSON.stringify({ type: 'done', sessionId: finalSessionId, citations: [] })}\n\n`,
+            `data: ${JSON.stringify({ type: 'done', sessionId: finalSessionId, citations: [], artifacts: [] })}\n\n`,
           ),
         );
         controller.close();
@@ -661,9 +947,113 @@ app.post('/chat/stream', requireAuth, async (c) => {
 });
 
 /**
+ * GET /sessions - list authenticated Ask Vasco sessions for the current client
+ */
+app.get('/sessions', requireAuth, async (c) => {
+  try {
+    const user = c.get('user');
+    const sessions = await listEnsuredAdvisorSessions(user.id);
+    return c.json({ sessions });
+  } catch (error) {
+    log.error('Failed to list advisor sessions', error);
+    return c.json({ error: 'Failed to load chat sessions' }, 500);
+  }
+});
+
+/**
+ * POST /sessions - create an empty Ask Vasco session for the current client
+ */
+app.post('/sessions', requireAuth, async (c) => {
+  try {
+    const user = c.get('user');
+    const body = await c.req.json().catch(() => ({}));
+    const title = isRecord(body) && typeof body.title === 'string' ? body.title : undefined;
+    const session = await ensureAdvisorSession(user.id, null, title);
+    return c.json({ session });
+  } catch (error) {
+    log.error('Failed to create advisor session', error);
+    return c.json({ error: 'Failed to create chat session' }, 500);
+  }
+});
+
+/**
+ * GET /sessions/:sessionId - load one authenticated Ask Vasco session
+ */
+app.get('/sessions/:sessionId', requireAuth, async (c) => {
+  try {
+    const user = c.get('user');
+    const sessionId = c.req.param('sessionId');
+    const session = await getAdvisorSessionSummary(user.id, sessionId);
+    if (!session) {
+      return c.json({ error: 'Chat session not found' }, 404);
+    }
+
+    const messages = await loadAdvisorSessionMessages(user.id, sessionId);
+    return c.json({ session, messages });
+  } catch (error) {
+    log.error('Failed to load advisor session', error);
+    return c.json({ error: 'Failed to load chat session' }, 500);
+  }
+});
+
+/**
+ * DELETE /sessions/:sessionId - delete an authenticated Ask Vasco thread
+ */
+app.delete('/sessions/:sessionId', requireAuth, async (c) => {
+  try {
+    const user = c.get('user');
+    const sessionId = c.req.param('sessionId');
+    await deleteAdvisorSession(user.id, sessionId);
+    return c.json({ success: true });
+  } catch (error) {
+    log.error('Failed to delete advisor session', error);
+    return c.json({ error: 'Failed to delete chat session' }, 500);
+  }
+});
+
+/**
  * GET /admin/history — fetch portal Ask Vasco history for a client (staff only)
  */
 app.get('/admin/history', async (c) => {
+  try {
+    const { userId, role } = await getAuthContext(c);
+    const clientUserId = c.req.query('clientUserId')?.trim();
+    const sessionId = c.req.query('sessionId')?.trim();
+    if (!clientUserId) {
+      return c.json({ error: 'clientUserId query parameter is required' }, 400);
+    }
+    const denied = await assertCanProxyClientVasco(c, userId, role, clientUserId);
+    if (denied) return denied;
+
+    if (sessionId) {
+      const session = await getAdvisorSessionSummary(clientUserId, sessionId);
+      if (!session) {
+        return c.json({ error: 'Chat session not found' }, 404);
+      }
+      const messages = await loadAdvisorSessionMessages(clientUserId, sessionId);
+      return c.json({ messages, sessionId, session });
+    }
+
+    const sessions = await listEnsuredAdvisorSessions(clientUserId);
+    const activeSession = sessions[0];
+    if (!activeSession) {
+      return c.json({ messages: [], sessionId: null, session: null });
+    }
+
+    const messages = await loadAdvisorSessionMessages(clientUserId, activeSession.id);
+    return c.json({ messages, sessionId: activeSession.id, session: activeSession });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
+    }
+    return c.json({ error: 'Failed to fetch history' }, 500);
+  }
+});
+
+/**
+ * GET /admin/sessions - list portal Ask Vasco sessions for a client (staff only)
+ */
+app.get('/admin/sessions', async (c) => {
   try {
     const { userId, role } = await getAuthContext(c);
     const clientUserId = c.req.query('clientUserId')?.trim();
@@ -673,25 +1063,98 @@ app.get('/admin/history', async (c) => {
     const denied = await assertCanProxyClientVasco(c, userId, role, clientUserId);
     if (denied) return denied;
 
-    const { data } = await getSupabase()
-      .from('kv_store_91ed8379')
-      .select('*')
-      .like('key', `ai_advisor:${clientUserId}:chat:%`)
-      .order('key', { ascending: true })
-      .limit(50);
-
-    const messages = (data || []).map((d) => ({
-      role: d.value.role,
-      content: d.value.content,
-      timestamp: d.value.timestamp,
-    }));
-
-    return c.json({ messages });
+    const sessions = await listEnsuredAdvisorSessions(clientUserId);
+    return c.json({ sessions });
   } catch (error) {
     if (error instanceof AuthError) {
       return c.json({ error: error.message, code: error.code }, error.statusCode);
     }
-    return c.json({ error: 'Failed to fetch history' }, 500);
+    log.error('Failed to list admin advisor sessions', error);
+    return c.json({ error: 'Failed to load chat sessions' }, 500);
+  }
+});
+
+/**
+ * POST /admin/sessions - create an Ask Vasco session for a client (staff only)
+ */
+app.post('/admin/sessions', async (c) => {
+  try {
+    const { userId, role } = await getAuthContext(c);
+    const body = await c.req.json().catch(() => ({}));
+    const clientUserId =
+      isRecord(body) && typeof body.clientUserId === 'string'
+        ? body.clientUserId.trim()
+        : '';
+    if (!clientUserId) {
+      return c.json({ error: 'clientUserId is required' }, 400);
+    }
+    const denied = await assertCanProxyClientVasco(c, userId, role, clientUserId);
+    if (denied) return denied;
+
+    const title = isRecord(body) && typeof body.title === 'string' ? body.title : undefined;
+    const session = await ensureAdvisorSession(clientUserId, null, title);
+    return c.json({ session });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
+    }
+    log.error('Failed to create admin advisor session', error);
+    return c.json({ error: 'Failed to create chat session' }, 500);
+  }
+});
+
+/**
+ * GET /admin/sessions/:sessionId - load one portal Ask Vasco session for a client (staff only)
+ */
+app.get('/admin/sessions/:sessionId', async (c) => {
+  try {
+    const { userId, role } = await getAuthContext(c);
+    const clientUserId = c.req.query('clientUserId')?.trim();
+    const sessionId = c.req.param('sessionId');
+    if (!clientUserId) {
+      return c.json({ error: 'clientUserId query parameter is required' }, 400);
+    }
+    const denied = await assertCanProxyClientVasco(c, userId, role, clientUserId);
+    if (denied) return denied;
+
+    const session = await getAdvisorSessionSummary(clientUserId, sessionId);
+    if (!session) {
+      return c.json({ error: 'Chat session not found' }, 404);
+    }
+
+    const messages = await loadAdvisorSessionMessages(clientUserId, sessionId);
+    return c.json({ session, messages });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
+    }
+    log.error('Failed to load admin advisor session', error);
+    return c.json({ error: 'Failed to load chat session' }, 500);
+  }
+});
+
+/**
+ * DELETE /admin/sessions/:sessionId - delete a client's Ask Vasco thread (staff only)
+ */
+app.delete('/admin/sessions/:sessionId', async (c) => {
+  try {
+    const { userId, role } = await getAuthContext(c);
+    const clientUserId = c.req.query('clientUserId')?.trim();
+    const sessionId = c.req.param('sessionId');
+    if (!clientUserId) {
+      return c.json({ error: 'clientUserId query parameter is required' }, 400);
+    }
+    const denied = await assertCanProxyClientVasco(c, userId, role, clientUserId);
+    if (denied) return denied;
+
+    await deleteAdvisorSession(clientUserId, sessionId);
+    return c.json({ success: true });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return c.json({ error: error.message, code: error.code }, error.statusCode);
+    }
+    log.error('Failed to delete admin advisor session', error);
+    return c.json({ error: 'Failed to delete chat session' }, 500);
   }
 });
 
@@ -727,16 +1190,24 @@ app.delete('/admin/history', async (c) => {
   try {
     const { userId, role } = await getAuthContext(c);
     const clientUserId = c.req.query('clientUserId')?.trim();
+    const sessionId = c.req.query('sessionId')?.trim();
     if (!clientUserId) {
       return c.json({ error: 'clientUserId query parameter is required' }, 400);
     }
     const denied = await assertCanProxyClientVasco(c, userId, role, clientUserId);
     if (denied) return denied;
 
-    await getSupabase()
-      .from('kv_store_91ed8379')
-      .delete()
-      .like('key', `ai_advisor:${clientUserId}:chat:%`);
+    if (sessionId) {
+      const session = await clearAdvisorSessionMessages(clientUserId, sessionId);
+      if (!session) {
+        return c.json({ error: 'Chat session not found' }, 404);
+      }
+      return c.json({ success: true, session });
+    }
+
+    const sessions = await listEnsuredAdvisorSessions(clientUserId);
+    await Promise.all(sessions.map((session) => deleteAdvisorSession(clientUserId, session.id)));
+    await deleteLegacyAdvisorHistory(clientUserId);
 
     return c.json({ success: true });
   } catch (error) {
@@ -803,20 +1274,25 @@ app.post('/chat', requireAuth, async (c) => {
 app.get('/history', requireAuth, async (c) => {
   try {
     const user = c.get('user');
-    const { data } = await getSupabase()
-      .from('kv_store_91ed8379')
-      .select('*')
-      .like('key', `ai_advisor:${user.id}:chat:%`)
-      .order('key', { ascending: true })
-      .limit(50);
+    const sessionId = c.req.query('sessionId')?.trim();
 
-    const messages = (data || []).map(d => ({
-      role: d.value.role,
-      content: d.value.content,
-      timestamp: d.value.timestamp
-    }));
+    if (sessionId) {
+      const session = await getAdvisorSessionSummary(user.id, sessionId);
+      if (!session) {
+        return c.json({ error: 'Chat session not found' }, 404);
+      }
+      const messages = await loadAdvisorSessionMessages(user.id, sessionId);
+      return c.json({ messages, sessionId, session });
+    }
 
-    return c.json({ messages });
+    const sessions = await listEnsuredAdvisorSessions(user.id);
+    const activeSession = sessions[0];
+    if (!activeSession) {
+      return c.json({ messages: [], sessionId: null, session: null });
+    }
+
+    const messages = await loadAdvisorSessionMessages(user.id, activeSession.id);
+    return c.json({ messages, sessionId: activeSession.id, session: activeSession });
   } catch (error) {
     return c.json({ error: 'Failed to fetch history' }, 500);
   }
@@ -828,10 +1304,19 @@ app.get('/history', requireAuth, async (c) => {
 app.delete('/history', requireAuth, async (c) => {
   try {
     const user = c.get('user');
-    await getSupabase()
-      .from('kv_store_91ed8379')
-      .delete()
-      .like('key', `ai_advisor:${user.id}:chat:%`);
+    const sessionId = c.req.query('sessionId')?.trim();
+
+    if (sessionId) {
+      const session = await clearAdvisorSessionMessages(user.id, sessionId);
+      if (!session) {
+        return c.json({ error: 'Chat session not found' }, 404);
+      }
+      return c.json({ success: true, session });
+    }
+
+    const sessions = await listEnsuredAdvisorSessions(user.id);
+    await Promise.all(sessions.map((session) => deleteAdvisorSession(user.id, session.id)));
+    await deleteLegacyAdvisorHistory(user.id);
     
     return c.json({ success: true });
   } catch (error) {

@@ -4,19 +4,9 @@
  * Full-page AI chat experience for authenticated users.
  * Uses the shared vasco-chat component library and SSE streaming
  * via the `/ai-advisor/chat/stream` endpoint.
- *
- * Features:
- *   - Streaming responses (SSE) with real-time token rendering
- *   - Server-side conversation history (KV-persisted per user)
- *   - Copy-to-clipboard on assistant messages
- *   - Suggested prompts sidebar
- *   - Expand-to-fullscreen mode
- *   - API key status check
- *
- * @module pages/AIAdvisorPage
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -28,37 +18,35 @@ import {
   Sparkles,
   Zap,
   AlertCircle,
-  Maximize2,
-  Minimize2,
-  Trash2,
   ChevronRight,
+  Maximize2,
   Shield,
   Briefcase,
   TrendingUp,
   FileText,
+  Plus,
+  Eraser,
 } from 'lucide-react';
 import { api } from '../../utils/api';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { advisorKeys } from '../../utils/queryKeys';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { ACTIVE_THEME } from '../portal/portal-theme';
 import { toast } from 'sonner@2.0.3';
 import { ConfirmDialog } from '../admin/modules/publications/components/ConfirmDialog';
-
-// Shared Vasco chat components
 import {
   VascoAvatar,
-  VascoChatMessage,
-  VascoTypingIndicator,
-  VascoStreamingBubble,
   VascoChatInput,
+  VascoChatMessage,
+  VascoSessionWorkspace,
+  VascoStreamingBubble,
+  VascoTypingIndicator,
   useVascoStream,
 } from '../shared/vasco-chat';
-import type { VascoChatMessageType as ChatMessage } from '../shared/vasco-chat';
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
+import type {
+  VascoChatMessageType as ChatMessage,
+  VascoChatSessionSummary,
+} from '../shared/vasco-chat';
 
 const WELCOME_MESSAGE: ChatMessage = {
   role: 'assistant',
@@ -86,164 +74,166 @@ const SUGGESTED_PROMPTS = [
   'How does estate duty work?',
 ];
 
-// ============================================================================
-// CHAT INTERFACE (used in both card and fullscreen modes)
-// ============================================================================
+function isWelcomeMessage(message: ChatMessage) {
+  return message.role === 'assistant' && message.content === WELCOME_MESSAGE.content;
+}
 
-function PortalChatInterface({
-  isExpanded,
-  onToggleExpand,
+function formatTimestamp(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  return date.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function mapMessages(
+  rawMessages: Array<{
+    role: string;
+    content: string;
+    timestamp: string;
+    citations?: Array<{ title: string; slug: string; url: string }>;
+    artifacts?: ChatMessage['artifacts'];
+  }> | undefined,
+): ChatMessage[] {
+  if (!rawMessages || rawMessages.length === 0) return [WELCOME_MESSAGE];
+
+  return rawMessages.map((message) => ({
+    role: message.role as 'user' | 'assistant',
+    content: message.content,
+    timestamp: new Date(message.timestamp),
+    citations: message.citations,
+    artifacts: message.artifacts,
+  }));
+}
+
+function InlineChatCard({
+  activeSession,
   messages,
   input,
-  setInput,
-  isLoading,
   error,
-  onSendMessage,
-  onClearChat,
+  isStreaming,
   streamingContent,
+  apiKeyWarning,
+  onInputChange,
+  onSendMessage,
+  onExpand,
+  onClearCurrent,
+  onNewChat,
 }: {
-  isExpanded: boolean;
-  onToggleExpand: () => void;
+  activeSession: VascoChatSessionSummary | null;
   messages: ChatMessage[];
   input: string;
-  setInput: (v: string) => void;
-  isLoading: boolean;
   error: string | null;
-  onSendMessage: () => void;
-  onClearChat: () => void;
+  isStreaming: boolean;
   streamingContent: string;
+  apiKeyWarning: React.ReactNode;
+  onInputChange: (value: string) => void;
+  onSendMessage: () => void;
+  onExpand: () => void;
+  onClearCurrent: () => void;
+  onNewChat: () => void;
 }) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  // Check API key status
-  const { data: apiKeyStatus } = useQuery({
-    queryKey: advisorKeys.status(),
-    queryFn: async () => {
-      return await api.get<{ configured: boolean; model?: string }>(
-        '/ai-advisor/status'
-      );
-    },
-  });
-
-  // Scroll to bottom when messages change or streaming content updates
   useEffect(() => {
-    if (messages.length > 0 && messagesContainerRef.current) {
-      const container = messagesContainerRef.current;
-      requestAnimationFrame(() => {
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: messages.length <= 1 ? 'instant' : 'smooth',
-        });
+    if (!messagesContainerRef.current || messages.length === 0) return;
+    const container = messagesContainerRef.current;
+    requestAnimationFrame(() => {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: messages.length <= 1 ? 'auto' : 'smooth',
       });
-    }
-  }, [messages, isLoading, streamingContent]);
-
-  const showApiKeyWarning =
-    apiKeyStatus &&
-    (!apiKeyStatus.configured ||
-      (apiKeyStatus as { keySuffix?: string }).keySuffix === 'oBEA');
-
-  const chatHeight = isExpanded
-    ? 'h-[calc(100vh-120px)]'
-    : 'h-[650px]';
+    });
+  }, [messages, isStreaming, streamingContent]);
 
   return (
-    <div
-      className={`flex flex-col ${chatHeight} bg-white rounded-lg transition-all duration-300`}
-    >
-      {/* Chat Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <VascoAvatar size="md" />
-          <div>
-            <h3 className="text-gray-900 font-semibold text-sm">Vasco</h3>
-            <p className="text-xs text-gray-500 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              AI Financial Navigator
-            </p>
+    <Card className="border-gray-200 shadow-sm overflow-hidden">
+      <div className="flex h-[650px] flex-col bg-white">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <VascoAvatar size="md" />
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                {activeSession?.title || 'Ask Vasco'}
+              </h3>
+              <p className="text-xs text-gray-500">
+                {activeSession ? `Updated ${formatTimestamp(activeSession.updatedAt)}` : 'AI Financial Navigator'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={onNewChat}
+              variant="outline"
+              size="sm"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              disabled={isStreaming}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              New chat
+            </Button>
+            <Button
+              onClick={onClearCurrent}
+              variant="outline"
+              size="sm"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              disabled={isStreaming || !activeSession}
+            >
+              <Eraser className="mr-2 h-4 w-4" />
+              Clear
+            </Button>
+            <Button
+              onClick={onExpand}
+              variant="ghost"
+              size="sm"
+              className="h-9 w-9 p-0 text-gray-500 hover:bg-purple-50 hover:text-[#6d28d9]"
+              title="Expand"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Button
-            onClick={onClearChat}
-            variant="ghost"
-            size="sm"
-            className="text-gray-500 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0"
-            title="Clear chat history"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-          <Button
-            onClick={onToggleExpand}
-            variant="ghost"
-            size="sm"
-            className="text-gray-500 hover:text-[#6d28d9] hover:bg-purple-50 h-8 w-8 p-0"
-            title={isExpanded ? 'Minimize' : 'Expand'}
-          >
-            {isExpanded ? (
-              <Minimize2 className="h-4 w-4" />
-            ) : (
-              <Maximize2 className="h-4 w-4" />
-            )}
-          </Button>
+
+        {apiKeyWarning && <div className="border-b border-gray-100 px-4 py-3">{apiKeyWarning}</div>}
+
+        <div
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto bg-gray-50/50 px-6 py-5"
+        >
+          <div className="space-y-5">
+            {messages.map((message, index) => (
+              <VascoChatMessage
+                key={`${message.role}-${index}-${message.timestamp.getTime()}`}
+                message={message}
+                isWelcome={index === 0 && isWelcomeMessage(message)}
+              />
+            ))}
+
+            {isStreaming && streamingContent && <VascoStreamingBubble content={streamingContent} />}
+            {isStreaming && !streamingContent && <VascoTypingIndicator />}
+          </div>
         </div>
+
+        <VascoChatInput
+          value={input}
+          onChange={onInputChange}
+          onSubmit={onSendMessage}
+          isLoading={isStreaming}
+          error={error}
+          placeholder="Ask Vasco about your financial goals..."
+          footer={
+            <p className="text-center text-[10px] text-gray-400">
+              Vasco provides general financial information only — not personal financial advice.
+            </p>
+          }
+        />
       </div>
-
-      {/* API Key Warning Banner */}
-      {showApiKeyWarning && (
-        <Alert className="m-4 border-amber-200 bg-amber-50">
-          <AlertCircle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-900 text-sm">
-            <strong>Action Required:</strong> OpenAI API key needs to be
-            updated.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Messages Area */}
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-6 space-y-5 bg-gray-50/50"
-      >
-        {messages.map((message, index) => (
-          <VascoChatMessage
-            key={index}
-            message={message}
-            isWelcome={index === 0 && message === WELCOME_MESSAGE}
-          />
-        ))}
-
-        {/* Streaming bubble — shows real-time content as it arrives */}
-        {isLoading && streamingContent && (
-          <VascoStreamingBubble content={streamingContent} />
-        )}
-
-        {/* Typing indicator — shown before streaming starts */}
-        {isLoading && !streamingContent && <VascoTypingIndicator />}
-      </div>
-
-      {/* Input Area */}
-      <VascoChatInput
-        value={input}
-        onChange={setInput}
-        onSubmit={onSendMessage}
-        isLoading={isLoading}
-        error={error}
-        placeholder="Ask Vasco about your financial goals..."
-        footer={
-          <p className="text-[10px] text-gray-400 text-center">
-            Vasco provides general financial information only — not personal
-            financial advice.
-          </p>
-        }
-      />
-    </div>
+    </Card>
   );
 }
-
-// ============================================================================
-// MAIN PAGE COMPONENT
-// ============================================================================
 
 export function AIAdvisorPage() {
   const { user } = useAuth();
@@ -254,9 +244,10 @@ export function AIAdvisorPage() {
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-
-  // Get auth token for streaming
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
+
   useEffect(() => {
     async function getToken() {
       try {
@@ -269,69 +260,145 @@ export function AIAdvisorPage() {
           setAuthToken(session.access_token);
         }
       } catch {
-        // Fall back to non-streaming if token unavailable
+        // Fall back to anon auth inside useVascoStream.
       }
     }
-    getToken();
+
+    void getToken();
   }, [user]);
 
-  // SSE streaming hook
   const { streamingContent, isStreaming, sendStream } = useVascoStream({
     endpoint: '/ai-advisor/chat/stream',
     authToken: authToken || undefined,
   });
 
-  // Fetch history
-  const { data: historyData } = useQuery({
-    queryKey: advisorKeys.history(user?.id),
+  const { data: apiKeyStatus } = useQuery({
+    queryKey: advisorKeys.status(),
+    queryFn: async () => api.get<{ configured: boolean; model?: string; keySuffix?: string }>('/ai-advisor/status'),
+  });
+
+  const sessionsQuery = useQuery({
+    queryKey: advisorKeys.sessions(user?.id),
     enabled: !!user,
-    queryFn: async () => {
-      return await api.get<{
+    queryFn: async () =>
+      api.get<{ sessions: VascoChatSessionSummary[] }>('/ai-advisor/sessions'),
+    staleTime: 60 * 1000,
+  });
+
+  const sessions = sessionsQuery.data?.sessions ?? [];
+  const activeSession = useMemo(
+    () => sessions.find((session) => session.id === activeSessionId) || null,
+    [sessions, activeSessionId],
+  );
+
+  useEffect(() => {
+    if (sessions.length === 0) {
+      setActiveSessionId(null);
+      setMessages([WELCOME_MESSAGE]);
+      return;
+    }
+
+    if (!activeSessionId || !sessions.some((session) => session.id === activeSessionId)) {
+      setActiveSessionId(sessions[0].id);
+    }
+  }, [sessions, activeSessionId]);
+
+  const sessionDetailQuery = useQuery({
+    queryKey: advisorKeys.session(user?.id, activeSessionId),
+    enabled: !!user && !!activeSessionId,
+    queryFn: async () =>
+      api.get<{
+        session: VascoChatSessionSummary;
         messages: Array<{
           role: string;
           content: string;
           timestamp: string;
+          citations?: Array<{ title: string; slug: string; url: string }>;
+          artifacts?: ChatMessage['artifacts'];
         }>;
-      }>('/ai-advisor/history');
-    },
-    staleTime: 5 * 60 * 1000,
+      }>(`/ai-advisor/sessions/${activeSessionId}`),
+    staleTime: 30 * 1000,
   });
 
-  // Sync history to local state on load
   useEffect(() => {
-    if (
-      historyData &&
-      historyData.messages &&
-      Array.isArray(historyData.messages) &&
-      historyData.messages.length > 0
-    ) {
-      const parsedMessages: ChatMessage[] = historyData.messages.map(
-        (msg) => ({
-          role: msg.role as 'user' | 'assistant',
-          content: msg.content,
-          timestamp: new Date(msg.timestamp),
-        })
-      );
-      setMessages(parsedMessages);
+    if (!activeSessionId) {
+      setMessages([WELCOME_MESSAGE]);
+      return;
     }
-  }, [historyData]);
 
-  // Scroll to top on mount
+    if (sessionDetailQuery.data) {
+      setMessages(mapMessages(sessionDetailQuery.data.messages));
+      setError(null);
+    }
+  }, [activeSessionId, sessionDetailQuery.data]);
+
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
 
-  // Send message handler — uses SSE streaming
+  const createSessionMutation = useMutation({
+    mutationFn: async () => api.post<{ session: VascoChatSessionSummary }>('/ai-advisor/sessions', {}),
+    onSuccess: ({ session }) => {
+      queryClient.invalidateQueries({ queryKey: advisorKeys.sessions(user?.id) });
+      setActiveSessionId(session.id);
+      setMessages([WELCOME_MESSAGE]);
+      setError(null);
+      setInput('');
+    },
+    onError: () => {
+      toast.error('Failed to create a new chat');
+    },
+  });
+
+  const clearChatMutation = useMutation({
+    mutationFn: async (sessionId: string) =>
+      api.delete<{ success: boolean }>(`/ai-advisor/history?sessionId=${encodeURIComponent(sessionId)}`),
+    onSuccess: () => {
+      setMessages([WELCOME_MESSAGE]);
+      queryClient.invalidateQueries({ queryKey: advisorKeys.sessions(user?.id) });
+      if (activeSessionId) {
+        queryClient.invalidateQueries({ queryKey: advisorKeys.session(user?.id, activeSessionId) });
+      }
+      toast.success('Current chat cleared');
+    },
+    onError: () => {
+      toast.error('Failed to clear chat history');
+    },
+  });
+
+  const deleteSessionMutation = useMutation({
+    mutationFn: async (sessionId: string) =>
+      api.delete<{ success: boolean }>(`/ai-advisor/sessions/${encodeURIComponent(sessionId)}`),
+    onSuccess: (_, deletedSessionId) => {
+      const remainingSessions = sessions.filter((session) => session.id !== deletedSessionId);
+      setActiveSessionId(remainingSessions[0]?.id ?? null);
+      setMessages([WELCOME_MESSAGE]);
+      queryClient.invalidateQueries({ queryKey: advisorKeys.sessions(user?.id) });
+      queryClient.removeQueries({ queryKey: advisorKeys.session(user?.id, deletedSessionId) });
+      toast.success('Chat deleted');
+    },
+    onError: () => {
+      toast.error('Failed to delete chat');
+    },
+  });
+
+  const ensureActiveSession = useCallback(async () => {
+    if (activeSessionId) return activeSessionId;
+    const created = await createSessionMutation.mutateAsync();
+    return created.session.id;
+  }, [activeSessionId, createSessionMutation]);
+
   const handleSendMessage = useCallback(
-    async (text?: string) => {
-      const content = text || input;
-      if (!content.trim() || isStreaming) return;
+    async (preset?: string) => {
+      const content = (preset || input).trim();
+      if (!content || isStreaming) return;
 
       setError(null);
 
+      const sessionId = await ensureActiveSession();
       const userMessage: ChatMessage = {
         role: 'user',
-        content: content.trim(),
+        content,
         timestamp: new Date(),
       };
 
@@ -340,60 +407,48 @@ export function AIAdvisorPage() {
       setInput('');
 
       try {
-        // Build chat history for the streaming endpoint
         const chatHistory = updatedMessages
-          .filter((m) => m !== WELCOME_MESSAGE)
-          .map((m) => ({ role: m.role, content: m.content }));
+          .filter((message) => !isWelcomeMessage(message))
+          .map((message) => ({ role: message.role, content: message.content }));
 
-        const result = await sendStream(chatHistory, null);
+        const result = await sendStream(chatHistory, sessionId);
 
         const assistantMessage: ChatMessage = {
           role: 'assistant',
           content: result.content,
           timestamp: new Date(),
-          citations:
-            result.citations.length > 0 ? result.citations : undefined,
+          citations: result.citations.length > 0 ? result.citations : undefined,
+          artifacts: result.artifacts.length > 0 ? result.artifacts : undefined,
         };
 
         setMessages((prev) => [...prev, assistantMessage]);
+        setActiveSessionId(result.sessionId || sessionId);
+        queryClient.invalidateQueries({ queryKey: advisorKeys.sessions(user?.id) });
+        queryClient.invalidateQueries({ queryKey: advisorKeys.session(user?.id, result.sessionId || sessionId) });
       } catch (err: unknown) {
-        const errorMsg =
+        const errorMessage =
           err instanceof Error
             ? err.message
             : 'I apologise, but I encountered a temporary issue. Please try again.';
-
-        setError(errorMsg);
-        const errorMessage: ChatMessage = {
-          role: 'assistant',
-          content: `I apologise, but I'm experiencing a technical issue: ${errorMsg}`,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, errorMessage]);
+        setError(errorMessage);
+        toast.error(errorMessage);
       }
     },
-    [messages, isStreaming, input, sendStream]
+    [input, isStreaming, ensureActiveSession, messages, sendStream, queryClient, user?.id],
   );
 
-  // Clear chat
-  const clearChatMutation = useMutation({
-    mutationFn: async () => {
-      if (user) await api.delete('/ai-advisor/history');
-    },
-    onSuccess: () => {
-      setMessages([WELCOME_MESSAGE]);
-      queryClient.setQueryData(['advisor', 'history', user?.id], {
-        messages: [],
-      });
-      toast.success('Chat history cleared');
-    },
-    onError: () => {
-      toast.error('Failed to clear chat history');
-    },
-  });
+  const showApiKeyWarning =
+    apiKeyStatus &&
+    (!apiKeyStatus.configured || apiKeyStatus.keySuffix === 'oBEA');
 
-  const handleClearChat = () => {
-    setShowClearConfirm(true);
-  };
+  const apiKeyWarningBanner = showApiKeyWarning ? (
+    <Alert className="border-amber-200 bg-amber-50">
+      <AlertCircle className="h-4 w-4 text-amber-600" />
+      <AlertDescription className="text-sm text-amber-900">
+        <strong>Action Required:</strong> OpenAI API key needs to be updated.
+      </AlertDescription>
+    </Alert>
+  ) : null;
 
   return (
     <div
@@ -407,78 +462,65 @@ export function AIAdvisorPage() {
         icon={Sparkles}
         compact
       />
-      <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* About Card */}
-            <Card className="border-gray-200 shadow-sm bg-gradient-to-br from-purple-50 to-white">
+
+      <div className="mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+          <div className="space-y-6 lg:col-span-1">
+            <Card className="border-gray-200 bg-gradient-to-br from-purple-50 to-white shadow-sm">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <Bot className="h-4 w-4 text-[#6d28d9]" />
                   About Vasco
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Vasco is trained on South African financial regulations and
-                  Navigate Wealth's planning philosophy. He has access to your
-                  full logged-in client context, including profile details,
-                  policies, portfolio overview, FNA information, communication
-                  history, and document history.
+                <p className="text-sm leading-relaxed text-gray-600">
+                  Vasco is trained on South African financial regulations and Navigate Wealth&apos;s
+                  planning philosophy. He has access to your full logged-in client context,
+                  including profile details, policies, portfolio overview, FNA information,
+                  communication history, and document history.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Badge
-                    variant="secondary"
-                    className="bg-white/50 text-gray-600 border-gray-200"
-                  >
+                  <Badge variant="secondary" className="border-gray-200 bg-white/50 text-gray-600">
                     24/7 Support
                   </Badge>
-                  <Badge
-                    variant="secondary"
-                    className="bg-white/50 text-gray-600 border-gray-200"
-                  >
+                  <Badge variant="secondary" className="border-gray-200 bg-white/50 text-gray-600">
                     Secure
                   </Badge>
-                  <Badge
-                    variant="secondary"
-                    className="bg-white/50 text-gray-600 border-gray-200"
-                  >
+                  <Badge variant="secondary" className="border-gray-200 bg-white/50 text-gray-600">
                     GPT-4o
                   </Badge>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Suggested Prompts */}
             <Card className="border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <Zap className="h-4 w-4 text-amber-500" />
                   Suggested Topics
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {SUGGESTED_PROMPTS.map((prompt, index) => (
+                  {SUGGESTED_PROMPTS.map((prompt) => (
                     <button
-                      key={index}
-                      onClick={() => handleSendMessage(prompt)}
+                      key={prompt}
+                      onClick={() => void handleSendMessage(prompt)}
                       disabled={isStreaming}
-                      className="w-full text-left p-2.5 text-xs text-gray-600 bg-gray-50 hover:bg-purple-50 hover:text-[#6d28d9] rounded-lg transition-colors border border-transparent hover:border-purple-100 flex items-center justify-between group"
+                      className="group flex w-full items-center justify-between rounded-lg border border-transparent bg-gray-50 p-2.5 text-left text-xs text-gray-600 transition-colors hover:border-purple-100 hover:bg-purple-50 hover:text-[#6d28d9]"
                     >
                       {prompt}
-                      <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ChevronRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
                     </button>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Capabilities */}
             <Card className="border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <Briefcase className="h-4 w-4 text-blue-500" />
                   Capabilities
                 </CardTitle>
@@ -488,92 +530,113 @@ export function AIAdvisorPage() {
                   { name: 'Retirement Planning', icon: TrendingUp },
                   { name: 'Tax Efficiency', icon: FileText },
                   { name: 'Risk Management', icon: Shield },
-                ].map((cap, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 text-sm text-gray-600"
-                  >
-                    <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
-                      <cap.icon className="h-4 w-4 text-gray-500" />
+                ].map((capability) => (
+                  <div key={capability.name} className="flex items-center gap-3 text-sm text-gray-600">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-50">
+                      <capability.icon className="h-4 w-4 text-gray-500" />
                     </div>
-                    <span>{cap.name}</span>
+                    <span>{capability.name}</span>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
-            {/* Disclaimer */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <div className="flex gap-2 mb-2">
-                <AlertCircle className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <h4 className="text-xs font-semibold text-gray-700">
-                  Disclaimer
-                </h4>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="mb-2 flex gap-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                <h4 className="text-xs font-semibold text-gray-700">Disclaimer</h4>
               </div>
-              <p className="text-[11px] text-gray-500 leading-relaxed">
-                Vasco provides general financial information only. Nothing in
-                this conversation constitutes formal financial advice, a
-                recommendation, or an offer to buy or sell any financial
-                product.
+              <p className="text-[11px] leading-relaxed text-gray-500">
+                Vasco provides general financial information only. Nothing in this conversation
+                constitutes formal financial advice, a recommendation, or an offer to buy or sell
+                any financial product.
               </p>
             </div>
           </div>
 
-          {/* Main Chat Area */}
           <div className="lg:col-span-3">
-            {!isExpanded ? (
-              <Card className="border-gray-200 shadow-sm overflow-hidden">
-                <PortalChatInterface
-                  isExpanded={false}
-                  onToggleExpand={() => setIsExpanded(true)}
-                  messages={messages}
-                  input={input}
-                  setInput={setInput}
-                  isLoading={isStreaming}
-                  error={error}
-                  onSendMessage={() => handleSendMessage()}
-                  onClearChat={handleClearChat}
-                  streamingContent={streamingContent}
-                />
-              </Card>
-            ) : (
-              <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
-                <DialogContent
-                  className="max-w-[95vw] w-[95vw] h-[90vh] p-0 gap-0 border-none sm:rounded-xl overflow-hidden shadow-2xl"
-                  hideCloseButton
-                >
-                  <PortalChatInterface
-                    isExpanded={true}
-                    onToggleExpand={() => setIsExpanded(false)}
-                    messages={messages}
-                    input={input}
-                    setInput={setInput}
-                    isLoading={isStreaming}
-                    error={error}
-                    onSendMessage={() => handleSendMessage()}
-                    onClearChat={handleClearChat}
-                    streamingContent={streamingContent}
-                  />
-                </DialogContent>
-              </Dialog>
-            )}
+            <InlineChatCard
+              activeSession={activeSession}
+              messages={messages}
+              input={input}
+              error={error}
+              isStreaming={isStreaming}
+              streamingContent={streamingContent}
+              apiKeyWarning={apiKeyWarningBanner}
+              onInputChange={setInput}
+              onSendMessage={() => void handleSendMessage()}
+              onExpand={() => setIsExpanded(true)}
+              onClearCurrent={() => setShowClearConfirm(true)}
+              onNewChat={() => createSessionMutation.mutate()}
+            />
           </div>
         </div>
       </div>
+
+      <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
+        <DialogContent
+          className="h-[92vh] max-w-[96vw] w-[96vw] gap-0 overflow-hidden border-none p-0 shadow-2xl sm:rounded-[28px]"
+          hideCloseButton
+        >
+          <VascoSessionWorkspace
+            title="AI Advisor"
+            subtitle="Switch between Ask Vasco chats, start a new thread, or clear the current conversation."
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            messages={messages}
+            input={input}
+            isLoading={isStreaming}
+            streamingContent={streamingContent}
+            error={error}
+            apiKeyWarning={apiKeyWarningBanner}
+            footer={
+              <p className="text-center text-[10px] text-gray-400">
+                Vasco provides general financial information only — not personal financial advice.
+              </p>
+            }
+            emptyRailLabel="No saved Ask Vasco chats yet. Start a new chat to begin."
+            onInputChange={setInput}
+            onSendMessage={() => void handleSendMessage()}
+            onSelectSession={setActiveSessionId}
+            onCreateSession={() => createSessionMutation.mutate()}
+            onClearSession={() => setShowClearConfirm(true)}
+            onDeleteSession={() => setShowDeleteConfirm(true)}
+            onClose={() => setIsExpanded(false)}
+            disableSessionActions={isStreaming}
+          />
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         isOpen={showClearConfirm}
         onClose={() => setShowClearConfirm(false)}
         onConfirm={() => {
+          if (!activeSessionId) return;
           setShowClearConfirm(false);
-          clearChatMutation.mutate();
+          clearChatMutation.mutate(activeSessionId);
         }}
-        title="Clear chat history?"
-        description="Are you sure you want to clear your Ask Vasco chat history? This action cannot be undone."
+        title="Clear current chat?"
+        description="This keeps the chat in your history list but removes all messages inside it."
         confirmLabel="Clear chat"
         cancelLabel="Cancel"
         variant="danger"
         isLoading={clearChatMutation.isPending}
+      />
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          if (!activeSessionId) return;
+          setShowDeleteConfirm(false);
+          deleteSessionMutation.mutate(activeSessionId);
+        }}
+        title="Delete this chat?"
+        description="This removes the current Ask Vasco thread from your chat history."
+        confirmLabel="Delete chat"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={deleteSessionMutation.isPending}
       />
     </div>
   );

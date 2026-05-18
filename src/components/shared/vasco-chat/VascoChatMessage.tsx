@@ -29,6 +29,7 @@ import {
 import { toast } from 'sonner@2.0.3';
 import { MessageRenderer } from '../MessageRenderer';
 import { VascoAvatar } from './VascoAvatar';
+import { VascoChatArtifacts } from './VascoChatArtifacts';
 import type { VascoChatMessage as ChatMessageType } from './types';
 
 export interface VascoChatMessageProps {
@@ -115,7 +116,11 @@ export function VascoChatMessage({
                 </Link>
               ))}
             </div>
-          )}
+        )}
+
+        {!isUser && message.artifacts && message.artifacts.length > 0 && (
+          <VascoChatArtifacts artifacts={message.artifacts} />
+        )}
 
         {/* Action buttons: copy + feedback */}
         {!isUser && !isWelcome && (

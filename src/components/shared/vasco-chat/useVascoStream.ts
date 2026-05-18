@@ -14,7 +14,7 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import type { VascoCitation } from './types';
+import type { VascoCitation, VascoChatArtifact } from './types';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 
 const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
@@ -32,6 +32,7 @@ export interface StreamResult {
   content: string;
   sessionId: string | null;
   citations: VascoCitation[];
+  artifacts: VascoChatArtifact[];
   remaining?: number;
 }
 
@@ -121,6 +122,7 @@ export function useVascoStream({
       let accumulatedContent = '';
       let receivedSessionId = sessionId;
       let receivedCitations: VascoCitation[] = [];
+      let receivedArtifacts: VascoChatArtifact[] = [];
       let buffer = '';
 
       try {
@@ -145,6 +147,7 @@ export function useVascoStream({
               } else if (data.type === 'done') {
                 receivedSessionId = data.sessionId || receivedSessionId;
                 receivedCitations = data.citations || [];
+                receivedArtifacts = Array.isArray(data.artifacts) ? data.artifacts : [];
               } else if (data.type === 'error') {
                 throw new Error(data.message || 'Stream error');
               }
@@ -170,6 +173,7 @@ export function useVascoStream({
           'I apologise, I was unable to generate a response. Please try again.',
         sessionId: receivedSessionId,
         citations: receivedCitations,
+        artifacts: receivedArtifacts,
         remaining,
       };
     },

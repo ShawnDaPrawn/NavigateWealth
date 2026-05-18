@@ -15,10 +15,18 @@ export { VascoStreamingBubble } from './VascoStreamingBubble';
 export type { VascoStreamingBubbleProps } from './VascoStreamingBubble';
 export { VascoChatInput } from './VascoChatInput';
 export type { VascoChatInputProps } from './VascoChatInput';
+export { VascoChatArtifacts } from './VascoChatArtifacts';
+export { VascoSessionWorkspace } from './VascoSessionWorkspace';
 export { useVascoStream } from './useVascoStream';
 export type {
   UseVascoStreamOptions,
   UseVascoStreamReturn,
   StreamResult,
 } from './useVascoStream';
-export type { VascoChatMessage as VascoChatMessageType, VascoCitation, VascoStreamEvent } from './types';
+export type {
+  VascoChatMessage as VascoChatMessageType,
+  VascoCitation,
+  VascoStreamEvent,
+  VascoChatArtifact,
+  VascoChatSessionSummary,
+} from './types';
