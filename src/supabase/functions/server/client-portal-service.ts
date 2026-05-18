@@ -233,6 +233,7 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
     })
     .map((p: PolicyRecord) => {
       const d = p.data;
+      const bucket = CATEGORY_BUCKET[p.categoryId] || 'other';
       // Guard: data must be a non-null plain object
       if (!d || typeof d !== 'object' || Array.isArray(d)) {
         log.info('Policy entry has missing or non-object data — skipping field extraction', {
@@ -241,7 +242,6 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
           dataType: d === null ? 'null' : typeof d,
         });
         // Still produce a holding with metadata-level info
-        const bucket = CATEGORY_BUCKET[p.categoryId] || 'other';
         return {
           id: p.id || `ph-${Math.random().toString(36).substring(2, 8)}`,
           category: bucket,
@@ -262,6 +262,23 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
       let value = 0;
       let premium = 0;
 
+      if (bucket === 'retirement') {
+        value = num(
+          d.retirement_fund_value ??
+          d.retirement_current_value ??
+          d.post_retirement_capital_value ??
+          d.ret_3 ??
+          d.ret_pre_3 ??
+          d.ret_post_3,
+        );
+      } else if (bucket === 'investment') {
+        value = num(
+          d.invest_current_value ??
+          d.inv_3 ??
+          d.inv_vol_3,
+        );
+      }
+
       for (const [key, val] of allEntries) {
         const lk = key.toLowerCase();
         // Policy number fields end in _1 in standard schemas
@@ -278,7 +295,9 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
         }
       }
 
-      // Extract value and premium using common field name patterns
+      // Extract value and premium using common field name patterns.
+      // Retirement and investment holdings keep the explicit current-value
+      // mapping above so the assets tab only reflects current policy value.
       for (const [key, val] of allEntries) {
         // Skip non-primitive values (nested objects/arrays from custom schemas)
         if (val !== null && typeof val === 'object') continue;
@@ -287,6 +306,8 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
         const n = num(val);
         // Value: current value, cover amount, capital, fund value
         if (
+          bucket !== 'retirement' &&
+          bucket !== 'investment' &&
           (lk.includes('value') || lk.includes('cover') || lk.includes('capital') ||
            lk.includes('sum_assured') || lk.includes('amount')) &&
           !lk.includes('maturity') && !lk.includes('projected') &&
@@ -314,8 +335,12 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
         const n = num(val);
         if (n <= 0) continue;
         // Value fields
-        if (['rp_2', 'rp_3', 'rp_4', 'rp_5', 'ret_3', 'ret_pre_3', 'ret_post_3', 'inv_3',
-             'inv_vol_3', 'inv_gua_3', 'eb_4', 'eb_risk_4', 'eb_ret_4', 'tax_4'].includes(key)) {
+        if (
+          bucket !== 'retirement' &&
+          bucket !== 'investment' &&
+          ['rp_2', 'rp_3', 'rp_4', 'rp_5', 'ret_3', 'ret_pre_3', 'ret_post_3', 'inv_3',
+           'inv_vol_3', 'inv_gua_3', 'eb_4', 'eb_risk_4', 'eb_ret_4', 'tax_4'].includes(key)
+        ) {
           if (value === 0) value = n;
         }
         // Premium fields
@@ -334,8 +359,6 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
           if (!policyNumber && typeof val === 'string') policyNumber = val;
         }
       }
-
-      const bucket = CATEGORY_BUCKET[p.categoryId] || 'other';
 
       return {
         id: p.id || `ph-${Math.random().toString(36).substring(2, 8)}`,

@@ -23,9 +23,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../ui/dialog';
-import { TrendingUp, DollarSign, Plus, Edit2, Trash2, X, Check, PieChart } from 'lucide-react';
+import { TrendingUp, DollarSign, Plus, Edit2, Trash2, X, Check, PieChart, AlertTriangle } from 'lucide-react';
 import { EmptyState } from '../../pages/profile/EmptyState';
 import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
+import { findPossiblePolicyAssetMatches, type DerivedPolicyAsset } from '../../../utils/derivedPolicyAssets';
 
 interface Asset {
   id: string;
@@ -53,6 +54,9 @@ interface Liability {
 interface AssetsLiabilitiesSectionProps {
   assets: Asset[];
   liabilities: Liability[];
+  derivedPolicyAssets?: DerivedPolicyAsset[];
+  linkedPolicyAssetsLoading?: boolean;
+  linkedPolicyAssetsError?: string | null;
   assetsInEditMode: Set<string>;
   liabilitiesInEditMode: Set<string>;
   assetToDelete: string | null;
@@ -134,6 +138,9 @@ function getLiabilityTypeLabel(liability: Liability) {
 export function AssetsLiabilitiesSection({
   assets = [],
   liabilities = [],
+  derivedPolicyAssets = [],
+  linkedPolicyAssetsLoading = false,
+  linkedPolicyAssetsError = null,
   assetsInEditMode,
   liabilitiesInEditMode,
   assetToDelete,
@@ -163,15 +170,26 @@ export function AssetsLiabilitiesSection({
   cleanCurrencyInput,
 }: AssetsLiabilitiesSectionProps) {
   const totalAssets = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
+  const linkedPolicyAssetTotal = derivedPolicyAssets.reduce((sum, asset) => sum + asset.value, 0);
+  const combinedAssets = totalAssets + linkedPolicyAssetTotal;
   const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.outstandingBalance || 0), 0);
-  const netWorth = totalAssets - totalLiabilities;
-  const hasBalanceSheetData = assets.length > 0 || liabilities.length > 0;
+  const netWorth = combinedAssets - totalLiabilities;
+  const possibleDuplicateMatches = findPossiblePolicyAssetMatches(assets, derivedPolicyAssets);
+  const possibleDuplicateCount = Object.keys(possibleDuplicateMatches).length;
+  const hasBalanceSheetData =
+    assets.length > 0 || liabilities.length > 0 || derivedPolicyAssets.length > 0;
 
   return (
     <div className="space-y-5">
       {hasBalanceSheetData && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <SummaryMetric label="Total Assets" value={formatCurrency(totalAssets)} tone="positive" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <SummaryMetric label="Manual Assets" value={formatCurrency(totalAssets)} tone="positive" />
+          <SummaryMetric
+            label="Linked Policy Assets"
+            value={formatCurrency(linkedPolicyAssetTotal)}
+            tone="accent"
+          />
+          <SummaryMetric label="Combined Assets" value={formatCurrency(combinedAssets)} tone="positive" />
           <SummaryMetric label="Total Liabilities" value={formatCurrency(totalLiabilities)} tone="negative" />
           <SummaryMetric label="Net Worth" value={formatCurrency(netWorth)} tone="accent" />
         </div>
@@ -191,7 +209,10 @@ export function AssetsLiabilitiesSection({
             </div>
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700">
-                {formatCurrency(totalAssets)}
+                Manual {formatCurrency(totalAssets)}
+              </div>
+              <div className="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+                Linked {formatCurrency(linkedPolicyAssetTotal)}
               </div>
               <Button
                 onClick={addAsset}
@@ -207,22 +228,75 @@ export function AssetsLiabilitiesSection({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          {(linkedPolicyAssetsLoading || linkedPolicyAssetsError || derivedPolicyAssets.length > 0) && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                  <PieChart className="h-4 w-4 text-blue-700" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-blue-950">Linked Policy Assets</p>
+                  <p className="mt-1 text-xs leading-relaxed text-blue-900/80">
+                    Retirement and investment policies are being displayed here automatically so
+                    advisers do not have to capture the same holdings twice. These rows are
+                    read-only and remain managed in Policy Details.
+                  </p>
+                  {linkedPolicyAssetsLoading && (
+                    <p className="mt-2 text-xs font-medium text-blue-800">
+                      Loading linked policy assets...
+                    </p>
+                  )}
+                  {linkedPolicyAssetsError && (
+                    <p className="mt-2 text-xs font-medium text-red-700">
+                      {linkedPolicyAssetsError}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {possibleDuplicateCount > 0 && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+                  <AlertTriangle className="h-4 w-4 text-amber-700" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-amber-950">Possible duplicate assets detected</p>
+                  <p className="mt-1 text-xs leading-relaxed text-amber-900/80">
+                    {possibleDuplicateCount} manual {possibleDuplicateCount === 1 ? 'asset appears' : 'assets appear'} to overlap with a linked retirement or investment policy.
+                    These are warnings only. Nothing has been merged or deleted.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {assets.length === 0 ? (
-            <EmptyState
-              icon={emptyStateConfigs.assets.icon}
-              title={emptyStateConfigs.assets.title}
-              description={emptyStateConfigs.assets.description}
-              actionLabel={emptyStateConfigs.assets.actionLabel}
-              onAction={addAsset}
-              iconColor={emptyStateConfigs.assets.iconColor}
-              iconBgColor={emptyStateConfigs.assets.iconBgColor}
-              buttonColor={emptyStateConfigs.assets.buttonColor}
-              buttonHoverColor={emptyStateConfigs.assets.buttonHoverColor}
-            />
+            derivedPolicyAssets.length === 0 ? (
+              <EmptyState
+                icon={emptyStateConfigs.assets.icon}
+                title={emptyStateConfigs.assets.title}
+                description={emptyStateConfigs.assets.description}
+                actionLabel={emptyStateConfigs.assets.actionLabel}
+                onAction={addAsset}
+                iconColor={emptyStateConfigs.assets.iconColor}
+                iconBgColor={emptyStateConfigs.assets.iconBgColor}
+                buttonColor={emptyStateConfigs.assets.buttonColor}
+                buttonHoverColor={emptyStateConfigs.assets.buttonHoverColor}
+              />
+            ) : (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-4 text-sm text-gray-600">
+                No manual assets have been entered yet. Linked retirement and investment policies
+                are shown below without writing anything into the profile asset list.
+              </div>
+            )
           ) : (
             assets.map((asset, index) => {
               const isEditing = assetsInEditMode.has(asset.id);
               const isOtherType = asset.type === 'Other';
+              const duplicateMatches = possibleDuplicateMatches[asset.id] || [];
               let isValid: string | boolean | undefined = asset.type && asset.name && asset.ownershipType;
               if (isOtherType) {
                 isValid = isValid && asset.customType;
@@ -248,6 +322,23 @@ export function AssetsLiabilitiesSection({
                           </div>
                           {asset.description && (
                             <p className="text-xs leading-relaxed text-gray-500">{asset.description}</p>
+                          )}
+                          {duplicateMatches.length > 0 && (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                              <p className="text-xs font-semibold text-amber-900">Possible duplicate of linked policy</p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {duplicateMatches.map((match) => (
+                                  <span
+                                    key={`${asset.id}:${match.id}`}
+                                    className="inline-flex flex-wrap items-center gap-1 rounded-full border border-amber-200 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-800"
+                                  >
+                                    <span>{match.providerName}</span>
+                                    <span className="text-amber-700/80">{match.productType}</span>
+                                    <span className="text-amber-700/80">{match.policyNumber}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -412,6 +503,51 @@ export function AssetsLiabilitiesSection({
                 </React.Fragment>
               );
             })
+          )}
+
+          {derivedPolicyAssets.length > 0 && (
+            <div className="space-y-3 border-t border-gray-100 pt-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Linked Policy Assets</p>
+                  <p className="text-xs text-gray-500">
+                    Read-only values derived from active retirement and investment policies.
+                  </p>
+                </div>
+                <div className="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+                  {formatCurrency(linkedPolicyAssetTotal)}
+                </div>
+              </div>
+
+              {derivedPolicyAssets.map((asset) => (
+                <div
+                  key={asset.id}
+                  className="rounded-xl border border-blue-100 bg-white px-4 py-3"
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                        <PieChart className="h-5 w-5 text-blue-700" />
+                      </div>
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <p className="text-sm font-semibold text-gray-900">{asset.providerName}</p>
+                          <span className="text-xs text-gray-500">{asset.assetTypeLabel}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <DetailChip label="Value" value={formatCurrency(asset.value)} />
+                          <DetailChip label="Product" value={asset.productType} />
+                          <DetailChip label="Policy" value={asset.policyNumber} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="self-start rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700">
+                      From Policy Register
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

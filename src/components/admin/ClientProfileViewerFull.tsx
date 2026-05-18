@@ -6,7 +6,7 @@
  * including CRUD operations, validations, file uploads, risk assessment, and more.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -38,6 +38,12 @@ import {
 } from './modules/client-management/types';
 import { useClientProfile } from './modules/client-management/hooks/useClientProfile';
 import { copyToClipboard } from '../../utils/clipboard';
+import { api } from '../../utils/api';
+import {
+  derivePolicyAssetsFromPolicies,
+  type DerivedPolicyAsset,
+  type PolicyAssetSourceRecord,
+} from '../../utils/derivedPolicyAssets';
 
 // Wrapper component for input with copy button using the reusable FieldWithCopy
 const InputWithCopy = ({ 
@@ -144,12 +150,54 @@ interface ClientProfileViewerFullProps {
 export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileViewerFullProps) {
   const [activeSection, setActiveSection] = useState('personal');
   const { state, actions } = useClientProfile(clientData, onSave);
+  const [policyRecords, setPolicyRecords] = useState<PolicyAssetSourceRecord[]>([]);
+  const [policyAssetsLoading, setPolicyAssetsLoading] = useState(false);
+  const [policyAssetsError, setPolicyAssetsError] = useState<string | null>(null);
 
   // Local display state for currency inputs
   const [grossIncomeDisplay, setGrossIncomeDisplay] = useState<string | null>(null);
   const [netIncomeDisplay, setNetIncomeDisplay] = useState<string | null>(null);
   const [grossAnnualIncomeDisplay, setGrossAnnualIncomeDisplay] = useState<string | null>(null);
   const [netAnnualIncomeDisplay, setNetAnnualIncomeDisplay] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPolicyAssets() {
+      setPolicyAssetsLoading(true);
+      setPolicyAssetsError(null);
+
+      try {
+        const response = await api.get<{ policies?: PolicyAssetSourceRecord[] }>(
+          `/integrations/policies?clientId=${encodeURIComponent(clientData.id)}`,
+        );
+
+        if (!cancelled) {
+          setPolicyRecords(Array.isArray(response.policies) ? response.policies : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPolicyRecords([]);
+          setPolicyAssetsError('Linked policy assets could not be loaded right now.');
+        }
+      } finally {
+        if (!cancelled) {
+          setPolicyAssetsLoading(false);
+        }
+      }
+    }
+
+    void loadPolicyAssets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clientData.id]);
+
+  const derivedPolicyAssets = useMemo<DerivedPolicyAsset[]>(
+    () => derivePolicyAssetsFromPolicies(policyRecords),
+    [policyRecords],
+  );
 
   const sections = [
     { id: 'personal', label: 'Personal Info', icon: User },
@@ -812,6 +860,9 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
           <AssetsLiabilitiesSection
             assets={state.profileData.assets || []}
             liabilities={state.profileData.liabilities || []}
+            derivedPolicyAssets={derivedPolicyAssets}
+            linkedPolicyAssetsLoading={policyAssetsLoading}
+            linkedPolicyAssetsError={policyAssetsError}
             assetsInEditMode={state.assetsInEditMode}
             liabilitiesInEditMode={state.liabilitiesInEditMode}
             addAsset={actions.addAsset}

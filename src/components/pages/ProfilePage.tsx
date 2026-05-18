@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { BudgetingPage } from './BudgetingPage';
 
 // Profile hook (Guidelines §6 — all state and handlers in a single hook)
 import { useProfileManager } from './profile/hooks/useProfileManager';
+import { usePortfolioSummary } from './portfolio/hooks';
+import { derivePolicyAssetsFromProductHoldings } from '../../utils/derivedPolicyAssets';
 
 // Section components (Guidelines §4.1 — decomposed presentation)
 import {
@@ -92,6 +94,14 @@ export function ProfilePage() {
     userLastName: user?.lastName,
     updateUser,
   });
+  const portfolioSummaryQuery = usePortfolioSummary(user?.id);
+  const linkedPolicyAssets = useMemo(
+    () => derivePolicyAssetsFromProductHoldings(portfolioSummaryQuery.data?.productHoldings || []),
+    [portfolioSummaryQuery.data?.productHoldings],
+  );
+  const linkedPolicyAssetsError = portfolioSummaryQuery.error instanceof Error
+    ? portfolioSummaryQuery.error.message
+    : null;
 
   // Handle URL parameters to open specific tab
   useEffect(() => {
@@ -400,6 +410,9 @@ export function ProfilePage() {
             {activeSection === 'assets' && (
               <AssetsLiabilitiesSection
                 profileData={pm.profileData}
+                derivedPolicyAssets={linkedPolicyAssets}
+                linkedPolicyAssetsLoading={portfolioSummaryQuery.isLoading}
+                linkedPolicyAssetsError={linkedPolicyAssetsError}
                 assetsInEditMode={pm.assetsInEditMode}
                 liabilitiesInEditMode={pm.liabilitiesInEditMode}
                 assetToDelete={pm.assetToDelete}
