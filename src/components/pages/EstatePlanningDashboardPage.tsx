@@ -8,7 +8,6 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -18,12 +17,13 @@ import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePag
 import { DynamicServicePageWrapper } from '../layout/DynamicServicePageWrapper';
 import { usePortfolioSummary } from './portfolio/hooks';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
+import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
 
 export function EstatePlanningDashboardPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [showNeedsAnalysis, setShowNeedsAnalysis] = useState(false);
   const [showWillReviewModal, setShowWillReviewModal] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   // ── Real data for insights ──
   const { data: portfolio } = usePortfolioSummary(user?.id);
@@ -110,7 +110,7 @@ export function EstatePlanningDashboardPage() {
       label: 'Get a Quote',
       description: 'Will drafting & trusts',
       icon: FileText,
-      onClick: () => navigate('/get-quote?service=estate-planning'),
+      onClick: () => setShowQuoteModal(true),
     },
     {
       label: 'View Will',
@@ -179,6 +179,13 @@ export function EstatePlanningDashboardPage() {
         config={SERVICE_REQUEST_CONFIGS.will_review}
         requestType="will_review"
         productCategory="estate-planning"
+      />
+
+      <PortalQuoteFlowModal
+        isOpen={showQuoteModal}
+        onClose={() => setShowQuoteModal(false)}
+        serviceId="estate-planning"
+        user={user}
       />
     </div>
   );

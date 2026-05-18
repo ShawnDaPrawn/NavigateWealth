@@ -63,16 +63,18 @@ import {
 import { toast } from 'sonner@2.0.3';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
+import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
 import { ACTIVE_THEME } from '../portal/portal-theme';
 import { usePortfolioSummary } from './portfolio/hooks';
 import type { ProductHolding, PortfolioFinancialOverview } from './portfolio/api';
 import { formatCurrency } from './portfolio/utils';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import type { QuoteServiceId } from './quote/types';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface ServiceModule {
-  id: string;
+  id: QuoteServiceId;
   title: string;
   shortLabel: string;
   description: string;
@@ -338,10 +340,6 @@ function getServiceGuidance(service: ServiceModule, derived: DerivedServiceInfo)
   };
 }
 
-function getQuotePath(serviceId: ServiceModule['id']): string {
-  return `/get-quote/${serviceId}/contact`;
-}
-
 function getCoverageValueLabel(holding: ProductHolding): string {
   if (holding.value > 0) return formatCurrency(holding.value);
   if (holding.premium > 0) return formatCurrency(holding.premium);
@@ -419,6 +417,8 @@ export function ProductsServicesDashboardPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [selectedServiceId, setSelectedServiceId] = useState<string>('risk-management');
   const [consultationOpen, setConsultationOpen] = useState(false);
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+  const [selectedQuoteService, setSelectedQuoteService] = useState<QuoteServiceId | null>(null);
   const [changeDialogOpen, setChangeDialogOpen] = useState(false);
   const [selectedHoldingId, setSelectedHoldingId] = useState<string>('');
   const [selectedChangeType, setSelectedChangeType] = useState<string>('');
@@ -528,6 +528,11 @@ export function ProductsServicesDashboardPage() {
     const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
     return fullName || user?.email || 'Navigate Wealth Client';
   }, [portfolioData?.clientData?.firstName, portfolioData?.clientData?.lastName, user?.email]);
+
+  const openQuoteModal = (serviceId: QuoteServiceId) => {
+    setSelectedQuoteService(serviceId);
+    setQuoteModalOpen(true);
+  };
 
   const openChangeDialog = () => {
     if (selectedServiceHoldings.length === 0) return;
@@ -672,7 +677,7 @@ export function ProductsServicesDashboardPage() {
                   <div className="flex flex-wrap gap-2 xl:justify-end">
                     <Button
                       type="button"
-                      onClick={() => navigate(getQuotePath(selectedDesktopService.id))}
+                      onClick={() => openQuoteModal(selectedDesktopService.id)}
                       className="inline-flex items-center gap-2 rounded-lg bg-[#6d28d9] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#5b21b6]"
                     >
                       Get a Quote
@@ -815,7 +820,7 @@ export function ProductsServicesDashboardPage() {
                     <div className="mt-6 flex flex-wrap justify-center gap-3">
                       <Button
                         type="button"
-                        onClick={() => navigate(getQuotePath(selectedDesktopService.id))}
+                        onClick={() => openQuoteModal(selectedDesktopService.id)}
                         className="bg-[#6d28d9] text-white hover:bg-[#5b21b6]"
                       >
                         Get a Quote
@@ -1148,6 +1153,13 @@ export function ProductsServicesDashboardPage() {
       </div>
 
       <ConsultationModal open={consultationOpen} onOpenChange={setConsultationOpen} />
+
+      <PortalQuoteFlowModal
+        isOpen={quoteModalOpen}
+        onClose={() => setQuoteModalOpen(false)}
+        serviceId={selectedQuoteService}
+        user={user}
+      />
 
       <Dialog
         open={changeDialogOpen}

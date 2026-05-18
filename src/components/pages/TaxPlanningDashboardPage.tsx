@@ -8,7 +8,6 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -19,12 +18,13 @@ import { DynamicServicePageWrapper } from '../layout/DynamicServicePageWrapper';
 import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
+import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
 
 export function TaxPlanningDashboardPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [showTaxAnalysis, setShowTaxAnalysis] = useState(false);
   const [showTaxReturnModal, setShowTaxReturnModal] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   // ── Real data for insights ──
   const { data: portfolio } = usePortfolioSummary(user?.id);
@@ -107,7 +107,7 @@ export function TaxPlanningDashboardPage() {
       label: 'Get a Quote',
       description: 'Tax practitioner services',
       icon: FileText,
-      onClick: () => navigate('/get-quote?service=tax-planning'),
+      onClick: () => setShowQuoteModal(true),
     },
     {
       label: 'Submit Return',
@@ -176,6 +176,13 @@ export function TaxPlanningDashboardPage() {
         config={SERVICE_REQUEST_CONFIGS.tax_return}
         requestType="tax_return"
         productCategory="tax-planning"
+      />
+
+      <PortalQuoteFlowModal
+        isOpen={showQuoteModal}
+        onClose={() => setShowQuoteModal(false)}
+        serviceId="tax-planning"
+        user={user}
       />
     </div>
   );

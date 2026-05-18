@@ -8,7 +8,6 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -19,6 +18,7 @@ import { DynamicServicePageWrapper, type SubCategoryConfig } from '../layout/Dyn
 import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
+import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
 
 const SUB_CATEGORIES: SubCategoryConfig[] = [
   {
@@ -37,9 +37,9 @@ const SUB_CATEGORIES: SubCategoryConfig[] = [
 
 export function InvestmentManagementDashboardPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [showNeedsAnalysis, setShowNeedsAnalysis] = useState(false);
   const [showAllocationModal, setShowAllocationModal] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   // ── Real data for insights ──
   const { data: portfolio } = usePortfolioSummary(user?.id);
@@ -131,7 +131,7 @@ export function InvestmentManagementDashboardPage() {
       label: 'Get a Quote',
       description: 'Start a new investment',
       icon: FileText,
-      onClick: () => navigate('/get-quote?service=investment-management'),
+      onClick: () => setShowQuoteModal(true),
     },
     {
       label: 'View Allocation',
@@ -201,6 +201,13 @@ export function InvestmentManagementDashboardPage() {
         config={SERVICE_REQUEST_CONFIGS.view_allocation}
         requestType="view_allocation"
         productCategory="investment-management"
+      />
+
+      <PortalQuoteFlowModal
+        isOpen={showQuoteModal}
+        onClose={() => setShowQuoteModal(false)}
+        serviceId="investment-management"
+        user={user}
       />
     </div>
   );

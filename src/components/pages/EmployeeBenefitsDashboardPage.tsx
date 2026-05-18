@@ -8,19 +8,19 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { Briefcase, Calculator, FileText, Users } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';
 import { DynamicServicePageWrapper } from '../layout/DynamicServicePageWrapper';
 import { usePortfolioSummary } from './portfolio/hooks';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
+import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
 
 export function EmployeeBenefitsDashboardPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { data: portfolio } = usePortfolioSummary(user?.id);
   const [showMembersModal, setShowMembersModal] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   // Check if client has any employee benefit holdings
   const ebHoldings = useMemo(
@@ -77,7 +77,7 @@ export function EmployeeBenefitsDashboardPage() {
       label: 'Get a Quote',
       description: 'Quote for business assurance',
       icon: FileText,
-      onClick: () => navigate('/get-quote?service=employee-benefits'),
+      onClick: () => setShowQuoteModal(true),
     },
     {
       label: 'View Members',
@@ -106,6 +106,13 @@ export function EmployeeBenefitsDashboardPage() {
         config={SERVICE_REQUEST_CONFIGS.view_members}
         requestType="view_members"
         productCategory="employee-benefits"
+      />
+
+      <PortalQuoteFlowModal
+        isOpen={showQuoteModal}
+        onClose={() => setShowQuoteModal(false)}
+        serviceId="employee-benefits"
+        user={user}
       />
     </div>
   );

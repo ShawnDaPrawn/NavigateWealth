@@ -8,7 +8,6 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -19,12 +18,13 @@ import { DynamicServicePageWrapper } from '../layout/DynamicServicePageWrapper';
 import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
+import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
 
 export function MedicalAidDashboardPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [showNeedsAnalysis, setShowNeedsAnalysis] = useState(false);
   const [showDependantModal, setShowDependantModal] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   // ── Real data for insights ──
   const { data: portfolio } = usePortfolioSummary(user?.id);
@@ -101,7 +101,7 @@ export function MedicalAidDashboardPage() {
       label: 'Get a Quote',
       description: 'Compare medical schemes',
       icon: FileText,
-      onClick: () => navigate('/get-quote?service=medical-aid'),
+      onClick: () => setShowQuoteModal(true),
     },
     {
       label: 'Add Dependant',
@@ -170,6 +170,13 @@ export function MedicalAidDashboardPage() {
         config={SERVICE_REQUEST_CONFIGS.add_dependant}
         requestType="add_dependant"
         productCategory="medical-aid"
+      />
+
+      <PortalQuoteFlowModal
+        isOpen={showQuoteModal}
+        onClose={() => setShowQuoteModal(false)}
+        serviceId="medical-aid"
+        user={user}
       />
     </div>
   );

@@ -4,14 +4,13 @@
  * Fetches real FNA + portfolio data for actionable insights.
  * Quick actions wired to real workflows:
  * - "Needs Analysis" → FNA modal
- * - "Get a Quote" → navigates to /get-quote?service=risk-management
+ * - "Get a Quote" → opens the native portal quote flow
  * - "Submit Claim" → ServiceRequestModal (claim type)
  *
  * Guidelines refs: §7 (presentation), §7.1 (derived display state)
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -24,13 +23,14 @@ import type { FinalRiskNeed } from '../admin/modules/risk-planning-fna/types';
 import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
+import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
 
 export function RiskManagementDashboardPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const [showNeedsAnalysis, setShowNeedsAnalysis] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   // ── Real data for insights ──
   const { data: portfolio } = usePortfolioSummary(user?.id);
@@ -133,7 +133,7 @@ export function RiskManagementDashboardPage() {
       label: 'Get a Quote',
       description: 'Compare insurer quotes',
       icon: FileText,
-      onClick: () => navigate('/get-quote?service=risk-management'),
+      onClick: () => setShowQuoteModal(true),
     },
     {
       label: 'Submit Claim',
@@ -202,6 +202,13 @@ export function RiskManagementDashboardPage() {
         config={SERVICE_REQUEST_CONFIGS.claim}
         requestType="claim"
         productCategory="risk-management"
+      />
+
+      <PortalQuoteFlowModal
+        isOpen={showQuoteModal}
+        onClose={() => setShowQuoteModal(false)}
+        serviceId="risk-management"
+        user={user}
       />
     </div>
   );

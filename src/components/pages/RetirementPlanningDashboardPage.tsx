@@ -8,7 +8,6 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -19,6 +18,7 @@ import { DynamicServicePageWrapper, type SubCategoryConfig } from '../layout/Dyn
 import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
+import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
 
 const SUB_CATEGORIES: SubCategoryConfig[] = [
   {
@@ -37,9 +37,9 @@ const SUB_CATEGORIES: SubCategoryConfig[] = [
 
 export function RetirementPlanningDashboardPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [showNeedsAnalysis, setShowNeedsAnalysis] = useState(false);
   const [showContributionModal, setShowContributionModal] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   // ── Real data for insights ──
   const { data: portfolio } = usePortfolioSummary(user?.id);
@@ -121,7 +121,7 @@ export function RetirementPlanningDashboardPage() {
       label: 'Get a Quote',
       description: 'Compare retirement annuities',
       icon: FileText,
-      onClick: () => navigate('/get-quote?service=retirement-planning'),
+      onClick: () => setShowQuoteModal(true),
     },
     {
       label: 'Boost Contribution',
@@ -191,6 +191,13 @@ export function RetirementPlanningDashboardPage() {
         config={SERVICE_REQUEST_CONFIGS.contribution_change}
         requestType="contribution_change"
         productCategory="retirement-planning"
+      />
+
+      <PortalQuoteFlowModal
+        isOpen={showQuoteModal}
+        onClose={() => setShowQuoteModal(false)}
+        serviceId="retirement-planning"
+        user={user}
       />
     </div>
   );
