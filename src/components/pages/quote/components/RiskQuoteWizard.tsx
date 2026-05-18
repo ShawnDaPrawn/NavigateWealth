@@ -165,6 +165,7 @@ interface RiskQuoteWizardProps {
   phone: string;
   parentSubmissionId?: string;
   onSuccess: () => void;
+  onExit?: () => void;
 }
 
 // ---- Helpers -------------------------------------------------------------------
@@ -793,6 +794,7 @@ export function RiskQuoteWizard({
   phone,
   parentSubmissionId,
   onSuccess,
+  onExit,
 }: RiskQuoteWizardProps) {
   const navigate = useNavigate();
 
@@ -969,7 +971,7 @@ export function RiskQuoteWizard({
           <Button
             type="button"
             variant="outline"
-            onClick={currentStep === 1 ? () => navigate('/get-quote/risk-management/contact') : goBack}
+            onClick={currentStep === 1 ? (onExit ?? (() => navigate('/get-quote/risk-management/contact'))) : goBack}
             className="h-11 px-5 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />

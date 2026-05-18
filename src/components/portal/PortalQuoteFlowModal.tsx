@@ -66,6 +66,7 @@ function renderServiceWizard(
     email: string;
     phone: string;
     onSuccess: () => void;
+    onExit: () => void;
   },
 ) {
   switch (serviceId) {
@@ -302,6 +303,7 @@ export function PortalQuoteFlowModal({
                           email,
                           phone,
                           onSuccess: () => setIsSuccess(true),
+                          onExit: onClose,
                         })}
                       </div>
                     ) : (
