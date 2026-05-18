@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router';
 import {
   ArrowUpRight,
   CalendarDays,
@@ -479,10 +480,13 @@ export function LegalDocumentDialog({
                   <div>
                     Please review these terms carefully before continuing with your signup.
                   </div>
-                  <div className="inline-flex items-center gap-1 font-medium text-sky-800">
+                  <Link
+                    to={`/legal/${document.slug}`}
+                    className="inline-flex items-center gap-1 font-medium text-sky-800 hover:text-sky-600 transition-colors"
+                  >
                     Read in full screen on the legal hub
                     <ArrowUpRight className="h-3.5 w-3.5" />
-                  </div>
+                  </Link>
                 </div>
               </div>
             )}

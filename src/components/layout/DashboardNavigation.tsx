@@ -9,7 +9,7 @@ import {
   History,
   Briefcase,
   TrendingUp,
-  Settings,
+  User,
   LogOut,
 } from 'lucide-react';
 import { ACTIVE_THEME, NAV_STYLES } from '../portal/portal-theme';
@@ -61,13 +61,13 @@ export function DashboardNavigation() {
     },
     { 
       path: '/profile', 
-      label: 'Settings', 
-      icon: Settings 
+      label: 'Profile', 
+      icon: User 
     },
   ];
 
   const isActive = (path: string) => {
-    // Settings group: highlight for /profile, /security
+    // Profile group: highlight for /profile, /security
     if (path === '/profile') {
       return ['/profile', '/security'].includes(location.pathname);
     }
