@@ -14,6 +14,7 @@ import React, { useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
+import { BrandPageLoader } from '../ui/brand-loader';
 import { Link } from 'react-router';
 import {
   Package,
@@ -21,7 +22,6 @@ import {
   FileText,
   User,
   MessageSquare,
-  Loader2,
   ArrowRight,
   Shield,
   PiggyBank,
@@ -201,17 +201,10 @@ export function HomeDashboardPage() {
 
   if (!user || !clientForOverview) {
     return (
-      <div
-        className="min-h-screen bg-gray-50 flex items-center justify-center"
-        role="status"
-        aria-label="Loading dashboard"
-      >
-        <Loader2
-          className="h-8 w-8 animate-spin text-purple-600"
-          aria-hidden="true"
-        />
-        <span className="sr-only">Loading dashboard, please wait...</span>
-      </div>
+      <BrandPageLoader
+        title="Loading your dashboard"
+        message="Pulling together your latest Navigate Wealth overview."
+      />
     );
   }
 

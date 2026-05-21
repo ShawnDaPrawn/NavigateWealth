@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { BrandSectionLoader } from '../ui/brand-loader';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
@@ -45,7 +46,6 @@ import {
   Link as LinkIcon,
   Upload,
   ExternalLink,
-  RefreshCw
 } from 'lucide-react';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { ACTIVE_THEME } from '../portal/portal-theme';
@@ -479,9 +479,12 @@ export function HistoryPage() {
             <div className="space-y-3">
               {isLoading ? (
                 <Card className="border-gray-200 shadow-sm">
-                  <CardContent className="p-12 text-center">
-                    <RefreshCw className="h-12 w-12 text-gray-400 mx-auto mb-3 animate-spin" />
-                    <p className="text-gray-600">Loading your documents...</p>
+                  <CardContent className="p-6">
+                    <BrandSectionLoader
+                      title="Loading your documents"
+                      message="Organising files, statements, and recent activity for this view."
+                      containerClassName="py-4"
+                    />
                   </CardContent>
                 </Card>
               ) : filteredItems.length === 0 ? (

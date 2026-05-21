@@ -6,8 +6,9 @@
  */
 
 import { useState, useMemo } from 'react';
-import { MessageSquare, Loader2, RefreshCw, Clock } from 'lucide-react';
+import { MessageSquare, RefreshCw, Clock } from 'lucide-react';
 import { Button } from '../../ui/button';
+import { BrandInlineLoader } from '../../ui/brand-loader';
 import { PortalPageHeader } from '../../portal/PortalPageHeader';
 import { ACTIVE_THEME } from '../../portal/portal-theme';
 import { MESSAGE_RETENTION_DAYS } from './constants';
@@ -93,10 +94,7 @@ export function CommunicationPage() {
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-600">
                 {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Loading messages...
-                  </span>
+                  <BrandInlineLoader label="Loading messages..." />
                 ) : (
                   <span>Showing {filtered.length} messages</span>
                 )}

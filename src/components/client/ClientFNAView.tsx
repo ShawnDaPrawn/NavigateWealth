@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { BrandSectionLoader } from '../ui/brand-loader';
 import {
   Shield,
   Heart,
@@ -17,7 +18,6 @@ import {
   Calendar,
   AlertCircle,
   CheckCircle,
-  Loader2,
   FileText,
   Download,
   Phone,
@@ -125,12 +125,10 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
 
   if (loading) {
     return (
-      <div className="py-12 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#6d28d9] mx-auto mb-3" />
-          <p className="text-sm text-gray-600">Loading your analysis...</p>
-        </div>
-      </div>
+      <BrandSectionLoader
+        title="Loading your analysis"
+        message="Pulling together the latest published financial needs results for this view."
+      />
     );
   }
 

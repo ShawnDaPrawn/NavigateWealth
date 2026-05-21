@@ -3,11 +3,12 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { AlertCircle, FileText, Loader2, PenLine, RefreshCw, Search } from 'lucide-react';
+import { AlertCircle, FileText, PenLine, RefreshCw, Search } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { PortalPageHeader } from '../../portal/PortalPageHeader';
 import { ACTIVE_THEME } from '../../portal/portal-theme';
 import { Button } from '../../ui/button';
+import { BrandSectionLoader } from '../../ui/brand-loader';
 import { Card, CardContent } from '../../ui/card';
 import { Input } from '../../ui/input';
 import {
@@ -124,9 +125,12 @@ export function ClientEsignHistoryPage() {
           icon={PenLine}
           compact
         />
-        <div className="flex items-center justify-center py-24 gap-3 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span className="text-sm">Loading your envelopes…</span>
+        <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-10">
+          <BrandSectionLoader
+            title="Loading your e-signatures"
+            message="Gathering envelopes, signer progress, and document actions for this page."
+          />
+          <span className="sr-only">Loading your envelopes…</span>
         </div>
       </div>
     );

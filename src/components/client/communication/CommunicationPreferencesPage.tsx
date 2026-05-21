@@ -17,9 +17,9 @@ import {
   AlertCircle,
   CheckCircle2,
   Inbox,
-  Loader2,
 } from 'lucide-react';
 import { Button } from '../../ui/button';
+import { BrandLoaderPanel } from '../../ui/brand-loader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Alert, AlertDescription } from '../../ui/alert';
 import { Separator } from '../../ui/separator';
@@ -108,10 +108,11 @@ export function CommunicationPreferencesPage() {
       {/* Loading overlay */}
       {isFetching && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-50/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-            <p className="text-sm text-gray-600">Loading your preferences...</p>
-          </div>
+          <BrandLoaderPanel
+            compact
+            title="Loading your preferences"
+            message="Fetching your latest communication settings and consent choices."
+          />
         </div>
       )}
 

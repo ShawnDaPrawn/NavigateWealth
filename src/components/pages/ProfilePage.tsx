@@ -24,6 +24,7 @@ import {
 
 // UI primitives — only those needed for the page shell
 import { Button } from '../ui/button';
+import { BrandPageLoader } from '../ui/brand-loader';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import {
@@ -186,13 +187,10 @@ export function ProfilePage() {
 
   if (pm.initialLoading) {
     return (
-      <div className="min-h-screen bg-[rgb(243,244,246)] flex items-center justify-center" role="status" aria-label="Loading profile">
-        <div className="text-center">
-          <Activity className="h-12 w-12 animate-spin mx-auto text-[#6d28d9] mb-4" aria-hidden="true" />
-          <h2 className="text-xl font-medium text-gray-900 mb-2">Loading Your Profile</h2>
-          <p className="text-sm text-gray-600">Please wait while we fetch your information...</p>
-        </div>
-      </div>
+      <BrandPageLoader
+        title="Loading your profile"
+        message="Fetching your personal details, policy links, and preferences."
+      />
     );
   }
 

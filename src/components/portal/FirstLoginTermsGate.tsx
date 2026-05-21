@@ -8,6 +8,7 @@ import { Shield, FileText, Lock, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { api } from '../../utils/api/client';
 import { createClient } from '../../utils/supabase/client';
+import { BrandPageLoader } from '../ui/brand-loader';
 
 interface FirstLoginTermsGateProps {
   children: React.ReactNode;
@@ -116,12 +117,10 @@ export function FirstLoginTermsGate({ children }: FirstLoginTermsGateProps) {
   // Still checking
   if (mustAcceptTerms === null) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <div className="h-12 w-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-gray-600">Loading your account...</p>
-        </div>
-      </div>
+      <BrandPageLoader
+        title="Loading your account"
+        message="Confirming whether any first-login steps still need your attention."
+      />
     );
   }
 

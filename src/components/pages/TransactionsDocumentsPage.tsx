@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { BrandInlineLoader, BrandSectionLoader } from '../ui/brand-loader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useAuth } from '../auth/AuthContext';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -422,14 +423,18 @@ export function TransactionsDocumentsPage() {
                   <div>
                     <CardTitle className="text-black">All Documents</CardTitle>
                     <CardDescription>
-                      {loading ? 'Loading...' : `Showing ${groupedDocuments.length} items`}
+                      {loading ? <BrandInlineLoader label="Loading documents..." /> : `Showing ${groupedDocuments.length} items`}
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 {loading ? (
-                   <div className="text-center py-8">Loading documents...</div>
+                   <BrandSectionLoader
+                     title="Loading your documents"
+                     message="Collecting statements, shared files, and document packs for this view."
+                     containerClassName="py-4"
+                   />
                 ) : groupedDocuments.length === 0 ? (
                    <div className="text-center py-8 text-muted-foreground">No documents found</div>
                 ) : (

@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { EmptyPolicyState } from './EmptyPolicyState';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { BrandPageLoader } from '../ui/brand-loader';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
 
@@ -128,12 +129,10 @@ export function ApplicationStatusGuard({
   // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <div className="h-12 w-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-600">Loading your account...</p>
-        </div>
-      </div>
+      <BrandPageLoader
+        title="Loading your account"
+        message="Checking your application status and portal access."
+      />
     );
   }
 

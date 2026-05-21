@@ -1,16 +1,19 @@
 import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { MainLayout as AppLayout } from './components/layout/MainLayout';
-import { Loader2 } from 'lucide-react';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
+import { BrandPageLoader } from './components/ui/brand-loader';
 
 // Shared loading fallback for lazy-loaded routes
 function RouteFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50" role="status" aria-label="Loading page">
-      <Loader2 className="h-8 w-8 animate-spin text-purple-600" aria-hidden="true" />
+    <>
+      <BrandPageLoader
+        title="Loading page"
+        message="Preparing the next screen and carrying your session across."
+      />
       <span className="sr-only">Loading, please wait…</span>
-    </div>
+    </>
   );
 }
 
