@@ -8,7 +8,7 @@
 import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import { createModuleLogger } from "./stderr-logger.ts";
-import { authenticateUser } from "./fna-auth.ts";
+import { authenticateUser, fnaErrorResponse } from "./fna-auth.ts";
 import { getErrMsg } from "./shared-logger-utils.ts";
 import { CreateSessionSchema, UpdateInputsSchema } from "./fna-validation.ts";
 import { formatZodError } from "./shared-validation-utils.ts";
@@ -293,7 +293,7 @@ retirementFnaRoutes.get('/client/:clientId', async (c) => {
     return c.json({ success: true, data: sessions });
   } catch (error: unknown) {
     log.error('Error fetching sessions:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -308,7 +308,7 @@ retirementFnaRoutes.get('/:fnaId', async (c) => {
     
     return c.json({ success: true, data: session });
   } catch (error: unknown) {
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -356,7 +356,7 @@ retirementFnaRoutes.post('/create', async (c) => {
     return c.json({ success: true, data: session });
   } catch (error: unknown) {
     log.error('Error creating session:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -382,7 +382,7 @@ retirementFnaRoutes.put('/:fnaId/inputs', async (c) => {
     
     return c.json({ success: true, data: session });
   } catch (error: unknown) {
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -409,7 +409,7 @@ retirementFnaRoutes.post('/:fnaId/calculate', async (c) => {
     return c.json({ success: true, data: session });
   } catch (error: unknown) {
     log.error('Error calculating:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -434,7 +434,7 @@ retirementFnaRoutes.put('/:fnaId/publish', async (c) => {
     
     return c.json({ success: true, data: session });
   } catch (error: unknown) {
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -463,7 +463,7 @@ retirementFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
     
     return c.json({ success: true, data: latest });
   } catch (error: unknown) {
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -478,7 +478,7 @@ retirementFnaRoutes.get('/client/:clientId/auto-populate', async (c) => {
     return c.json({ success: true, data: inputs });
   } catch (error: unknown) {
     log.error('Error in auto-populate:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 

@@ -310,6 +310,13 @@ class APIClient {
   }
   
   /**
+   * Bearer token for authenticated Edge Function calls (session JWT when logged in).
+   */
+  async getAccessToken(): Promise<string> {
+    return this.getAuthToken();
+  }
+
+  /**
    * GET request
    */
   async get<T>(endpoint: string, options?: RequestInit): Promise<T> {

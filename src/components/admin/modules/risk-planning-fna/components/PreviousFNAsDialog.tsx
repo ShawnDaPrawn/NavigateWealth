@@ -21,10 +21,9 @@ import {
   TableRow,
 } from '../../../../ui/table';
 import { Eye, Loader2, FileText, Calendar, User } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { toast } from 'sonner@2.0.3';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+import { api, resolveApiEndpoint } from '../../../../../utils/api';
+import { normalizeFnaListResponse } from '../../fna/fnaListUtils';
 
 interface PreviousFNAsDialogProps {
   open: boolean;
@@ -69,29 +68,12 @@ export function PreviousFNAsDialog({
     setIsLoading(true);
     try {
       // Default to Risk Planning URL if no custom API URL is provided
-      const url = apiUrl || `${API_BASE}/risk-planning-fna/client/${clientId}/list`;
-      
-      const res = await fetch(
-        url,
-        {
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
-        }
+      const endpoint = resolveApiEndpoint(
+        apiUrl || `/risk-planning-fna/client/${clientId}/list`,
       );
 
-      if (!res.ok) {
-        throw new Error('Failed to load FNAs');
-      }
-
-      const result = await res.json();
-      
-      let fnaList: FNASummary[] = [];
-      if (Array.isArray(result)) {
-        fnaList = result;
-      } else if (result.success && Array.isArray(result.data)) {
-        fnaList = result.data;
-      } else if (result.data && Array.isArray(result.data)) {
-        fnaList = result.data;
-      }
+      const result = await api.get<unknown>(endpoint);
+      const fnaList = normalizeFnaListResponse<FNASummary>(result);
 
       // Filter to only show published FNAs and sort by published date (newest first)
       const publishedFnas = fnaList

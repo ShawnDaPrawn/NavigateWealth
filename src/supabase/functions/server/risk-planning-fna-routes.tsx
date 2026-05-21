@@ -8,7 +8,7 @@
 import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import { createModuleLogger } from "./stderr-logger.ts";
-import { authenticateUser } from "./fna-auth.ts";
+import { authenticateUser, fnaErrorResponse } from "./fna-auth.ts";
 import { getErrMsg } from "./shared-logger-utils.ts";
 import { CreateRiskPlanningFnaSchema, UpdateRiskPlanningFnaSchema } from "./fna-validation.ts";
 import { formatZodError } from "./shared-validation-utils.ts";
@@ -648,10 +648,7 @@ riskPlanningFnaRoutes.get('/client-profile/:clientId', async (c) => {
     });
   } catch (error) {
     log.error('❌ Error fetching client profile:', error);
-    return c.json({
-      success: false,
-      error: getErrMsg(error),
-    }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -681,10 +678,7 @@ riskPlanningFnaRoutes.get('/client/:clientId/latest', async (c) => {
     });
   } catch (error) {
     log.error('❌ Error fetching latest FNA:', error);
-    return c.json({
-      success: false,
-      error: getErrMsg(error),
-    }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -728,10 +722,7 @@ riskPlanningFnaRoutes.get('/client/:clientId/list', async (c) => {
     });
   } catch (error) {
     log.error('❌ Error listing FNAs:', error);
-    return c.json({
-      success: false,
-      error: getErrMsg(error),
-    }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -825,10 +816,7 @@ riskPlanningFnaRoutes.post('/create', async (c) => {
     });
   } catch (error) {
     log.error('❌ Error creating FNA:', error);
-    return c.json({
-      success: false,
-      error: getErrMsg(error),
-    }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -857,10 +845,7 @@ riskPlanningFnaRoutes.get('/:fnaId', async (c) => {
     });
   } catch (error) {
     log.error('❌ Error fetching FNA:', error);
-    return c.json({
-      success: false,
-      error: getErrMsg(error),
-    }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -925,10 +910,7 @@ riskPlanningFnaRoutes.put('/update/:fnaId', async (c) => {
     });
   } catch (error) {
     log.error('❌ Error updating FNA:', error);
-    return c.json({
-      success: false,
-      error: getErrMsg(error),
-    }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -986,10 +968,7 @@ riskPlanningFnaRoutes.post('/publish/:fnaId', async (c) => {
     });
   } catch (error) {
     log.error('❌ Error publishing FNA:', error);
-    return c.json({
-      success: false,
-      error: getErrMsg(error),
-    }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -1039,10 +1018,7 @@ riskPlanningFnaRoutes.post('/unpublish/:fnaId', async (c) => {
     });
   } catch (error) {
     log.error('❌ Error unpublishing FNA:', error);
-    return c.json({
-      success: false,
-      error: getErrMsg(error),
-    }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -1099,10 +1075,7 @@ riskPlanningFnaRoutes.delete('/archive/:fnaId', async (c) => {
     });
   } catch (error) {
     log.error('❌ Error archiving FNA:', error);
-    return c.json({
-      success: false,
-      error: getErrMsg(error),
-    }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -1153,10 +1126,7 @@ riskPlanningFnaRoutes.delete('/hard-delete/:fnaId', async (c) => {
     });
   } catch (error) {
     log.error('❌ Error deleting FNA:', error);
-    return c.json({
-      success: false,
-      error: getErrMsg(error),
-    }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 

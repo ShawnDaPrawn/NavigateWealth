@@ -6,7 +6,7 @@
 import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import { createModuleLogger } from "./stderr-logger.ts";
-import { authenticateUser } from "./fna-auth.ts";
+import { authenticateUser, fnaErrorResponse } from "./fna-auth.ts";
 import { getErrMsg } from "./shared-logger-utils.ts";
 import { CreateSessionSchema, UpdateResultsSchema } from "./fna-validation.ts";
 import { formatZodError } from "./shared-validation-utils.ts";
@@ -321,7 +321,7 @@ medicalFnaRoutes.get('/client/:clientId', async (c) => {
     return c.json({ success: true, data: fnas });
   } catch (error: unknown) {
     log.error('❌ Error fetching Medical FNAs:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -384,7 +384,7 @@ medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
     return c.json({ success: true, data: latestPublished });
   } catch (error: unknown) {
     log.error('❌ Error fetching latest published Medical FNA:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -404,7 +404,7 @@ medicalFnaRoutes.get('/client/:clientId/auto-populate', async (c) => {
     return c.json({ success: true, data: inputs });
   } catch (error: unknown) {
     log.error('❌ Error auto-populating:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -456,7 +456,7 @@ medicalFnaRoutes.post('/create', async (c) => {
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('❌ Error creating Medical FNA:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -492,7 +492,7 @@ medicalFnaRoutes.put('/inputs/:fnaId', async (c) => {
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('❌ Error updating Medical FNA inputs:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -537,7 +537,7 @@ medicalFnaRoutes.put('/results/:fnaId', async (c) => {
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('❌ Error updating Medical FNA results:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -573,7 +573,7 @@ medicalFnaRoutes.post('/calculate/:fnaId', async (c) => {
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('❌ Error calculating Medical FNA:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -602,7 +602,7 @@ medicalFnaRoutes.put('/draft/:fnaId', async (c) => {
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('❌ Error saving Medical FNA draft:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -662,7 +662,7 @@ medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : undefined,
     });
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -691,7 +691,7 @@ medicalFnaRoutes.post('/unpublish/:fnaId', async (c) => {
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('❌ Error unpublishing Medical FNA:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -720,7 +720,7 @@ medicalFnaRoutes.put('/archive/:fnaId', async (c) => {
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('❌ Error archiving Medical FNA:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -741,7 +741,7 @@ medicalFnaRoutes.delete('/delete/:fnaId', async (c) => {
     return c.json({ success: true, data: null });
   } catch (error: unknown) {
     log.error('❌ Error deleting Medical FNA:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -766,7 +766,7 @@ medicalFnaRoutes.get('/:fnaId', async (c) => {
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
     log.error('❌ Error fetching Medical FNA:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 

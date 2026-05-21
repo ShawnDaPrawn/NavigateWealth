@@ -10,4 +10,5 @@
  */
 
 export { api, APIClientError as APIError } from './client';
+export { resolveApiEndpoint } from './resolveEndpoint';
 export type * from './types';

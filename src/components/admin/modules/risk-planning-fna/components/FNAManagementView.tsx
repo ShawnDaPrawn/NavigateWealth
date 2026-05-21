@@ -27,7 +27,8 @@ import {
   TableRow,
 } from '../../../../ui/table';
 import { toast } from 'sonner@2.0.3';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api, APIError, resolveApiEndpoint } from '../../../../../utils/api';
+import { normalizeFnaListResponse } from '../../fna/fnaListUtils';
 
 interface FNASummary {
   id: string;
@@ -71,55 +72,28 @@ export function FNAManagementView({
   const loadFNAs = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
-      // Default to Risk Planning URL if no custom API URL is provided
-      const url = apiUrl || `${API_BASE}/risk-planning-fna/client/${clientId}/list`;
-      
-      console.log('Loading FNAs from:', url);
-      
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${publicAnonKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const endpoint = resolveApiEndpoint(
+        apiUrl || `/risk-planning-fna/client/${clientId}/list`,
+      );
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
+      const result = await api.get<unknown>(endpoint);
+      const fnaList = normalizeFnaListResponse<FNASummary>(result);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('FNA list result:', result);
-
-      let fnaList = [];
-      if (Array.isArray(result)) {
-        fnaList = result;
-      } else if (result.success && Array.isArray(result.data)) {
-        fnaList = result.data;
-      } else if (result.data && Array.isArray(result.data)) {
-         // Fallback for some APIs that might return { data: [] } without success flag
-         fnaList = result.data;
-      } else {
-        throw new Error(result.error || 'Failed to load FNAs');
-      }
-
-      // Sort by most recent first
-      const sortedFnas = fnaList.sort((a: FNASummary, b: FNASummary) => {
+      const sortedFnas = fnaList.sort((a, b) => {
         const dateA = new Date(a.updatedAt).getTime();
         const dateB = new Date(b.updatedAt).getTime();
         return dateB - dateA;
       });
-      
-      console.log('Loaded FNAs:', sortedFnas.length);
+
       setFnas(sortedFnas);
     } catch (err) {
       console.error('Error loading FNAs:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      const errorMessage =
+        err instanceof APIError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Unknown error occurred';
       toast.error(`Failed to load FNAs: ${errorMessage}`);
       setFnas([]);
     } finally {

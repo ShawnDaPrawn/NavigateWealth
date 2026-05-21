@@ -1,12 +1,6 @@
-import { createClient } from '../../../../../utils/supabase/client';
-import { publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 
+/** Session-aware Bearer token for Estate Planning API calls. */
 export async function getEstatePlanningAuthToken(): Promise<string> {
-  try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || publicAnonKey;
-  } catch {
-    return publicAnonKey;
-  }
+  return api.getAccessToken();
 }

@@ -7,7 +7,7 @@ import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from "./stderr-logger.ts";
-import { authenticateUser } from "./fna-auth.ts";
+import { authenticateUser, fnaErrorResponse } from "./fna-auth.ts";
 import { getErrMsg } from "./shared-logger-utils.ts";
 import { SaveSessionSchema } from "./fna-validation.ts";
 import { formatZodError } from "./shared-validation-utils.ts";
@@ -225,7 +225,7 @@ estatePlanningRoutes.get('/client/:clientId/auto-populate', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error auto-populating Estate Planning inputs:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -278,7 +278,7 @@ estatePlanningRoutes.post('/save', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error saving Estate Planning session:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -304,7 +304,7 @@ estatePlanningRoutes.get('/client/:clientId/sessions', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error fetching Estate Planning sessions:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -352,7 +352,7 @@ estatePlanningRoutes.get('/client/:clientId/latest-published', async (c) => {
     return c.json({ success: true, data: latest });
   } catch (error: unknown) {
     log.error('❌ Error fetching latest published Estate Planning FNA:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -386,7 +386,7 @@ estatePlanningRoutes.get('/session/:sessionId', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error fetching Estate Planning session:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -412,7 +412,7 @@ estatePlanningRoutes.delete('/session/:sessionId', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error deleting Estate Planning session:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 

@@ -65,7 +65,7 @@ import {
   TableRow,
 } from '../../../../ui/table';
 import { toast } from 'sonner@2.0.3';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 
 // ── Constants ────────────────────────────────────────────────────
 
@@ -118,10 +118,6 @@ interface TaxDocumentsSectionProps {
   clientName: string;
 }
 
-// ── API Base ─────────────────────────────────────────────────────
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/tax-planning-fna`;
-
 // ── Component ────────────────────────────────────────────────────
 
 export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectionProps) {
@@ -158,15 +154,9 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
   const loadDocuments = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_BASE}/tax-docs/${clientId}`, {
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load tax documents: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = await api.get<{ success: boolean; data?: TaxDocument[] }>(
+        `/tax-planning-fna/tax-docs/${clientId}`,
+      );
       if (result.success) {
         setDocuments(result.data || []);
       }
@@ -193,18 +183,10 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
       formData.append('notes', notes);
       if (taxYear) formData.append('taxYear', taxYear);
 
-      const response = await fetch(`${API_BASE}/tax-docs/${clientId}/upload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to upload document');
-      }
-
-      const result = await response.json();
+      const result = await api.post<{ success: boolean; data: TaxDocument; error?: string }>(
+        `/tax-planning-fna/tax-docs/${clientId}/upload`,
+        formData,
+      );
       if (result.success) {
         toast.success('Tax document uploaded successfully');
         setDocuments(prev => [result.data, ...prev]);
@@ -222,13 +204,9 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
   const handleDownload = async (doc: TaxDocument) => {
     try {
       setDownloadingDocId(doc.id);
-      const response = await fetch(`${API_BASE}/tax-docs/${clientId}/${doc.id}/download`, {
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to get download URL');
-
-      const result = await response.json();
+      const result = await api.get<{ success: boolean; url?: string }>(
+        `/tax-planning-fna/tax-docs/${clientId}/${doc.id}/download`,
+      );
       if (result.success && result.url) {
         window.open(result.url, '_blank');
       }
@@ -245,12 +223,7 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
 
     try {
       setIsDeleting(true);
-      const response = await fetch(`${API_BASE}/tax-docs/${clientId}/${deleteTarget.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to delete document');
+      await api.delete(`/tax-planning-fna/tax-docs/${clientId}/${deleteTarget.id}`);
 
       toast.success('Tax document deleted');
       setDocuments(prev => prev.filter(d => d.id !== deleteTarget.id));

@@ -14,7 +14,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { authenticateUser } from './fna-auth.ts';
+import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 
 const fnaBatchStatusRoutes = new Hono();
@@ -248,7 +248,7 @@ fnaBatchStatusRoutes.get('/client/:clientId', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error fetching batch FNA status:', error);
-    return c.json({ success: false, error: getErrMsg(error) }, 500);
+    return fnaErrorResponse(c, error);
   }
 });
 

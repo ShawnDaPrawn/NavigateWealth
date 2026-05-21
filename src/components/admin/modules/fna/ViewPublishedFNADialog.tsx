@@ -26,10 +26,8 @@ import {
   AlertDialogTitle,
 } from '../../../ui/alert-dialog';
 import { Loader2, Trash2 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
 import { toast } from 'sonner@2.0.3';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+import { api, resolveApiEndpoint } from '../../../../utils/api';
 
 // ==================== TYPES ====================
 
@@ -106,18 +104,15 @@ export function ViewPublishedFNADialog({
         );
       }
 
-      const url = `${apiBaseUrl}/${fnaId}`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${publicAnonKey}` },
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to load ${fnaTypeName} (HTTP ${res.status})`);
-      }
-
-      const result = await res.json();
-      // Handle both { data: ... } and direct object responses
-      setFnaData(result.data || result);
+      const endpoint = resolveApiEndpoint(`${apiBaseUrl}/${fnaId}`);
+      const result = await api.get<{ data?: Record<string, unknown> } | Record<string, unknown>>(
+        endpoint,
+      );
+      setFnaData(
+        (result && typeof result === 'object' && 'data' in result && result.data
+          ? result.data
+          : result) as Record<string, unknown>,
+      );
     } catch (err) {
       console.error(`Error loading ${fnaTypeName}:`, err);
       toast.error(`Failed to load ${fnaTypeName} details`);
@@ -139,21 +134,8 @@ export function ViewPublishedFNADialog({
       if (deleteFn) {
         await deleteFn(fnaId);
       } else if (apiBaseUrl) {
-        const res = await fetch(`${apiBaseUrl}/delete/${fnaId}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
-        });
-
-        if (!res.ok) {
-          let errorMessage = `Failed to delete ${fnaTypeName}`;
-          try {
-            const errorData = await res.json();
-            errorMessage = errorData.error || errorData.message || errorMessage;
-          } catch {
-            // Ignore JSON parse failure
-          }
-          throw new Error(errorMessage);
-        }
+        const endpoint = resolveApiEndpoint(`${apiBaseUrl}/delete/${fnaId}`);
+        await api.delete(endpoint);
       }
 
       toast.success(`${fnaTypeName} deleted successfully`);

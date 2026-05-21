@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useClientKeys } from '../../client-management/hooks/useClientKeys';
 import { MEDICAL_AID_KEYS } from '../../product-management/keyManagerConstants';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 import { medicalFnaKeys } from './queryKeys';
 
 export interface MedicalAidProductData {
@@ -23,14 +23,13 @@ export function useClientProductKeys(clientId: string | undefined): MedicalAidPr
     queryKey: medicalFnaKeys.policies(clientId),
     queryFn: async () => {
       if (!clientId) return null;
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/policies?clientId=${clientId}&categoryId=medical_aid`,
-        {
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
-        }
-      );
-      if (!res.ok) return null;
-      return await res.json();
+      try {
+        return await api.get<{ policies?: Array<{ data?: Record<string, unknown> }> }>(
+          `/integrations/policies?clientId=${clientId}&categoryId=medical_aid`,
+        );
+      } catch {
+        return null;
+      }
     },
     enabled: !!clientId,
     staleTime: 1000 * 60 * 5, // 5 mins

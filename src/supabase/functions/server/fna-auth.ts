@@ -17,8 +17,10 @@
  * Moved from shared/ subdirectory to root server directory for bundler compatibility.
  */
 
+import type { Context } from 'npm:hono';
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 import { createModuleLogger } from "./stderr-logger.ts";
+import { getErrMsg } from './shared-logger-utils.ts';
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () => createClient(
@@ -100,4 +102,17 @@ export async function authenticateUser(
     log.error(`[${context}] Unexpected auth failure`, err);
     throw new Error('Unauthorized');
   }
+}
+
+/** True when authenticateUser rejected the request. */
+export function isFnaUnauthorized(error: unknown): boolean {
+  return error instanceof Error && error.message === 'Unauthorized';
+}
+
+/** Map FNA route errors to correct HTTP status (401 for auth failures). */
+export function fnaErrorResponse(c: Context, error: unknown) {
+  if (isFnaUnauthorized(error)) {
+    return c.json({ success: false, error: 'Unauthorized' }, 401);
+  }
+  return c.json({ success: false, error: getErrMsg(error) }, 500);
 }
