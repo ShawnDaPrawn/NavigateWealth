@@ -648,6 +648,11 @@ export function AskVascoPage() {
     setShowClearConfirm(true);
   };
 
+  const handleBackToLanding = () => {
+    setHasStartedChat(false);
+    setShowHandoff(false);
+  };
+
   // ── Disabled state ─────────────────────────────────────────────
   if (isDisabled) {
     return (
@@ -1012,9 +1017,10 @@ export function AskVascoPage() {
             <div className="flex items-center justify-between py-3 border-b border-gray-200 bg-white mt-1">
               <div className="flex items-center gap-3">
                 <button
-                  onClick={handleClearChat}
+                  onClick={handleBackToLanding}
                   className="flex items-center gap-1.5 text-gray-500 hover:text-primary transition-colors group"
                   title="Back to Meet Vasco"
+                  aria-label="Back to Meet Vasco"
                 >
                   <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
                 </button>
