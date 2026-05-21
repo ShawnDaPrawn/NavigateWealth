@@ -155,6 +155,20 @@ const SERVICE_MODULES: ServiceModule[] = [
     pillarKey: 'retirement',
   },
   {
+    id: 'employee-benefits',
+    title: 'Employee Benefits',
+    shortLabel: 'Employee Benefits',
+    description: 'Group risk schemes and employee wellness programs for businesses.',
+    focusAreas: ['Group schemes', 'Wellness support', 'Business benefit planning'],
+    icon: Briefcase,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    iconColor: 'text-purple-500',
+    path: '/dashboard/employee-benefits',
+    category: 'Business',
+    holdingCategory: 'employeeBenefits',
+  },
+  {
     id: 'tax-planning',
     title: 'Tax Planning',
     shortLabel: 'Tax',
@@ -183,20 +197,6 @@ const SERVICE_MODULES: ServiceModule[] = [
     category: 'Advisory',
     holdingCategory: 'estate',
     pillarKey: 'estate',
-  },
-  {
-    id: 'employee-benefits',
-    title: 'Employee Benefits',
-    shortLabel: 'Benefits',
-    description: 'Group risk schemes and employee wellness programs for businesses.',
-    focusAreas: ['Group schemes', 'Wellness support', 'Business benefit planning'],
-    icon: Briefcase,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50',
-    iconColor: 'text-purple-500',
-    path: '/dashboard/employee-benefits',
-    category: 'Business',
-    holdingCategory: 'employeeBenefits',
   },
 ];
 
@@ -627,7 +627,7 @@ export function ProductsServicesDashboardPage() {
                     key={service.id}
                     type="button"
                     onClick={() => setSelectedServiceId(service.id)}
-                    className={`group min-w-[118px] rounded-xl border px-3 py-2.5 text-left transition-all ${
+                    className={`group min-w-[148px] rounded-xl border px-3 py-2.5 text-left transition-all ${
                       isSelected
                         ? 'border-purple-200 bg-purple-50 shadow-sm'
                         : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
