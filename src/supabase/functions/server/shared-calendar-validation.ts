@@ -52,7 +52,6 @@ export const CreateEventSchema = z.object({
   video_link: z.string().nullable().optional(),
   client_id: z.string().nullable().optional(),
   attendees: z.array(z.object({ name: z.string().optional(), email: z.string().optional() }).passthrough()).optional(),
-  create_reminder: z.boolean().optional(),
   recurrence_rule: z.string().nullable().optional(),
   notes: z.string().optional(),
 }).refine(data => {
