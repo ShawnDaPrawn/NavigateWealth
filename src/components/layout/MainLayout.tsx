@@ -103,8 +103,14 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
       )}
       
       {/* Navigation - sticky positioned */}
-      <div className={`sticky top-0 z-50 ${isScrolled ? 'shadow-lg' : ''}`}>
+      <div className={`sticky top-0 z-50 relative ${isScrolled ? 'shadow-lg' : ''}`}>
         <Navigation forcePublic={forcePublicLayout} />
+        {/* Article reading progress mounts here — absolute so nav layout is unchanged */}
+        <div
+          id="nw-reading-progress-slot"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] z-[60]"
+          aria-hidden
+        />
       </div>
       
       {isDashboardPage && !isAdminDashboard && <DashboardNavigation />}

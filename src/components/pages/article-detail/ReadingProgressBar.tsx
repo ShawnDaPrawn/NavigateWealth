@@ -4,9 +4,8 @@
  * A thin accent-coloured bar fixed below the site header that fills from left
  * to right as the reader scrolls through the article.
  *
- * Rendered via portal so position:fixed is never broken by layout ancestors
- * (e.g. display:contents wrappers). The bar tracks the sticky nav bottom edge
- * so it stays visible while scrolling down, not only near the page top.
+ * Mounts into the sticky header slot in MainLayout so the bar tracks the nav
+ * without affecting logo/menu spacing (no body-level fixed overlay on the nav).
  *
  * @module article-detail/ReadingProgressBar
  */
@@ -14,23 +13,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
+/** Must match the slot element id in MainLayout.tsx */
+export const READING_PROGRESS_SLOT_ID = 'nw-reading-progress-slot';
+
 interface ReadingProgressBarProps {
   /** Ref to the article content element whose scroll progress we track */
   contentRef: React.RefObject<HTMLElement | null>;
 }
 
-const NAV_SELECTOR = 'nav[aria-label="Main navigation"]';
-
-function measureHeaderBottomOffset(): number {
-  const nav = document.querySelector(NAV_SELECTOR);
-  if (!nav) return 0;
-  return Math.max(0, Math.round(nav.getBoundingClientRect().bottom));
-}
-
 export function ReadingProgressBar({ contentRef }: ReadingProgressBarProps) {
   const [progress, setProgress] = useState(0);
-  const [topOffset, setTopOffset] = useState(0);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
   const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setSlot(document.getElementById(READING_PROGRESS_SLOT_ID));
+  }, []);
 
   useEffect(() => {
     const update = () => {
@@ -39,17 +37,13 @@ export function ReadingProgressBar({ contentRef }: ReadingProgressBarProps) {
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = null;
 
-        setTopOffset(measureHeaderBottomOffset());
-
         const el = contentRef.current;
         if (!el) return;
 
         const rect = el.getBoundingClientRect();
         const windowHeight = window.innerHeight;
 
-        // How far the top of the content has scrolled past the top of the viewport
         const scrolledPast = -rect.top;
-        // Total scrollable distance for this element
         const totalScrollable = rect.height - windowHeight;
 
         if (totalScrollable <= 0) {
@@ -73,14 +67,13 @@ export function ReadingProgressBar({ contentRef }: ReadingProgressBarProps) {
     };
   }, [contentRef]);
 
-  if (typeof document === 'undefined') {
+  if (!slot) {
     return null;
   }
 
   return createPortal(
     <div
-      className="fixed left-0 right-0 z-[100] h-[3px] bg-transparent pointer-events-none print:hidden"
-      style={{ top: topOffset }}
+      className="absolute inset-0 overflow-hidden print:hidden"
       role="progressbar"
       aria-valuenow={Math.round(progress)}
       aria-valuemin={0}
@@ -92,6 +85,6 @@ export function ReadingProgressBar({ contentRef }: ReadingProgressBarProps) {
         style={{ width: `${progress}%` }}
       />
     </div>,
-    document.body,
+    slot,
   );
 }
