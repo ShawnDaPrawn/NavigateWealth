@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { TopBar } from './TopBar';
 import { Navigation } from './Navigation';
@@ -9,9 +8,6 @@ import { Footer } from './Footer';
 import { DashboardFooter } from './DashboardFooter';
 import { AccountSuspendedPage } from '../pages/AccountSuspendedPage';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
-
-/** Article reading progress bar portals here (see ReadingProgressBar.tsx). */
-export const READING_PROGRESS_SLOT_ID = 'nw-reading-progress-slot';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -27,16 +23,10 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, showNavAndFooter = true, forcePublicLayout = false }: MainLayoutProps) {
   const { isAuthenticated, user, logout } = useAuth();
-  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
 
   // When forcePublicLayout is on, treat as unauthenticated for layout decisions
   const effectivelyAuthenticated = forcePublicLayout ? false : isAuthenticated;
-  const showPublicTopBar = !effectivelyAuthenticated;
-  const isArticleReaderPage = location.pathname.startsWith('/resources/article/');
-  const collapsePublicTopBar = isScrolled;
-  /** When the TopBar collapses on articles, add mobile nav padding so logo/menu stay centered. */
-  const articleCompactMobileNav = isArticleReaderPage && isScrolled && showPublicTopBar;
   // Use accountStatus (primary) with applicationStatus fallback for backward compat
   const userStatus = user?.accountStatus || user?.applicationStatus;
   const isDashboardPage = effectivelyAuthenticated && userStatus === 'approved';
@@ -101,29 +91,20 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
   
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Single sticky site header — TopBar collapse happens inside this block so
-          content never scrolls between TopBar and nav (no gap / bleed on articles). */}
-      <div className={`sticky top-0 z-50 overflow-hidden bg-white ${isScrolled ? 'shadow-lg' : ''}`}>
-        {showPublicTopBar && (
-          <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              collapsePublicTopBar ? 'max-h-0 opacity-0' : 'max-h-12 opacity-100'
-            }`}
-          >
-            <TopBar />
-          </div>
-        )}
-        <div className="relative">
-          <Navigation
-            forcePublic={forcePublicLayout}
-            articleCompactMobilePadding={articleCompactMobileNav}
-          />
-          <div
-            id={READING_PROGRESS_SLOT_ID}
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
-            aria-hidden
-          />
+      {/* TopBar - only show for logged out users (or forcePublicLayout), smoothly collapses on scroll */}
+      {!effectivelyAuthenticated && (
+        <div
+          className={`transition-all duration-300 ease-in-out overflow-hidden ${
+            isScrolled ? 'max-h-0 opacity-0' : 'max-h-12 opacity-100'
+          }`}
+        >
+          <TopBar />
         </div>
+      )}
+      
+      {/* Navigation - sticky positioned */}
+      <div className={`sticky top-0 z-50 ${isScrolled ? 'shadow-lg' : ''}`}>
+        <Navigation forcePublic={forcePublicLayout} />
       </div>
       
       {isDashboardPage && !isAdminDashboard && <DashboardNavigation />}

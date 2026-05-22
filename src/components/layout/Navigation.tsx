@@ -31,19 +31,13 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { UserProfileDropdown } from '../auth/UserProfileDropdown';
 import { Logo } from './Logo';
-import { cn } from '../ui/utils';
 
 interface NavigationProps {
   /** When true, render the public website nav regardless of auth state */
   forcePublic?: boolean;
-  /** Extra vertical padding on mobile after the public TopBar collapses on article pages */
-  articleCompactMobilePadding?: boolean;
 }
 
-export function Navigation({
-  forcePublic = false,
-  articleCompactMobilePadding = false,
-}: NavigationProps) {
+export function Navigation({ forcePublic = false }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isServicesExpanded, setIsServicesExpanded] = useState(false);
   const [isSolutionsExpanded, setIsSolutionsExpanded] = useState(false);
@@ -163,14 +157,7 @@ export function Navigation({
   return (
     <nav className="border-b border-gray-300 bg-white relative" aria-label="Main navigation">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-        <div
-          className={cn(
-            'flex justify-between items-center transition-[padding,min-height] duration-300 ease-in-out',
-            articleCompactMobilePadding
-              ? 'min-h-[4.5rem] py-3 lg:h-16 lg:min-h-0 lg:py-0'
-              : 'h-16',
-          )}
-        >
+        <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center space-x-3">
             <Link to="/" className="flex items-center">
