@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Eraser, Maximize2, Plus } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Card } from '../../ui/card';
+import { cn } from '../../ui/utils';
 import { VascoAvatar } from './VascoAvatar';
 import { VascoChatInput } from './VascoChatInput';
 import { VascoChatMessage } from './VascoChatMessage';
@@ -34,6 +35,10 @@ export interface VascoInlineChatCardProps {
   inputPlaceholder?: string;
   inputFooter?: React.ReactNode;
   beforeInput?: React.ReactNode;
+  className?: string;
+  shellClassName?: string;
+  headerClassName?: string;
+  messagesClassName?: string;
 }
 
 export function VascoInlineChatCard({
@@ -61,6 +66,10 @@ export function VascoInlineChatCard({
   inputPlaceholder = 'Ask Vasco about your financial goals...',
   inputFooter,
   beforeInput,
+  className,
+  shellClassName,
+  headerClassName,
+  messagesClassName,
 }: VascoInlineChatCardProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -76,9 +85,9 @@ export function VascoInlineChatCard({
   }, [messages, isLoading, streamingContent]);
 
   return (
-    <Card className="overflow-hidden border-gray-200 shadow-sm">
-      <div className="flex h-[650px] flex-col bg-white">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+    <Card className={cn('overflow-hidden border-gray-200 shadow-sm', className)}>
+      <div className={cn('flex h-[650px] flex-col bg-white', shellClassName)}>
+        <div className={cn('flex items-center justify-between border-b border-gray-100 px-6 py-4', headerClassName)}>
           <div className="flex min-w-0 items-center gap-3">
             <VascoAvatar size="md" />
             <div className="min-w-0">
@@ -128,7 +137,10 @@ export function VascoInlineChatCard({
 
         {apiKeyWarning && <div className="border-b border-gray-100 px-4 py-3">{apiKeyWarning}</div>}
 
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gray-50/50 px-6 py-5">
+        <div
+          ref={messagesContainerRef}
+          className={cn('flex-1 overflow-y-auto bg-gray-50/50 px-6 py-5', messagesClassName)}
+        >
           <div className="space-y-5">
             {messages.map((message, index) => (
               <VascoChatMessage
