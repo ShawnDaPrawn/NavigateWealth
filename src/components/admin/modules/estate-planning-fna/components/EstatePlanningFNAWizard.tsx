@@ -17,7 +17,8 @@ interface EstatePlanningFNAWizardProps {
   open: boolean;
   onClose: () => void;
   clientId: string;
-  onFNAComplete: (fnaId: string) => void;
+  onFNAComplete?: (fnaId: string) => void;
+  intakePrefill?: Record<string, unknown>;
 }
 
 export function EstatePlanningFNAWizard({
@@ -25,6 +26,7 @@ export function EstatePlanningFNAWizard({
   onClose,
   clientId,
   onFNAComplete,
+  intakePrefill,
 }: EstatePlanningFNAWizardProps) {
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
@@ -85,6 +87,7 @@ export function EstatePlanningFNAWizard({
       const mergedInputs = {
         ...defaultInputs,
         ...autoPopulatedInputs,
+        ...(intakePrefill ?? {}),
       };
 
       setInputs(mergedInputs);
@@ -126,7 +129,7 @@ export function EstatePlanningFNAWizard({
         hasTrusts: false,
         planningNotes: '',
       };
-      setInputs(defaultInputs);
+      setInputs({ ...defaultInputs, ...(intakePrefill ?? {}) });
       console.log('⚠️ Estate Planning FNA backend not available - working in client-side mode');
     } finally {
       setLoading(false);

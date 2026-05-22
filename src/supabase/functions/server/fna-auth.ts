@@ -114,5 +114,52 @@ export function fnaErrorResponse(c: Context, error: unknown) {
   if (isFnaUnauthorized(error)) {
     return c.json({ success: false, error: 'Unauthorized' }, 401);
   }
-  return c.json({ success: false, error: getErrMsg(error) }, 500);
+
+  if (error instanceof Error && error.name === 'FnaIntakeError' && 'status' in error) {
+    const intakeError = error as { status: number; message: string };
+    return c.json({ success: false, error: intakeError.message }, intakeError.status as 400);
+  }
+
+  if (error && typeof error === 'object' && 'issues' in error) {
+    return c.json({ success: false, error: 'Validation failed', details: (error as { issues: unknown }).issues }, 400);
+  }
+
+  const message = getErrMsg(error);
+  if (/not found/i.test(message)) {
+    return c.json({ success: false, error: message }, 404);
+  }
+  if (/unauthorized|forbidden|access denied/i.test(message)) {
+    return c.json({ success: false, error: message }, 403);
+  }
+  if (/already submitted|already accepted|cannot be (submitted|updated|accepted)/i.test(message)) {
+    return c.json({ success: false, error: message }, 422);
+  }
+
+  return c.json({ success: false, error: message }, 500);
+}
+
+/** True when the user is the synthetic admin identity from anon-key auth. */
+export function isSyntheticAdminUser(user: FNAAuthUser): boolean {
+  return user.id === 'admin';
+}
+
+/** Client-owned intake writes require a real authenticated user JWT. */
+export function requireRealUserForClientWrite(user: FNAAuthUser): void {
+  if (isSyntheticAdminUser(user)) {
+    throw new Error('Unauthorized');
+  }
+}
+
+/** Admin intake mutations (accept, request-info) require a real user JWT. */
+export function requireRealUserForIntakeAdmin(user: FNAAuthUser): void {
+  requireRealUserForClientWrite(user);
+}
+
+export function isFnaAdminRole(role: string): boolean {
+  return (
+    role === 'admin' ||
+    role === 'super_admin' ||
+    role === 'super-admin' ||
+    role === 'adviser'
+  );
 }

@@ -39,6 +39,39 @@ interface MedicalFNAWizardProps {
   onFNAComplete?: () => void; // Compatible with fna-config interface
   open?: boolean;
   onClose?: () => void;
+  startAtStep?: number;
+  intakePrefill?: Record<string, unknown>;
+}
+
+function buildInitialMedicalState(
+  clientId: string | undefined,
+  clientName: string | undefined,
+  startAtStep: number | undefined,
+  intakePrefill: Record<string, unknown> | undefined,
+): MedicalFNAWizardState {
+  if (startAtStep === 2 && intakePrefill) {
+    const inputs = intakePrefill as MedicalFNAInputs;
+    const calculations = calculateMedicalNeeds(inputs);
+    return {
+      currentStep: 2,
+      clientId,
+      clientName,
+      inputs,
+      calculations,
+      adjustments: { notes: '' },
+      isPublishing: false,
+    };
+  }
+
+  return {
+    currentStep: startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1,
+    clientId,
+    clientName,
+    inputs: (intakePrefill as MedicalFNAInputs) || {},
+    calculations: null,
+    adjustments: { notes: '' },
+    isPublishing: false,
+  };
 }
 
 export function MedicalFNAWizard({
@@ -47,17 +80,13 @@ export function MedicalFNAWizard({
   onComplete,
   onFNAComplete,
   open,
-  onClose
+  onClose,
+  startAtStep,
+  intakePrefill,
 }: MedicalFNAWizardProps) {
-  const [state, setState] = useState<MedicalFNAWizardState>({
-    currentStep: 1,
-    clientId,
-    clientName,
-    inputs: {},
-    calculations: null,
-    adjustments: { notes: '' },
-    isPublishing: false,
-  });
+  const [state, setState] = useState<MedicalFNAWizardState>(() =>
+    buildInitialMedicalState(clientId, clientName, startAtStep, intakePrefill),
+  );
 
   // Handle completion callback
   const handleComplete = () => {

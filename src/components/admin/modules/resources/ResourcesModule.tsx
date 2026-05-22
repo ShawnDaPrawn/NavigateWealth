@@ -59,6 +59,7 @@ const LetterRenderer = React.lazy(() => import('./components/LetterRenderer').th
 const ClientConsentForm = React.lazy(() => import('./forms/ClientConsentForm'));
 const ClientPicker = React.lazy(() => import('./components/ClientPicker').then(m => ({ default: m.ClientPicker })));
 const UniversalKeyManager = React.lazy(() => import('./UniversalKeyManager').then(m => ({ default: m.UniversalKeyManager })));
+const FormTemplatesModule = React.lazy(() => import('../form-prefill/FormTemplatesModule').then(m => ({ default: m.FormTemplatesModule })));
 const ZipEncryptTool = React.lazy(() => import('./tools/ZipEncryptTool').then(m => ({ default: m.ZipEncryptTool })));
 const PdfDecryptTool = React.lazy(() => import('./tools/PdfDecryptTool').then(m => ({ default: m.PdfDecryptTool })));
 const CorporateIdentityTab = React.lazy(() => import('./components/CorporateIdentityTab').then(m => ({ default: m.CorporateIdentityTab })));
@@ -907,9 +908,12 @@ export function ResourcesModule() {
         {/* Tools Tab */}
         <TabsContent value="tools">
           <Suspense fallback={<LazyFallback />}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <ZipEncryptTool />
-              <PdfDecryptTool />
+            <div className="space-y-6">
+              <FormTemplatesModule />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <ZipEncryptTool />
+                <PdfDecryptTool />
+              </div>
             </div>
           </Suspense>
         </TabsContent>

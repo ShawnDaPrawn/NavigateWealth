@@ -53,13 +53,17 @@ interface InvestmentINAWizardProps {
   onClose: () => void;
   clientId: string;
   onComplete?: (sessionId: string) => void;
+  intakePrefill?: Record<string, unknown>;
+  startAtStep?: number;
 }
 
 export function InvestmentINAWizard({ 
   open, 
   onClose, 
   clientId,
-  onComplete 
+  onComplete,
+  intakePrefill,
+  startAtStep,
 }: InvestmentINAWizardProps) {
   const [currentStep, setCurrentStep] = useState<InvestmentINAWizardStep>('client-overview');
   const [inputs, setInputs] = useState<Partial<InvestmentINAInputs>>({});
@@ -92,6 +96,10 @@ export function InvestmentINAWizard({
   useEffect(() => {
     if (open) {
       loadInitialData();
+      if (startAtStep && startAtStep > 1) {
+        const targetIndex = Math.min(startAtStep - 1, stepsList.length - 1);
+        setCurrentStep(stepsList[targetIndex]);
+      }
     } else {
       // Reset on close
       setCurrentStep('client-overview');
@@ -104,12 +112,11 @@ export function InvestmentINAWizard({
     try {
       setLoading(true);
       const autoPopulated = await InvestmentINAApiService.autoPopulateInputs(clientId);
-      setInputs(autoPopulated);
+      setInputs(intakePrefill ? { ...autoPopulated, ...intakePrefill } : autoPopulated);
       toast.success('Client data loaded successfully');
     } catch (error: unknown) {
       console.log('⚠️ Investment INA backend not available - working in client-side mode');
-      // Initialize with empty inputs
-      setInputs({});
+      setInputs(intakePrefill ?? {});
     } finally {
       setLoading(false);
     }

@@ -220,7 +220,6 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
   if (!fnaData) {
     return (
       <div className="space-y-4">
-        {/* Info Banner */}
         <Card className={`${config.borderColor} ${config.bgColor} border-2`}>
           <CardContent className="py-6">
             <div className="flex items-start gap-4">
@@ -229,72 +228,20 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
               </div>
               <div className="flex-1">
                 <h3 className="text-gray-900 mb-2">{config.title}</h3>
-                <p className="text-sm text-gray-700 mb-4">
-                  {config.description}
-                </p>
-                <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200">
-                  <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-gray-700 mb-4">{config.description}</p>
+                <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-purple-200">
+                  <AlertCircle className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-900 mb-1">
-                      No analysis available yet
-                    </p>
+                    <p className="text-sm text-gray-900 mb-1">Start your needs analysis</p>
                     <p className="text-xs text-gray-600">
-                      Your financial adviser has not yet completed a {config.title.toLowerCase()} for your profile. 
-                      Contact them to schedule a comprehensive financial needs analysis.
+                      Share your financial facts through our discovery intake. Your adviser will review,
+                      calculate, and publish your formal {config.title.toLowerCase()} when ready.
+                    </p>
+                    <p className="text-xs text-purple-700 mt-2 font-medium">
+                      You prepare. We analyse. Together we plan.
                     </p>
                   </div>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Action Card */}
-        <Card className="border-gray-200">
-          <CardContent className="py-6">
-            <div className="text-center">
-              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-4">
-                <Phone className="h-6 w-6 text-[#6d28d9]" />
-              </div>
-              <h4 className="text-gray-900 mb-2">
-                Schedule Your Financial Needs Analysis
-              </h4>
-              <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
-                Get personalized insights and recommendations from your dedicated financial adviser. 
-                A comprehensive {config.title.toLowerCase()} typically takes 30-45 minutes.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button 
-                  variant="outline" 
-                  className="border-[#6d28d9] text-[#6d28d9] hover:bg-purple-50"
-                >
-                  <Phone className="h-4 w-4 mr-2" />
-                  Call (+27) 12-667-2505
-                </Button>
-                <Button className="bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] hover:from-[#5b21b6] hover:to-[#6d28d9] text-white shadow-md shadow-purple-500/20">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Book Consultation
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Info Section */}
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="py-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-900">
-                <p className="mb-2">
-                  <strong>What to expect:</strong>
-                </p>
-                <ul className="space-y-1 text-xs">
-                  <li>• Comprehensive analysis of your financial situation and goals</li>
-                  <li>• Personalized recommendations tailored to your needs</li>
-                  <li>• Clear action plan with next steps</li>
-                  <li>• Ongoing review and updates as your circumstances change</li>
-                </ul>
               </div>
             </div>
           </CardContent>

@@ -29,9 +29,19 @@ interface Step1Props {
   clientId?: string;
   initialData?: Partial<MedicalFNAInputs>;
   onNext: (data: MedicalFNAInputs) => void;
+  intakeMode?: boolean;
+  submitLabel?: string;
+  onSaveDraft?: (data: MedicalFNAInputs) => void;
 }
 
-export function Step1InputForm({ clientId, initialData, onNext }: Step1Props) {
+export function Step1InputForm({
+  clientId,
+  initialData,
+  onNext,
+  intakeMode = false,
+  submitLabel,
+  onSaveDraft,
+}: Step1Props) {
   const { data: profile } = useClientProfile(clientId);
   const { 
     planType, 
@@ -658,9 +668,20 @@ export function Step1InputForm({ clientId, initialData, onNext }: Step1Props) {
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-end pt-4 border-t">
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          {intakeMode && onSaveDraft && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={() => onSaveDraft(form.getValues() as MedicalFNAInputs)}
+            >
+              Save progress
+            </Button>
+          )}
           <Button type="submit" size="lg">
-            Analyze Needs <ArrowRight className="ml-2 w-4 h-4" />
+            {submitLabel ?? (intakeMode ? 'Continue to submit' : 'Analyze Needs')}{' '}
+            <ArrowRight className="ml-2 w-4 h-4" />
           </Button>
         </div>
       </form>

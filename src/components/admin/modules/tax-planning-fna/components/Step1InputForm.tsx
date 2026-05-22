@@ -9,20 +9,28 @@ import { TaxPlanningInputs } from '../types';
 import { ArrowRight, Info, User, Wallet, Calculator, Loader2 } from 'lucide-react';
 import { toast } from "sonner@2.0.3";
 import { formatCurrencyInput, cleanCurrencyInput } from '../../../../../utils/currencyFormatter';
-import { TaxPlanningFnaAPI } from '../api';
+import { useFormPrefill } from '../../form-prefill/useFormPrefill';
 
 interface Step1Props {
   clientId?: string;
   initialData: Partial<TaxPlanningInputs>;
   onNext: (inputs: TaxPlanningInputs) => void;
+  intakeMode?: boolean;
+  submitLabel?: string;
+  onSaveDraft?: (inputs: TaxPlanningInputs) => void;
 }
 
-export function Step1InputForm({ clientId, initialData, onNext }: Step1Props) {
+export function Step1InputForm({
+  clientId,
+  initialData,
+  onNext,
+  intakeMode = false,
+  submitLabel,
+  onSaveDraft,
+}: Step1Props) {
   const [activeTab, setActiveTab] = useState<string>('profile');
-  const [loading, setLoading] = useState(false);
-  const [hasLoadedData, setHasLoadedData] = useState(false);
+  const [prefillStarted, setPrefillStarted] = useState(false);
   
-  // Default State strictly matching new interface
   const [formData, setFormData] = React.useState<TaxPlanningInputs>({
     age: 45,
     maritalStatus: 'married_out_community',
@@ -39,42 +47,25 @@ export function Step1InputForm({ clientId, initialData, onNext }: Step1Props) {
     raContributions: 0,
     tfsaContributionsLifetime: 0,
     medicalSchemeMembers: 3,
-    ...initialData
+    ...initialData,
   });
 
-  // Auto-populate on mount if client ID exists and we haven't loaded data yet
-  // But ONLY if initialData is empty (meaning we haven't already filled this form before)
+  const { PrefillUI, startPrefill } = useFormPrefill({
+    clientId,
+    formId: 'tax-fna-step1',
+    currentValues: formData as Record<string, unknown>,
+    onApplyValues: (values) => {
+      setFormData((prev) => ({ ...prev, ...(values as Partial<TaxPlanningInputs>) }));
+    },
+  });
+
   useEffect(() => {
     const isInitialDataEmpty = Object.keys(initialData).length === 0;
-    
-    if (clientId && !hasLoadedData && isInitialDataEmpty) {
-      loadProfileData();
+    if (clientId && !prefillStarted && isInitialDataEmpty) {
+      setPrefillStarted(true);
+      void startPrefill();
     }
-  }, [clientId, hasLoadedData, initialData]);
-
-  const loadProfileData = async () => {
-    if (!clientId) return;
-    setLoading(true);
-    
-    try {
-      const autoInputs = await TaxPlanningFnaAPI.autoPopulateInputs(clientId);
-      
-      setFormData(prev => ({
-        ...prev,
-        ...autoInputs
-      }));
-      
-      toast.success("Client data loaded from profile");
-      setHasLoadedData(true);
-    } catch (error) {
-      console.error("Failed to load client data", error);
-      // Don't show error toast as it might be annoying if data just doesn't exist
-      // Just fall back to defaults
-      setHasLoadedData(true); 
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [clientId, prefillStarted, initialData, startPrefill]);
 
   const handleChange = (field: keyof TaxPlanningInputs, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -106,28 +97,21 @@ export function Step1InputForm({ clientId, initialData, onNext }: Step1Props) {
     onNext(formData);
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Loading client data...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
+      {PrefillUI}
       
       {/* Introduction / Context */}
       <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex gap-3 items-start text-blue-800">
         <Info className="w-5 h-5 shrink-0 mt-0.5" />
         <div>
-          <h4 className="font-semibold text-sm">Information Gathering</h4>
+          <h4 className="font-semibold text-sm">
+            {intakeMode ? 'Your tax information' : 'Information Gathering'}
+          </h4>
           <p className="text-sm mt-1 text-blue-700">
-            Confirm the client's profile and annual gross income streams below. 
-            Do not apply any tax tables or calculations yet—enter raw gross figures.
+            {intakeMode
+              ? 'Share your profile and annual income figures. Your adviser will apply tax rules and calculations after review.'
+              : "Confirm the client's profile and annual gross income streams below. Do not apply any tax tables or calculations yet—enter raw gross figures."}
           </p>
         </div>
       </div>
@@ -346,12 +330,18 @@ export function Step1InputForm({ clientId, initialData, onNext }: Step1Props) {
       </Tabs>
 
       <div className="flex justify-between pt-6 border-t">
-        <div className="text-sm text-muted-foreground">
-          Step 1 of 4
+        <div className="text-sm text-muted-foreground">{intakeMode ? 'Step 1' : 'Step 1 of 4'}</div>
+        <div className="flex gap-2">
+          {intakeMode && onSaveDraft && (
+            <Button type="button" variant="outline" onClick={() => onSaveDraft(formData)}>
+              Save draft
+            </Button>
+          )}
+          <Button onClick={handleSubmit} size="lg" className="gap-2">
+            {submitLabel ?? (intakeMode ? 'Continue to submit' : 'Confirm Inputs & Run Calculation')}{' '}
+            <ArrowRight className="h-4 w-4" />
+          </Button>
         </div>
-        <Button onClick={handleSubmit} size="lg" className="gap-2">
-          Confirm Inputs & Run Calculation <ArrowRight className="h-4 w-4" />
-        </Button>
       </div>
     </div>
   );

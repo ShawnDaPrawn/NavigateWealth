@@ -57,4 +57,6 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/vasco',                () => import('./vasco-routes.ts'));
   lazy(app, '/ai-management',       () => import('./ai-management-routes.ts'));
   lazy(app, '/openclaw',             () => import('./openclaw-routes.ts'));
+  lazy(app, '/prefill',              () => import('./form-prefill-routes.ts'));
+  lazy(app, '/form-templates',       () => import('./form-template-routes.ts'));
 }

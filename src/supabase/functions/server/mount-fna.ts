@@ -11,6 +11,7 @@ import type { Hono } from 'npm:hono';
 export function mountFnaRoutes(app: Hono) {
   // Batch status endpoint — must be registered before /fna catch-all
   lazy(app, '/fna/batch-status', () => import('./fna-batch-status-routes.ts'));
+  lazy(app, '/fna-intake', () => import('./fna-intake-routes.ts'));
 
   // Current paths
   lazy(app, '/fna/retirement',      () => import('./retirement-fna-routes.ts'));

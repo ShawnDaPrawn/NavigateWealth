@@ -29,6 +29,8 @@ interface TaxPlanningFNAWizardProps {
   onClose?: () => void;
   onComplete?: () => void;
   onFNAComplete?: () => void;
+  startAtStep?: number;
+  intakePrefill?: Record<string, unknown>;
 }
 
 export function TaxPlanningFNAWizard({
@@ -37,19 +39,35 @@ export function TaxPlanningFNAWizard({
   open,
   onClose,
   onComplete,
-  onFNAComplete
+  onFNAComplete,
+  startAtStep,
+  intakePrefill,
 }: TaxPlanningFNAWizardProps) {
   
   // ================= STATE =================
-  const [currentStep, setCurrentStep] = useState<WizardStep>(1);
+  const [currentStep, setCurrentStep] = useState<WizardStep>(() => {
+    if (startAtStep === 2 && intakePrefill) return 2;
+    return startAtStep && startAtStep >= 1 && startAtStep <= 4 ? (startAtStep as WizardStep) : 1;
+  });
   const [isPublishing, setIsPublishing] = useState(false);
 
   // Data Store
-  const [baselineInputs, setBaselineInputs] = useState<TaxPlanningInputs | null>(null);
-  const [baselineResults, setBaselineResults] = useState<TaxCalculationResults | null>(null);
+  const [baselineInputs, setBaselineInputs] = useState<TaxPlanningInputs | null>(() => {
+    if (startAtStep === 2 && intakePrefill) return intakePrefill as TaxPlanningInputs;
+    return null;
+  });
+  const [baselineResults, setBaselineResults] = useState<TaxCalculationResults | null>(() => {
+    if (startAtStep === 2 && intakePrefill) {
+      return TaxPlanningCalculationService.calculate(intakePrefill as TaxPlanningInputs);
+    }
+    return null;
+  });
   
   // Scenario Store
-  const [adjustedInputs, setAdjustedInputs] = useState<TaxPlanningInputs | null>(null);
+  const [adjustedInputs, setAdjustedInputs] = useState<TaxPlanningInputs | null>(() => {
+    if (startAtStep === 2 && intakePrefill) return intakePrefill as TaxPlanningInputs;
+    return null;
+  });
   const [adjustments, setAdjustments] = useState<AdjustmentLog[]>([]);
 
   // ================= ACTIONS =================

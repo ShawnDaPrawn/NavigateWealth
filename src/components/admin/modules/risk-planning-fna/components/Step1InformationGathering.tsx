@@ -28,14 +28,25 @@ import type { InformationGatheringInput, ClientProfileData } from '../types';
 import { IncomeDetailsForm } from './step1/IncomeDetailsForm';
 import { DependantsForm } from './step1/DependantsForm';
 import { ExistingCoverForm } from './step1/ExistingCoverForm';
+import { useFormPrefill } from '../../form-prefill/useFormPrefill';
 
 interface Step1Props {
   clientId?: string;
   initialData?: InformationGatheringInput;
   onNext: (data: InformationGatheringInput) => void;
+  intakeMode?: boolean;
+  submitLabel?: string;
+  onSaveDraft?: (data: InformationGatheringInput) => void;
 }
 
-export function Step1InformationGathering({ clientId, initialData, onNext }: Step1Props) {
+export function Step1InformationGathering({
+  clientId,
+  initialData,
+  onNext,
+  intakeMode = false,
+  submitLabel,
+  onSaveDraft,
+}: Step1Props) {
   const { data: profileData, isLoading: isLoadingProfile } = useClientProfile(clientId);
   const { data: clientKeys, isError: isClientKeysError } = useClientKeys(clientId);
   const queryClient = useQueryClient();
@@ -54,15 +65,36 @@ export function Step1InformationGathering({ clientId, initialData, onNext }: Ste
     defaultValues: DEFAULT_FORM_VALUES,
     mode: 'onChange',
   });
+
+  const [prefillStarted, setPrefillStarted] = React.useState(false);
+
+  const { PrefillUI, startPrefill } = useFormPrefill({
+    clientId: initialData ? undefined : clientId,
+    formId: 'risk-fna-step1',
+    currentValues: form.getValues() as Record<string, unknown>,
+    onApplyValues: (values) => {
+      Object.entries(values).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        if (key in DEFAULT_FORM_VALUES) {
+          form.setValue(key as keyof InformationGatheringFormValues, String(value) as never);
+        }
+      });
+    },
+  });
+
+  React.useEffect(() => {
+    if (clientId && !initialData && !prefillStarted) {
+      setPrefillStarted(true);
+      void startPrefill();
+    }
+  }, [clientId, initialData, prefillStarted, startPrefill]);
   
-  // Auto-populate from client profile or initial data
+  // Auto-populate from initial handoff data only
   useEffect(() => {
     if (initialData) {
       populateFromInitialData(initialData);
-    } else if (profileData) {
-      populateFromProfile(profileData);
     }
-  }, [profileData, initialData]);
+  }, [initialData]);
   
   // Auto-populate Existing Cover fields from client keys
   useEffect(() => {
@@ -217,11 +249,13 @@ export function Step1InformationGathering({ clientId, initialData, onNext }: Ste
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {PrefillUI}
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-sm">
-            Data will auto-populate from the client profile if available. You can edit any field as needed.
-            Derived values are calculated automatically and cannot be edited directly.
+            {intakeMode
+              ? 'Review suggested values from your profile. You can edit any field before continuing.'
+              : 'Use "Review matches" to prefill from the client record. You can edit any field before continuing.'}
           </AlertDescription>
         </Alert>
         
@@ -268,25 +302,38 @@ export function Step1InformationGathering({ clientId, initialData, onNext }: Ste
           </TabsContent>
         </Tabs>
         
-        {/* Next Step Preview */}
-        <Alert className="border-blue-200 bg-blue-50">
-          <Info className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-sm text-blue-900">
-            <strong>Next Step:</strong> The system will automatically calculate risk needs based on the information you've entered. 
-            You'll be able to review all calculations in detail before making any manual adjustments.
-          </AlertDescription>
-        </Alert>
-        
+        {!intakeMode && (
+          <Alert className="border-blue-200 bg-blue-50">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-sm text-blue-900">
+              <strong>Next Step:</strong> The system will automatically calculate risk needs based on the information
+              you&apos;ve entered. You&apos;ll be able to review all calculations in detail before making any manual
+              adjustments.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Submit */}
         <div className="flex justify-between pt-6 border-t">
           <Button type="button" variant="outline" disabled>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90">
-            Continue to Calculations
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          <div className="flex gap-2">
+            {intakeMode && onSaveDraft && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onSaveDraft(transformFormToInput(form.getValues()))}
+              >
+                Save draft
+              </Button>
+            )}
+            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90">
+              {submitLabel ?? (intakeMode ? 'Continue to submit' : 'Continue to Calculations')}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </form>
     </Form>

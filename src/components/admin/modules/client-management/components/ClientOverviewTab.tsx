@@ -91,7 +91,14 @@ import {
   ArrowRight,
   Download,
   Loader2,
+  PlayCircle,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../ui/dialog';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { createClient as createSupabaseClient } from '../../../../../utils/supabase/client';
 import { getClientProfileQueryOptions } from '../api';
@@ -139,6 +146,14 @@ import type { HealthSubScores } from '../utils';
 
 // FNA API — uses batch endpoint via React Query hook for cache control
 import { useFnaBatchStatus } from '../hooks/useFnaBatchStatus';
+import type { FnaIntakeDomain } from '../../../../../services/fna-intake-api';
+import { getFnaStatusLabel, isFnaIntakeFeatureEnabled } from '@/shared/fna-intake/fna-intake-labels';
+
+const LazyClientFNAHub = React.lazy(() =>
+  import('../../../../client/fna-intake/ClientFNAHub').then((m) => ({
+    default: m.ClientFNAHub,
+  })),
+);
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -173,10 +188,12 @@ interface FNAStatusItem {
   key: string;
   name: string;
   icon: React.ElementType;
-  status: 'published' | 'draft' | 'not_started' | 'error';
+  status: 'published' | 'draft' | 'client_draft' | 'submitted' | 'not_started' | 'error';
   updatedAt?: string;
   publishedAt?: string;
+  submittedAt?: string;
   nextReviewDue?: string;
+  progressPercent?: number;
   loading: boolean;
 }
 
@@ -244,6 +261,7 @@ const FNA_MODULES: Array<{
   { key: 'medical', name: 'Medical Aid FNA', icon: Heart },
   { key: 'retirement', name: 'Retirement FNA', icon: PiggyBank },
   { key: 'investment', name: 'Investment INA', icon: TrendingUp },
+  { key: 'tax', name: 'Tax Planning FNA', icon: FileText },
   { key: 'estate', name: 'Estate Planning FNA', icon: Landmark },
 ];
 
@@ -628,18 +646,28 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
       const updatedAt = data?.updatedAt || data?.updated_at;
       const publishedAt = data?.publishedAt || data?.published_at;
       const createdAt = data?.createdAt || data?.created_at;
+      const submittedAt = data?.submittedAt as string | undefined;
+      const progressPercent =
+        typeof data?.progressPercent === 'number' ? (data.progressPercent as number) : undefined;
 
       const reviewBase = publishedAt || updatedAt || createdAt;
       const nextReviewDue = reviewBase ? addMonths(reviewBase as string, 12) : undefined;
+
+      const displayStatus =
+        match.status === 'error'
+          ? ('error' as const)
+          : (match.status as FNAStatusItem['status']);
 
       return {
         key: m.key,
         name: m.name,
         icon: m.icon,
-        status: match.status === 'error' ? 'error' as const : match.status,
-        updatedAt: (updatedAt || createdAt) as string | undefined,
+        status: displayStatus,
+        updatedAt: (updatedAt || createdAt || submittedAt) as string | undefined,
         publishedAt: publishedAt as string | undefined,
+        submittedAt,
         nextReviewDue,
+        progressPercent,
         loading: false,
       };
     });
@@ -651,6 +679,7 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   // ── Phase 4 state ───────────────────────────────────────────────────
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [intakeDialogDomain, setIntakeDialogDomain] = useState<FnaIntakeDomain | null>(null);
 
   // ── Phase 1: Data fetching ────────────────────────────────────────────
 
@@ -863,6 +892,9 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   const fnaPublished = fnaStatuses.filter(f => f.status === 'published').length;
   const fnaDraft = fnaStatuses.filter(f => f.status === 'draft').length;
+  const fnaClientDraft = fnaStatuses.filter(f => f.status === 'client_draft').length;
+  const fnaSubmitted = fnaStatuses.filter(f => f.status === 'submitted').length;
+  const fnaInProgress = fnaDraft + fnaClientDraft + fnaSubmitted;
   const fnaOverdue = fnaStatuses.filter(f => f.nextReviewDue && isPast(f.nextReviewDue)).length;
 
   // ── Synthesise FNA milestone events into activity timeline ────────────
@@ -879,6 +911,16 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
           timestamp: fna.publishedAt,
           icon: FileCheck,
           iconColor: 'text-gray-500',
+          success: true,
+        });
+      } else if (fna.status === 'submitted' && (fna.submittedAt || fna.updatedAt)) {
+        fnaEvents.push({
+          id: `fna-intake-submitted-${fna.key}`,
+          type: 'fna_intake_submitted',
+          label: isClient ? `${fna.name} submitted for review` : `${fna.name} — client intake submitted`,
+          timestamp: (fna.submittedAt || fna.updatedAt) as string,
+          icon: ClipboardCheck,
+          iconColor: 'text-blue-600',
           success: true,
         });
       } else if (fna.updatedAt && fna.status === 'draft') {
@@ -1089,12 +1131,46 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
           priority: 'urgent',
           category: 'fna',
           title: isClient
-            ? `Your ${fna.name} is overdue for a check-up`
+            ? fna.status === 'published'
+              ? `Time to refresh your ${fna.name}`
+              : `Your ${fna.name} is overdue for a check-up`
             : `${fna.name} — review overdue`,
           detail: isClient
-            ? `This was due for review on ${fmtDate(fna.nextReviewDue)}. Get in touch with your adviser to book a fresh one.`
+            ? fna.status === 'published'
+              ? `Your last review was due ${fmtDate(fna.nextReviewDue)}. Update your facts and resubmit so your adviser can republish.`
+              : `This was due for review on ${fmtDate(fna.nextReviewDue)}. Get in touch with your adviser to book a fresh one.`
             : `Was due ${fmtDate(fna.nextReviewDue)}. Book a new review to make sure the recommendations still hold.`,
           icon: ClipboardCheck,
+        });
+      }
+
+      if (fna.status === 'client_draft') {
+        items.push({
+          id: `fna-client-draft-${fna.key}`,
+          priority: 'attention',
+          category: 'fna',
+          title: isClient
+            ? `Continue your ${fna.name}`
+            : `${fna.name} — client draft in progress`,
+          detail: isClient
+            ? 'You started this discovery — pick up where you left off and submit when ready.'
+            : 'Client has started intake but not submitted yet.',
+          icon: PlayCircle,
+        });
+      }
+
+      if (fna.status === 'submitted') {
+        items.push({
+          id: `fna-submitted-${fna.key}`,
+          priority: isClient ? 'recommended' : 'attention',
+          category: 'fna',
+          title: isClient
+            ? `${fna.name} is with your adviser`
+            : `${fna.name} — intake in review queue`,
+          detail: isClient
+            ? 'Submitted for review — not advice until your adviser publishes the formal analysis.'
+            : 'Client submitted intake. Accept from the intake queue to continue at Step 2.',
+          icon: Clock,
         });
       }
 
@@ -1119,10 +1195,10 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
           priority: 'recommended',
           category: 'fna',
           title: isClient
-            ? `${fna.name} hasn't been done yet`
+            ? `Start your ${fna.name}`
             : `Start a ${fna.name}`,
           detail: isClient
-            ? 'This review hasn\'t happened yet — bring it up with your adviser at your next catch-up.'
+            ? 'You prepare. We analyse. Together we plan — begin your financial discovery here.'
             : 'No review on file. Worth kicking one off at the next meeting.',
           icon: ClipboardCheck,
         });
@@ -2315,9 +2391,9 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
               )}
               <span className="text-xs text-gray-400 ml-auto mr-2 hidden sm:inline truncate">
                 {fnaPublished > 0 && `${fnaPublished} published`}
-                {fnaPublished > 0 && fnaDraft > 0 && ' · '}
-                {fnaDraft > 0 && `${fnaDraft} ${isClient ? 'in progress' : 'draft'}`}
-                {fnaPublished === 0 && fnaDraft === 0 && (isClient ? 'No reviews yet' : 'No reviews conducted')}
+                {fnaPublished > 0 && fnaInProgress > 0 && ' · '}
+                {fnaInProgress > 0 && `${fnaInProgress} ${isClient ? 'in progress' : 'in progress'}`}
+                {fnaPublished === 0 && fnaInProgress === 0 && (isClient ? 'Start a financial discovery' : 'No reviews conducted')}
               </span>
             </div>
           </AccordionTrigger>
@@ -2330,11 +2406,11 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                  <span className="text-sm text-gray-600">{fnaDraft} {isClient ? 'In Progress' : 'Draft'}</span>
+                  <span className="text-sm text-gray-600">{fnaInProgress} {isClient ? 'In Progress' : 'In Progress'}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-gray-300" />
-                  <span className="text-sm text-gray-600">{FNA_MODULES.length - fnaPublished - fnaDraft} Not Started</span>
+                  <span className="text-sm text-gray-600">{FNA_MODULES.length - fnaPublished - fnaInProgress} Not Started</span>
                 </div>
                 {fnaOverdue > 0 && (
                   <div className="flex items-center gap-1.5">
@@ -2347,7 +2423,20 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {fnaStatuses.map((fna) => (
-                  <FNAStatusCard key={fna.key} fna={fna} mode={mode} />
+                  <FNAStatusCard
+                    key={fna.key}
+                    fna={fna}
+                    mode={mode}
+                    onIntakeAction={
+                      isClient &&
+                      isFnaIntakeFeatureEnabled() &&
+                      (fna.status === 'not_started' ||
+                        fna.status === 'client_draft' ||
+                        (fna.status === 'published' && fna.nextReviewDue && isPast(fna.nextReviewDue)))
+                        ? () => setIntakeDialogDomain(fna.key as FnaIntakeDomain)
+                        : undefined
+                    }
+                  />
                 ))}
               </div>
             </div>
@@ -2520,6 +2609,30 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
         </AccordionItem>
 
       </Accordion>
+
+      {isClient && isFnaIntakeFeatureEnabled() && intakeDialogDomain && (
+        <Dialog open={!!intakeDialogDomain} onOpenChange={(open) => !open && setIntakeDialogDomain(null)}>
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Financial Needs Discovery</DialogTitle>
+            </DialogHeader>
+            <React.Suspense
+              fallback={
+                <div className="flex items-center justify-center py-12 text-gray-500">
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Loading…
+                </div>
+              }
+            >
+              <LazyClientFNAHub
+                clientId={client.id}
+                fnaType={intakeDialogDomain}
+                batchItem={batchFnaData?.find((item) => item.key === intakeDialogDomain)}
+              />
+            </React.Suspense>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* ─── Print Footer ────────────────────────────────────────────── */}
       <div className="hidden print:block print:mt-8 border-t pt-4">
@@ -3050,15 +3163,27 @@ function ActionItemRow({ item, mode = 'adviser' }: { item: ActionItem; mode?: Da
 const FNA_STATUS_STYLES: Record<FNAStatusItem['status'], { dot: string; badge: string; badgeLabel: string }> = {
   published: { dot: 'bg-green-500', badge: 'bg-green-50 text-green-700 border-green-200', badgeLabel: 'Published' },
   draft: { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700 border-amber-200', badgeLabel: 'Draft' },
+  client_draft: { dot: 'bg-purple-400', badge: 'bg-purple-50 text-purple-700 border-purple-200', badgeLabel: 'Client draft' },
+  submitted: { dot: 'bg-blue-400', badge: 'bg-blue-50 text-blue-700 border-blue-200', badgeLabel: 'Review queue' },
   not_started: { dot: 'bg-gray-300', badge: 'bg-gray-50 text-gray-500 border-gray-200', badgeLabel: 'Not Started' },
   error: { dot: 'bg-red-400', badge: 'bg-red-50 text-red-600 border-red-200', badgeLabel: 'Error' },
 };
 
-function FNAStatusCard({ fna, mode = 'adviser' }: { fna: FNAStatusItem; mode?: DashboardMode }) {
-  const style = FNA_STATUS_STYLES[fna.status];
+function FNAStatusCard({
+  fna,
+  mode = 'adviser',
+  onIntakeAction,
+}: {
+  fna: FNAStatusItem;
+  mode?: DashboardMode;
+  onIntakeAction?: () => void;
+}) {
+  const style = FNA_STATUS_STYLES[fna.status] ?? FNA_STATUS_STYLES.not_started;
   const FnaIcon = fna.icon;
   const overdue = fna.nextReviewDue && isPast(fna.nextReviewDue);
   const isClientMode = mode === 'client';
+  const clientLabel = getFnaStatusLabel(fna.status, 'client');
+  const adviserLabel = getFnaStatusLabel(fna.status, 'adviser');
 
   if (fna.loading) {
     return (
@@ -3081,14 +3206,14 @@ function FNAStatusCard({ fna, mode = 'adviser' }: { fna: FNAStatusItem; mode?: D
         <div className="flex items-center gap-2 mb-1">
           <p className="text-sm font-semibold text-gray-800 truncate">{fna.name}</p>
           <Badge variant="outline" className={`text-[11px] px-1.5 py-0 h-4.5 border ${style.badge}`}>
-            {isClientMode
-              ? (fna.status === 'published' ? 'Complete' : fna.status === 'draft' ? 'In Progress' : style.badgeLabel)
-              : style.badgeLabel}
+            {isClientMode ? clientLabel : adviserLabel}
           </Badge>
         </div>
         {fna.status === 'not_started' ? (
           <p className="text-xs text-gray-400">
-            {isClientMode ? 'Not yet started — your adviser will initiate this' : 'No analysis conducted yet'}
+            {isClientMode
+              ? 'Start your financial discovery — your adviser will review and publish formal advice.'
+              : 'No analysis conducted yet'}
           </p>
         ) : (
           <div className="space-y-0.5">
@@ -3097,10 +3222,18 @@ function FNAStatusCard({ fna, mode = 'adviser' }: { fna: FNAStatusItem; mode?: D
                 {isClientMode ? 'Completed: ' : 'Published: '}{fmtDate(fna.publishedAt)}
               </p>
             )}
-            {fna.updatedAt && !fna.publishedAt && (
+            {fna.submittedAt && fna.status === 'submitted' && (
+              <p className="text-xs text-gray-500">
+                Submitted: {fmtDate(fna.submittedAt)}
+              </p>
+            )}
+            {fna.updatedAt && !fna.publishedAt && fna.status !== 'submitted' && (
               <p className="text-xs text-gray-500">
                 {isClientMode ? 'Last updated: ' : 'Last saved: '}{fmtDate(fna.updatedAt)}
               </p>
+            )}
+            {typeof fna.progressPercent === 'number' && fna.status === 'client_draft' && (
+              <p className="text-xs text-gray-500">Progress: {fna.progressPercent}%</p>
             )}
             {fna.nextReviewDue && (
               <p className={`text-xs ${overdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
@@ -3111,6 +3244,20 @@ function FNAStatusCard({ fna, mode = 'adviser' }: { fna: FNAStatusItem; mode?: D
               </p>
             )}
           </div>
+        )}
+        {onIntakeAction && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-2 h-7 text-xs"
+            onClick={onIntakeAction}
+          >
+            {fna.status === 'client_draft'
+              ? 'Continue'
+              : fna.status === 'published' && overdue
+                ? 'Refresh discovery'
+                : 'Start discovery'}
+          </Button>
         )}
       </div>
       <div className={`h-2.5 w-2.5 rounded-full ${style.dot} flex-shrink-0 mt-1`} />

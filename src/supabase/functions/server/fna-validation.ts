@@ -22,6 +22,18 @@ export const UuidSchema = z.string().regex(UUID_REGEX, 'Must be a valid UUID');
 /** FNA session status values */
 export const FnaStatusSchema = z.enum(['draft', 'published', 'archived']);
 
+/** Client intake session status (separate from formal FNA lifecycle) */
+export const FnaIntakeStatusSchema = z.enum(['client_draft', 'submitted', 'accepted']);
+
+export const FnaIntakeDomainSchema = z.enum([
+  'risk',
+  'medical',
+  'retirement',
+  'investment',
+  'tax',
+  'estate',
+]);
+
 // ============================================================================
 // SESSION LIFECYCLE SCHEMAS
 // ============================================================================
@@ -131,3 +143,22 @@ export type UpdateResultsInput = z.infer<typeof UpdateResultsSchema>;
 export type SaveInvestmentSessionInput = z.infer<typeof SaveInvestmentSessionSchema>;
 export type CreateRiskPlanningFnaInput = z.infer<typeof CreateRiskPlanningFnaSchema>;
 export type UpdateRiskPlanningFnaInput = z.infer<typeof UpdateRiskPlanningFnaSchema>;
+
+// ============================================================================
+// CLIENT INTAKE SCHEMAS
+// ============================================================================
+
+import {
+  FnaIntakeSaveDraftSchema,
+  FnaIntakeSubmitSchema,
+} from '../../../shared/fna-intake/schemas/intake-payload.ts';
+
+/** PUT /fna-intake/:domain/draft/:clientId — mirrors src/shared/fna-intake/schemas/intake-payload.ts */
+export { FnaIntakeSaveDraftSchema, FnaIntakeSubmitSchema };
+
+/** Route param: clientId or sessionId */
+export const FnaIntakeClientIdParamSchema = UuidSchema;
+export const FnaIntakeSessionIdParamSchema = UuidSchema;
+
+export type FnaIntakeSaveDraftInput = z.infer<typeof FnaIntakeSaveDraftSchema>;
+export type FnaIntakeSubmitInput = z.infer<typeof FnaIntakeSubmitSchema>;

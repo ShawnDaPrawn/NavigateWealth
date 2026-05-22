@@ -14,7 +14,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { ClientFNAView } from '../client/ClientFNAView';
+import { ServiceFnaModal } from '../portal/ServiceFnaModal';
 import { Shield, Calculator, FileText, Upload } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';
 import { DynamicServicePageWrapper } from '../layout/DynamicServicePageWrapper';
@@ -155,45 +155,14 @@ export function RiskManagementDashboardPage() {
         insights={insights}
       />
 
-      {/* Needs Analysis Modal */}
-      {showNeedsAnalysis && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <Card className="max-w-4xl w-full max-h-[90vh] overflow-y-auto border-gray-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <CardHeader className="border-b border-gray-100 pb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-purple-50 flex items-center justify-center">
-                    <Calculator className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <CardTitle>Financial Needs Analysis</CardTitle>
-                    <CardDescription>View your comprehensive coverage analysis</CardDescription>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowNeedsAnalysis(false)}
-                  className="h-8 w-8 p-0 rounded-full hover:bg-gray-100"
-                >
-                  <span className="sr-only">Close</span>×
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6 pb-6 bg-gray-50/30">
-              <ClientFNAView clientId={user?.id || ''} fnaType="risk" />
-              <div className="mt-8 flex justify-end">
-                <Button
-                  onClick={() => setShowNeedsAnalysis(false)}
-                  className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                >
-                  Close Analysis
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <ServiceFnaModal
+        open={showNeedsAnalysis}
+        onClose={() => setShowNeedsAnalysis(false)}
+        clientId={user?.id || ''}
+        fnaType="risk"
+        title="Financial Needs Analysis"
+        description="Start your discovery or view your published risk analysis"
+      />
 
       {/* Claim Submission Modal */}
       <ServiceRequestModal

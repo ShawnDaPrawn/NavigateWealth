@@ -18,17 +18,22 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
 import { User, Wallet, Info, ArrowRight, Loader2, CalendarDays, TrendingUp } from 'lucide-react';
 import { formatCurrencyInput, cleanCurrencyInput } from '../../../../../utils/currencyFormatter';
 import { RetirementFNAInputs, RetirementFNAAdjustments } from '../types';
-import { RetirementFnaAPI } from '../api';
 import { DEFAULT_RETIREMENT_ASSUMPTIONS } from '../utils/calculation-engine';
+import { useFormPrefill } from '../../form-prefill/useFormPrefill';
 
 interface Step1InputFormProps {
   clientId?: string;
   initialData: Partial<RetirementFNAInputs>;
   initialAssumptions?: Partial<RetirementFNAAdjustments>;
   onNext: (data: RetirementFNAInputs, assumptions: RetirementFNAAdjustments) => void;
+  /** Client intake mode — hides adviser-only assumptions and changes CTA copy */
+  intakeMode?: boolean;
+  hideAssumptionsTab?: boolean;
+  submitLabel?: string;
+  onSaveDraft?: (data: RetirementFNAInputs, assumptions: RetirementFNAAdjustments) => void;
 }
 
-// Backend response shape for auto-population
+// Backend response shape for auto-population (legacy field names)
 interface AutoPopulateResponse {
   currentAge?: number;
   intendedRetirementAge?: number;
@@ -36,10 +41,33 @@ interface AutoPopulateResponse {
   grossMonthlyIncome?: number;
   totalMonthlyContribution?: number;
   totalCurrentRetirementCapital?: number;
-  [key: string]: unknown; // Allow other properties
+  [key: string]: unknown;
 }
 
-export function Step1InputForm({ clientId, initialData, initialAssumptions, onNext }: Step1InputFormProps) {
+function mapPrefillToRetirementInputs(values: Record<string, unknown>): Partial<RetirementFNAInputs> {
+  const autoData = values as AutoPopulateResponse;
+  return {
+    currentAge: Number(autoData.currentAge) || undefined,
+    retirementAge: Number(autoData.retirementAge ?? autoData.intendedRetirementAge) || 65,
+    currentMonthlyIncome:
+      Number(autoData.currentMonthlyIncome ?? autoData.netMonthlyIncome ?? autoData.grossMonthlyIncome) || 0,
+    currentMonthlyContribution:
+      Number(autoData.currentMonthlyContribution ?? autoData.totalMonthlyContribution) || 0,
+    currentRetirementSavings:
+      Number(autoData.currentRetirementSavings ?? autoData.totalCurrentRetirementCapital) || 0,
+  };
+}
+
+export function Step1InputForm({
+  clientId,
+  initialData,
+  initialAssumptions,
+  onNext,
+  intakeMode = false,
+  hideAssumptionsTab = false,
+  submitLabel,
+  onSaveDraft,
+}: Step1InputFormProps) {
   const [data, setData] = useState<Partial<RetirementFNAInputs>>(initialData);
   
   // Initialize assumptions with passed values or system defaults
@@ -57,44 +85,24 @@ export function Step1InputForm({ clientId, initialData, initialAssumptions, onNe
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('profile');
-  const [hasLoadedData, setHasLoadedData] = useState(false);
+  const [prefillStarted, setPrefillStarted] = useState(false);
 
-  // Auto-populate on mount if client ID exists and we haven't loaded data yet
+  const { PrefillUI, startPrefill } = useFormPrefill({
+    clientId: intakeMode ? undefined : clientId,
+    formId: 'retirement-fna-step1',
+    currentValues: data as Record<string, unknown>,
+    onApplyValues: (values) => {
+      setData((prev) => ({ ...prev, ...mapPrefillToRetirementInputs(values) }));
+    },
+    autoOpenReview: !intakeMode,
+  });
+
   useEffect(() => {
-    if (clientId && !hasLoadedData) {
-      loadProfileData();
+    if (clientId && !intakeMode && !prefillStarted && Object.keys(initialData).length === 0) {
+      setPrefillStarted(true);
+      void startPrefill();
     }
-  }, [clientId, hasLoadedData]);
-
-  const loadProfileData = async () => {
-    if (!clientId || hasLoadedData) return;
-    setLoading(true);
-    setError(null);
-    try {
-      // Cast to unknown first then to expected shape to allow property access
-      // The API returns Partial<RetirementFNAInputs> but actually returns the backend shape
-      const response = await RetirementFnaAPI.getAutoPopulatedInputs(clientId);
-      const autoData = response as unknown as AutoPopulateResponse;
-      
-      const populatedData: Partial<RetirementFNAInputs> = {
-        currentAge: autoData.currentAge,
-        retirementAge: autoData.intendedRetirementAge || 65,
-        // Prefer net income, fall back to gross, or 0
-        currentMonthlyIncome: autoData.netMonthlyIncome || autoData.grossMonthlyIncome || 0,
-        currentMonthlyContribution: autoData.totalMonthlyContribution || 0,
-        currentRetirementSavings: autoData.totalCurrentRetirementCapital || 0,
-      };
-      
-      setData(populatedData);
-      setHasLoadedData(true);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(`Failed to load client data: ${errorMsg}. Please enter details manually.`);
-      setHasLoadedData(true); // Mark as attempted even if failed
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [clientId, intakeMode, prefillStarted, initialData, startPrefill]);
 
   const handleChange = (field: keyof RetirementFNAInputs, value: string | number | boolean) => {
     setData(prev => ({ ...prev, [field]: value }));
@@ -141,6 +149,7 @@ export function Step1InputForm({ clientId, initialData, initialAssumptions, onNe
 
   return (
     <div className="space-y-6">
+      {!intakeMode && PrefillUI}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -150,7 +159,7 @@ export function Step1InputForm({ clientId, initialData, initialAssumptions, onNe
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription className="text-sm">
-          Please review and confirm all client information below. Data has been pre-populated from the client profile where available.
+          Review client information below. Use &quot;Review matches&quot; to prefill from the client record where available.
         </AlertDescription>
       </Alert>
 
@@ -282,6 +291,8 @@ export function Step1InputForm({ clientId, initialData, initialAssumptions, onNe
               </CardContent>
             </Card>
 
+            {!hideAssumptionsTab && (
+            <>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -386,18 +397,31 @@ export function Step1InputForm({ clientId, initialData, initialAssumptions, onNe
                 These assumptions will be used for the initial calculation. You can refine them further in Step 3.
               </AlertDescription>
             </Alert>
+            </>
+            )}
           </TabsContent>
         </Tabs>
 
         {/* Navigation */}
         <div className="flex justify-between pt-6 border-t">
           <div className="text-sm text-muted-foreground">
-            Step 1 of 4
+            {intakeMode ? 'Financial discovery intake' : 'Step 1 of 4'}
           </div>
-          <Button type="submit" size="lg" className="gap-2">
-            Run Calculation
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-2">
+            {intakeMode && onSaveDraft && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onSaveDraft(data as RetirementFNAInputs, assumptions)}
+              >
+                Save progress
+              </Button>
+            )}
+            <Button type="submit" size="lg" className="gap-2">
+              {submitLabel ?? (intakeMode ? 'Continue to submit' : 'Run Calculation')}
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </form>
     </div>

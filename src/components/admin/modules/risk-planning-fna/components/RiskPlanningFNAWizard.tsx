@@ -39,6 +39,40 @@ interface RiskPlanningFNAWizardProps {
   onFNAComplete?: () => void; // Compatible with fna-config interface
   open?: boolean; // Compatible with Dialog interface
   onClose?: () => void; // Compatible with Dialog interface
+  /** Open wizard at Step 2+ with client intake pre-fill (after queue accept) */
+  startAtStep?: number;
+  intakePrefill?: Record<string, unknown>;
+}
+
+function buildInitialRiskState(
+  clientId: string | undefined,
+  clientName: string | undefined,
+  startAtStep: number | undefined,
+  intakePrefill: Record<string, unknown> | undefined,
+): WizardState {
+  if (startAtStep === 2 && intakePrefill) {
+    const inputData = intakePrefill as InformationGatheringInput;
+    const calculations = calculateRiskAnalysis(inputData, 'Current User');
+    return {
+      currentStep: 2,
+      clientId,
+      clientName,
+      inputData,
+      calculations,
+      adjustments: {},
+      isPublishing: false,
+    };
+  }
+
+  return {
+    currentStep: startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1,
+    clientId,
+    clientName,
+    inputData: intakePrefill ? (intakePrefill as InformationGatheringInput) : null,
+    calculations: null,
+    adjustments: {},
+    isPublishing: false,
+  };
 }
 
 export function RiskPlanningFNAWizard({ 
@@ -47,17 +81,13 @@ export function RiskPlanningFNAWizard({
   onComplete, 
   onFNAComplete,
   open,
-  onClose 
+  onClose,
+  startAtStep,
+  intakePrefill,
 }: RiskPlanningFNAWizardProps) {
-  const [state, setState] = useState<WizardState>({
-    currentStep: 1,
-    clientId,
-    clientName,
-    inputData: null,
-    calculations: null,
-    adjustments: {},
-    isPublishing: false,
-  });
+  const [state, setState] = useState<WizardState>(() =>
+    buildInitialRiskState(clientId, clientName, startAtStep, intakePrefill),
+  );
   
   const { publishFNA } = useFNAMutations();
   

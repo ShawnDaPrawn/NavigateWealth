@@ -17,6 +17,78 @@ those proposed files exist on `main`.
 
 ---
 
+## Section 0 - Current Addendum As Of 2026-05-19
+
+### Client-led FNA Intake (production hardening — landed in working tree)
+
+Big-bang client intake across all six domains (risk, medical, retirement, investment,
+tax, estate) is implemented with:
+
+- KV-backed `/fna-intake/*` API with auth hardening, Zod validation, rate limits,
+  accept idempotency, durable submitted queue markers, and client sanitization.
+- **Notifications:** client inbox on submit / request-info / accept; **assigned adviser
+  inbox on submit** (via `fna-intake-adviser-resolver.ts`). Advisers without a resolved
+  assignment still rely on the FNA Intake Queue poll.
+- `/fna/batch-status/client/:clientId` requires authentication; `adviser` role included
+  in admin checks.
+- Client hub + wizard via `ClientFNAHub` / `ClientFNAIntakeWizard`:
+  - Full admin Step 1 reuse (`intakeMode`) for risk, medical, retirement, tax.
+  - Bespoke Step 1 subsets for investment and estate.
+  - **Submitted read-only:** `IntakeReadOnlyReview` renders saved answers; hub exposes
+    **View your submission** when status is `submitted`.
+  - Request-info messaging and illustrative retirement projection (non-advice).
+- Admin intake queue (feature-flagged) with client names, drawer deep links,
+  accept → Step 2 handoff via domain Step 1 form IDs, and audit events
+  (`fna_intake_submitted`, `fna_intake_accepted`, `fna_intake_request_info`).
+- Shared module: `src/shared/fna-intake/` (hooks, labels, status badge,
+  `schemas/intake-payload.ts` for client-side validation).
+- Shared draft factory: `fna-intake-draft-factory.ts` aligns accept handoff KV shapes
+  with admin `POST /create` routes.
+- Feature flag: `VITE_FNA_INTAKE_ENABLED` gates `ClientOverviewTab` intake CTAs,
+  `ServiceFnaModal`, and `FNAIntakeQueue` (defaults on; set `false` to hide intake UI).
+- Admin intake mutations (queue, accept, request-info) require a **real JWT** — synthetic
+  anon-key admin is blocked in production paths.
+
+**Deploy required after backend changes:**
+
+```bash
+npx supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir .
+```
+
+**Test coverage (v1 — not launch sign-off):**
+
+- Unit: sanitize, auth matrix, labels, intake-field-mapping, lifecycle (mock KV),
+  adviser resolver, shared payload schema, `IntakeReadOnlyReview`, hub view resolution,
+  wizard read-only mode.
+- E2E smoke: `e2e/fna-intake-smoke.spec.ts` (skipped unless `E2E_FNA_*` staging creds set).
+- **Not yet covered:** full browser matrix per domain, auth integration against live Edge
+  Function, publish → client results path.
+
+**Staging UAT checklist (run before enabling for real clients):**
+
+1. Set `VITE_FNA_INTAKE_ENABLED=true` on staging; deploy Edge Function.
+2. **Per domain** (risk, medical, retirement, investment, tax, estate): client draft →
+   submit (consent) → adviser queue → accept → Step 2 handoff prefill → publish → client
+   sees published results.
+3. **Request-info loop:** adviser returns intake → client edits → resubmits.
+4. **Notifications:** client inbox on submit; adviser inbox on submit (when assigned);
+   client inbox on request-info and accept.
+5. **Read-only:** submitted client sees answers via View your submission; no edit controls.
+6. **Feature flag off:** intake CTAs hidden; legacy FNA view still reachable where applicable.
+7. **Legal:** consent copy (`FNA_INTAKE_CONSENT_TEXT`) signed off operationally.
+
+**Known limits (v1):**
+
+- Intake sessions remain KV-backed (no Postgres migration yet).
+- Multi-KV writes are not atomic; concurrent accept may duplicate drafts (mitigated by
+  idempotent accept when already accepted).
+- Investment/estate client forms are subsets — highest dual-path drift risk when Step 1 changes.
+- Legal sign-off of consent copy is an operational checklist item, not code-enforced.
+
+**Do not enable `VITE_FNA_INTAKE_ENABLED` for real clients until staging UAT passes.**
+
+---
+
 ## Section 0 - Current Addendum As Of 2026-04-29
 
 This addendum supersedes the older clean-`main` snapshot below where the two

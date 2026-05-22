@@ -38,6 +38,42 @@ interface RetirementFNAWizardProps {
   onFNAComplete?: () => void; // Compatible with fna-config interface
   open?: boolean;
   onClose?: () => void;
+  startAtStep?: number;
+  intakePrefill?: Record<string, unknown>;
+}
+
+function buildInitialRetirementState(
+  clientId: string | undefined,
+  clientName: string | undefined,
+  startAtStep: number | undefined,
+  intakePrefill: Record<string, unknown> | undefined,
+): RetirementFNAWizardState {
+  if (startAtStep === 2 && intakePrefill) {
+    const { assumptions, ...inputFields } = intakePrefill;
+    const inputs = inputFields as RetirementFNAInputs;
+    const initialAssumptions = (assumptions as RetirementFNAAdjustments) || {};
+    const adjustments = { ...initialAssumptions };
+    const calculations = calculateRetirementFNA(inputs, adjustments);
+    return {
+      currentStep: 2,
+      clientId,
+      clientName,
+      inputs,
+      adjustments,
+      calculations,
+      isPublishing: false,
+    };
+  }
+
+  return {
+    currentStep: startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1,
+    clientId,
+    clientName,
+    inputs: (intakePrefill as RetirementFNAInputs) || {},
+    adjustments: {},
+    calculations: null,
+    isPublishing: false,
+  };
 }
 
 export function RetirementFNAWizard({
@@ -46,17 +82,13 @@ export function RetirementFNAWizard({
   onComplete,
   onFNAComplete,
   open,
-  onClose
+  onClose,
+  startAtStep,
+  intakePrefill,
 }: RetirementFNAWizardProps) {
-  const [state, setState] = useState<RetirementFNAWizardState>({
-    currentStep: 1,
-    clientId,
-    clientName,
-    inputs: {},
-    adjustments: {},
-    calculations: null,
-    isPublishing: false,
-  });
+  const [state, setState] = useState<RetirementFNAWizardState>(() =>
+    buildInitialRetirementState(clientId, clientName, startAtStep, intakePrefill),
+  );
 
   // Handle completion callback
   const handleComplete = () => {

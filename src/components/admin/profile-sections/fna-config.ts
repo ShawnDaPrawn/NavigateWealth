@@ -15,6 +15,8 @@ import { RiskPlanningFnaAPI } from '../modules/risk-planning-fna/api';
 import { MedicalFNAApiService } from '../modules/medical-fna/api';
 import { RetirementFnaAPI } from '../modules/retirement-fna/api';
 import { EstatePlanningAPI as EstatePlanningApiService } from '../modules/estate-planning-fna/api';
+import { InvestmentINAApiService } from '../modules/investment-ina/api';
+import { TaxPlanningFnaAPI } from '../modules/tax-planning-fna/api';
 
 // ==================== LAZY WIZARD / RESULTS COMPONENTS ====================
 // These are heavy components with deep dependency trees.
@@ -49,6 +51,20 @@ const LazyEstatePlanningResultsView = React.lazy(() =>
   import('../modules/estate-planning-fna/components/EstatePlanningResultsView').then(m => ({ default: m.EstatePlanningResultsView }))
 );
 
+const LazyInvestmentINAWizard = React.lazy(() =>
+  import('../modules/investment-ina/components/InvestmentINAWizard').then(m => ({ default: m.InvestmentINAWizard }))
+);
+const LazyInvestmentINAResultsView = React.lazy(() =>
+  import('../modules/investment-ina/components/InvestmentINAResultsView').then(m => ({ default: m.InvestmentINAResultsView }))
+);
+
+const LazyTaxPlanningFNAWizard = React.lazy(() =>
+  import('../modules/tax-planning-fna/components/TaxPlanningFNAWizard').then(m => ({ default: m.TaxPlanningFNAWizard }))
+);
+const LazyTaxPlanningResultsView = React.lazy(() =>
+  import('../modules/tax-planning-fna/components/TaxPlanningResultsView').then(m => ({ default: m.TaxPlanningResultsView }))
+);
+
 // Generic FNA components (shared module — also lazy)
 const LazyFNAWizard = React.lazy(() =>
   import('../modules/fna/FNAWizard').then(m => ({ default: m.FNAWizard }))
@@ -60,7 +76,7 @@ const LazyFNAResultsView = React.lazy(() =>
 // ==================== CONFIG TYPE ====================
 
 export interface FNAConfig {
-  type: 'risk' | 'medical' | 'retirement' | 'investment' | 'estate';
+  type: 'risk' | 'medical' | 'retirement' | 'investment' | 'estate' | 'tax';
   name: string;
   Wizard: React.ComponentType<Record<string, unknown>>;
   ResultsView: React.ComponentType<Record<string, unknown>>;
@@ -134,6 +150,36 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     deleteFNA: (sessionId) => EstatePlanningApiService.deleteSession(sessionId),
     publishFNA: (sessionId) => EstatePlanningApiService.publishSession(sessionId),
     unpublishFNA: (sessionId) => EstatePlanningApiService.unpublishSession(sessionId),
+    wizardProps: {
+      onCompleteKey: 'onFNAComplete',
+    },
+    resultsPropsKey: 'fna',
+  },
+
+  'investments': {
+    type: 'investment',
+    name: 'Investment INA',
+    Wizard: LazyInvestmentINAWizard,
+    ResultsView: LazyInvestmentINAResultsView,
+    getLatestPublished: (clientId) => InvestmentINAApiService.getLatestPublished(clientId),
+    deleteFNA: (sessionId) => InvestmentINAApiService.deleteSession(sessionId),
+    publishFNA: (sessionId) => InvestmentINAApiService.publishSession(sessionId),
+    unpublishFNA: (sessionId) => InvestmentINAApiService.unpublishSession(sessionId),
+    wizardProps: {
+      onCompleteKey: 'onComplete',
+    },
+    resultsPropsKey: 'session',
+  },
+
+  'tax-planning': {
+    type: 'tax',
+    name: 'Tax Planning FNA',
+    Wizard: LazyTaxPlanningFNAWizard,
+    ResultsView: LazyTaxPlanningResultsView,
+    getLatestPublished: (clientId) => TaxPlanningFnaAPI.getLatestPublished(clientId),
+    deleteFNA: async () => { /* tax sessions managed via saveSession */ },
+    publishFNA: async (sessionId) => { await TaxPlanningFnaAPI.publishSession(sessionId); return {}; },
+    unpublishFNA: async (sessionId) => { await TaxPlanningFnaAPI.unpublishSession(sessionId); return {}; },
     wizardProps: {
       onCompleteKey: 'onFNAComplete',
     },
