@@ -14,6 +14,15 @@ import { applySelectedMatches, resolveFormPrefill } from './form-prefill-resolve
 const routes = new Hono();
 const log = createModuleLogger('form-prefill-routes');
 
+const INTAKE_DOMAIN_FORM_IDS: Record<string, FormPrefillId> = {
+  risk: 'risk-fna-step1',
+  medical: 'medical-fna-step1',
+  retirement: 'retirement-fna-step1',
+  tax: 'tax-fna-step1',
+  estate: 'estate-fna-step1',
+  investment: 'investment-ina-step1',
+};
+
 function isFormPrefillId(value: string): value is FormPrefillId {
   return listFormPrefillIds().includes(value as FormPrefillId);
 }
@@ -93,8 +102,8 @@ routes.post('/normalize-intake', async (c) => {
     const wizardInputs = normalizeIntakeToWizard(domain, inputs);
 
     if (clientId) {
-      const formId = `${domain}-intake-simplified` as FormPrefillId;
-      if (isFormPrefillId(formId)) {
+      const formId = INTAKE_DOMAIN_FORM_IDS[domain];
+      if (formId && isFormPrefillId(formId)) {
         const prefill = await resolveFormPrefill(clientId, formId, { intakeInputs: inputs });
         const merged = applySelectedMatches(
           wizardInputs,

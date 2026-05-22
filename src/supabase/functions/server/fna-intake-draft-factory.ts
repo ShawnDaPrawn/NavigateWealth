@@ -4,7 +4,7 @@
  */
 
 import * as kv from './kv_store.tsx';
-import type { FnaIntakeDomain, FnaIntakeSession } from './fna-intake-service.ts';
+import { FNA_INTAKE_DOMAINS, type FnaIntakeDomain, type FnaIntakeSession } from './fna-intake-types.ts';
 
 export interface IntakeDraftCreator {
   id: string;
@@ -123,11 +123,4 @@ async function createGenericDraftFromIntake(
   return fnaId;
 }
 
-export const FNA_INTAKE_DOMAIN_LIST: FnaIntakeDomain[] = [
-  'risk',
-  'medical',
-  'retirement',
-  'investment',
-  'tax',
-  'estate',
-];
+export const FNA_INTAKE_DOMAIN_LIST: FnaIntakeDomain[] = [...FNA_INTAKE_DOMAINS];

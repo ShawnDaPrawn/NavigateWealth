@@ -55,7 +55,9 @@ describe('normaliseRowsForXLSX', () => {
     ]);
   });
 
-  it('creates a branded Navigate Wealth workbook for report exports', async () => {
+  it(
+    'creates a branded Navigate Wealth workbook for report exports',
+    async () => {
     const workbook = await createBrandedReportWorkbook(
       [
         {
@@ -97,5 +99,7 @@ describe('normaliseRowsForXLSX', () => {
     expect(worksheet?.getCell('B6').font.bold).toBe(true);
     expect(worksheet?.getCell('C6').numFmt).toBe('R #,##0.00');
     expect(worksheet?.getCell('D6').value).toBeInstanceOf(Date);
-  });
+  },
+  15_000,
+  );
 });

@@ -9,4 +9,20 @@ describe('normalizeIntakeToWizard', () => {
     };
     expect(normalizeIntakeToWizard('risk', inputs)).toEqual(inputs);
   });
+
+  it('passes through full investment Step 1 payloads with goals array', () => {
+    const inputs = {
+      goals: [{ goalName: 'Education', targetAmountToday: 500000 }],
+      clientRiskProfile: 'moderate',
+    };
+    expect(normalizeIntakeToWizard('investment', inputs)).toEqual(inputs);
+  });
+
+  it('passes through full estate Step 1 payloads with willInfo', () => {
+    const inputs = {
+      familyInfo: { fullName: 'Jane Doe', maritalStatus: 'married' },
+      willInfo: { hasValidWill: true },
+    };
+    expect(normalizeIntakeToWizard('estate', inputs)).toEqual(inputs);
+  });
 });

@@ -36,7 +36,12 @@ export function ServiceFnaModal({
   description = 'Share your information or view your published analysis',
 }: ServiceFnaModalProps) {
   const intakeEnabled = isFnaIntakeFeatureEnabled();
-  const { data: batchFnaData } = useFnaBatchStatus(clientId, { enabled: open && !!clientId });
+  const {
+    data: batchFnaData,
+    error: batchStatusError,
+    isLoading: batchStatusLoading,
+    refetch: refetchBatchStatus,
+  } = useFnaBatchStatus(clientId, { enabled: open && !!clientId });
 
   if (!open) return null;
 
@@ -60,6 +65,9 @@ export function ServiceFnaModal({
             fnaType={fnaType}
             batchItem={batchFnaData?.find((item) => item.key === fnaType)}
             title={title}
+            statusError={batchStatusError?.message ?? null}
+            onRetryStatus={() => void refetchBatchStatus()}
+            isStatusLoading={batchStatusLoading}
           />
         ) : (
           <ClientFNAView clientId={clientId} fnaType={fnaType} />

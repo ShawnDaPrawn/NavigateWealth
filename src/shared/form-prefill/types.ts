@@ -8,11 +8,7 @@ export type FormPrefillId =
   | 'medical-fna-step1'
   | 'tax-fna-step1'
   | 'estate-fna-step1'
-  | 'investment-ina-step1'
-  | 'risk-intake-simplified'
-  | 'tax-intake-simplified'
-  | 'estate-intake-simplified'
-  | 'investment-intake-simplified';
+  | 'investment-ina-step1';
 
 export type PrefillDataSource =
   | 'profile'

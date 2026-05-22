@@ -52,32 +52,6 @@ export const FORM_FIELD_REGISTRY: Record<FormPrefillId, FormFieldMapping[]> = {
     { formField: 'householdDependants', label: 'Household dependants', canonicalKey: 'derived:dependant_count', group: 'Profile' },
     { formField: 'monthlyContribution', label: 'Monthly contribution', canonicalKey: 'derived:investment_monthly_contribution', group: 'Investments' },
   ],
-  'risk-intake-simplified': [
-    { formField: 'currentAge', label: 'Current age', canonicalKey: 'derived:age_from_dob', group: 'Profile' },
-    { formField: 'grossMonthlyIncome', label: 'Gross monthly income', canonicalKey: 'profile_gross_monthly_income', group: 'Income' },
-    { formField: 'netMonthlyIncome', label: 'Net monthly income', canonicalKey: 'profile_net_monthly_income', group: 'Income' },
-    { formField: 'totalOutstandingDebts', label: 'Total outstanding debts', canonicalKey: 'derived:total_liabilities', group: 'Financial' },
-    { formField: 'dependantsSummary', label: 'Dependants summary', canonicalKey: 'derived:dependants_summary', group: 'Household' },
-    { formField: 'existingCoverSummary', label: 'Existing cover summary', canonicalKey: 'derived:existing_cover_summary', group: 'Cover' },
-  ],
-  'tax-intake-simplified': [
-    { formField: 'taxNumber', label: 'Tax number', canonicalKey: 'profile_tax_number', group: 'Profile' },
-    { formField: 'annualTaxableIncome', label: 'Annual taxable income', canonicalKey: 'derived:annual_employment_income', group: 'Income' },
-    { formField: 'tfsaContributions', label: 'TFSA contributions (year)', canonicalKey: 'profile_tfsa_contributions', group: 'Contributions' },
-    { formField: 'taxConcerns', label: 'Main tax planning concerns', canonicalKey: 'profile_tax_concerns', group: 'Notes' },
-  ],
-  'estate-intake-simplified': [
-    { formField: 'hasValidWill', label: 'Valid will?', canonicalKey: 'profile_has_valid_will', group: 'Estate' },
-    { formField: 'maritalStatus', label: 'Marital status', canonicalKey: 'profile_marital_status', group: 'Profile' },
-    { formField: 'estimatedEstateValue', label: 'Estimated estate value', canonicalKey: 'derived:net_worth', group: 'Estate' },
-    { formField: 'estateNotes', label: 'Estate planning notes', canonicalKey: 'profile_estate_notes', group: 'Notes' },
-  ],
-  'investment-intake-simplified': [
-    { formField: 'investmentGoals', label: 'Primary investment goals', canonicalKey: 'profile_investment_goals', group: 'Goals' },
-    { formField: 'investmentHorizonYears', label: 'Investment horizon (years)', canonicalKey: 'profile_investment_horizon', group: 'Goals' },
-    { formField: 'monthlyContribution', label: 'Monthly contribution', canonicalKey: 'derived:investment_monthly_contribution', group: 'Investments' },
-    { formField: 'riskTolerance', label: 'Risk tolerance', canonicalKey: 'profile_risk_tolerance', group: 'Profile' },
-  ],
 };
 
 export function getFormFieldMappings(formId: FormPrefillId): FormFieldMapping[] {

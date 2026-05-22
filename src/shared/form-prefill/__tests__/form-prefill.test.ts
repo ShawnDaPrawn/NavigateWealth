@@ -10,7 +10,8 @@ describe('form-field-registry', () => {
   it('lists all supported internal form ids', () => {
     const ids = listFormPrefillIds();
     expect(ids).toContain('retirement-fna-step1');
-    expect(ids).toContain('risk-intake-simplified');
+    expect(ids).toContain('risk-fna-step1');
+    expect(ids).not.toContain('risk-intake-simplified');
   });
 
   it('maps retirement step 1 fields to canonical keys', () => {

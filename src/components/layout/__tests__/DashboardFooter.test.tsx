@@ -1,6 +1,7 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 
 const fetchMock = vi.fn();
 
@@ -10,6 +11,14 @@ vi.mock('../Logo', () => ({
 }));
 
 import { DashboardFooter } from '../DashboardFooter';
+
+function renderFooter() {
+  return render(
+    <MemoryRouter>
+      <DashboardFooter />
+    </MemoryRouter>,
+  );
+}
 
 function buildDocumentResponse(slug: string, title: string) {
   return {
@@ -45,7 +54,7 @@ describe('DashboardFooter', () => {
       json: async () => buildDocumentResponse('privacy-notice', 'Privacy Notice'),
     });
 
-    render(<DashboardFooter />);
+    renderFooter();
 
     fireEvent.click(screen.getByRole('button', { name: /Privacy Policy/i }));
 
@@ -72,7 +81,7 @@ describe('DashboardFooter', () => {
       json: async () => buildDocumentResponse('conflict-of-interest', 'Conflict of Interest'),
     });
 
-    render(<DashboardFooter />);
+    renderFooter();
 
     fireEvent.click(screen.getByRole('button', { name: /FAIS Conflict of Interest Policy/i }));
 

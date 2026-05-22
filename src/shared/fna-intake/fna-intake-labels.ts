@@ -91,5 +91,5 @@ export function getFnaStatusDescription(
 
 export function isFnaIntakeFeatureEnabled(): boolean {
   const flag = import.meta.env.VITE_FNA_INTAKE_ENABLED;
-  return flag !== 'false' && flag !== '0';
+  return flag === 'true' || flag === '1';
 }

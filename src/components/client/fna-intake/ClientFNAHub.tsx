@@ -22,9 +22,20 @@ interface ClientFNAHubProps {
   fnaType: ClientFnaType;
   batchItem?: BatchFNAStatusItem;
   title?: string;
+  statusError?: string | null;
+  onRetryStatus?: () => void;
+  isStatusLoading?: boolean;
 }
 
-export function ClientFNAHub({ clientId, fnaType, batchItem, title }: ClientFNAHubProps) {
+export function ClientFNAHub({
+  clientId,
+  fnaType,
+  batchItem,
+  title,
+  statusError,
+  onRetryStatus,
+  isStatusLoading,
+}: ClientFNAHubProps) {
   const [intakeMode, setIntakeMode] = useState<HubIntakeMode>('none');
 
   const view = useMemo(() => {
@@ -57,6 +68,16 @@ export function ClientFNAHub({ clientId, fnaType, batchItem, title }: ClientFNAH
 
   return (
     <div className="space-y-4">
+      {statusError && (
+        <div className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
+          <span>We could not load your needs analysis status. You can still start or continue your discovery.</span>
+          {onRetryStatus && (
+            <Button variant="outline" size="sm" onClick={onRetryStatus} disabled={isStatusLoading}>
+              {isStatusLoading ? 'Retrying…' : 'Retry'}
+            </Button>
+          )}
+        </div>
+      )}
       {requestInfoAt && status === 'client_draft' && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <strong>Action needed:</strong> Your adviser needs more information. Open your discovery form to
