@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { TopBar } from './TopBar';
 import { Navigation } from './Navigation';
@@ -26,11 +27,15 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, showNavAndFooter = true, forcePublicLayout = false }: MainLayoutProps) {
   const { isAuthenticated, user, logout } = useAuth();
+  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
 
   // When forcePublicLayout is on, treat as unauthenticated for layout decisions
   const effectivelyAuthenticated = forcePublicLayout ? false : isAuthenticated;
   const showPublicTopBar = !effectivelyAuthenticated;
+  const isArticleReaderPage = location.pathname.startsWith('/resources/article/');
+  /** Keep TopBar visible while reading so mobile nav logo/menu keep balanced vertical spacing. */
+  const collapsePublicTopBar = isScrolled && !isArticleReaderPage;
   // Use accountStatus (primary) with applicationStatus fallback for backward compat
   const userStatus = user?.accountStatus || user?.applicationStatus;
   const isDashboardPage = effectivelyAuthenticated && userStatus === 'approved';
@@ -101,7 +106,7 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
         {showPublicTopBar && (
           <div
             className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              isScrolled ? 'max-h-0 opacity-0' : 'max-h-12 opacity-100'
+              collapsePublicTopBar ? 'max-h-0 opacity-0' : 'max-h-12 opacity-100'
             }`}
           >
             <TopBar />
