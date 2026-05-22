@@ -34,8 +34,9 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
   const effectivelyAuthenticated = forcePublicLayout ? false : isAuthenticated;
   const showPublicTopBar = !effectivelyAuthenticated;
   const isArticleReaderPage = location.pathname.startsWith('/resources/article/');
-  /** Keep TopBar visible while reading so mobile nav logo/menu keep balanced vertical spacing. */
-  const collapsePublicTopBar = isScrolled && !isArticleReaderPage;
+  const collapsePublicTopBar = isScrolled;
+  /** When the TopBar collapses on articles, add mobile nav padding so logo/menu stay centered. */
+  const articleCompactMobileNav = isArticleReaderPage && isScrolled && showPublicTopBar;
   // Use accountStatus (primary) with applicationStatus fallback for backward compat
   const userStatus = user?.accountStatus || user?.applicationStatus;
   const isDashboardPage = effectivelyAuthenticated && userStatus === 'approved';
@@ -113,7 +114,10 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
           </div>
         )}
         <div className="relative">
-          <Navigation forcePublic={forcePublicLayout} />
+          <Navigation
+            forcePublic={forcePublicLayout}
+            articleCompactMobilePadding={articleCompactMobileNav}
+          />
           <div
             id={READING_PROGRESS_SLOT_ID}
             className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
