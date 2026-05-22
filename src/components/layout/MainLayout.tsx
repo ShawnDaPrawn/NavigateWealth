@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { TopBar } from './TopBar';
 import { Navigation } from './Navigation';
@@ -23,10 +24,15 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, showNavAndFooter = true, forcePublicLayout = false }: MainLayoutProps) {
   const { isAuthenticated, user, logout } = useAuth();
+  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
 
   // When forcePublicLayout is on, treat as unauthenticated for layout decisions
   const effectivelyAuthenticated = forcePublicLayout ? false : isAuthenticated;
+  const isArticleReaderPage = location.pathname.startsWith('/resources/article/');
+  const showPublicTopBar = !effectivelyAuthenticated;
+  /** Keep the full public header (TopBar + nav) pinned while reading long articles. */
+  const pinPublicSiteChrome = showPublicTopBar && isArticleReaderPage;
   // Use accountStatus (primary) with applicationStatus fallback for backward compat
   const userStatus = user?.accountStatus || user?.applicationStatus;
   const isDashboardPage = effectivelyAuthenticated && userStatus === 'approved';
@@ -91,19 +97,27 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
   
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* TopBar - only show for logged out users (or forcePublicLayout), smoothly collapses on scroll */}
-      {!effectivelyAuthenticated && (
+      {/* TopBar - collapses on scroll except on article reader pages */}
+      {showPublicTopBar && (
         <div
-          className={`transition-all duration-300 ease-in-out overflow-hidden ${
-            isScrolled ? 'max-h-0 opacity-0' : 'max-h-12 opacity-100'
-          }`}
+          className={
+            pinPublicSiteChrome
+              ? 'sticky top-0 z-[60] bg-gray-200 border-b border-gray-300/60'
+              : `transition-all duration-300 ease-in-out overflow-hidden ${
+                isScrolled ? 'max-h-0 opacity-0' : 'max-h-12 opacity-100'
+              }`
+          }
         >
           <TopBar />
         </div>
       )}
       
       {/* Navigation - sticky positioned */}
-      <div className={`sticky top-0 z-50 relative ${isScrolled ? 'shadow-lg' : ''}`}>
+      <div
+        className={`sticky relative z-50 ${pinPublicSiteChrome ? 'top-12' : 'top-0'} ${
+          isScrolled ? 'shadow-lg' : ''
+        }`}
+      >
         <Navigation forcePublic={forcePublicLayout} />
         {/* Article reading progress mounts here — absolute so nav layout is unchanged */}
         <div
