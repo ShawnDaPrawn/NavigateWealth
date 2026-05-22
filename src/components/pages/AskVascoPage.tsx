@@ -473,32 +473,6 @@ export function AskVascoPage() {
         />
 
         <div className="relative z-10 mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          <div className="mb-6 overflow-hidden rounded-2xl border border-[#ddd6fe]/80 bg-white/85 shadow-sm backdrop-blur">
-            <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-              <div className="flex min-w-0 items-center gap-4">
-                <div className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-[#f5f3ff]">
-                  <div className="absolute inset-1 rounded-full border border-[#c4b5fd]/60" />
-                  <div className="absolute inset-3 rounded-full border border-[#6d28d9]/10" />
-                  <VascoAvatar size="lg" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6d28d9]">
-                    AI Financial Navigator
-                  </p>
-                  <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#1a1e36] sm:text-2xl">
-                    Clear guidance for South African financial questions
-                  </h2>
-                  <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-600">
-                    Ask about financial planning, retirement, tax, risk cover, estate planning, or
-                    Navigate Wealth services.
-                  </p>
-                </div>
-              </div>
-              <div className="hidden h-20 w-20 flex-shrink-0 items-center justify-center rounded-full border border-[#ddd6fe]/80 bg-white/60 text-[#6d28d9] lg:flex">
-                <Compass className="h-9 w-9" />
-              </div>
-            </div>
-          </div>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
             <div className="space-y-6 lg:col-span-1">
               <Card className="relative overflow-hidden border-[#ddd6fe]/80 bg-gradient-to-br from-white via-[#f5f3ff] to-white shadow-sm">
