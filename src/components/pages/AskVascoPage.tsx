@@ -458,10 +458,10 @@ export function AskVascoPage() {
         }`}
       >
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_28%_12%,rgba(214,183,106,0.20),transparent_34%),radial-gradient(circle_at_72%_0%,rgba(109,40,217,0.10),transparent_32%)]" />
-          <div className="absolute right-[-90px] top-28 h-72 w-72 rounded-full border border-[#d6b76a]/20" />
+          <div className="absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_28%_12%,rgba(109,40,217,0.10),transparent_34%),radial-gradient(circle_at_72%_0%,rgba(14,165,233,0.08),transparent_32%)]" />
+          <div className="absolute right-[-90px] top-28 h-72 w-72 rounded-full border border-[#c4b5fd]/30" />
           <div className="absolute right-[-42px] top-40 h-48 w-48 rounded-full border border-[#6d28d9]/10" />
-          <div className="absolute left-4 top-64 h-px w-80 rotate-[-12deg] bg-gradient-to-r from-transparent via-[#d6b76a]/30 to-transparent" />
+          <div className="absolute left-4 top-64 h-px w-80 rotate-[-12deg] bg-gradient-to-r from-transparent via-[#8b5cf6]/25 to-transparent" />
           <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(26,30,54,0.8)_1px,transparent_1px),linear-gradient(90deg,rgba(26,30,54,0.8)_1px,transparent_1px)] [background-size:48px_48px]" />
         </div>
 
@@ -473,16 +473,16 @@ export function AskVascoPage() {
         />
 
         <div className="relative z-10 mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          <div className="mb-6 overflow-hidden rounded-2xl border border-[#e3d3a1]/60 bg-white/85 shadow-sm backdrop-blur">
+          <div className="mb-6 overflow-hidden rounded-2xl border border-[#ddd6fe]/80 bg-white/85 shadow-sm backdrop-blur">
             <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <div className="flex min-w-0 items-center gap-4">
-                <div className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-[#f8f4e8]">
-                  <div className="absolute inset-1 rounded-full border border-[#d6b76a]/40" />
+                <div className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-[#f5f3ff]">
+                  <div className="absolute inset-1 rounded-full border border-[#c4b5fd]/60" />
                   <div className="absolute inset-3 rounded-full border border-[#6d28d9]/10" />
                   <VascoAvatar size="lg" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a6d1f]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6d28d9]">
                     AI Financial Navigator
                   </p>
                   <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#1a1e36] sm:text-2xl">
@@ -494,19 +494,19 @@ export function AskVascoPage() {
                   </p>
                 </div>
               </div>
-              <div className="hidden h-20 w-20 flex-shrink-0 items-center justify-center rounded-full border border-[#d6b76a]/30 bg-white/60 text-[#6d28d9] lg:flex">
+              <div className="hidden h-20 w-20 flex-shrink-0 items-center justify-center rounded-full border border-[#ddd6fe]/80 bg-white/60 text-[#6d28d9] lg:flex">
                 <Compass className="h-9 w-9" />
               </div>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
             <div className="space-y-6 lg:col-span-1">
-              <Card className="relative overflow-hidden border-[#e3d3a1]/60 bg-gradient-to-br from-white via-[#fbf8f0] to-white shadow-sm">
-                <div aria-hidden="true" className="absolute -right-10 -top-10 h-28 w-28 rounded-full border border-[#d6b76a]/25" />
+              <Card className="relative overflow-hidden border-[#ddd6fe]/80 bg-gradient-to-br from-white via-[#f5f3ff] to-white shadow-sm">
+                <div aria-hidden="true" className="absolute -right-10 -top-10 h-28 w-28 rounded-full border border-[#c4b5fd]/40" />
                 <div aria-hidden="true" className="absolute -right-4 top-6 h-16 w-16 rounded-full border border-[#6d28d9]/10" />
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Compass className="h-4 w-4 text-[#8a6d1f]" />
+                    <Compass className="h-4 w-4 text-[#6d28d9]" />
                     About Vasco
                   </CardTitle>
                 </CardHeader>
@@ -517,13 +517,13 @@ export function AskVascoPage() {
                     our services — no account needed.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="border-[#e3d3a1]/70 bg-white/70 text-gray-600">
+                    <Badge variant="secondary" className="border-[#ddd6fe]/80 bg-white/70 text-gray-600">
                       24/7 Support
                     </Badge>
-                    <Badge variant="secondary" className="border-[#e3d3a1]/70 bg-white/70 text-gray-600">
+                    <Badge variant="secondary" className="border-[#ddd6fe]/80 bg-white/70 text-gray-600">
                       No Login
                     </Badge>
-                    <Badge variant="secondary" className="border-[#e3d3a1]/70 bg-white/70 text-gray-600">
+                    <Badge variant="secondary" className="border-[#ddd6fe]/80 bg-white/70 text-gray-600">
                       GPT-4o
                     </Badge>
                   </div>
@@ -533,7 +533,7 @@ export function AskVascoPage() {
               <Card className="border-gray-200/80 bg-white/90 shadow-sm backdrop-blur">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Zap className="h-4 w-4 text-[#c1972e]" />
+                    <Zap className="h-4 w-4 text-[#6d28d9]" />
                     Suggested Topics
                   </CardTitle>
                 </CardHeader>
@@ -544,10 +544,10 @@ export function AskVascoPage() {
                         key={prompt}
                         onClick={() => void sendMessage(prompt)}
                         disabled={isStreaming}
-                        className="group flex w-full items-center justify-between rounded-lg border border-gray-100 bg-white p-2.5 text-left text-xs text-gray-600 shadow-sm transition-colors hover:border-[#d6b76a]/50 hover:bg-[#fbf8f0] hover:text-[#1a1e36]"
+                        className="group flex w-full items-center justify-between rounded-lg border border-gray-100 bg-white p-2.5 text-left text-xs text-gray-600 shadow-sm transition-colors hover:border-[#c4b5fd] hover:bg-[#f5f3ff] hover:text-[#1a1e36]"
                       >
                         <span className="flex min-w-0 items-center gap-2">
-                          <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#d6b76a]" />
+                          <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#6d28d9]" />
                           <span className="truncate">{prompt}</span>
                         </span>
                         <ChevronRight className="h-3 w-3 flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
@@ -571,7 +571,7 @@ export function AskVascoPage() {
                     { name: 'Risk Management', icon: Shield },
                   ].map((capability) => (
                     <div key={capability.name} className="flex items-center gap-3 text-sm text-gray-600">
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-[#e3d3a1]/60 bg-[#fbf8f0]">
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-[#ddd6fe]/80 bg-[#f5f3ff]">
                         <capability.icon className="h-4 w-4 text-[#6d28d9]" />
                       </div>
                       <span>{capability.name}</span>
@@ -583,7 +583,7 @@ export function AskVascoPage() {
               <Button
                 onClick={() => setShowHandoff(true)}
                 variant="outline"
-                className="w-full border-[#d6b76a]/60 bg-white/80 text-primary shadow-sm hover:bg-[#fbf8f0]"
+                className="w-full border-primary/25 bg-white/80 text-primary shadow-sm hover:bg-purple-50"
               >
                 <Phone className="mr-2 h-4 w-4" />
                 Talk to an Adviser
@@ -604,9 +604,9 @@ export function AskVascoPage() {
 
             <div className="lg:col-span-3">
               <VascoInlineChatCard
-                className="border-[#e3d3a1]/60 bg-white/95 shadow-[0_24px_70px_-48px_rgba(26,30,54,0.7)]"
-                headerClassName="border-[#e6d7aa]/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(251,248,240,0.92))]"
-                messagesClassName="bg-[#f8f9fb] [background-image:linear-gradient(rgba(26,30,54,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(214,183,106,0.075)_1px,transparent_1px)] [background-size:42px_42px]"
+                className="border-[#ddd6fe]/80 bg-white/95 shadow-[0_24px_70px_-48px_rgba(26,30,54,0.7)]"
+                headerClassName="border-[#ddd6fe]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(245,243,255,0.92))]"
+                messagesClassName="bg-[#f8f9fb] [background-image:linear-gradient(rgba(26,30,54,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(109,40,217,0.055)_1px,transparent_1px)] [background-size:42px_42px]"
                 sessionTitle="Ask Vasco"
                 sessionSubtitle="AI Financial Navigator · No login required"
                 messages={messages}
@@ -624,7 +624,7 @@ export function AskVascoPage() {
                 onFeedback={handleFeedback}
                 headerExtra={
                   remaining !== null && remaining < 10 ? (
-                    <span className="text-xs font-medium text-amber-600">{remaining} messages left</span>
+                    <span className="text-xs font-medium text-primary">{remaining} messages left</span>
                   ) : null
                 }
                 inputPlaceholder="Ask Vasco about financial planning, retirement, tax, or try a calculation..."
@@ -643,7 +643,7 @@ export function AskVascoPage() {
                 }
                 beforeInput={
                   userMessageCount >= 4 && !showHandoff ? (
-                    <div className="mx-6 mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#e3d3a1]/70 bg-gradient-to-r from-[#fbf8f0] to-purple-50/70 p-3">
+                    <div className="mx-6 mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#ddd6fe]/80 bg-gradient-to-r from-[#f5f3ff] to-purple-50/70 p-3">
                       <p className="min-w-0 truncate text-xs text-gray-700">
                         Want personalised advice?{' '}
                         <span className="font-medium text-primary">Talk to a qualified adviser.</span>
