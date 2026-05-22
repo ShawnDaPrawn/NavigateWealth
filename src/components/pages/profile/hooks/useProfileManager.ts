@@ -87,7 +87,8 @@ export interface ProfileManagerState {
   initialLoading: boolean;
   saveSuccess: boolean;
   setSaveSuccess: React.Dispatch<React.SetStateAction<boolean>>;
-  handleSave: () => Promise<void>;
+  handleSave: () => Promise<boolean>;
+  handleDiscard: () => void;
   /** True when profileData has diverged from the last saved/loaded state */
   isDirty: boolean;
 
@@ -468,12 +469,12 @@ export function useProfileManager({
   // Save Handler
   // ══════════════════════════════════════════════════════════════════
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (): Promise<boolean> => {
     if (profileData.netIncome > profileData.grossIncome && profileData.grossIncome > 0) {
       setIncomeValidationError(
         `Net income (${formatCurrency(profileData.netIncome)}) cannot exceed gross income (${formatCurrency(profileData.grossIncome)}). Please correct this before saving.`
       );
-      return;
+      return false;
     }
 
     setIsLoading(true);
@@ -481,8 +482,7 @@ export function useProfileManager({
       const session = await getSession();
       if (!session?.access_token || !session?.user?.id) {
         toast.error('Not authenticated. Please log in again.');
-        setIsLoading(false);
-        return;
+        return false;
       }
 
       const userId = session.user.id;
@@ -506,8 +506,7 @@ export function useProfileManager({
         toast.success('Profile saved successfully!');
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
-        setIsLoading(false);
-        return;
+        return true;
       }
 
       const cleanPatchData = deepSanitize(patchData);
@@ -525,8 +524,7 @@ export function useProfileManager({
         toast.success('Profile saved successfully!');
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
-        setIsLoading(false);
-        return;
+        return true;
       }
 
       await api.post('/profile/personal-info', { key: profileKey, data: cleanPatchData });
@@ -541,8 +539,10 @@ export function useProfileManager({
       toast.success('Profile saved successfully!');
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+      return true;
     } catch (error: unknown) {
       toast.error(`Failed to save: ${getUserErrorMessage(error)}`);
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -812,6 +812,39 @@ export function useProfileManager({
     return JSON.stringify(profileData) !== JSON.stringify(originalData);
   }, [profileData, originalData]);
 
+  const handleDiscard = useCallback(() => {
+    if (!originalData) return;
+
+    setProfileData({ ...originalData });
+    setSaveSuccess(false);
+    setIncomeValidationError('');
+    setGrossIncomeDisplay(null);
+    setNetIncomeDisplay(null);
+    setGrossAnnualIncomeDisplay(null);
+    setNetAnnualIncomeDisplay(null);
+    setAssetDisplayValues({});
+    setLiabilityDisplayValues({});
+    setSelfEmployedInEditMode(false);
+    setProofOfResidenceInEditMode(false);
+    setProofOfBankToDelete(null);
+    setProofOfResidenceToDelete(false);
+    setIdentityDocsInEditMode(new Set());
+    bankAccountCrud.resetEditMode();
+    familyMemberCrud.resetEditMode();
+    assetCrud.resetEditMode();
+    liabilityCrud.resetEditMode();
+    chronicConditionCrud.resetEditMode();
+    employerCrud.resetEditMode();
+  }, [
+    originalData,
+    bankAccountCrud,
+    familyMemberCrud,
+    assetCrud,
+    liabilityCrud,
+    chronicConditionCrud,
+    employerCrud,
+  ]);
+
   // ══════════════════════════════════════════════════════════════════
   // Return — public API unchanged from pre-refactor
   // ══════════════════════════════════════════════════════════════════
@@ -826,6 +859,7 @@ export function useProfileManager({
     saveSuccess,
     setSaveSuccess,
     handleSave,
+    handleDiscard,
     isDirty,
 
     // Income display states

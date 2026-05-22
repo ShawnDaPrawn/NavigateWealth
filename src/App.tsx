@@ -3,7 +3,6 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Analytics } from "@vercel/analytics/react";
 import { validateEnv, logEnvironmentInfo } from "./config/env";
 import { AppProviders } from "./components/providers/AppProviders";
-import { AppRoutes } from "./AppRoutes";
 import { SkipToContent } from "./components/shared/AccessibilityHelpers";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary";
 import {
@@ -285,12 +284,10 @@ export default function App() {
       fallbackTitle="Application Error"
       fallbackMessage="Navigate Wealth encountered an unexpected error. Please refresh the page to try again."
     >
-      <AppProviders>
-        <SkipToContent targetId="main-content" />
-        <SpeedInsights />
-        <Analytics />
-        <AppRoutes />
-      </AppProviders>
+      <SkipToContent targetId="main-content" />
+      <SpeedInsights />
+      <Analytics />
+      <AppProviders />
     </ErrorBoundary>
   );
 }

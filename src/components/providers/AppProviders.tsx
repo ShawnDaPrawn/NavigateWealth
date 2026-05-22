@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router } from 'react-router';
+import React, { useMemo } from 'react';
+import { RouterProvider } from 'react-router';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { AuthProvider } from '../auth/AuthContext';
 import { Toaster } from '../ui/sonner';
@@ -8,7 +8,10 @@ import { PerformanceOptimizer } from '../shared/PerformanceOptimizer';
 import { InactivityManager } from '../auth/InactivityManager';
 import { ScrollToTop } from '../shared/ScrollToTop';
 import { ImageOptimization } from '../shared/ImageOptimization';
+import { UnsavedChangesRegistryProvider } from '../shared/unsaved-changes';
 import { createClient } from '../../utils/supabase/client';
+import { createAppRouter } from '../../router/createAppRouter';
+import { AppRoutes } from '../../AppRoutes';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,22 +68,39 @@ const queryClient = new QueryClient({
   }),
 });
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
+function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <PerformanceOptimizer />
+      <ImageOptimization />
+      <InactivityManager />
+      <ScrollToTop />
+      <UnsavedChangesRegistryProvider>
+        <ErrorBoundary fallbackTitle="Navigation Error">
+          {children}
+        </ErrorBoundary>
+      </UnsavedChangesRegistryProvider>
+      <Toaster position="top-right" richColors />
+    </>
+  );
+}
+
+export function AppProviders() {
+  const router = useMemo(
+    () => createAppRouter(
+      <AppShell>
+        <AppRoutes />
+      </AppShell>,
+    ),
+    [],
+  );
+
   return (
     <ErrorBoundary fallbackTitle="Application Error" showDetails={true}>
       <QueryClientProvider client={queryClient}>
         <ErrorBoundary fallbackTitle="Authentication Error">
           <AuthProvider>
-            <Router>
-              <PerformanceOptimizer />
-              <ImageOptimization />
-              <InactivityManager />
-              <ScrollToTop />
-              <ErrorBoundary fallbackTitle="Navigation Error">
-                {children}
-              </ErrorBoundary>
-              <Toaster position="top-right" richColors />
-            </Router>
+            <RouterProvider router={router} />
           </AuthProvider>
         </ErrorBoundary>
       </QueryClientProvider>

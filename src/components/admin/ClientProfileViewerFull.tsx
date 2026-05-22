@@ -6,7 +6,7 @@
  * including CRUD operations, validations, file uploads, risk assessment, and more.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -39,6 +39,11 @@ import {
 import { useClientProfile } from './modules/client-management/hooks/useClientProfile';
 import { copyToClipboard } from '../../utils/clipboard';
 import { api } from '../../utils/api';
+import {
+  UnsavedChangesDialog,
+  useUnsavedChangesGuard,
+  useUnsavedChangesRegistry,
+} from '../shared/unsaved-changes';
 import {
   derivePolicyAssetsFromPolicies,
   type DerivedPolicyAsset,
@@ -147,9 +152,37 @@ interface ClientProfileViewerFullProps {
   onSave?: (data: ProfileData) => void;
 }
 
+const ADMIN_CLIENT_PROFILE_REGISTRY_ID = 'admin-client-profile';
+
 export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileViewerFullProps) {
   const [activeSection, setActiveSection] = useState('personal');
   const { state, actions } = useClientProfile(clientData, onSave);
+  const registry = useUnsavedChangesRegistry();
+
+  const unsavedChangesGuard = useUnsavedChangesGuard({
+    isDirty: state.hasChanges,
+    onSave: actions.handleSave,
+    onDiscard: actions.handleDiscard,
+    message:
+      'You have unsaved changes to this client profile. Would you like to save before leaving?',
+  });
+
+  useEffect(() => {
+    registry.register({
+      id: ADMIN_CLIENT_PROFILE_REGISTRY_ID,
+      isDirty: state.hasChanges,
+      tryAction: unsavedChangesGuard.tryAction,
+    });
+    return () => registry.unregister(ADMIN_CLIENT_PROFILE_REGISTRY_ID);
+  }, [registry, state.hasChanges, unsavedChangesGuard.tryAction]);
+
+  const handleSectionChange = useCallback(
+    (sectionId: string) => {
+      if (sectionId === activeSection) return;
+      unsavedChangesGuard.tryAction(() => setActiveSection(sectionId));
+    },
+    [activeSection, unsavedChangesGuard],
+  );
   const [policyRecords, setPolicyRecords] = useState<PolicyAssetSourceRecord[]>([]);
   const [policyAssetsLoading, setPolicyAssetsLoading] = useState(false);
   const [policyAssetsError, setPolicyAssetsError] = useState<string | null>(null);
@@ -235,7 +268,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             return (
               <button
                 key={section.id}
-                onClick={() => setActiveSection(section.id)}
+                onClick={() => handleSectionChange(section.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                   activeSection === section.id
                     ? 'bg-white text-[#6d28d9] border-2 border-[#6d28d9] shadow-sm'
@@ -913,6 +946,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
 
 
       </div>
+      <UnsavedChangesDialog {...unsavedChangesGuard.dialogProps} />
     </div>
   );
 }

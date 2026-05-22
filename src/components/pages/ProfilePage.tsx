@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { BudgetingPage } from './BudgetingPage';
 
@@ -27,16 +27,7 @@ import { Button } from '../ui/button';
 import { BrandPageLoader } from '../ui/brand-loader';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../ui/alert-dialog';
+import { UnsavedChangesDialog, useUnsavedChangesGuard } from '../shared/unsaved-changes';
 
 // Icons — only those used in the page shell (nav, header, loading)
 import {
@@ -84,9 +75,7 @@ const NAV_ITEMS = [
 export function ProfilePage() {
   const { user, updateUser } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('personal');
-  const [isSavingBeforeLeave, setIsSavingBeforeLeave] = useState(false);
 
   // All profile state and handlers via custom hook (Guidelines §6)
   const pm = useProfileManager({
@@ -113,73 +102,20 @@ export function ProfilePage() {
     }
   }, [location]);
 
-  // ── Browser tab/window close protection ─────────────────────────
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (pm.isDirty) {
-        e.preventDefault();
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [pm.isDirty]);
+  const unsavedChangesGuard = useUnsavedChangesGuard({
+    isDirty: pm.isDirty,
+    onSave: pm.handleSave,
+    onDiscard: pm.handleDiscard,
+    message: 'You have unsaved changes to your profile. Would you like to save before leaving?',
+  });
 
-  // ── Custom navigation guard ─────────────────────────────────────
-  // WORKAROUND: useBlocker-data-router-incompatibility
-  // `useBlocker` from react-router requires a data router (createBrowserRouter),
-  // but this app uses BrowserRouter. This custom guard uses the popstate event
-  // to intercept browser back/forward navigation when there are unsaved changes.
-  // Proper fix: migrate to createBrowserRouter when feasible.
-  const [navBlocked, setNavBlocked] = useState(false);
-  const isDirtyRef = useRef(pm.isDirty);
-  isDirtyRef.current = pm.isDirty;
-  const pendingNavRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!pm.isDirty) return;
-
-    // Push a duplicate history entry so we can catch the back navigation
-    window.history.pushState({ profileGuard: true }, '');
-
-    const handlePopState = (_e: PopStateEvent) => {
-      if (isDirtyRef.current) {
-        // Re-push to stay on the page and show the confirmation dialog
-        window.history.pushState({ profileGuard: true }, '');
-        setNavBlocked(true);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [pm.isDirty]);
-
-  // "Stay on Page" — dismiss the dialog
-  const handleNavReset = useCallback(() => {
-    setNavBlocked(false);
-  }, []);
-
-  // "Discard Changes" — allow the navigation to proceed
-  const handleNavProceed = useCallback(() => {
-    setNavBlocked(false);
-    // Navigate back (pop the guard entry + the original back intent)
-    navigate(-1);
-  }, [navigate]);
-
-  // "Save & Leave" — save first, then navigate
-  const handleSaveAndProceed = useCallback(async () => {
-    setIsSavingBeforeLeave(true);
-    try {
-      await pm.handleSave();
-      setNavBlocked(false);
-      navigate(-1);
-    } catch {
-      // Save failed — toast already shown by handleSave, stay on page
-    } finally {
-      setIsSavingBeforeLeave(false);
-    }
-  }, [pm.handleSave, navigate]);
+  const handleSectionChange = useCallback(
+    (sectionId: string) => {
+      if (sectionId === activeSection) return;
+      unsavedChangesGuard.tryAction(() => setActiveSection(sectionId));
+    },
+    [activeSection, unsavedChangesGuard],
+  );
 
   // ========================================================================
   // Render
@@ -241,7 +177,7 @@ export function ProfilePage() {
                     return (
                       <button
                         key={item.id}
-                        onClick={() => setActiveSection(item.id)}
+                        onClick={() => handleSectionChange(item.id)}
                         className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
                           activeSection === item.id
                             ? 'bg-[#6d28d9]/10 text-[#6d28d9] border-r-2 border-[#6d28d9]'
@@ -259,7 +195,7 @@ export function ProfilePage() {
 
             {/* Mobile Navigation */}
             <div className="lg:hidden mb-4">
-              <Select value={activeSection} onValueChange={setActiveSection}>
+              <Select value={activeSection} onValueChange={handleSectionChange}>
                 <SelectTrigger className="w-full"><SelectValue placeholder="Select section" /></SelectTrigger>
                 <SelectContent>
                   {NAV_ITEMS.map((item) => (
@@ -462,50 +398,7 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* ── Unsaved Changes Dialog ─────────────────────────────────── */}
-      <AlertDialog open={navBlocked}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <AlertDialogTitle className="text-lg text-gray-900">Unsaved Changes</AlertDialogTitle>
-                <AlertDialogDescription className="text-sm text-gray-600 mt-1">
-                  You have unsaved changes to your profile. Would you like to save before leaving?
-                </AlertDialogDescription>
-              </div>
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-2">
-            <AlertDialogCancel
-              onClick={handleNavReset}
-              className="border-gray-200 text-gray-700 hover:bg-gray-50"
-            >
-              Stay on Page
-            </AlertDialogCancel>
-            <Button
-              variant="outline"
-              onClick={handleNavProceed}
-              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-            >
-              Discard Changes
-            </Button>
-            <AlertDialogAction
-              onClick={handleSaveAndProceed}
-              disabled={isSavingBeforeLeave}
-              className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white"
-            >
-              {isSavingBeforeLeave ? (
-                <div className="contents"><Activity className="h-4 w-4 mr-2 animate-spin" />Saving...</div>
-              ) : (
-                <div className="contents"><Save className="h-4 w-4 mr-2" />Save & Leave</div>
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <UnsavedChangesDialog {...unsavedChangesGuard.dialogProps} />
     </div>
   );
 }

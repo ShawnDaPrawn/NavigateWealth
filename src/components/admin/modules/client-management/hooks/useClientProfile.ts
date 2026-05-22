@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner@2.0.3';
 import { clientApi, getClientProfileQueryOptions } from '../api';
@@ -45,9 +45,8 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   const [error, setError] = useState<string | null>(null);
 
   // Track a snapshot of loaded data to compare against for dirty detection.
-  // This is set AFTER profileData is updated from the server, so the comparison
-  // is against the normalised/merged state, not the raw server response.
   const [loadedProfileSnapshot, setLoadedProfileSnapshot] = useState<string | null>(null);
+  const loadedProfileDataRef = useRef<ProfileData | null>(null);
   // Flag to trigger snapshot capture after profileData has been updated from the server
   const [snapshotPending, setSnapshotPending] = useState(false);
 
@@ -267,7 +266,9 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   // "last known clean" state for dirty detection.
   useEffect(() => {
     if (snapshotPending) {
-      setLoadedProfileSnapshot(createProfileSnapshot(profileData));
+      const snapshot = createProfileSnapshot(profileData);
+      setLoadedProfileSnapshot(snapshot);
+      loadedProfileDataRef.current = { ...profileData };
       setSnapshotPending(false);
       setHasChanges(false);
     }
@@ -316,13 +317,13 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     setHasChanges(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<boolean> => {
     try {
       setSaving(true);
       const userId = clientData.id;
       if (!userId) {
         toast.error('Client user ID not found');
-        return;
+        return false;
       }
 
       // Legacy KV rows may embed `personalInformation` alongside flat fields; saving both
@@ -337,14 +338,48 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
 
       toast.success('Profile updated successfully');
       setLoadedProfileSnapshot(createProfileSnapshot(profilePayload as ProfileData));
+      loadedProfileDataRef.current = profilePayload as ProfileData;
       setHasChanges(false);
       if (onSave) onSave(profilePayload as ProfileData);
+      return true;
     } catch (error) {
       toast.error(`Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
     } finally {
       setSaving(false);
     }
   };
+
+  const handleDiscard = useCallback(() => {
+    const baseline = loadedProfileDataRef.current;
+    if (!baseline) return;
+
+    setProfileData({ ...baseline });
+    setHasChanges(false);
+    setIncomeValidationError('');
+    setGrossIncomeDisplay(null);
+    setNetIncomeDisplay(null);
+    setAssetDisplayValues({});
+    setLiabilityDisplayValues({});
+    setAssetsInEditMode(new Set());
+    setLiabilitiesInEditMode(new Set());
+    setFamilyMembersInEditMode(new Set());
+    setBankAccountsInEditMode(new Set());
+    setEmployersInEditMode(new Set());
+    setChronicConditionsInEditMode(new Set());
+    setIdentityDocsInEditMode(new Set());
+    setSelfEmployedInEditMode(false);
+    setProofOfResidenceInEditMode(false);
+    setAssetToDelete(null);
+    setLiabilityToDelete(null);
+    setBankAccountToDelete(null);
+    setFamilyMemberToDelete(null);
+    setChronicConditionToDelete(null);
+    setEmployerToDelete(null);
+    setIdentityDocToDelete(null);
+    setProofOfResidenceToDelete(false);
+    setProofOfBankToDelete(null);
+  }, []);
 
   // Identity Document Management Functions
   const hasDocumentType = (type: IdentityDocumentType) => {
@@ -1344,6 +1379,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       setHasChanges,
       handleInputChange,
       handleSave,
+      handleDiscard,
       addIdentityDocument,
       handleDocumentUpload,
       updateIdentityDocument,

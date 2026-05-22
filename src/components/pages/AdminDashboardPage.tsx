@@ -4,6 +4,7 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { AdminModule } from '../admin/layout/types';
 import { AdminNavigationProvider } from '../admin/layout/AdminNavigationContext';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
+import { useOptionalUnsavedChangesRegistry } from '../shared/unsaved-changes';
 import { useAutoContentProcessor } from '../admin/modules/publications/hooks/useAutoContentProcessor';
 import { useArticleNotificationProcessor } from '../admin/modules/publications/hooks/useArticleNotificationProcessor';
 import { useScheduledPublishProcessor } from '../admin/modules/publications/hooks/useScheduledPublishProcessor';
@@ -66,6 +67,7 @@ const IssuesModule = React.lazy(() => import('../admin/modules/issues/IssuesModu
 
 export function AdminDashboardPage() {
   const [searchParams] = useSearchParams();
+  const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
 
   // ── Deep Link Support ──────────────────────────────────────────────────
   // URL params like ?module=submissions&type=consultation allow email
@@ -87,11 +89,20 @@ export function AdminDashboardPage() {
 
   // Clear deep-link when navigating away from tasks
   const handleModuleChange = useCallback((module: string) => {
-    if (module !== 'tasks') {
-      setDeepLinkTaskId(null);
+    const applyModuleChange = () => {
+      if (module !== 'tasks') {
+        setDeepLinkTaskId(null);
+      }
+      setActiveModule(module as AdminModule);
+    };
+
+    if (unsavedChangesRegistry?.getDirtyEntries().length) {
+      unsavedChangesRegistry.tryLeaveAny(applyModuleChange);
+      return;
     }
-    setActiveModule(module as AdminModule);
-  }, []);
+
+    applyModuleChange();
+  }, [unsavedChangesRegistry]);
 
   // ── Background Processors ──
   // These run at the AdminDashboardPage level (not inside PublicationsModule)

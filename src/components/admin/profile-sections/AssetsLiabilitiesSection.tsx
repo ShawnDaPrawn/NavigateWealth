@@ -27,6 +27,7 @@ import { TrendingUp, DollarSign, Plus, Edit2, Trash2, X, Check, PieChart, AlertT
 import { EmptyState } from '../../pages/profile/EmptyState';
 import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
 import { findPossiblePolicyAssetMatches, type DerivedPolicyAsset } from '../../../utils/derivedPolicyAssets';
+import { useInlineEditDialogClose } from '../../shared/unsaved-changes';
 
 interface Asset {
   id: string;
@@ -178,6 +179,18 @@ export function AssetsLiabilitiesSection({
   const possibleDuplicateCount = Object.keys(possibleDuplicateMatches).length;
   const hasBalanceSheetData =
     assets.length > 0 || liabilities.length > 0 || derivedPolicyAssets.length > 0;
+
+  const assetEditGuard = useInlineEditDialogClose({
+    getItem: (id) => assets.find((asset) => asset.id === id),
+    onCancelEdit: cancelEditAsset,
+    itemLabel: 'this asset',
+  });
+
+  const liabilityEditGuard = useInlineEditDialogClose({
+    getItem: (id) => liabilities.find((liability) => liability.id === id),
+    onCancelEdit: cancelEditLiability,
+    itemLabel: 'this liability',
+  });
 
   return (
     <div className="space-y-5">
@@ -346,7 +359,10 @@ export function AssetsLiabilitiesSection({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => editAsset(asset.id)}
+                          onClick={() => {
+                            assetEditGuard.trackEditStart(asset.id);
+                            editAsset(asset.id);
+                          }}
                           className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9]/10"
                         >
                           <Edit2 className="mr-1 h-4 w-4" />
@@ -364,7 +380,10 @@ export function AssetsLiabilitiesSection({
                     </div>
                   </div>
 
-                  <Dialog open={isEditing} onOpenChange={(open) => !open && cancelEditAsset(asset.id)}>
+                  <Dialog
+                    open={isEditing}
+                    onOpenChange={(open) => assetEditGuard.handleDialogOpenChange(asset.id, open)}
+                  >
                     <DialogContent className="sm:max-w-2xl">
                       <DialogHeader>
                         <DialogTitle>{asset.name || `Asset ${index + 1}`}</DialogTitle>
@@ -483,14 +502,17 @@ export function AssetsLiabilitiesSection({
                       <DialogFooter>
                         <Button
                           variant="outline"
-                          onClick={() => cancelEditAsset(asset.id)}
+                          onClick={() => assetEditGuard.handleDialogOpenChange(asset.id, false)}
                           className="border-gray-300 text-gray-700 hover:bg-gray-50"
                         >
                           <X className="mr-1 h-4 w-4" />
                           Cancel
                         </Button>
                         <Button
-                          onClick={() => saveAsset(asset.id)}
+                          onClick={() => {
+                            assetEditGuard.clearSnapshot(asset.id);
+                            saveAsset(asset.id);
+                          }}
                           disabled={!isValid}
                           className={!isValid ? 'cursor-not-allowed bg-gray-300 text-gray-500 hover:bg-gray-300' : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'}
                         >
@@ -631,7 +653,10 @@ export function AssetsLiabilitiesSection({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => editLiability(liability.id)}
+                            onClick={() => {
+                              liabilityEditGuard.trackEditStart(liability.id);
+                              editLiability(liability.id);
+                            }}
                           className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9]/10"
                         >
                           <Edit2 className="mr-1 h-4 w-4" />
@@ -649,7 +674,10 @@ export function AssetsLiabilitiesSection({
                     </div>
                   </div>
 
-                  <Dialog open={isEditing} onOpenChange={(open) => !open && cancelEditLiability(liability.id)}>
+                  <Dialog
+                    open={isEditing}
+                    onOpenChange={(open) => liabilityEditGuard.handleDialogOpenChange(liability.id, open)}
+                  >
                     <DialogContent className="sm:max-w-2xl">
                       <DialogHeader>
                         <DialogTitle>{liability.name || `Liability ${index + 1}`}</DialogTitle>
@@ -821,14 +849,17 @@ export function AssetsLiabilitiesSection({
                       <DialogFooter>
                         <Button
                           variant="outline"
-                          onClick={() => cancelEditLiability(liability.id)}
+                          onClick={() => liabilityEditGuard.handleDialogOpenChange(liability.id, false)}
                           className="border-gray-300 text-gray-700 hover:bg-gray-50"
                         >
                           <X className="mr-1 h-4 w-4" />
                           Cancel
                         </Button>
                         <Button
-                          onClick={() => saveLiability(liability.id)}
+                          onClick={() => {
+                            liabilityEditGuard.clearSnapshot(liability.id);
+                            saveLiability(liability.id);
+                          }}
                           disabled={!isValid}
                           className={!isValid ? 'cursor-not-allowed bg-gray-300 text-gray-500 hover:bg-gray-300' : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'}
                         >
@@ -888,6 +919,9 @@ export function AssetsLiabilitiesSection({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {assetEditGuard.confirmDialog}
+      {liabilityEditGuard.confirmDialog}
     </div>
   );
 }

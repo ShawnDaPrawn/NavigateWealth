@@ -27,8 +27,9 @@ import {
   DialogTitle,
 } from '../../../ui/dialog';
 import { formatCurrency, formatCurrencyInput, cleanCurrencyInput } from '../../../../utils/currencyFormatter';
-import { TrendingUp, DollarSign, PieChart, Plus, Edit2, Trash2, X, Check, AlertTriangle } from 'lucide-react';
+import { TrendingUp, DollarSign, PieChart, Plus, Edit2, Trash2, X, Check, AlertTriangle, Scale, Wallet, Landmark } from 'lucide-react';
 import { findPossiblePolicyAssetMatches, type DerivedPolicyAsset } from '../../../../utils/derivedPolicyAssets';
+import { useInlineEditDialogClose } from '../../../shared/unsaved-changes';
 
 interface AssetsLiabilitiesSectionProps {
   profileData: ProfileData;
@@ -67,25 +68,28 @@ interface AssetsLiabilitiesSectionProps {
 function SummaryMetric({
   label,
   value,
+  helper,
   tone = 'neutral',
 }: {
   label: string;
   value: string;
+  helper?: string;
   tone?: 'neutral' | 'positive' | 'negative' | 'accent';
 }) {
   const toneClasses =
     tone === 'positive'
-      ? 'border-green-200 bg-green-50 text-green-900'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
       : tone === 'negative'
-        ? 'border-red-200 bg-red-50 text-red-900'
+        ? 'border-red-200 bg-red-50 text-red-950'
         : tone === 'accent'
           ? 'border-[#6d28d9]/20 bg-[#6d28d9]/5 text-[#4c1d95]'
-          : 'border-gray-200 bg-gray-50 text-gray-900';
+          : 'border-gray-200 bg-white text-gray-900';
 
   return (
-    <div className={`rounded-xl border px-4 py-3 ${toneClasses}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-current/70">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-current">{value}</p>
+    <div className={`rounded-2xl border px-4 py-3 ${toneClasses}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-current/65">{label}</p>
+      <p className="mt-1 text-lg font-semibold leading-tight text-current">{value}</p>
+      {helper && <p className="mt-1 text-xs leading-snug text-current/65">{helper}</p>}
     </div>
   );
 }
@@ -153,36 +157,115 @@ export function AssetsLiabilitiesSection({
   const possibleDuplicateCount = Object.keys(possibleDuplicateMatches).length;
   const hasBalanceSheetData =
     profileData.assets.length > 0 || profileData.liabilities.length > 0 || derivedPolicyAssets.length > 0;
+  const netWorthIsNegative = combinedNetWorth < 0;
+
+  const assetEditGuard = useInlineEditDialogClose({
+    getItem: (id) => profileData.assets.find((asset) => asset.id === id),
+    onCancelEdit: cancelEditAsset,
+    itemLabel: 'this asset',
+  });
+
+  const liabilityEditGuard = useInlineEditDialogClose({
+    getItem: (id) => profileData.liabilities.find((liability) => liability.id === id),
+    onCancelEdit: cancelEditLiability,
+    itemLabel: 'this liability',
+  });
 
   return (
     <div className="space-y-5">
       {hasBalanceSheetData && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <SummaryMetric label="Manual Assets" value={formatCurrency(totalAssets)} tone="positive" />
-          <SummaryMetric label="Linked Policy Assets" value={formatCurrency(linkedPolicyAssetTotal)} tone="accent" />
-          <SummaryMetric label="Combined Assets" value={formatCurrency(combinedAssets)} tone="positive" />
-          <SummaryMetric label="Total Liabilities" value={formatCurrency(totalLiabilities)} tone="negative" />
-          <SummaryMetric label="Net Worth" value={formatCurrency(combinedNetWorth)} tone="accent" />
-        </div>
+        <Card className="overflow-hidden border-[#6d28d9]/20 shadow-sm">
+          <CardContent className="p-0">
+            <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_1.95fr]">
+              <div className="relative overflow-hidden bg-gradient-to-br from-[#22183f] via-[#31235d] to-[#6d28d9] p-6 text-white">
+                <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/10" />
+                <div className="absolute -bottom-20 left-8 h-44 w-44 rounded-full bg-white/5" />
+                <div className="relative">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/12 ring-1 ring-white/15">
+                    <Scale className="h-5 w-5" />
+                  </div>
+                  <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-white/65">
+                    Balance Sheet Position
+                  </p>
+                  <p className={`mt-2 text-3xl font-semibold leading-tight ${netWorthIsNegative ? 'text-red-200' : 'text-white'}`}>
+                    {formatCurrency(combinedNetWorth)}
+                  </p>
+                  <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/75">
+                    Net worth is calculated from all captured assets, linked policy values, and outstanding liabilities.
+                  </p>
+                  <div className="mt-5 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white/85">
+                    <span className="font-semibold">{formatCurrency(combinedAssets)}</span> assets
+                    <span className="mx-2 text-white/45">minus</span>
+                    <span className="font-semibold">{formatCurrency(totalLiabilities)}</span> liabilities
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-4 sm:p-6">
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-950">What is included</p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Manual entries remain editable here; policy-linked holdings are included automatically.
+                    </p>
+                  </div>
+                  {netWorthIsNegative && (
+                    <div className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+                      Negative net worth
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <SummaryMetric
+                    label="Manual Assets"
+                    value={formatCurrency(totalAssets)}
+                    helper={`${profileData.assets.length} editable ${profileData.assets.length === 1 ? 'entry' : 'entries'}`}
+                    tone="positive"
+                  />
+                  <SummaryMetric
+                    label="Linked Policies"
+                    value={formatCurrency(linkedPolicyAssetTotal)}
+                    helper={`${derivedPolicyAssets.length} read-only ${derivedPolicyAssets.length === 1 ? 'holding' : 'holdings'}`}
+                    tone="accent"
+                  />
+                  <SummaryMetric
+                    label="Total Assets"
+                    value={formatCurrency(combinedAssets)}
+                    helper="Manual plus linked"
+                    tone="positive"
+                  />
+                  <SummaryMetric
+                    label="Liabilities"
+                    value={formatCurrency(totalLiabilities)}
+                    helper={`${profileData.liabilities.length} debt ${profileData.liabilities.length === 1 ? 'entry' : 'entries'}`}
+                    tone="negative"
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      <Card className="border-gray-200 shadow-sm">
-        <CardHeader className="pb-4">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 xl:items-start">
+        <Card className="h-full border-gray-200 shadow-sm">
+        <CardHeader className="border-b border-gray-100 bg-gradient-to-br from-emerald-50 via-white to-white pb-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100">
-                <TrendingUp className="h-5 w-5 text-green-600" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100">
+                <Wallet className="h-5 w-5 text-emerald-700" />
               </div>
               <div>
                 <CardTitle className="text-xl">Assets</CardTitle>
-                <CardDescription>Your properties, investments, and valuables</CardDescription>
+                <CardDescription>What you own and what is linked from policies</CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
                 Manual {formatCurrency(totalAssets)}
               </div>
-              <div className="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+              <div className="rounded-full bg-[#6d28d9]/10 px-3 py-1 text-xs font-semibold text-[#5b21b6]">
                 Linked {formatCurrency(linkedPolicyAssetTotal)}
               </div>
               <Button
@@ -198,7 +281,7 @@ export function AssetsLiabilitiesSection({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 p-4">
           {(linkedPolicyAssetsLoading || linkedPolicyAssetsError || derivedPolicyAssets.length > 0) && (
             <div className="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3">
               <div className="flex items-start gap-3">
@@ -275,19 +358,18 @@ export function AssetsLiabilitiesSection({
 
               return (
                 <React.Fragment key={asset.id}>
-                  <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 transition-colors hover:border-gray-300">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:border-emerald-200 hover:bg-emerald-50/30">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex min-w-0 items-start gap-3">
-                        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100">
-                          <TrendingUp className="h-5 w-5 text-green-600" />
+                        <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100">
+                          <TrendingUp className="h-5 w-5 text-emerald-700" />
                         </div>
                         <div className="min-w-0 space-y-2">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <p className="text-sm font-semibold text-gray-900">{asset.name || `Asset ${index + 1}`}</p>
-                            <span className="text-xs text-gray-500">{getAssetTypeLabel(asset)}</span>
+                            <p className="text-base font-semibold text-gray-950">{asset.name || `Asset ${index + 1}`}</p>
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">{getAssetTypeLabel(asset)}</span>
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            <DetailChip label="Value" value={formatCurrency(asset.value || 0)} />
                             <DetailChip label="Ownership" value={asset.ownershipType || 'Not set'} />
                             {asset.provider && <DetailChip label="Provider" value={asset.provider} />}
                           </div>
@@ -313,29 +395,41 @@ export function AssetsLiabilitiesSection({
                           )}
                         </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2 self-end lg:self-start">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => editAsset(asset.id)}
-                          className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9]/10"
-                        >
-                          <Edit2 className="mr-1 h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => confirmDeleteAsset(asset.id)}
-                          className="border-red-200 text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div className="flex shrink-0 flex-col items-end gap-3 self-end lg:self-start">
+                        <div className="text-right">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700/70">Value</p>
+                          <p className="text-lg font-semibold text-emerald-950">{formatCurrency(asset.value || 0)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              assetEditGuard.trackEditStart(asset.id);
+                              editAsset(asset.id);
+                            }}
+                            className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9]/10"
+                          >
+                            <Edit2 className="mr-1 h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => confirmDeleteAsset(asset.id)}
+                            className="border-red-200 text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <Dialog open={isEditing} onOpenChange={(open) => !open && cancelEditAsset(asset.id)}>
+                  <Dialog
+                    open={isEditing}
+                    onOpenChange={(open) => assetEditGuard.handleDialogOpenChange(asset.id, open)}
+                  >
                     <DialogContent className="sm:max-w-2xl">
                       <DialogHeader>
                         <DialogTitle>{asset.name || `Asset ${index + 1}`}</DialogTitle>
@@ -444,14 +538,17 @@ export function AssetsLiabilitiesSection({
                       <DialogFooter>
                         <Button
                           variant="outline"
-                          onClick={() => cancelEditAsset(asset.id)}
+                          onClick={() => assetEditGuard.handleDialogOpenChange(asset.id, false)}
                           className="border-gray-300 text-gray-700 hover:bg-gray-50"
                         >
                           <X className="mr-1 h-4 w-4" />
                           Cancel
                         </Button>
                         <Button
-                          onClick={() => saveAsset(asset.id)}
+                          onClick={() => {
+                            assetEditGuard.clearSnapshot(asset.id);
+                            saveAsset(asset.id);
+                          }}
                           disabled={!isValid}
                           className={!isValid ? 'cursor-not-allowed bg-gray-300 text-gray-500 hover:bg-gray-300' : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'}
                         >
@@ -483,27 +580,32 @@ export function AssetsLiabilitiesSection({
               {derivedPolicyAssets.map((asset) => (
                 <div
                   key={asset.id}
-                  className="rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-white px-4 py-3"
+                  className="rounded-2xl border border-[#6d28d9]/15 bg-gradient-to-r from-[#6d28d9]/5 via-white to-white p-4"
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
-                      <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
-                        <TrendingUp className="h-5 w-5 text-blue-700" />
+                      <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#6d28d9]/10">
+                        <PieChart className="h-5 w-5 text-[#6d28d9]" />
                       </div>
                       <div className="min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <p className="text-sm font-semibold text-gray-900">{asset.providerName}</p>
-                          <span className="text-xs text-gray-500">{asset.assetTypeLabel}</span>
+                          <p className="text-base font-semibold text-gray-950">{asset.providerName}</p>
+                          <span className="rounded-full bg-[#6d28d9]/10 px-2 py-0.5 text-[11px] font-medium text-[#5b21b6]">{asset.assetTypeLabel}</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          <DetailChip label="Value" value={formatCurrency(asset.value)} />
                           <DetailChip label="Product" value={asset.productType} />
                           <DetailChip label="Policy" value={asset.policyNumber} />
                         </div>
                       </div>
                     </div>
-                    <div className="self-start rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700">
-                      From Policy Register
+                    <div className="flex shrink-0 flex-col items-end gap-2 self-start">
+                      <div className="text-right">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6d28d9]/70">Value</p>
+                        <p className="text-lg font-semibold text-[#4c1d95]">{formatCurrency(asset.value)}</p>
+                      </div>
+                      <div className="rounded-full border border-[#6d28d9]/20 bg-[#6d28d9]/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#5b21b6]">
+                        Linked
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -513,20 +615,20 @@ export function AssetsLiabilitiesSection({
         </CardContent>
       </Card>
 
-      <Card className="border-gray-200 shadow-sm">
-        <CardHeader className="pb-4">
+        <Card className="h-full border-gray-200 shadow-sm">
+        <CardHeader className="border-b border-gray-100 bg-gradient-to-br from-red-50 via-white to-white pb-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
-                <DollarSign className="h-5 w-5 text-red-600" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-100">
+                <Landmark className="h-5 w-5 text-red-700" />
               </div>
               <div>
                 <CardTitle className="text-xl">Liabilities</CardTitle>
-                <CardDescription>Your debts and financial obligations</CardDescription>
+                <CardDescription>What you owe and the monthly pressure it creates</CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-red-50 px-3 py-1 text-sm font-medium text-red-700">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-800">
                 {formatCurrency(totalLiabilities)}
               </div>
               <Button
@@ -542,7 +644,7 @@ export function AssetsLiabilitiesSection({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 p-4">
           {profileData.liabilities.length === 0 ? (
             <EmptyState
               icon={emptyStateConfigs.liabilities.icon}
@@ -566,19 +668,18 @@ export function AssetsLiabilitiesSection({
 
               return (
                 <React.Fragment key={liability.id}>
-                  <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 transition-colors hover:border-gray-300">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:border-red-200 hover:bg-red-50/25">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex min-w-0 items-start gap-3">
-                        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-100">
-                          <DollarSign className="h-5 w-5 text-red-600" />
+                        <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-100">
+                          <DollarSign className="h-5 w-5 text-red-700" />
                         </div>
                         <div className="min-w-0 space-y-2">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <p className="text-sm font-semibold text-gray-900">{liability.name || `Liability ${index + 1}`}</p>
-                            <span className="text-xs text-gray-500">{getLiabilityTypeLabel(liability)}</span>
+                            <p className="text-base font-semibold text-gray-950">{liability.name || `Liability ${index + 1}`}</p>
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">{getLiabilityTypeLabel(liability)}</span>
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            <DetailChip label="Outstanding" value={formatCurrency(liability.outstandingBalance || 0)} />
                             <DetailChip label="Monthly" value={formatCurrency(liability.monthlyPayment || 0)} />
                             <DetailChip label="Provider" value={liability.provider || 'Not set'} />
                             {liability.interestRate > 0 && <DetailChip label="Interest" value={`${liability.interestRate}%`} />}
@@ -588,29 +689,41 @@ export function AssetsLiabilitiesSection({
                           )}
                         </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2 self-end lg:self-start">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => editLiability(liability.id)}
-                          className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9]/10"
-                        >
-                          <Edit2 className="mr-1 h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => confirmDeleteLiability(liability.id)}
-                          className="border-red-200 text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div className="flex shrink-0 flex-col items-end gap-3 self-end lg:self-start">
+                        <div className="text-right">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-red-700/70">Outstanding</p>
+                          <p className="text-lg font-semibold text-red-950">{formatCurrency(liability.outstandingBalance || 0)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              liabilityEditGuard.trackEditStart(liability.id);
+                              editLiability(liability.id);
+                            }}
+                            className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9]/10"
+                          >
+                            <Edit2 className="mr-1 h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => confirmDeleteLiability(liability.id)}
+                            className="border-red-200 text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <Dialog open={isEditing} onOpenChange={(open) => !open && cancelEditLiability(liability.id)}>
+                  <Dialog
+                    open={isEditing}
+                    onOpenChange={(open) => liabilityEditGuard.handleDialogOpenChange(liability.id, open)}
+                  >
                     <DialogContent className="sm:max-w-2xl">
                       <DialogHeader>
                         <DialogTitle>{liability.name || `Liability ${index + 1}`}</DialogTitle>
@@ -754,14 +867,17 @@ export function AssetsLiabilitiesSection({
                       <DialogFooter>
                         <Button
                           variant="outline"
-                          onClick={() => cancelEditLiability(liability.id)}
+                          onClick={() => liabilityEditGuard.handleDialogOpenChange(liability.id, false)}
                           className="border-gray-300 text-gray-700 hover:bg-gray-50"
                         >
                           <X className="mr-1 h-4 w-4" />
                           Cancel
                         </Button>
                         <Button
-                          onClick={() => saveLiability(liability.id)}
+                          onClick={() => {
+                            liabilityEditGuard.clearSnapshot(liability.id);
+                            saveLiability(liability.id);
+                          }}
                           disabled={!isValid}
                           className={!isValid ? 'cursor-not-allowed bg-gray-300 text-gray-500 hover:bg-gray-300' : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'}
                         >
@@ -778,19 +894,7 @@ export function AssetsLiabilitiesSection({
         </CardContent>
       </Card>
 
-      {hasBalanceSheetData && (
-        <Card className="border-[#6d28d9]/20 bg-gradient-to-br from-[#6d28d9]/5 via-white to-white shadow-sm">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#6d28d9]/10">
-              <PieChart className="h-5 w-5 text-[#6d28d9]" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Net Worth Snapshot</p>
-              <p className={`text-xl font-semibold ${combinedNetWorth >= 0 ? 'text-[#4c1d95]' : 'text-red-600'}`}>{formatCurrency(combinedNetWorth)}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      </div>
 
       <AlertDialog open={assetToDelete !== null} onOpenChange={(open) => !open && setAssetToDelete(null)}>
         <AlertDialogContent>
@@ -821,6 +925,9 @@ export function AssetsLiabilitiesSection({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {assetEditGuard.confirmDialog}
+      {liabilityEditGuard.confirmDialog}
     </div>
   );
 }

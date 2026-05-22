@@ -21,6 +21,7 @@ import { esignApi } from '../../esign/api';
 import { QUERY_GC_TIME, QUERY_STALE_TIME } from '../../esign/constants';
 import { esignKeys } from '../../esign/hooks/useEnvelopesQuery';
 import { AskVascoPortalTab } from './AskVascoPortalTab';
+import { useOptionalUnsavedChangesRegistry } from '../../../../shared/unsaved-changes';
 
 const loadClientProfileViewerFull = () =>
   import('../../../ClientProfileViewerFull').then((m) => ({ default: m.ClientProfileViewerFull }));
@@ -124,6 +125,7 @@ type DrawerTab =
  */
 function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: ClientDrawerInnerProps) {
   const queryClient = useQueryClient();
+  const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
   const [sanctionsScreeningRunning, setSanctionsScreeningRunning] = useState(false);
   const [activeTab, setActiveTab] = useState<DrawerTab>('overview');
   // Hardcoded for now as in original file
@@ -131,7 +133,27 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
 
   const handleTabChange = (value: string) => {
     const nextTab = value as DrawerTab;
+    if (activeTab === 'personal' && nextTab !== 'personal') {
+      const switchTab = () => setActiveTab(nextTab);
+      if (unsavedChangesRegistry?.getDirtyEntries().length) {
+        unsavedChangesRegistry.tryLeaveAny(switchTab);
+        return;
+      }
+    }
     setActiveTab(nextTab);
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      const closeDrawer = () => onOpenChange(false);
+      if (activeTab === 'personal' && unsavedChangesRegistry?.getDirtyEntries().length) {
+        unsavedChangesRegistry.tryLeaveAny(closeDrawer);
+        return;
+      }
+      onOpenChange(false);
+      return;
+    }
+    onOpenChange(true);
   };
 
   const handleSanctionsScreening = () => {
@@ -222,7 +244,7 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
   }, [client.email, client.id, open, queryClient]);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
+    <Sheet open={open} onOpenChange={handleOpenChange} modal={false}>
       <SheetContent
         className="w-[1400px] overflow-y-auto transition-[max-width] duration-300"
         style={{ maxWidth: 'calc(100vw - var(--sidebar-width, 18rem))' }}

@@ -39,6 +39,7 @@ import {
 import { ACCOUNT_STATUS_CONFIG, ACCOUNT_STATUS_FILTER_OPTIONS } from './constants';
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 import { useAdminNavigation } from '../../layout/AdminNavigationContext';
+import { useOptionalUnsavedChangesRegistry } from '../../../shared/unsaved-changes';
 
 // Heavy sub-components — lazy-loaded (only rendered on user action)
 const ClientDrawer = React.lazy(() => import('./components/ClientDrawer').then(m => ({ default: m.ClientDrawer })));
@@ -66,6 +67,7 @@ export function ClientManagementModule() {
   const [clientType, setClientType] = useState('personal');
   const { canDo } = useCurrentUserPermissions();
   const { pendingSelection, clearPendingSelection } = useAdminNavigation();
+  const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
 
   // Defensive: ensure clients is always an array (§10 — never swallow errors silently)
   const safeClients = Array.isArray(clients) ? clients : [];
@@ -111,9 +113,17 @@ export function ClientManagementModule() {
   const canEditClient = canDo('clients', 'edit');
   const canDeleteClient = canDo('clients', 'delete');
 
-  const handleRowClick = (client: Client) => {
+  const openClientDrawer = (client: Client) => {
     setSelectedClient(client);
     setDrawerOpen(true);
+  };
+
+  const handleRowClick = (client: Client) => {
+    if (drawerOpen && selectedClient && selectedClient.id !== client.id) {
+      unsavedChangesRegistry?.tryLeaveAny(() => openClientDrawer(client));
+      return;
+    }
+    openClientDrawer(client);
   };
 
   // Filter clients, then alphabetical by first name → surname (en-ZA, case-insensitive)

@@ -73,7 +73,8 @@ export interface EntityCrudHandlers<T extends { id: string }> {
   edit: (id: string) => void;
   cancelEdit: (id: string) => void;
   confirmDelete: (id: string) => void;
-  remove: (id: string) => void;
+  /** Clear all in-edit markers (e.g. after discarding page-level changes). */
+  resetEditMode: () => void;
 }
 
 // ============================================================================
@@ -186,6 +187,11 @@ export function useEntityCrud<T extends { id: string }>(
     configRef.current.onCleanup?.(id);
   }, [setProfileData, removeFromEditMode]);
 
+  const resetEditMode = useCallback(() => {
+    setInEditMode(new Set());
+    setItemToDelete(null);
+  }, []);
+
   return {
     inEditMode,
     itemToDelete,
@@ -197,5 +203,6 @@ export function useEntityCrud<T extends { id: string }>(
     cancelEdit,
     confirmDelete,
     remove,
+    resetEditMode,
   };
 }
