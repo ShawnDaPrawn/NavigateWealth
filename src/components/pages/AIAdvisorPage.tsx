@@ -6,11 +6,10 @@
  * via the `/ai-advisor/chat/stream` endpoint.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Button } from '../ui/button';
 import { Dialog, DialogContent } from '../ui/dialog';
 import { Badge } from '../ui/badge';
 import {
@@ -19,13 +18,10 @@ import {
   Zap,
   AlertCircle,
   ChevronRight,
-  Maximize2,
   Shield,
   Briefcase,
   TrendingUp,
   FileText,
-  Plus,
-  Eraser,
 } from 'lucide-react';
 import { api } from '../../utils/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -35,12 +31,8 @@ import { ACTIVE_THEME } from '../portal/portal-theme';
 import { toast } from 'sonner@2.0.3';
 import { ConfirmDialog } from '../admin/modules/publications/components/ConfirmDialog';
 import {
-  VascoAvatar,
-  VascoChatInput,
-  VascoChatMessage,
+  VascoInlineChatCard,
   VascoSessionWorkspace,
-  VascoStreamingBubble,
-  VascoTypingIndicator,
   useVascoStream,
 } from '../shared/vasco-chat';
 import type {
@@ -107,132 +99,6 @@ function mapMessages(
     citations: message.citations,
     artifacts: message.artifacts,
   }));
-}
-
-function InlineChatCard({
-  activeSession,
-  messages,
-  input,
-  error,
-  isStreaming,
-  streamingContent,
-  apiKeyWarning,
-  onInputChange,
-  onSendMessage,
-  onExpand,
-  onClearCurrent,
-  onNewChat,
-}: {
-  activeSession: VascoChatSessionSummary | null;
-  messages: ChatMessage[];
-  input: string;
-  error: string | null;
-  isStreaming: boolean;
-  streamingContent: string;
-  apiKeyWarning: React.ReactNode;
-  onInputChange: (value: string) => void;
-  onSendMessage: () => void;
-  onExpand: () => void;
-  onClearCurrent: () => void;
-  onNewChat: () => void;
-}) {
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!messagesContainerRef.current || messages.length === 0) return;
-    const container = messagesContainerRef.current;
-    requestAnimationFrame(() => {
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: messages.length <= 1 ? 'auto' : 'smooth',
-      });
-    });
-  }, [messages, isStreaming, streamingContent]);
-
-  return (
-    <Card className="border-gray-200 shadow-sm overflow-hidden">
-      <div className="flex h-[650px] flex-col bg-white">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <VascoAvatar size="md" />
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900">
-                {activeSession?.title || 'Ask Vasco'}
-              </h3>
-              <p className="text-xs text-gray-500">
-                {activeSession ? `Updated ${formatTimestamp(activeSession.updatedAt)}` : 'AI Financial Navigator'}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={onNewChat}
-              variant="outline"
-              size="sm"
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
-              disabled={isStreaming}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New chat
-            </Button>
-            <Button
-              onClick={onClearCurrent}
-              variant="outline"
-              size="sm"
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
-              disabled={isStreaming || !activeSession}
-            >
-              <Eraser className="mr-2 h-4 w-4" />
-              Clear
-            </Button>
-            <Button
-              onClick={onExpand}
-              variant="ghost"
-              size="sm"
-              className="h-9 w-9 p-0 text-gray-500 hover:bg-purple-50 hover:text-[#6d28d9]"
-              title="Expand"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {apiKeyWarning && <div className="border-b border-gray-100 px-4 py-3">{apiKeyWarning}</div>}
-
-        <div
-          ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto bg-gray-50/50 px-6 py-5"
-        >
-          <div className="space-y-5">
-            {messages.map((message, index) => (
-              <VascoChatMessage
-                key={`${message.role}-${index}-${message.timestamp.getTime()}`}
-                message={message}
-                isWelcome={index === 0 && isWelcomeMessage(message)}
-              />
-            ))}
-
-            {isStreaming && streamingContent && <VascoStreamingBubble content={streamingContent} />}
-            {isStreaming && !streamingContent && <VascoTypingIndicator />}
-          </div>
-        </div>
-
-        <VascoChatInput
-          value={input}
-          onChange={onInputChange}
-          onSubmit={onSendMessage}
-          isLoading={isStreaming}
-          error={error}
-          placeholder="Ask Vasco about your financial goals..."
-          footer={
-            <p className="text-center text-[10px] text-gray-400">
-              Vasco provides general financial information only — not personal financial advice.
-            </p>
-          }
-        />
-      </div>
-    </Card>
-  );
 }
 
 export function AIAdvisorPage() {
@@ -555,19 +421,33 @@ export function AIAdvisorPage() {
           </div>
 
           <div className="lg:col-span-3">
-            <InlineChatCard
-              activeSession={activeSession}
+            <VascoInlineChatCard
+              sessionTitle={activeSession?.title || 'Ask Vasco'}
+              sessionSubtitle={
+                activeSession
+                  ? `Updated ${formatTimestamp(activeSession.updatedAt)}`
+                  : 'AI Financial Navigator'
+              }
               messages={messages}
               input={input}
               error={error}
-              isStreaming={isStreaming}
+              isLoading={isStreaming}
               streamingContent={streamingContent}
               apiKeyWarning={apiKeyWarningBanner}
               onInputChange={setInput}
               onSendMessage={() => void handleSendMessage()}
               onExpand={() => setIsExpanded(true)}
-              onClearCurrent={() => setShowClearConfirm(true)}
+              onClear={() => setShowClearConfirm(true)}
               onNewChat={() => createSessionMutation.mutate()}
+              disableActions={isStreaming}
+              disableClear={!activeSession}
+              isWelcomeMessage={isWelcomeMessage}
+              inputPlaceholder="Ask Vasco about your financial goals..."
+              inputFooter={
+                <p className="text-center text-[10px] text-gray-400">
+                  Vasco provides general financial information only — not personal financial advice.
+                </p>
+              }
             />
           </div>
         </div>
