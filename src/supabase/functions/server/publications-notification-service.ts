@@ -863,6 +863,28 @@ async function resumeArticleNotificationJob(
   return snapshot;
 }
 
+async function resolvePublishedArticleForDelivery(
+  article: PublishedArticle,
+): Promise<PublishedArticle> {
+  const stored = await kv.get(`article:${article.id}`) as {
+    status?: string;
+    slug?: string;
+    title?: string;
+    excerpt?: string;
+  } | null;
+
+  if (!stored || stored.status !== 'published') {
+    throw new Error(`Cannot send article notifications: article ${article.id} is not published`);
+  }
+
+  return {
+    id: article.id,
+    title: stored.title || article.title,
+    slug: stored.slug || article.slug,
+    excerpt: stored.excerpt ?? article.excerpt,
+  };
+}
+
 async function deliverTrackedNotificationRecord(
   article: PublishedArticle,
   record: ArticleEmailTrackingRecord,
@@ -870,6 +892,8 @@ async function deliverTrackedNotificationRecord(
   if (isArticleEmailDeliveryTerminalStatus(record.deliveryStatus)) {
     return;
   }
+
+  const publishedArticle = await resolvePublishedArticleForDelivery(article);
 
   let lastFailure: DeliveryFailureClassification = {
     message: 'Delivery failed',
@@ -879,19 +903,22 @@ async function deliverTrackedNotificationRecord(
   for (let attempt = 1; attempt <= MAX_SEND_ATTEMPTS; attempt++) {
     try {
       await markArticleEmailDeliveryAttemptStarted(record.token);
-      const articleUrl = buildTrackedArticleUrl(article.slug, record.token);
+      const articleUrl = buildTrackedArticleUrl(
+        publishedArticle.slug || record.articleSlug,
+        record.token,
+      );
       const unsubscribeUrl = `https://www.navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(record.recipientEmail)}`;
       const { html, text } = await createArticleNotificationEmail({
         firstName: record.recipientFirstName,
-        articleTitle: article.title,
-        articleExcerpt: article.excerpt || 'A new article has been published on Navigate Wealth.',
+        articleTitle: publishedArticle.title,
+        articleExcerpt: publishedArticle.excerpt || 'A new article has been published on Navigate Wealth.',
         articleUrl,
         unsubscribeUrl,
       });
 
       await sendEmail(
         record.recipientEmail,
-        `New article: ${article.title}`,
+        `New article: ${publishedArticle.title}`,
         html,
         text,
       );
@@ -1293,6 +1320,12 @@ export async function runArticleNotificationDelivery(
   },
 ): Promise<ArticleNotificationRunResult> {
   const dryRun = options?.dryRun ?? false;
+  const source = options?.source ?? 'publish';
+
+  if (!dryRun && source === 'publish') {
+    await resolvePublishedArticleForDelivery(article);
+  }
+
   const recipients = await collectArticleNotificationRecipients(options?.recipientEmails);
 
   if (recipients.length === 0) {
@@ -1379,19 +1412,47 @@ const PUBLISH_TRACKING_CAMPAIGN_ID = (articleId: string) => `publish_tracking_${
 
 async function syncPublishNotificationCampaignFromTrackingState(
   article: PublishedArticle,
-  options?: { retryJobId?: string | null },
+  options?: {
+    retryJobId?: string | null;
+    blast?: Pick<ArticleNotificationRunResult, 'recipientCount' | 'sent' | 'failed'>;
+  },
 ): Promise<ArticleNotificationCampaign | null> {
-  const records = await listArticleEmailTrackingRecords(article.id);
-  const publishRecords = records.filter((r) => r.source === 'publish');
-  if (publishRecords.length === 0) {
-    return null;
+  const blast = options?.blast;
+  const blastFullyDelivered = Boolean(
+    blast
+    && blast.recipientCount > 0
+    && blast.failed === 0
+    && blast.sent === blast.recipientCount,
+  );
+
+  let totals: ReturnType<typeof summarizeTrackedRecipientDeliveries>;
+  let intended: number;
+
+  if (blastFullyDelivered) {
+    totals = {
+      pending: 0,
+      sending: 0,
+      sent: blast!.sent,
+      failed: 0,
+      failedRetryable: 0,
+      failedTerminal: 0,
+      undelivered: 0,
+    };
+    intended = blast!.recipientCount;
+  } else {
+    const records = await listArticleEmailTrackingRecords(article.id);
+    const publishRecords = records.filter((r) => r.source === 'publish');
+    if (publishRecords.length === 0) {
+      return null;
+    }
+
+    totals = summarizeTrackedRecipientDeliveries(publishRecords, 'publish');
+    intended = publishRecords.length;
   }
 
-  const totals = summarizeTrackedRecipientDeliveries(publishRecords, 'publish');
   const campaignId = PUBLISH_TRACKING_CAMPAIGN_ID(article.id);
   const existing = await getArticleNotificationCampaignRecord(campaignId);
   const now = nowIso();
-  const intended = publishRecords.length;
   const processedCount = totals.sent + totals.failedTerminal;
   const progressPercent = intended > 0 ? Math.round((processedCount / intended) * 1000) / 10 : 100;
 
@@ -1456,23 +1517,45 @@ export async function sendArticlePublishedNotificationsBlastThenRetryQueue(
   const blast = await runArticleNotificationDelivery(article, { source: 'publish' });
 
   let retryJob: ArticleNotificationJobSnapshot | null = null;
-  if (blast.recipientCount > 0) {
-    const undelivered = await listUndeliveredArticleEmailTrackingRecords(article.id, 'publish');
-    if (undelivered.length > 0) {
-      try {
-        retryJob = await retryUndeliveredArticleNotifications(article, { source: 'publish' });
-      } catch (error) {
-        log.error('Failed to queue undelivered publish recipients after blast', {
-          articleId: article.id,
-          error: normalizeSendError(error),
-        });
+  let publishCampaign: ArticleNotificationCampaign | null = null;
+
+  try {
+    const blastFullyDelivered = blast.recipientCount > 0
+      && blast.failed === 0
+      && blast.sent === blast.recipientCount;
+
+    if (blast.recipientCount > 0 && !blastFullyDelivered) {
+      const undelivered = await listUndeliveredArticleEmailTrackingRecords(article.id, 'publish');
+      if (undelivered.length > 0) {
+        try {
+          retryJob = await retryUndeliveredArticleNotifications(article, { source: 'publish' });
+        } catch (error) {
+          log.error('Failed to queue undelivered publish recipients after blast', {
+            articleId: article.id,
+            error: normalizeSendError(error),
+          });
+        }
       }
     }
-  }
 
-  const publishCampaign = await syncPublishNotificationCampaignFromTrackingState(article, {
-    retryJobId: retryJob?.id ?? null,
-  });
+    publishCampaign = await syncPublishNotificationCampaignFromTrackingState(article, {
+      retryJobId: retryJob?.id ?? null,
+      blast,
+    });
+  } catch (postBlastError) {
+    const lastError = normalizeSendError(postBlastError);
+    log.error('Post-blast publish notification sync failed', {
+      articleId: article.id,
+      blastSent: blast.sent,
+      blastFailed: blast.failed,
+      error: lastError,
+    });
+    publishCampaign = await createArticleNotificationQueueFailedCampaign(article, {
+      source: 'publish',
+      lastError,
+      blast,
+    });
+  }
 
   return { blast, retryJob, publishCampaign };
 }
@@ -1567,9 +1650,16 @@ export async function getLatestArticleNotificationCampaign(
   source: ArticleEmailTrackingSource = 'publish',
 ): Promise<ArticleNotificationCampaign | null> {
   const campaigns = await listArticleNotificationCampaigns({ articleId, source });
-  const latestCampaign = campaigns[0] ?? null;
-  if (!latestCampaign) return null;
-  return getArticleNotificationCampaign(latestCampaign.id);
+  if (campaigns.length === 0) return null;
+
+  const trackingCampaignId = PUBLISH_TRACKING_CAMPAIGN_ID(articleId);
+  const preferred = campaigns.find((campaign) => (
+    campaign.id === trackingCampaignId && campaign.sentCount > 0
+  )) ?? campaigns.find((campaign) => (
+    campaign.status !== 'queue_failed' || campaign.sentCount > 0 || campaign.intendedRecipientCount > 0
+  )) ?? campaigns[0];
+
+  return getArticleNotificationCampaign(preferred.id);
 }
 
 export async function getArticleNotificationProcessorState(): Promise<ArticleNotificationProcessorState | null> {
@@ -1581,40 +1671,109 @@ export async function createArticleNotificationQueueFailedCampaign(
   options?: {
     source?: ArticleEmailTrackingSource;
     lastError?: string | null;
+    blast?: Pick<ArticleNotificationRunResult, 'recipientCount' | 'sent' | 'failed'>;
   },
 ): Promise<ArticleNotificationCampaign> {
-  const createdAt = nowIso();
+  const source = options?.source ?? 'publish';
+  const lastError = options?.lastError ?? 'Notification campaign could not be queued';
+
+  if (source === 'publish') {
+    try {
+      const repaired = await repairPublishNotificationCampaignFromTracking(article, {
+        lastError,
+      });
+      if (repaired) {
+        return repaired;
+      }
+    } catch (error) {
+      log.warn('Could not repair publish campaign from tracking after queue failure', {
+        articleId: article.id,
+        error: normalizeSendError(error),
+      });
+    }
+  }
+
+  const blast = options?.blast;
+  const now = nowIso();
+  const intended = blast?.recipientCount ?? 0;
+  const sent = blast?.sent ?? 0;
+  const failedTerminal = blast?.failed ?? 0;
+  const processedCount = sent + failedTerminal;
+  const progressPercent = intended > 0 ? Math.round((processedCount / intended) * 1000) / 10 : 0;
+  const existing = blast && source === 'publish'
+    ? await getArticleNotificationCampaignRecord(PUBLISH_TRACKING_CAMPAIGN_ID(article.id))
+    : null;
+
+  let status: ArticleNotificationCampaignStatus;
+  if (sent <= 0) {
+    status = 'queue_failed';
+  } else if (failedTerminal > 0 || (intended > 0 && processedCount < intended)) {
+    status = 'completed_with_failures';
+  } else {
+    status = 'completed';
+  }
+
   const campaign: ArticleNotificationCampaign = {
-    id: crypto.randomUUID(),
+    id: blast && source === 'publish'
+      ? PUBLISH_TRACKING_CAMPAIGN_ID(article.id)
+      : crypto.randomUUID(),
     articleId: article.id,
     articleTitle: article.title,
     articleSlug: article.slug,
     articleExcerpt: article.excerpt,
-    source: options?.source ?? 'publish',
-    status: 'queue_failed',
+    source,
+    status,
     phase: 'completed',
-    intendedRecipientCount: 0,
-    preparedCount: 0,
+    intendedRecipientCount: intended,
+    preparedCount: intended,
     unpreparedCount: 0,
-    pendingCount: 0,
+    pendingCount: Math.max(0, intended - processedCount),
     sendingCount: 0,
-    sentCount: 0,
+    sentCount: sent,
     failedRetryableCount: 0,
-    failedTerminalCount: 0,
-    processedCount: 0,
-    progressPercent: 0,
-    createdAt,
-    updatedAt: createdAt,
-    startedAt: null,
-    completedAt: createdAt,
-    lastActivityAt: createdAt,
-    lastError: options?.lastError ?? 'Notification campaign could not be queued',
+    failedTerminalCount: failedTerminal,
+    processedCount,
+    progressPercent,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+    startedAt: existing?.startedAt ?? (sent > 0 ? now : null),
+    completedAt: now,
+    lastActivityAt: now,
+    lastError,
     jobId: null,
     stuck: false,
   };
 
   await persistArticleNotificationCampaign(campaign);
   return campaign;
+}
+
+export async function repairPublishNotificationCampaignFromTracking(
+  article: PublishedArticle,
+  options?: {
+    lastError?: string | null;
+    retryJobId?: string | null;
+  },
+): Promise<ArticleNotificationCampaign | null> {
+  const repaired = await syncPublishNotificationCampaignFromTrackingState(article, {
+    retryJobId: options?.retryJobId ?? null,
+  });
+  if (!repaired) {
+    return null;
+  }
+
+  if (!options?.lastError) {
+    return repaired;
+  }
+
+  const withError: ArticleNotificationCampaign = {
+    ...repaired,
+    lastError: options.lastError,
+    updatedAt: nowIso(),
+    lastActivityAt: nowIso(),
+  };
+  await persistArticleNotificationCampaign(withError);
+  return withError;
 }
 
 export async function getArticleNotificationJob(

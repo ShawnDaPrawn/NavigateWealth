@@ -12,6 +12,7 @@ import {
   getArticleNotificationProcessorState,
   listArticleNotificationCampaigns,
   processArticleNotificationJobs,
+  repairPublishNotificationCampaignFromTracking,
   resumeArticleNotificationDelivery,
   runArticleNotificationDelivery,
   sendArticlePublishedNotificationsBlastThenRetryQueue,
@@ -266,6 +267,7 @@ function buildCampaignFirstEmailEngagementSummary(
 ) {
   const articleDetails = articleTrackingDetails(article) || deletedArticleTrackingDetails(deletedArticle);
   const baseSummary = summarizeArticleEmailEngagement(articleDetails, records);
+  const publishTotals = summarizeTrackedRecipientDeliveries(records, 'publish');
   const reshareTotals = summarizeTrackedRecipientDeliveries(records, 'reshare');
 
   if (!campaign) {
@@ -275,29 +277,54 @@ function buildCampaignFirstEmailEngagementSummary(
       deletedAt: deletedArticle?.deleted_at ?? null,
       campaignId: null,
       campaignStatus: null,
-      intendedRecipientCount: baseSummary.sent + baseSummary.publishUndelivered + baseSummary.publishFailed,
+      intendedRecipientCount: publishTotals.sent + publishTotals.undelivered + publishTotals.failedTerminal,
       sendingCount: 0,
-      failedRetryableCount: 0,
-      failedTerminalCount: baseSummary.publishFailed,
+      failedRetryableCount: publishTotals.failedRetryable,
+      failedTerminalCount: publishTotals.failedTerminal,
       lastActivityAt: baseSummary.latestReadAt || baseSummary.latestOpenedAt || baseSummary.latestSentAt || baseSummary.publishedAt,
       lastError: null,
     };
   }
 
-  const publishPending = campaign.pendingCount + campaign.sendingCount + campaign.failedRetryableCount;
-  const publishFailed = campaign.failedTerminalCount;
-  const publishSent = campaign.sentCount;
+  const campaignPublishMisleading = (
+    campaign.status === 'queue_failed'
+    && campaign.sentCount === 0
+    && publishTotals.sent > 0
+  ) || (
+    campaign.intendedRecipientCount === 0
+    && publishTotals.sent + publishTotals.undelivered + publishTotals.failedTerminal > 0
+  );
+
+  const publishPending = campaignPublishMisleading
+    ? publishTotals.undelivered
+    : campaign.pendingCount + campaign.sendingCount + campaign.failedRetryableCount;
+  const publishFailed = campaignPublishMisleading
+    ? publishTotals.failedTerminal
+    : campaign.failedTerminalCount;
+  const publishSent = campaignPublishMisleading
+    ? publishTotals.sent
+    : Math.max(campaign.sentCount, publishTotals.sent);
+  const intendedRecipientCount = campaignPublishMisleading
+    ? publishTotals.sent + publishTotals.undelivered + publishTotals.failedTerminal
+    : Math.max(
+      campaign.intendedRecipientCount,
+      publishTotals.sent + publishTotals.undelivered + publishTotals.failedTerminal,
+    );
 
   return {
     ...baseSummary,
     isDeleted: Boolean(deletedArticle),
     deletedAt: deletedArticle?.deleted_at ?? null,
     campaignId: campaign.id,
-    campaignStatus: campaign.status,
-    intendedRecipientCount: campaign.intendedRecipientCount,
-    sendingCount: campaign.sendingCount,
-    failedRetryableCount: campaign.failedRetryableCount,
-    failedTerminalCount: campaign.failedTerminalCount,
+    campaignStatus: campaignPublishMisleading && publishSent > 0 && publishPending === 0
+      ? (publishFailed > 0 ? 'completed_with_failures' : 'completed')
+      : campaign.status,
+    intendedRecipientCount,
+    sendingCount: campaignPublishMisleading ? publishTotals.sending : campaign.sendingCount,
+    failedRetryableCount: campaignPublishMisleading
+      ? publishTotals.failedRetryable
+      : campaign.failedRetryableCount,
+    failedTerminalCount: publishFailed,
     lastActivityAt: campaign.lastActivityAt || baseSummary.latestReadAt || baseSummary.latestOpenedAt || baseSummary.latestSentAt || baseSummary.publishedAt,
     lastError: campaign.lastError,
     pending: publishPending + reshareTotals.pending,
@@ -1247,10 +1274,38 @@ publications.get('/articles/:id/email-engagement', requireAuth, requireAdmin, as
   const article = await kv.get(`article:${id}`) as Article | null;
   const deletedArticle = await kv.get(`article_deleted:${id}`) as DeletedArticleRecord | null;
   const records = await listArticleEmailTrackingRecords(id);
-  const campaign = await getLatestArticleNotificationCampaign(id, 'publish');
+  let campaign = await getLatestArticleNotificationCampaign(id, 'publish');
 
   if (!article && !deletedArticle && records.length === 0 && !campaign) {
     return c.json({ success: false, error: 'Article not found' }, 404);
+  }
+
+  const publishTotals = summarizeTrackedRecipientDeliveries(records, 'publish');
+  const shouldRepairCampaign = Boolean(
+    article
+    && publishTotals.sent > 0
+    && (
+      !campaign
+      || (campaign.status === 'queue_failed' && campaign.sentCount === 0)
+    ),
+  );
+
+  if (shouldRepairCampaign && article) {
+    try {
+      campaign = await repairPublishNotificationCampaignFromTracking({
+        id: article.id,
+        title: article.title,
+        slug: article.slug,
+        excerpt: article.excerpt,
+      }, {
+        lastError: campaign?.lastError ?? null,
+      }) ?? campaign;
+    } catch (repairError) {
+      log.warn('Failed to self-heal publish notification campaign from tracking', {
+        articleId: id,
+        error: repairError instanceof Error ? repairError.message : String(repairError),
+      });
+    }
   }
 
   const summary = buildCampaignFirstEmailEngagementSummary(article, deletedArticle, records, campaign);
