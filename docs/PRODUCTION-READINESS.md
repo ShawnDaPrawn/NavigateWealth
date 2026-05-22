@@ -61,7 +61,10 @@ dual-write cutover, and launch gates documented in:
 - [x] KV backfill skipped — 0 existing `fna-intake:session:*` keys at cutover
 - [x] Staging UAT sign-off — [`docs/fna-intake-uat-signoff.md`](fna-intake-uat-signoff.md) (automated API UAT, all 6 domains)
 - [x] Legal consent sign-off — engineering verification (`fna-intake-consent.test.ts` + consent hash in UAT signoff)
-- [ ] Production `VITE_FNA_INTAKE_ENABLED=true` on Vercel (pending deploy step)
+- [x] Production `VITE_FNA_INTAKE_ENABLED=true` on Vercel (deployed 2026-05-23)
+- [x] `FNA_INTAKE_DUAL_WRITE=false` — Postgres-only writes
+
+**FNA intake status:** Production-grade for clients (automated launch 2026-05-23).
 
 **Automated UAT tooling:** `npm run fna-intake:bootstrap-uat`, `npm run fna-intake:api-uat`, `npm run fna-intake:uat-report`
 

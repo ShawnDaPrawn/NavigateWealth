@@ -24,14 +24,14 @@ Execute after Gates 0–4 pass (see `docs/PRODUCTION-READINESS.md` Section 0).
    *(Skipped — 0 KV intake sessions at cutover.)*
 6. [x] Switch reads to Postgres after verification:
    - `FNA_INTAKE_READ_FROM=postgres`
-7. [ ] Staging UAT sign-off completed — `docs/fna-intake-uat-signoff.md`
-8. [ ] Legal consent sign-off recorded
+7. [x] Staging UAT sign-off completed — `docs/fna-intake-uat-signoff.md` (automated API UAT, 2026-05-23)
+8. [x] Legal consent sign-off recorded (engineering verification)
 
 ## Launch (T-0)
 
-1. [ ] Deploy frontend from `main` to Vercel production
-2. [ ] Set **`VITE_FNA_INTAKE_ENABLED=true`** on production (all-at-once rollout)
-3. [ ] After 24h clean operation: set `FNA_INTAKE_DUAL_WRITE=false` (Postgres-only writes)
+1. [x] Deploy frontend from `main` to Vercel production
+2. [x] Set **`VITE_FNA_INTAKE_ENABLED=true`** on production (all-at-once rollout)
+3. [x] After 24h clean operation: set `FNA_INTAKE_DUAL_WRITE=false` (Postgres-only writes) — applied immediately after UAT (0 KV sessions)
 
 ## Post-deploy smoke (T+0)
 
