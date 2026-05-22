@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { TopBar } from './TopBar';
 import { Navigation } from './Navigation';
@@ -9,6 +8,9 @@ import { Footer } from './Footer';
 import { DashboardFooter } from './DashboardFooter';
 import { AccountSuspendedPage } from '../pages/AccountSuspendedPage';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
+
+/** Article reading progress bar portals here (see ReadingProgressBar.tsx). */
+export const READING_PROGRESS_SLOT_ID = 'nw-reading-progress-slot';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -24,15 +26,11 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, showNavAndFooter = true, forcePublicLayout = false }: MainLayoutProps) {
   const { isAuthenticated, user, logout } = useAuth();
-  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
 
   // When forcePublicLayout is on, treat as unauthenticated for layout decisions
   const effectivelyAuthenticated = forcePublicLayout ? false : isAuthenticated;
-  const isArticleReaderPage = location.pathname.startsWith('/resources/article/');
   const showPublicTopBar = !effectivelyAuthenticated;
-  /** Keep the full public header (TopBar + nav) pinned while reading long articles. */
-  const pinPublicSiteChrome = showPublicTopBar && isArticleReaderPage;
   // Use accountStatus (primary) with applicationStatus fallback for backward compat
   const userStatus = user?.accountStatus || user?.applicationStatus;
   const isDashboardPage = effectivelyAuthenticated && userStatus === 'approved';
@@ -97,34 +95,26 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
   
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* TopBar - collapses on scroll except on article reader pages */}
-      {showPublicTopBar && (
-        <div
-          className={
-            pinPublicSiteChrome
-              ? 'sticky top-0 z-[60] bg-gray-200 border-b border-gray-300/60'
-              : `transition-all duration-300 ease-in-out overflow-hidden ${
-                isScrolled ? 'max-h-0 opacity-0' : 'max-h-12 opacity-100'
-              }`
-          }
-        >
-          <TopBar />
+      {/* Single sticky site header — TopBar collapse happens inside this block so
+          content never scrolls between TopBar and nav (no gap / bleed on articles). */}
+      <div className={`sticky top-0 z-50 overflow-hidden bg-white ${isScrolled ? 'shadow-lg' : ''}`}>
+        {showPublicTopBar && (
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              isScrolled ? 'max-h-0 opacity-0' : 'max-h-12 opacity-100'
+            }`}
+          >
+            <TopBar />
+          </div>
+        )}
+        <div className="relative">
+          <Navigation forcePublic={forcePublicLayout} />
+          <div
+            id={READING_PROGRESS_SLOT_ID}
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+            aria-hidden
+          />
         </div>
-      )}
-      
-      {/* Navigation - sticky positioned */}
-      <div
-        className={`sticky relative z-50 ${pinPublicSiteChrome ? 'top-12' : 'top-0'} ${
-          isScrolled ? 'shadow-lg' : ''
-        }`}
-      >
-        <Navigation forcePublic={forcePublicLayout} />
-        {/* Article reading progress mounts here — absolute so nav layout is unchanged */}
-        <div
-          id="nw-reading-progress-slot"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] z-[60]"
-          aria-hidden
-        />
       </div>
       
       {isDashboardPage && !isAdminDashboard && <DashboardNavigation />}

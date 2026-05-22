@@ -12,9 +12,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-
-/** Must match the slot element id in MainLayout.tsx */
-export const READING_PROGRESS_SLOT_ID = 'nw-reading-progress-slot';
+import { READING_PROGRESS_SLOT_ID } from '../../layout/MainLayout';
 
 interface ReadingProgressBarProps {
   /** Ref to the article content element whose scroll progress we track */
