@@ -1183,11 +1183,8 @@ export function ArticleDetailPage() {
   const enhancedHtml = enhanceArticleHtml(sanitisedHtml);
 
   return (
-    <div className="contents">
-      {/* Reading progress bar */}
+    <>
       <ReadingProgressBar contentRef={articleContentRef} />
-
-      {/* Back to top */}
       <BackToTop />
 
       <article className="min-h-screen bg-gray-50/50 print:bg-white">
@@ -1545,7 +1542,7 @@ export function ArticleDetailPage() {
           }
         }
       `}</style>
-    </div>
+    </>
   );
 }
 

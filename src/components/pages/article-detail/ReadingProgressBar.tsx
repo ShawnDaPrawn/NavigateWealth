@@ -1,32 +1,45 @@
 /**
  * ReadingProgressBar
  *
- * A thin accent-coloured bar fixed at the very top of the viewport that
- * fills from left to right as the reader scrolls through the article.
+ * A thin accent-coloured bar fixed below the site header that fills from left
+ * to right as the reader scrolls through the article.
  *
- * Uses requestAnimationFrame-throttled scroll listener for smooth 60fps
- * updates without jank.
+ * Rendered via portal so position:fixed is never broken by layout ancestors
+ * (e.g. display:contents wrappers). The bar tracks the sticky nav bottom edge
+ * so it stays visible while scrolling down, not only near the page top.
  *
  * @module article-detail/ReadingProgressBar
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ReadingProgressBarProps {
   /** Ref to the article content element whose scroll progress we track */
   contentRef: React.RefObject<HTMLElement | null>;
 }
 
+const NAV_SELECTOR = 'nav[aria-label="Main navigation"]';
+
+function measureHeaderBottomOffset(): number {
+  const nav = document.querySelector(NAV_SELECTOR);
+  if (!nav) return 0;
+  return Math.max(0, Math.round(nav.getBoundingClientRect().bottom));
+}
+
 export function ReadingProgressBar({ contentRef }: ReadingProgressBarProps) {
   const [progress, setProgress] = useState(0);
+  const [topOffset, setTopOffset] = useState(0);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (rafRef.current !== null) return; // already scheduled
+    const update = () => {
+      if (rafRef.current !== null) return;
 
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = null;
+
+        setTopOffset(measureHeaderBottomOffset());
 
         const el = contentRef.current;
         if (!el) return;
@@ -49,18 +62,25 @@ export function ReadingProgressBar({ contentRef }: ReadingProgressBarProps) {
       });
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // initial
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [contentRef]);
 
-  return (
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(
     <div
-      className="fixed top-0 left-0 right-0 z-[60] h-[3px] bg-transparent pointer-events-none"
+      className="fixed left-0 right-0 z-[100] h-[3px] bg-transparent pointer-events-none print:hidden"
+      style={{ top: topOffset }}
       role="progressbar"
       aria-valuenow={Math.round(progress)}
       aria-valuemin={0}
@@ -71,6 +91,7 @@ export function ReadingProgressBar({ contentRef }: ReadingProgressBarProps) {
         className="h-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-500 transition-[width] duration-150 ease-out"
         style={{ width: `${progress}%` }}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }
