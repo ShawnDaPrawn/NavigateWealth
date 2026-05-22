@@ -4,23 +4,25 @@ Execute after Gates 0–4 pass (see `docs/PRODUCTION-READINESS.md` Section 0).
 
 ## Pre-launch (T-1)
 
-1. [ ] Merge `main` includes Postgres migration + intake launch commits
-2. [ ] Apply migration on production Supabase:
+1. [x] Merge `main` includes Postgres migration + intake launch commits
+2. [x] Apply migration on production Supabase:
    ```bash
    npx supabase db push --project-ref vpjmdsltwrnpefzcgdmz
    ```
-3. [ ] Enable dual-write on Edge Function secrets:
+   *(Applied 2026-05-23 via Supabase MCP — table `public.fna_intake_sessions` verified.)*
+3. [x] Enable dual-write on Edge Function secrets:
    - `FNA_INTAKE_DUAL_WRITE=true`
-   - `FNA_INTAKE_READ_FROM=kv`
-4. [ ] Deploy Edge Function:
+   - ~~`FNA_INTAKE_READ_FROM=kv`~~ → switched to `postgres` (no KV sessions to backfill)
+4. [x] Deploy Edge Function:
    ```bash
    npx supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir .
    ```
-5. [ ] Run backfill (if KV sessions exist):
+5. [x] Run backfill (if KV sessions exist):
    ```bash
    node scripts/fna-intake-backfill.mjs
    ```
-6. [ ] Switch reads to Postgres after verification:
+   *(Skipped — 0 KV intake sessions at cutover.)*
+6. [x] Switch reads to Postgres after verification:
    - `FNA_INTAKE_READ_FROM=postgres`
 7. [ ] Staging UAT sign-off completed — `docs/fna-intake-uat-signoff.md`
 8. [ ] Legal consent sign-off recorded

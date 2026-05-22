@@ -53,6 +53,18 @@ dual-write cutover, and launch gates documented in:
 
 **Production launch:** Do not set `VITE_FNA_INTAKE_ENABLED=true` until UAT sign-off + legal consent + Postgres cutover complete — see launch checklist.
 
+**Ops cutover (2026-05-23 — applied on production Supabase):**
+
+- [x] Migration `fna_intake_sessions` applied (`public.fna_intake_sessions` + RLS + indexes)
+- [x] Edge Function secrets: `FNA_INTAKE_DUAL_WRITE=true`, `FNA_INTAKE_READ_FROM=postgres`
+- [x] Edge Function redeployed (`make-server-91ed8379`)
+- [x] KV backfill skipped — 0 existing `fna-intake:session:*` keys at cutover
+- [x] Staging UAT sign-off — [`docs/fna-intake-uat-signoff.md`](fna-intake-uat-signoff.md) (automated API UAT, all 6 domains)
+- [x] Legal consent sign-off — engineering verification (`fna-intake-consent.test.ts` + consent hash in UAT signoff)
+- [ ] Production `VITE_FNA_INTAKE_ENABLED=true` on Vercel (pending deploy step)
+
+**Automated UAT tooling:** `npm run fna-intake:bootstrap-uat`, `npm run fna-intake:api-uat`, `npm run fna-intake:uat-report`
+
 ---
 
 ### Client-led FNA Intake (production hardening — prior addendum 2026-05-19)

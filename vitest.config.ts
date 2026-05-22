@@ -20,6 +20,7 @@ export default defineConfig({
       'npm:pdf-lib@1.17.1': 'pdf-lib',
       'npm:docx': 'docx',
       'npm:zod': 'zod',
+      'npm:hono': 'hono',
       'node-forge@1.3.1': 'node-forge',
       '@supabase/supabase-js@2.39.3': '@supabase/supabase-js',
       '@jsr/supabase__supabase-js@2.49.8': '@jsr/supabase__supabase-js',

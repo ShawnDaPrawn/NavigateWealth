@@ -40,6 +40,14 @@ jobs:
           echo "${PIPESTATUS[0]}" > quality-test.exit
           exit 0
 
+      - name: Run FNA intake test suite
+        shell: bash
+        run: |
+          set +e
+          npm test -- src/supabase/functions/server/__tests__/fna-intake- src/components/client/fna-intake/__tests__/ src/shared/fna-intake/__tests__/ 2>&1 | tee quality-fna-intake-test.log
+          echo "${PIPESTATUS[0]}" > quality-fna-intake-test.exit
+          exit 0
+
       - name: Run dependency audit
         shell: bash
         run: npm audit --json > quality-npm-audit-report.json || true

@@ -4,6 +4,7 @@ build
 tmp
 supabase/.temp
 .env.local
+e2e/.env.local
 .env.*.local
 .openclaw*.local
 *.secret.local

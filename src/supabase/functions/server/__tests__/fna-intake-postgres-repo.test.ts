@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { rowToSession, sessionToRow } from '../fna-intake-postgres-repo.ts';
 import type { FnaIntakeSession } from '../fna-intake-types.ts';
 
@@ -34,5 +36,18 @@ describe('fna-intake-postgres-repo mapping', () => {
     expect(restored.clientId).toBe(session.clientId);
     expect(restored.domain).toBe('retirement');
     expect(restored.inputs).toEqual({ currentAge: 45 });
+  });
+
+  it('claimSessionForAccept uses conditional update on submitted status only', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src/supabase/functions/server/fna-intake-postgres-repo.ts'),
+      'utf8',
+    );
+    const claimStart = source.indexOf('async claimSessionForAccept');
+    const claimBlock = source.slice(claimStart, claimStart + 1200);
+
+    expect(claimBlock).toContain(".eq('status', 'submitted')");
+    expect(claimBlock).toContain("kind: 'already_accepted'");
+    expect(claimBlock).toContain('placeholderLinkedId');
   });
 });

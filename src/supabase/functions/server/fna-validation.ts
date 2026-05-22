@@ -148,13 +148,30 @@ export type UpdateRiskPlanningFnaInput = z.infer<typeof UpdateRiskPlanningFnaSch
 // CLIENT INTAKE SCHEMAS
 // ============================================================================
 
-import {
-  FnaIntakeSaveDraftSchema,
-  FnaIntakeSubmitSchema,
-} from '../../../shared/fna-intake/schemas/intake-payload.ts';
+const MAX_INTAKE_FIELDS = 200;
+const MAX_INTAKE_JSON_BYTES = 256_000;
+
+function intakePayloadSizeOk(obj: Record<string, unknown>): boolean {
+  try {
+    return JSON.stringify(obj).length <= MAX_INTAKE_JSON_BYTES;
+  } catch {
+    return false;
+  }
+}
 
 /** PUT /fna-intake/:domain/draft/:clientId — mirrors src/shared/fna-intake/schemas/intake-payload.ts */
-export { FnaIntakeSaveDraftSchema, FnaIntakeSubmitSchema };
+export const FnaIntakeSaveDraftSchema = z.object({
+  inputs: z
+    .record(z.unknown())
+    .refine((obj) => Object.keys(obj).length <= MAX_INTAKE_FIELDS, {
+      message: `Intake may contain at most ${MAX_INTAKE_FIELDS} fields`,
+    })
+    .refine(intakePayloadSizeOk, { message: 'Intake payload is too large' }),
+});
+
+export const FnaIntakeSubmitSchema = z.object({
+  consentAccepted: z.literal(true),
+});
 
 /** Route param: clientId or sessionId */
 export const FnaIntakeClientIdParamSchema = UuidSchema;
