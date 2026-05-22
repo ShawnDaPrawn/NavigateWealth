@@ -19,7 +19,7 @@ export { VascoChatArtifacts } from './VascoChatArtifacts';
 export { VascoSessionWorkspace } from './VascoSessionWorkspace';
 export { VascoInlineChatCard } from './VascoInlineChatCard';
 export type { VascoInlineChatCardProps } from './VascoInlineChatCard';
-export { useVascoStream } from './useVascoStream';
+export { useVascoStream, VascoStreamError } from './useVascoStream';
 export type {
   UseVascoStreamOptions,
   UseVascoStreamReturn,

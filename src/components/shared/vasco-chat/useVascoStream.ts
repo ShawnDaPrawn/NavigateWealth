@@ -36,6 +36,13 @@ export interface StreamResult {
   remaining?: number;
 }
 
+export class VascoStreamError extends Error {
+  status?: number;
+  code?: string;
+  remaining?: number;
+  limitReached?: boolean;
+}
+
 export interface UseVascoStreamReturn {
   /** Current accumulated streaming content (empty when idle) */
   streamingContent: string;
@@ -107,7 +114,21 @@ export function useVascoStream({
           ? bodyError || "You've reached the message limit. Please try again later."
           : bodyError ||
             'I apologise, but I encountered a temporary issue. Please try again.';
-        throw new Error(errorMsg);
+        const streamError = new VascoStreamError(errorMsg);
+        streamError.status = response.status;
+        streamError.code =
+          typeof (errorBody as { code?: string }).code === 'string'
+            ? (errorBody as { code: string }).code
+            : undefined;
+        streamError.remaining =
+          typeof (errorBody as { remaining?: number }).remaining === 'number'
+            ? (errorBody as { remaining: number }).remaining
+            : undefined;
+        streamError.limitReached =
+          typeof (errorBody as { limitReached?: boolean }).limitReached === 'boolean'
+            ? (errorBody as { limitReached: boolean }).limitReached
+            : isRateLimited && streamError.remaining === 0;
+        throw streamError;
       }
 
       // Parse X-Vasco-Remaining header

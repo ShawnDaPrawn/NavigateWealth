@@ -43,6 +43,10 @@ interface DailyMetrics {
   handoffs: number;
   ragHits: number;
   rateLimited: number;
+  topicBlocked: number;
+  circuitBreakerBlocked: number;
+  guardrailFailures: number;
+  estimatedPublicTokens: number;
 }
 
 interface AnalyticsSummary {
@@ -52,6 +56,11 @@ interface AnalyticsSummary {
   totalFeedbackNegative: number;
   totalHandoffs: number;
   totalRagHits: number;
+  totalRateLimited: number;
+  totalTopicBlocked: number;
+  totalCircuitBreakerBlocked: number;
+  totalGuardrailFailures: number;
+  totalEstimatedPublicTokens: number;
   last7Days: DailyMetrics[];
   topTopics: Array<{ topic: string; count: number }>;
   lastUpdated: string;
@@ -206,6 +215,29 @@ export function VascoAnalyticsCard() {
               <span className="text-[11px] text-gray-500">Handoffs (7d)</span>
             </div>
             <p className="text-lg font-bold text-gray-900">{analytics.totalHandoffs}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 rounded-lg bg-purple-50/60 border border-purple-100">
+            <p className="text-[11px] text-gray-500">Public usage estimate</p>
+            <p className="text-base font-bold text-gray-900">
+              {Math.round((analytics.totalEstimatedPublicTokens ?? 0) / 1000)}k
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-purple-50/60 border border-purple-100">
+            <p className="text-[11px] text-gray-500">Guardrail blocks</p>
+            <p className="text-base font-bold text-gray-900">
+              {(analytics.totalRateLimited ?? 0) +
+                (analytics.totalTopicBlocked ?? 0) +
+                (analytics.totalCircuitBreakerBlocked ?? 0)}
+            </p>
+            {(analytics.totalGuardrailFailures ?? 0) > 0 && (
+              <p className="text-[10px] text-amber-600">
+                {analytics.totalGuardrailFailures} guardrail fallback
+                {analytics.totalGuardrailFailures === 1 ? '' : 's'}
+              </p>
+            )}
           </div>
         </div>
 

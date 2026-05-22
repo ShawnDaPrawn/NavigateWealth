@@ -70,6 +70,10 @@ export interface DailyMetrics {
   handoffs: number;
   ragHits: number;
   rateLimited: number;
+  topicBlocked: number;
+  circuitBreakerBlocked: number;
+  guardrailFailures: number;
+  estimatedPublicTokens: number;
 }
 
 export interface AnalyticsSummary {
@@ -79,6 +83,11 @@ export interface AnalyticsSummary {
   totalFeedbackNegative: number;
   totalHandoffs: number;
   totalRagHits: number;
+  totalRateLimited: number;
+  totalTopicBlocked: number;
+  totalCircuitBreakerBlocked: number;
+  totalGuardrailFailures: number;
+  totalEstimatedPublicTokens: number;
   last7Days: DailyMetrics[];
   topTopics: Array<{ topic: string; count: number }>;
   lastUpdated: string;

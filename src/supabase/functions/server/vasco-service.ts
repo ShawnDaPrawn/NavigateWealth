@@ -17,6 +17,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { retrieveContext, type RetrievedContext } from './vasco-rag-service.ts';
 import { ensureSeeded, getActivePrompt, type PromptContext } from './prompt-service.ts';
+import { VASCO_PUBLIC_LIMITS } from './vasco-guardrails.ts';
 
 const log = createModuleLogger('vasco');
 
@@ -38,6 +39,7 @@ export interface VascoChatMessage {
 export interface VascoChatRequest {
   messages: Array<{ role: 'user' | 'assistant'; content: string }>;
   sessionId?: string;
+  safetyIdentifier?: string;
 }
 
 /** Citation metadata returned to the frontend for rendering */
@@ -69,25 +71,24 @@ export interface VascoSessionData {
 // ============================================================================
 
 const FEATURE_FLAG_KEY = 'platform:feature_flags:vasco_public';
-const RATE_LIMIT_PREFIX = 'vasco:rate_limit';
-
-/** Per-session message limit */
-const SESSION_MESSAGE_LIMIT = 30;
-
-/** Per-IP daily message limit */
-const DAILY_MESSAGE_LIMIT = 100;
-
-/** Rate limit window in ms (1 hour) */
-const RATE_WINDOW_MS = 60 * 60 * 1000;
-
-/** Daily window in ms (24 hours) */
+const RATE_LIMIT_PREFIX = 'vasco:legacy_rate_limit';
+const SESSION_MESSAGE_LIMIT = VASCO_PUBLIC_LIMITS.visitorDaily;
+const DAILY_MESSAGE_LIMIT = VASCO_PUBLIC_LIMITS.ipDaily;
+const RATE_WINDOW_MS = VASCO_PUBLIC_LIMITS.burstWindowMs;
 const DAILY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
+interface VascoRateLimitEntry {
+  count: number;
+  windowStart: number;
+  dailyCount: number;
+  dailyStart: number;
+}
+
 /** Max conversation history sent to OpenAI (last N messages) */
-const MAX_CONTEXT_MESSAGES = 20;
+const MAX_CONTEXT_MESSAGES = VASCO_PUBLIC_LIMITS.maxSubmittedMessages;
 
 /** Max tokens per response */
-const MAX_RESPONSE_TOKENS = 1000;
+const MAX_RESPONSE_TOKENS = VASCO_PUBLIC_LIMITS.maxResponseTokens;
 
 // ============================================================================
 // SYSTEM PROMPT
@@ -275,8 +276,12 @@ export async function checkVascoRateLimit(
       ),
     };
   } catch (error) {
-    log.error('Rate limit check failed (failing open)', error);
-    return { allowed: true, remaining: SESSION_MESSAGE_LIMIT };
+    log.error('Rate limit check failed (failing closed)', error);
+    return {
+      allowed: false,
+      remaining: 0,
+      reason: 'Vasco is temporarily unavailable. Please try again shortly.',
+    };
   }
 }
 
@@ -385,6 +390,7 @@ export async function chat(
       temperature: 0.7,
       presence_penalty: 0.1,
       frequency_penalty: 0.1,
+      safety_identifier: request.safetyIdentifier,
     }),
   });
 
@@ -480,6 +486,7 @@ export async function chatStream(
       temperature: 0.7,
       presence_penalty: 0.1,
       frequency_penalty: 0.1,
+      safety_identifier: request.safetyIdentifier,
       stream: true,
     }),
   });

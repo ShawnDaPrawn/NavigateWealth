@@ -29,6 +29,7 @@ export interface VascoInlineChatCardProps {
   showExpand?: boolean;
   disableActions?: boolean;
   disableClear?: boolean;
+  inputDisabled?: boolean;
   isWelcomeMessage?: (message: ChatMessage) => boolean;
   onFeedback?: (messageIndex: number, rating: 'positive' | 'negative') => void;
   headerExtra?: React.ReactNode;
@@ -60,6 +61,7 @@ export function VascoInlineChatCard({
   showExpand = true,
   disableActions = false,
   disableClear = false,
+  inputDisabled = false,
   isWelcomeMessage,
   onFeedback,
   headerExtra,
@@ -169,6 +171,7 @@ export function VascoInlineChatCard({
           isLoading={isLoading}
           error={error}
           placeholder={inputPlaceholder}
+          disabled={inputDisabled}
           footer={inputFooter}
         />
       </div>

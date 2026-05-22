@@ -37,6 +37,10 @@ export interface DailyMetrics {
   handoffs: number;
   ragHits: number;        // Messages where RAG context was injected
   rateLimited: number;
+  topicBlocked: number;
+  circuitBreakerBlocked: number;
+  guardrailFailures: number;
+  estimatedPublicTokens: number;
 }
 
 export interface AnalyticsSummary {
@@ -46,6 +50,11 @@ export interface AnalyticsSummary {
   totalFeedbackNegative: number;
   totalHandoffs: number;
   totalRagHits: number;
+  totalRateLimited: number;
+  totalTopicBlocked: number;
+  totalCircuitBreakerBlocked: number;
+  totalGuardrailFailures: number;
+  totalEstimatedPublicTokens: number;
   last7Days: DailyMetrics[];
   topTopics: Array<{ topic: string; count: number }>;
   lastUpdated: string;
@@ -112,6 +121,7 @@ export async function trackChatEvent(params: {
   ip: string;
   sessionId: string;
   hadRagContext: boolean;
+  estimatedTokens?: number;
 }): Promise<void> {
   try {
     const date = todayKey();
@@ -131,6 +141,7 @@ export async function trackChatEvent(params: {
         sessions: uniqueIps.length,
         uniqueIps,
         ragHits: existing.ragHits + (params.hadRagContext ? 1 : 0),
+        estimatedPublicTokens: (existing.estimatedPublicTokens ?? 0) + (params.estimatedTokens ?? 0),
       });
     } else {
       await kv.set(key, {
@@ -143,6 +154,10 @@ export async function trackChatEvent(params: {
         handoffs: 0,
         ragHits: params.hadRagContext ? 1 : 0,
         rateLimited: 0,
+        topicBlocked: 0,
+        circuitBreakerBlocked: 0,
+        guardrailFailures: 0,
+        estimatedPublicTokens: params.estimatedTokens ?? 0,
       } satisfies DailyMetrics);
     }
   } catch (err) {
@@ -163,11 +178,52 @@ export async function trackRateLimitEvent(): Promise<void> {
     if (existing) {
       await kv.set(key, {
         ...existing,
-        rateLimited: existing.rateLimited + 1,
+        rateLimited: (existing.rateLimited ?? 0) + 1,
       });
     }
   } catch (err) {
     log.error('Failed to track rate limit event (non-fatal)', err);
+  }
+}
+
+/**
+ * Track public Vasco guardrail blocks and estimated usage controls.
+ */
+export async function trackGuardrailEvent(params: {
+  type: 'topic_blocked' | 'rate_limited' | 'circuit_breaker' | 'guardrail_error';
+  estimatedTokens?: number;
+}): Promise<void> {
+  try {
+    const date = todayKey();
+    const key = `${DAILY_PREFIX}${date}`;
+    const existing = await kv.get(key) as DailyMetrics | null;
+    const base: DailyMetrics = existing ?? {
+      date,
+      sessions: 0,
+      messages: 0,
+      uniqueIps: [],
+      feedbackPositive: 0,
+      feedbackNegative: 0,
+      handoffs: 0,
+      ragHits: 0,
+      rateLimited: 0,
+      topicBlocked: 0,
+      circuitBreakerBlocked: 0,
+      guardrailFailures: 0,
+      estimatedPublicTokens: 0,
+    };
+
+    await kv.set(key, {
+      ...base,
+      rateLimited: (base.rateLimited ?? 0) + (params.type === 'rate_limited' ? 1 : 0),
+      topicBlocked: (base.topicBlocked ?? 0) + (params.type === 'topic_blocked' ? 1 : 0),
+      circuitBreakerBlocked:
+        (base.circuitBreakerBlocked ?? 0) + (params.type === 'circuit_breaker' ? 1 : 0),
+      guardrailFailures: (base.guardrailFailures ?? 0) + (params.type === 'guardrail_error' ? 1 : 0),
+      estimatedPublicTokens: (base.estimatedPublicTokens ?? 0) + (params.estimatedTokens ?? 0),
+    } satisfies DailyMetrics);
+  } catch (err) {
+    log.error('Failed to track guardrail event (non-fatal)', err);
   }
 }
 
@@ -462,7 +518,14 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
     const metrics = await kv.get(key) as DailyMetrics | null;
 
     if (metrics) {
-      days.push(metrics);
+      days.push({
+        ...metrics,
+        rateLimited: metrics.rateLimited ?? 0,
+        topicBlocked: metrics.topicBlocked ?? 0,
+        circuitBreakerBlocked: metrics.circuitBreakerBlocked ?? 0,
+        guardrailFailures: metrics.guardrailFailures ?? 0,
+        estimatedPublicTokens: metrics.estimatedPublicTokens ?? 0,
+      });
     } else {
       days.push({
         date: dateStr,
@@ -474,6 +537,10 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
         handoffs: 0,
         ragHits: 0,
         rateLimited: 0,
+        topicBlocked: 0,
+        circuitBreakerBlocked: 0,
+        guardrailFailures: 0,
+        estimatedPublicTokens: 0,
       });
     }
   }
@@ -487,6 +554,13 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
       totalFeedbackNegative: acc.totalFeedbackNegative + day.feedbackNegative,
       totalHandoffs: acc.totalHandoffs + day.handoffs,
       totalRagHits: acc.totalRagHits + day.ragHits,
+      totalRateLimited: acc.totalRateLimited + (day.rateLimited ?? 0),
+      totalTopicBlocked: acc.totalTopicBlocked + (day.topicBlocked ?? 0),
+      totalCircuitBreakerBlocked:
+        acc.totalCircuitBreakerBlocked + (day.circuitBreakerBlocked ?? 0),
+      totalGuardrailFailures: acc.totalGuardrailFailures + (day.guardrailFailures ?? 0),
+      totalEstimatedPublicTokens:
+        acc.totalEstimatedPublicTokens + (day.estimatedPublicTokens ?? 0),
     }),
     {
       totalSessions: 0,
@@ -495,6 +569,11 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
       totalFeedbackNegative: 0,
       totalHandoffs: 0,
       totalRagHits: 0,
+      totalRateLimited: 0,
+      totalTopicBlocked: 0,
+      totalCircuitBreakerBlocked: 0,
+      totalGuardrailFailures: 0,
+      totalEstimatedPublicTokens: 0,
     }
   );
 

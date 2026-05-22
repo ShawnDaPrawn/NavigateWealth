@@ -4,7 +4,7 @@
  * Logged-out Ask Vasco experience aligned with the client portal AI Advisor UI.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { SEO, createWebPageSchema } from '../seo/SEO';
@@ -38,6 +38,7 @@ import { ACTIVE_THEME } from '../portal/portal-theme';
 import {
   VascoAvatar,
   VascoInlineChatCard,
+  VascoStreamError,
   useVascoStream,
 } from '../shared/vasco-chat';
 import type { VascoChatMessageType as Message, VascoCitation } from '../shared/vasco-chat';
@@ -48,6 +49,24 @@ const SUGGESTED_PROMPTS = [
   'Am I saving enough for retirement?',
   'How does estate duty work in SA?',
 ];
+
+const VASCO_VISITOR_ID_KEY = 'vasco_visitor_id';
+
+function getOrCreateVascoVisitorId() {
+  try {
+    const existing = localStorage.getItem(VASCO_VISITOR_ID_KEY);
+    if (existing) return existing;
+
+    const generated =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(VASCO_VISITOR_ID_KEY, generated);
+    return generated;
+  } catch {
+    return 'anonymous';
+  }
+}
 
 const VASCO_WELCOME: Message = {
   role: 'assistant',
@@ -245,11 +264,15 @@ export function AskVascoPage() {
     }
   });
   const [remaining, setRemaining] = useState<number | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showHandoff, setShowHandoff] = useState(false);
+  const [visitorId] = useState(getOrCreateVascoVisitorId);
+  const vascoExtraBody = useMemo(() => ({ visitorId }), [visitorId]);
 
   const { streamingContent, isStreaming, sendStream } = useVascoStream({
     endpoint: '/vasco/chat/stream',
+    extraBody: vascoExtraBody,
   });
 
   const { data: vascoStatus, isLoading: statusLoading } = useQuery({
@@ -320,7 +343,7 @@ export function AskVascoPage() {
   const sendMessage = useCallback(
     async (preset?: string) => {
       const content = (preset || input).trim();
-      if (!content || isStreaming) return;
+      if (!content || isStreaming || limitReached) return;
 
       setError(null);
 
@@ -355,17 +378,22 @@ export function AskVascoPage() {
         }
         if (typeof result.remaining === 'number') {
           setRemaining(result.remaining);
+          setLimitReached(result.remaining <= 0);
         }
       } catch (err: unknown) {
         const errorMsg =
           err instanceof Error
             ? err.message
             : 'I apologise, but I encountered a temporary issue. Please try again.';
+        if (err instanceof VascoStreamError && err.limitReached) {
+          setRemaining(err.remaining ?? 0);
+          setLimitReached(true);
+        }
         setError(errorMsg);
         toast.error(errorMsg);
       }
     },
-    [input, isStreaming, messages, sendStream, sessionId],
+    [input, isStreaming, limitReached, messages, sendStream, sessionId],
   );
 
   const handleFeedback = useCallback(
@@ -398,6 +426,7 @@ export function AskVascoPage() {
     setError(null);
     setSessionId(null);
     setRemaining(null);
+    setLimitReached(false);
     setShowHandoff(false);
     try {
       localStorage.removeItem('vasco_session_messages');
@@ -498,7 +527,7 @@ export function AskVascoPage() {
                       No Login
                     </Badge>
                     <Badge variant="secondary" className="border-[#ddd6fe]/80 bg-white/70 text-gray-600">
-                      GPT-4o
+                      Focused Scope
                     </Badge>
                   </div>
                 </CardContent>
@@ -594,12 +623,17 @@ export function AskVascoPage() {
                 showNewChat={false}
                 showExpand={false}
                 disableActions={isStreaming}
+                inputDisabled={limitReached}
                 isWelcomeMessage={isWelcomeMessage}
                 onFeedback={handleFeedback}
                 headerExtra={
-                  remaining !== null && remaining < 10 ? (
-                    <span className="text-xs font-medium text-primary">{remaining} messages left</span>
-                  ) : null
+                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                    {limitReached
+                      ? 'Free questions used'
+                      : remaining !== null
+                        ? `${remaining} free questions left`
+                        : '10 free questions daily'}
+                  </span>
                 }
                 inputPlaceholder="Ask Vasco about financial planning, retirement, tax, or try a calculation..."
                 inputFooter={
@@ -616,7 +650,21 @@ export function AskVascoPage() {
                   </div>
                 }
                 beforeInput={
-                  userMessageCount >= 4 && !showHandoff ? (
+                  limitReached ? (
+                    <div className="mx-6 mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#ddd6fe]/80 bg-gradient-to-r from-[#f5f3ff] to-purple-50/70 p-3">
+                      <p className="min-w-0 text-xs text-gray-700">
+                        You have used the free public questions for now.{' '}
+                        <span className="font-medium text-primary">A Navigate Wealth adviser can help from here.</span>
+                      </p>
+                      <Button
+                        onClick={() => setShowHandoff(true)}
+                        size="sm"
+                        className="h-7 flex-shrink-0 bg-primary px-3 text-xs text-primary-foreground hover:bg-primary/90"
+                      >
+                        Get in Touch
+                      </Button>
+                    </div>
+                  ) : userMessageCount >= 4 && !showHandoff ? (
                     <div className="mx-6 mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#ddd6fe]/80 bg-gradient-to-r from-[#f5f3ff] to-purple-50/70 p-3">
                       <p className="min-w-0 truncate text-xs text-gray-700">
                         Want personalised advice?{' '}

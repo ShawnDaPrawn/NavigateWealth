@@ -34,13 +34,13 @@ import { createModuleLogger } from './stderr-logger.ts';
 import {
   getVascoStatus,
   updateVascoConfig,
-  checkVascoRateLimit,
   chat,
   chatStream,
   saveSession,
   loadSession,
   deleteSession,
 } from './vasco-service.ts';
+import { evaluateVascoPublicGuardrails } from './vasco-guardrails.ts';
 import {
   indexAllArticles,
   getArticleIndex,
@@ -48,7 +48,7 @@ import {
 } from './vasco-rag-service.ts';
 import {
   trackChatEvent,
-  trackRateLimitEvent,
+  trackGuardrailEvent,
   trackTopic,
   submitFeedback,
   getRecentFeedback,
@@ -93,44 +93,34 @@ app.post('/chat', asyncHandler(async (c) => {
     c.req.header('x-real-ip') ||
     'unknown';
 
-  // Check rate limits
-  const rateLimit = await checkVascoRateLimit(ip);
-  if (!rateLimit.allowed) {
-    // Track rate limit event (non-blocking)
-    trackRateLimitEvent().catch(() => {});
+  // Parse request body
+  const body = await c.req.json();
+  const { messages, sessionId, visitorId } = body;
+
+  const guardrail = await evaluateVascoPublicGuardrails({ ip, visitorId, messages });
+  if (!guardrail.allowed) {
+    if (guardrail.analyticsEvent) {
+      trackGuardrailEvent({
+        type: guardrail.analyticsEvent,
+        estimatedTokens: guardrail.estimatedTokens,
+      }).catch(() => {});
+    }
     return c.json(
       {
-        error: rateLimit.reason || 'Rate limit exceeded. Please try again later.',
-        rateLimited: true,
-        remaining: 0,
+        error: guardrail.reason || 'Vasco is temporarily unavailable. Please try again shortly.',
+        code: guardrail.code,
+        rateLimited: guardrail.code === 'rate_limited' || guardrail.code === 'circuit_breaker',
+        limitReached:
+          guardrail.code === 'circuit_breaker' ||
+          (guardrail.code === 'rate_limited' && guardrail.remaining === 0),
+        remaining: guardrail.remaining,
       },
-      429
+      guardrail.status as 400 | 429 | 503
     );
   }
 
-  // Parse request body
-  const body = await c.req.json();
-  const { messages, sessionId } = body;
-
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return c.json({ error: 'Messages array is required' }, 400);
-  }
-
-  // Validate message format
-  for (const msg of messages) {
-    if (!msg.role || !msg.content || !['user', 'assistant'].includes(msg.role)) {
-      return c.json(
-        { error: 'Each message must have a valid role (user/assistant) and content' },
-        400
-      );
-    }
-    if (typeof msg.content === 'string' && msg.content.length > 4000) {
-      return c.json({ error: 'Message content exceeds maximum length' }, 400);
-    }
-  }
-
   // Call the service (includes RAG retrieval + citations)
-  const result = await chat({ messages, sessionId });
+  const result = await chat({ messages, sessionId, safetyIdentifier: guardrail.safetyIdentifier });
 
   // Track analytics (non-blocking — fire and forget)
   const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === 'user');
@@ -139,6 +129,7 @@ app.post('/chat', asyncHandler(async (c) => {
       ip,
       sessionId: result.sessionId,
       hadRagContext: result.citations.length > 0,
+      estimatedTokens: guardrail.estimatedTokens,
     }),
     lastUserMsg ? trackTopic(lastUserMsg.content) : Promise.resolve(),
   ]).catch(() => {});
@@ -146,7 +137,7 @@ app.post('/chat', asyncHandler(async (c) => {
   return c.json({
     reply: result.reply,
     sessionId: result.sessionId,
-    remaining: rateLimit.remaining,
+    remaining: guardrail.remaining,
     citations: result.citations,
   });
 }));
@@ -232,41 +223,33 @@ app.post('/chat/stream', asyncHandler(async (c) => {
     c.req.header('x-real-ip') ||
     'unknown';
 
-  // Check rate limits
-  const rateLimit = await checkVascoRateLimit(ip);
-  if (!rateLimit.allowed) {
-    trackRateLimitEvent().catch(() => {});
+  // Parse request body
+  const body = await c.req.json();
+  const { messages, sessionId, visitorId } = body;
+
+  const guardrail = await evaluateVascoPublicGuardrails({ ip, visitorId, messages });
+  if (!guardrail.allowed) {
+    if (guardrail.analyticsEvent) {
+      trackGuardrailEvent({
+        type: guardrail.analyticsEvent,
+        estimatedTokens: guardrail.estimatedTokens,
+      }).catch(() => {});
+    }
     return c.json(
       {
-        error: rateLimit.reason || 'Rate limit exceeded. Please try again later.',
-        rateLimited: true,
-        remaining: 0,
+        error: guardrail.reason || 'Vasco is temporarily unavailable. Please try again shortly.',
+        code: guardrail.code,
+        rateLimited: guardrail.code === 'rate_limited' || guardrail.code === 'circuit_breaker',
+        limitReached:
+          guardrail.code === 'circuit_breaker' ||
+          (guardrail.code === 'rate_limited' && guardrail.remaining === 0),
+        remaining: guardrail.remaining,
       },
-      429
+      guardrail.status as 400 | 429 | 503
     );
   }
 
-  // Parse request body
-  const body = await c.req.json();
-  const { messages, sessionId } = body;
-
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return c.json({ error: 'Messages array is required' }, 400);
-  }
-
-  for (const msg of messages) {
-    if (!msg.role || !msg.content || !['user', 'assistant'].includes(msg.role)) {
-      return c.json(
-        { error: 'Each message must have a valid role (user/assistant) and content' },
-        400
-      );
-    }
-    if (typeof msg.content === 'string' && msg.content.length > 4000) {
-      return c.json({ error: 'Message content exceeds maximum length' }, 400);
-    }
-  }
-
-  const result = await chatStream({ messages, sessionId });
+  const result = await chatStream({ messages, sessionId, safetyIdentifier: guardrail.safetyIdentifier });
 
   // Track analytics (non-blocking)
   const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === 'user');
@@ -275,6 +258,7 @@ app.post('/chat/stream', asyncHandler(async (c) => {
       ip,
       sessionId: result.sessionId,
       hadRagContext: result.citations.length > 0,
+      estimatedTokens: guardrail.estimatedTokens,
     }),
     lastUserMsg ? trackTopic(lastUserMsg.content) : Promise.resolve(),
   ]).catch(() => {});
@@ -285,7 +269,7 @@ app.post('/chat/stream', asyncHandler(async (c) => {
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*',
-      'X-Vasco-Remaining': String(rateLimit.remaining),
+      'X-Vasco-Remaining': String(guardrail.remaining),
     },
   });
 }));
