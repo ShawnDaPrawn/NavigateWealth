@@ -4,7 +4,7 @@
       "source": "/:path*",
       "has": [{ "type": "host", "value": "navigatewealth.co" }],
       "destination": "https://www.navigatewealth.co/:path*",
-      "permanent": true
+      "statusCode": 301
     }
   ],
   "outputDirectory": "dist",
