@@ -9,9 +9,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { ServiceFnaModal } from '../portal/ServiceFnaModal';
 import { Heart, Calculator, FileText, Users } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';
 import { DynamicServicePageWrapper } from '../layout/DynamicServicePageWrapper';
@@ -19,12 +16,19 @@ import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
 import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
+import { useServiceFnaSection } from '../portal/useServiceFnaSection';
 
 export function MedicalAidDashboardPage() {
   const { user } = useAuth();
-  const [showNeedsAnalysis, setShowNeedsAnalysis] = useState(false);
   const [showDependantModal, setShowDependantModal] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
+
+  const { topContent, scrollToPanel } = useServiceFnaSection({
+    clientId: user?.id,
+    fnaType: 'medical',
+    title: 'Medical Needs Analysis',
+    description: 'Start your discovery or view your published medical aid analysis',
+  });
 
   // ── Real data for insights ──
   const { data: portfolio } = usePortfolioSummary(user?.id);
@@ -39,15 +43,13 @@ export function MedicalAidDashboardPage() {
         title: 'Complete Your Medical Aid Assessment',
         description: 'A healthcare needs analysis will help identify the best scheme and plan for your family\'s medical needs and budget.',
         severity: 'high',
-        onClick: () => setShowNeedsAnalysis(true),
+        onClick: scrollToPanel,
       });
       return result;
     }
 
-    // Annual review reminder — medical aid benefits change every January
-    const currentMonth = new Date().getMonth(); // 0-indexed
+    const currentMonth = new Date().getMonth();
     if (currentMonth >= 8 && currentMonth <= 11) {
-      // September–December is review season
       result.push({
         id: 'med-annual-review',
         title: 'Medical Aid Review Season',
@@ -56,7 +58,6 @@ export function MedicalAidDashboardPage() {
       });
     }
 
-    // Premium insight
     if (medicalAid.monthlyPremium > 0) {
       const annualPremium = medicalAid.monthlyPremium * 12;
       result.push({
@@ -67,7 +68,6 @@ export function MedicalAidDashboardPage() {
       });
     }
 
-    // Dependants
     if (medicalAid.dependants > 0) {
       result.push({
         id: 'med-dependants',
@@ -77,8 +77,6 @@ export function MedicalAidDashboardPage() {
       });
     }
 
-    // No gap cover check
-    // We can't know for sure without checking policies, so this is a general reminder
     result.push({
       id: 'med-gap-cover',
       title: 'Do You Have Gap Cover?',
@@ -87,14 +85,14 @@ export function MedicalAidDashboardPage() {
     });
 
     return result;
-  }, [medicalAid]);
+  }, [medicalAid, scrollToPanel]);
 
   const quickActions: ServicePageAction[] = [
     {
       label: 'Needs Analysis',
       description: 'Analyse your healthcare needs',
       icon: Calculator,
-      onClick: () => setShowNeedsAnalysis(true),
+      onClick: scrollToPanel,
       primary: true,
     },
     {
@@ -121,18 +119,9 @@ export function MedicalAidDashboardPage() {
         themeColor="red"
         quickActions={quickActions}
         insights={insights}
+        topContent={topContent}
       />
 
-      <ServiceFnaModal
-        open={showNeedsAnalysis}
-        onClose={() => setShowNeedsAnalysis(false)}
-        clientId={user?.id || ''}
-        fnaType="medical"
-        title="Medical Needs Analysis"
-        description="Start your discovery or view your published medical aid analysis"
-      />
-
-      {/* Add Dependant Modal */}
       <ServiceRequestModal
         isOpen={showDependantModal}
         onClose={() => setShowDependantModal(false)}

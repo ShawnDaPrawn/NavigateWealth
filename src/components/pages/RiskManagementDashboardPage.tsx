@@ -3,7 +3,7 @@
  *
  * Fetches real FNA + portfolio data for actionable insights.
  * Quick actions wired to real workflows:
- * - "Needs Analysis" → FNA modal
+ * - "Needs Analysis" → scrolls to inline FNA panel
  * - "Get a Quote" → opens the native portal quote flow
  * - "Submit Claim" → ServiceRequestModal (claim type)
  *
@@ -12,9 +12,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { ServiceFnaModal } from '../portal/ServiceFnaModal';
 import { Shield, Calculator, FileText, Upload } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';
 import { DynamicServicePageWrapper } from '../layout/DynamicServicePageWrapper';
@@ -24,13 +21,20 @@ import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
 import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
+import { useServiceFnaSection } from '../portal/useServiceFnaSection';
 
 export function RiskManagementDashboardPage() {
   const { user } = useAuth();
 
-  const [showNeedsAnalysis, setShowNeedsAnalysis] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
+
+  const { topContent, scrollToPanel } = useServiceFnaSection({
+    clientId: user?.id,
+    fnaType: 'risk',
+    title: 'Financial Needs Analysis',
+    description: 'Start your discovery or view your published risk analysis',
+  });
 
   // ── Real data for insights ──
   const { data: portfolio } = usePortfolioSummary(user?.id);
@@ -59,7 +63,7 @@ export function RiskManagementDashboardPage() {
               title: `${gaps.length} Coverage ${gaps.length === 1 ? 'Gap' : 'Gaps'} Identified`,
               description: `Your needs analysis shows a total shortfall of ${formatCurrency(totalGap)} across ${gaps.map((g: FinalRiskNeed) => g.label).join(', ')}. Consider reviewing with your adviser.`,
               severity: totalGap > 1_000_000 ? 'high' : totalGap > 500_000 ? 'medium' : 'low',
-              onClick: () => setShowNeedsAnalysis(true),
+              onClick: scrollToPanel,
             });
           }
 
@@ -85,7 +89,7 @@ export function RiskManagementDashboardPage() {
             description:
               'A Financial Needs Analysis helps identify coverage gaps and ensures your family is adequately protected. Book a review with your adviser.',
             severity: 'high',
-            onClick: () => setShowNeedsAnalysis(true),
+            onClick: scrollToPanel,
           });
         }
 
@@ -119,14 +123,14 @@ export function RiskManagementDashboardPage() {
     }
 
     fetchInsights();
-  }, [user?.id, portfolio]);
+  }, [user?.id, portfolio, scrollToPanel]);
 
   const quickActions: ServicePageAction[] = [
     {
       label: 'Needs Analysis',
       description: 'Calculate your coverage gap',
       icon: Calculator,
-      onClick: () => setShowNeedsAnalysis(true),
+      onClick: scrollToPanel,
       primary: true,
     },
     {
@@ -153,18 +157,9 @@ export function RiskManagementDashboardPage() {
         themeColor="purple"
         quickActions={quickActions}
         insights={insights}
+        topContent={topContent}
       />
 
-      <ServiceFnaModal
-        open={showNeedsAnalysis}
-        onClose={() => setShowNeedsAnalysis(false)}
-        clientId={user?.id || ''}
-        fnaType="risk"
-        title="Financial Needs Analysis"
-        description="Start your discovery or view your published risk analysis"
-      />
-
-      {/* Claim Submission Modal */}
       <ServiceRequestModal
         isOpen={showClaimModal}
         onClose={() => setShowClaimModal(false)}

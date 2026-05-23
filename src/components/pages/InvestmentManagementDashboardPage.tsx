@@ -9,9 +9,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { ServiceFnaModal } from '../portal/ServiceFnaModal';
 import { TrendingUp, Calculator, FileText, PieChart } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';
 import { DynamicServicePageWrapper, type SubCategoryConfig } from '../layout/DynamicServicePageWrapper';
@@ -19,6 +16,7 @@ import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
 import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
+import { useServiceFnaSection } from '../portal/useServiceFnaSection';
 
 const SUB_CATEGORIES: SubCategoryConfig[] = [
   {
@@ -37,11 +35,16 @@ const SUB_CATEGORIES: SubCategoryConfig[] = [
 
 export function InvestmentManagementDashboardPage() {
   const { user } = useAuth();
-  const [showNeedsAnalysis, setShowNeedsAnalysis] = useState(false);
   const [showAllocationModal, setShowAllocationModal] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
 
-  // ── Real data for insights ──
+  const { topContent, scrollToPanel } = useServiceFnaSection({
+    clientId: user?.id,
+    fnaType: 'investment',
+    title: 'Investment Needs Analysis',
+    description: 'Start your discovery or view your published investment analysis',
+  });
+
   const { data: portfolio } = usePortfolioSummary(user?.id);
   const investment = portfolio?.financialOverview?.investment;
 
@@ -54,12 +57,11 @@ export function InvestmentManagementDashboardPage() {
         title: 'Complete Your Investment Assessment',
         description: 'An investment needs analysis will help align your portfolio with your risk profile and financial goals.',
         severity: 'high',
-        onClick: () => setShowNeedsAnalysis(true),
+        onClick: scrollToPanel,
       });
       return result;
     }
 
-    // Portfolio performance
     if (investment.performance && investment.performance !== 'N/A') {
       const perf = parseFloat(investment.performance);
       if (!isNaN(perf)) {
@@ -81,7 +83,6 @@ export function InvestmentManagementDashboardPage() {
       }
     }
 
-    // Diversification check
     if (investment.totalValue > 0 && investment.goalsLinked === 0) {
       result.push({
         id: 'inv-no-goals',
@@ -91,7 +92,6 @@ export function InvestmentManagementDashboardPage() {
       });
     }
 
-    // Contribution check
     if (investment.monthlyContribution === 0 && investment.totalValue > 0) {
       result.push({
         id: 'inv-no-contribution',
@@ -101,7 +101,6 @@ export function InvestmentManagementDashboardPage() {
       });
     }
 
-    // Review reminder
     if (investment.nextReview) {
       const daysUntil = Math.ceil(
         (new Date(investment.nextReview).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
@@ -117,14 +116,14 @@ export function InvestmentManagementDashboardPage() {
     }
 
     return result;
-  }, [investment]);
+  }, [investment, scrollToPanel]);
 
   const quickActions: ServicePageAction[] = [
     {
       label: 'Needs Analysis',
       description: 'Determine your investment goals',
       icon: Calculator,
-      onClick: () => setShowNeedsAnalysis(true),
+      onClick: scrollToPanel,
       primary: true,
     },
     {
@@ -152,18 +151,9 @@ export function InvestmentManagementDashboardPage() {
         quickActions={quickActions}
         insights={insights}
         subCategories={SUB_CATEGORIES}
+        topContent={topContent}
       />
 
-      <ServiceFnaModal
-        open={showNeedsAnalysis}
-        onClose={() => setShowNeedsAnalysis(false)}
-        clientId={user?.id || ''}
-        fnaType="investment"
-        title="Investment Needs Analysis"
-        description="Start your discovery or view your published investment analysis"
-      />
-
-      {/* Allocation Report Modal */}
       <ServiceRequestModal
         isOpen={showAllocationModal}
         onClose={() => setShowAllocationModal(false)}

@@ -9,9 +9,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { ServiceFnaModal } from '../portal/ServiceFnaModal';
 import { FileText, Calculator, Upload } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';
 import { DynamicServicePageWrapper } from '../layout/DynamicServicePageWrapper';
@@ -19,14 +16,20 @@ import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
 import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
+import { useServiceFnaSection } from '../portal/useServiceFnaSection';
 
 export function TaxPlanningDashboardPage() {
   const { user } = useAuth();
-  const [showTaxAnalysis, setShowTaxAnalysis] = useState(false);
   const [showTaxReturnModal, setShowTaxReturnModal] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
 
-  // ── Real data for insights ──
+  const { topContent, scrollToPanel } = useServiceFnaSection({
+    clientId: user?.id,
+    fnaType: 'tax',
+    title: 'Tax Planning Analysis',
+    description: 'Start your discovery or view your published tax analysis',
+  });
+
   const { data: portfolio } = usePortfolioSummary(user?.id);
   const tax = portfolio?.financialOverview?.tax;
   const retirement = portfolio?.financialOverview?.retirement;
@@ -40,11 +43,10 @@ export function TaxPlanningDashboardPage() {
         title: 'Get a Tax Assessment',
         description: 'A tax planning review can identify deductions you may be missing and help optimise your effective tax rate.',
         severity: 'high',
-        onClick: () => setShowTaxAnalysis(true),
+        onClick: scrollToPanel,
       });
     }
 
-    // Filing status
     if (tax?.returnStatus === 'not-filed') {
       result.push({
         id: 'tax-not-filed',
@@ -54,7 +56,6 @@ export function TaxPlanningDashboardPage() {
       });
     }
 
-    // Refund notification
     if (tax?.estimatedRefund && tax.estimatedRefund > 0) {
       result.push({
         id: 'tax-refund',
@@ -64,7 +65,6 @@ export function TaxPlanningDashboardPage() {
       });
     }
 
-    // Retirement contribution headroom for tax
     if (retirement?.monthlyContribution && retirement.monthlyContribution > 0) {
       const annualRA = retirement.monthlyContribution * 12;
       const maxDeductible = 350_000;
@@ -79,10 +79,8 @@ export function TaxPlanningDashboardPage() {
       }
     }
 
-    // Filing deadline awareness
     const now = new Date();
     const month = now.getMonth();
-    // SARS provisional tax: Feb and Aug deadlines
     if (month === 1 || month === 7) {
       result.push({
         id: 'tax-provisional',
@@ -93,14 +91,14 @@ export function TaxPlanningDashboardPage() {
     }
 
     return result;
-  }, [tax, retirement]);
+  }, [tax, retirement, scrollToPanel]);
 
   const quickActions: ServicePageAction[] = [
     {
       label: 'Tax Analysis',
       description: 'Review tax efficiency',
       icon: Calculator,
-      onClick: () => setShowTaxAnalysis(true),
+      onClick: scrollToPanel,
       primary: true,
     },
     {
@@ -127,18 +125,9 @@ export function TaxPlanningDashboardPage() {
         themeColor="indigo"
         quickActions={quickActions}
         insights={insights}
+        topContent={topContent}
       />
 
-      <ServiceFnaModal
-        open={showTaxAnalysis}
-        onClose={() => setShowTaxAnalysis(false)}
-        clientId={user?.id || ''}
-        fnaType="tax"
-        title="Tax Planning Analysis"
-        description="Start your discovery or view your published tax analysis"
-      />
-
-      {/* Tax Return Modal */}
       <ServiceRequestModal
         isOpen={showTaxReturnModal}
         onClose={() => setShowTaxReturnModal(false)}

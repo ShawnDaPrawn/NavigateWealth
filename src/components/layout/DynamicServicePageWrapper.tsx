@@ -44,6 +44,7 @@ interface DynamicServicePageWrapperProps {
   quickActions: ServicePageAction[];
   insights: ServicePageInsight[];
   backPath?: string;
+  topContent?: React.ReactNode;
   /**
    * Optional sub-category configuration for multi-table layout.
    * When provided, policies are split into separate tables by sub-categoryId,
@@ -77,6 +78,7 @@ export function DynamicServicePageWrapper({
   insights,
   backPath,
   subCategories,
+  topContent,
 }: DynamicServicePageWrapperProps) {
   const { user } = useAuth();
   // Map of categoryId → schema fields
@@ -291,6 +293,7 @@ export function DynamicServicePageWrapper({
         quickActions={quickActions}
         insights={insights}
         backPath={backPath}
+        topContent={topContent}
         onRowClick={(policy) => {
           setSelectedPolicy(policy);
           setShowPolicyModal(true);

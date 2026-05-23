@@ -9,23 +9,26 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { ServiceFnaModal } from '../portal/ServiceFnaModal';
 import { Landmark, Calculator, FileText, Scroll } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';
 import { DynamicServicePageWrapper } from '../layout/DynamicServicePageWrapper';
 import { usePortfolioSummary } from './portfolio/hooks';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
 import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
+import { useServiceFnaSection } from '../portal/useServiceFnaSection';
 
 export function EstatePlanningDashboardPage() {
   const { user } = useAuth();
-  const [showNeedsAnalysis, setShowNeedsAnalysis] = useState(false);
   const [showWillReviewModal, setShowWillReviewModal] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
 
-  // ── Real data for insights ──
+  const { topContent, scrollToPanel } = useServiceFnaSection({
+    clientId: user?.id,
+    fnaType: 'estate',
+    title: 'Estate Planning Analysis',
+    description: 'Start your discovery or view your published estate analysis',
+  });
+
   const { data: portfolio } = usePortfolioSummary(user?.id);
   const estate = portfolio?.financialOverview?.estate;
 
@@ -38,12 +41,11 @@ export function EstatePlanningDashboardPage() {
         title: 'Complete Your Estate Assessment',
         description: 'An estate planning analysis ensures your assets are protected, your family is provided for, and estate duty exposure is minimised.',
         severity: 'high',
-        onClick: () => setShowNeedsAnalysis(true),
+        onClick: scrollToPanel,
       });
       return result;
     }
 
-    // Will status
     if (estate.willStatus === 'not-drafted') {
       result.push({
         id: 'est-no-will',
@@ -64,7 +66,6 @@ export function EstatePlanningDashboardPage() {
       }
     }
 
-    // Trust status
     if (estate.trustStatus === 'not-established') {
       result.push({
         id: 'est-no-trust',
@@ -74,7 +75,6 @@ export function EstatePlanningDashboardPage() {
       });
     }
 
-    // Nomination status
     if (estate.nominationStatus === 'incomplete') {
       result.push({
         id: 'est-nominations',
@@ -84,7 +84,6 @@ export function EstatePlanningDashboardPage() {
       });
     }
 
-    // Estate duty awareness
     const totalWealth = portfolio?.clientData?.totalWealthValue || 0;
     if (totalWealth > 3_500_000) {
       result.push({
@@ -96,14 +95,14 @@ export function EstatePlanningDashboardPage() {
     }
 
     return result;
-  }, [estate, portfolio?.clientData?.totalWealthValue]);
+  }, [estate, portfolio?.clientData?.totalWealthValue, scrollToPanel]);
 
   const quickActions: ServicePageAction[] = [
     {
       label: 'Needs Analysis',
       description: 'Estate liquidity calculation',
       icon: Calculator,
-      onClick: () => setShowNeedsAnalysis(true),
+      onClick: scrollToPanel,
       primary: true,
     },
     {
@@ -130,18 +129,9 @@ export function EstatePlanningDashboardPage() {
         themeColor="purple"
         quickActions={quickActions}
         insights={insights}
+        topContent={topContent}
       />
 
-      <ServiceFnaModal
-        open={showNeedsAnalysis}
-        onClose={() => setShowNeedsAnalysis(false)}
-        clientId={user?.id || ''}
-        fnaType="estate"
-        title="Estate Planning Analysis"
-        description="Start your discovery or view your published estate analysis"
-      />
-
-      {/* Will Review Modal */}
       <ServiceRequestModal
         isOpen={showWillReviewModal}
         onClose={() => setShowWillReviewModal(false)}

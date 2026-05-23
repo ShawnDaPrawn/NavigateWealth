@@ -146,14 +146,11 @@ import type { HealthSubScores } from '../utils';
 
 // FNA API — uses batch endpoint via React Query hook for cache control
 import { useFnaBatchStatus } from '../hooks/useFnaBatchStatus';
-import type { FnaIntakeDomain } from '../../../../../services/fna-intake-api';
-import { getFnaStatusLabel, isFnaIntakeFeatureEnabled } from '@/shared/fna-intake/fna-intake-labels';
-
-const LazyClientFNAHub = React.lazy(() =>
-  import('../../../../client/fna-intake/ClientFNAHub').then((m) => ({
-    default: m.ClientFNAHub,
-  })),
-);
+import { PrefillDomainPicker } from '../../form-prefill/PrefillDomainPicker';
+import { PrefillHistoryPanel } from '../../form-prefill/PrefillHistoryPanel';
+import { FillExternalFormButton } from '../../form-prefill/FillExternalFormButton';
+import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
+import { getFnaStatusLabel } from '@/shared/fna-intake/fna-intake-labels';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -679,8 +676,6 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
 
   // ── Phase 4 state ───────────────────────────────────────────────────
   const [generatingPDF, setGeneratingPDF] = useState(false);
-  const [intakeDialogDomain, setIntakeDialogDomain] = useState<FnaIntakeDomain | null>(null);
-
   // ── Phase 1: Data fetching ────────────────────────────────────────────
 
   const fetchProfile = useCallback(async () => {
@@ -2162,6 +2157,18 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
         mode={mode}
       />
 
+      {!isClient && isFormPrefillEnabled() && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-wrap gap-2">
+            <PrefillDomainPicker clientId={client.id} />
+            <FillExternalFormButton clientId={client.id} />
+          </div>
+          <div className="w-full sm:max-w-md">
+            <PrefillHistoryPanel clientId={client.id} />
+          </div>
+        </div>
+      )}
+
       {/* ─── 2. Health Pillar Cards ──────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 items-stretch">
         {pillars.map((pillar) => (
@@ -2375,6 +2382,7 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
         </AccordionItem>
 
         {/* ─── Financial Reviews ───────────────────────────────────────── */}
+        {!isClient && (
         <AccordionItem value="reviews" className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
           <AccordionTrigger className="px-5 py-3.5 hover:no-underline hover:bg-gray-50/60 bg-gray-50/40 data-[state=open]:border-b data-[state=open]:border-gray-100">
             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -2427,21 +2435,13 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
                     key={fna.key}
                     fna={fna}
                     mode={mode}
-                    onIntakeAction={
-                      isClient &&
-                      isFnaIntakeFeatureEnabled() &&
-                      (fna.status === 'not_started' ||
-                        fna.status === 'client_draft' ||
-                        (fna.status === 'published' && fna.nextReviewDue && isPast(fna.nextReviewDue)))
-                        ? () => setIntakeDialogDomain(fna.key as FnaIntakeDomain)
-                        : undefined
-                    }
                   />
                 ))}
               </div>
             </div>
           </AccordionContent>
         </AccordionItem>
+        )}
 
         {/* ─── Documents & Compliance ─────────────────────────────────── */}
         <AccordionItem value="documents" className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
@@ -2609,30 +2609,6 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
         </AccordionItem>
 
       </Accordion>
-
-      {isClient && isFnaIntakeFeatureEnabled() && intakeDialogDomain && (
-        <Dialog open={!!intakeDialogDomain} onOpenChange={(open) => !open && setIntakeDialogDomain(null)}>
-          <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Financial Needs Discovery</DialogTitle>
-            </DialogHeader>
-            <React.Suspense
-              fallback={
-                <div className="flex items-center justify-center py-12 text-gray-500">
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Loading…
-                </div>
-              }
-            >
-              <LazyClientFNAHub
-                clientId={client.id}
-                fnaType={intakeDialogDomain}
-                batchItem={batchFnaData?.find((item) => item.key === intakeDialogDomain)}
-              />
-            </React.Suspense>
-          </DialogContent>
-        </Dialog>
-      )}
 
       {/* ─── Print Footer ────────────────────────────────────────────── */}
       <div className="hidden print:block print:mt-8 border-t pt-4">

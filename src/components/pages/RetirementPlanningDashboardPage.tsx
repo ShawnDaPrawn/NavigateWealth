@@ -9,9 +9,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { ServiceFnaModal } from '../portal/ServiceFnaModal';
 import { PiggyBank, Calculator, FileText, TrendingUp } from 'lucide-react';
 import type { ServicePageAction, ServicePageInsight } from '../layout/ServicePageLayout';
 import { DynamicServicePageWrapper, type SubCategoryConfig } from '../layout/DynamicServicePageWrapper';
@@ -19,6 +16,7 @@ import { usePortfolioSummary } from './portfolio/hooks';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { ServiceRequestModal, SERVICE_REQUEST_CONFIGS } from '../modals/ServiceRequestModal';
 import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
+import { useServiceFnaSection } from '../portal/useServiceFnaSection';
 
 const SUB_CATEGORIES: SubCategoryConfig[] = [
   {
@@ -37,11 +35,16 @@ const SUB_CATEGORIES: SubCategoryConfig[] = [
 
 export function RetirementPlanningDashboardPage() {
   const { user } = useAuth();
-  const [showNeedsAnalysis, setShowNeedsAnalysis] = useState(false);
   const [showContributionModal, setShowContributionModal] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
 
-  // ── Real data for insights ──
+  const { topContent, scrollToPanel } = useServiceFnaSection({
+    clientId: user?.id,
+    fnaType: 'retirement',
+    title: 'Retirement Planning Analysis',
+    description: 'Start your discovery or view your published retirement analysis',
+  });
+
   const { data: portfolio } = usePortfolioSummary(user?.id);
   const retirement = portfolio?.financialOverview?.retirement;
 
@@ -54,12 +57,11 @@ export function RetirementPlanningDashboardPage() {
         title: 'Complete Your Retirement Assessment',
         description: 'A retirement needs analysis will project whether your current savings and contributions will meet your retirement income needs.',
         severity: 'high',
-        onClick: () => setShowNeedsAnalysis(true),
+        onClick: scrollToPanel,
       });
       return result;
     }
 
-    // Progress to goal
     if (retirement.progressToGoal > 0 && retirement.progressToGoal < 60) {
       result.push({
         id: 'ret-behind-target',
@@ -76,10 +78,8 @@ export function RetirementPlanningDashboardPage() {
       });
     }
 
-    // Tax benefit maximisation
     if (retirement.monthlyContribution > 0) {
       const annualContribution = retirement.monthlyContribution * 12;
-      // Section 11F allows up to 27.5% of remuneration or R350,000 per year
       const maxDeductible = 350_000;
       if (annualContribution < maxDeductible * 0.7) {
         result.push({
@@ -91,7 +91,6 @@ export function RetirementPlanningDashboardPage() {
       }
     }
 
-    // Next review
     if (retirement.nextReview) {
       const daysUntil = Math.ceil(
         (new Date(retirement.nextReview).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
@@ -107,14 +106,14 @@ export function RetirementPlanningDashboardPage() {
     }
 
     return result;
-  }, [retirement]);
+  }, [retirement, scrollToPanel]);
 
   const quickActions: ServicePageAction[] = [
     {
       label: 'Needs Analysis',
       description: 'Project your retirement income',
       icon: Calculator,
-      onClick: () => setShowNeedsAnalysis(true),
+      onClick: scrollToPanel,
       primary: true,
     },
     {
@@ -142,18 +141,9 @@ export function RetirementPlanningDashboardPage() {
         quickActions={quickActions}
         insights={insights}
         subCategories={SUB_CATEGORIES}
+        topContent={topContent}
       />
 
-      <ServiceFnaModal
-        open={showNeedsAnalysis}
-        onClose={() => setShowNeedsAnalysis(false)}
-        clientId={user?.id || ''}
-        fnaType="retirement"
-        title="Retirement Planning Analysis"
-        description="Start your discovery or view your published retirement analysis"
-      />
-
-      {/* Contribution Change Modal */}
       <ServiceRequestModal
         isOpen={showContributionModal}
         onClose={() => setShowContributionModal(false)}

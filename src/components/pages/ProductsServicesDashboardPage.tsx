@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -64,7 +64,12 @@ import { toast } from 'sonner@2.0.3';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
+import { ServiceFnaPanel } from '../portal/ServiceFnaPanel';
 import { ACTIVE_THEME } from '../portal/portal-theme';
+import {
+  getFnaTitleForService,
+  quoteServiceIdToFnaDomain,
+} from '@/shared/fna-intake/service-fna-mapping';
 import { usePortfolioSummary } from './portfolio/hooks';
 import type { ProductHolding, PortfolioFinancialOverview } from './portfolio/api';
 import { formatCurrency } from './portfolio/utils';
@@ -412,6 +417,7 @@ const STATUS_CONFIG: Record<ServiceStatus, {
 export function ProductsServicesDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -475,6 +481,25 @@ export function ProductsServicesDashboardPage() {
     if (!selectedDesktopService) return null;
     return getServiceGuidance(selectedDesktopService, selectedDesktopService.derived);
   }, [selectedDesktopService]);
+
+  const selectedFnaDomain = useMemo(() => {
+    if (!selectedDesktopService) return undefined;
+    return quoteServiceIdToFnaDomain(selectedDesktopService.id);
+  }, [selectedDesktopService]);
+
+  const selectedFnaTitle = useMemo(() => {
+    if (!selectedDesktopService) return undefined;
+    return getFnaTitleForService(selectedDesktopService.id);
+  }, [selectedDesktopService]);
+
+  useEffect(() => {
+    const serviceParam = searchParams.get('service');
+    if (!serviceParam) return;
+    const isValid = enrichedServices.some((service) => service.id === serviceParam);
+    if (isValid) {
+      setSelectedServiceId(serviceParam);
+    }
+  }, [searchParams, enrichedServices]);
 
   const selectedServiceHoldings = useMemo(() => {
     if (!selectedDesktopService) return [];
@@ -707,6 +732,15 @@ export function ProductsServicesDashboardPage() {
               </div>
 
               <div className="px-7 py-6 space-y-6">
+                {selectedFnaDomain && selectedFnaTitle && user?.id && (
+                  <ServiceFnaPanel
+                    clientId={user.id}
+                    fnaType={selectedFnaDomain}
+                    title={selectedFnaTitle}
+                    description={`Complete your ${selectedDesktopService.shortLabel.toLowerCase()} needs discovery or view your published analysis.`}
+                  />
+                )}
+
                 {selectedServiceHoldings.length > 0 ? (
                   <>
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

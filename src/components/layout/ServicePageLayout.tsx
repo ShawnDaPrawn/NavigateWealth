@@ -83,6 +83,8 @@ interface ServicePageLayoutProps<T> {
 
   quickActions: ServicePageAction[];
   insights: ServicePageInsight[];
+  /** Optional content rendered after quick actions (e.g. inline FNA panel) */
+  topContent?: React.ReactNode;
 }
 
 const SEVERITY_CONFIG = {
@@ -175,6 +177,7 @@ export function ServicePageLayout<T extends { id?: string | number; [key: string
   onRowClick,
   quickActions,
   insights,
+  topContent,
 }: ServicePageLayoutProps<T>) {
   const navigate = useNavigate();
   const theme = THEME_STYLES[themeColor] || THEME_STYLES.purple;
@@ -250,6 +253,8 @@ export function ServicePageLayout<T extends { id?: string | number; [key: string
             );
           })}
         </div>
+
+        {topContent && <div className="mb-6">{topContent}</div>}
 
         {/* ── Insights Banner ── */}
         {insights.length > 0 && (
