@@ -24,6 +24,8 @@ import { useClientProductKeys } from '../hooks/useClientProductKeys';
 import { MedicalFNAInputSchema, MedicalFNAFormValues } from '../schema';
 import { MedicalFNAInputs } from '../types';
 import { toast } from 'sonner@2.0.3';
+import { useFormPrefill } from '../../form-prefill/useFormPrefill';
+import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
 
 interface Step1Props {
   clientId?: string;
@@ -76,11 +78,41 @@ export function Step1InputForm({
     }
   });
 
-  // Pre-fill from profile and product keys
+  const [prefillStarted, setPrefillStarted] = React.useState(false);
+  const prefillEnabled = isFormPrefillEnabled();
+
+  const { PrefillUI, startPrefill } = useFormPrefill({
+    clientId:
+      prefillEnabled && initialData && Object.keys(initialData).length > 0 ? undefined : clientId,
+    formId: 'medical-fna-step1',
+    currentValues: form.getValues() as Record<string, unknown>,
+    onApplyValues: (values) => {
+      Object.entries(values).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        const typedKey = key as keyof MedicalFNAFormValues;
+        if (typedKey in form.getValues()) {
+          form.setValue(typedKey, value as never);
+        }
+      });
+    },
+  });
+
+  React.useEffect(() => {
+    if (
+      prefillEnabled &&
+      clientId &&
+      (!initialData || Object.keys(initialData).length === 0) &&
+      !prefillStarted
+    ) {
+      setPrefillStarted(true);
+      void startPrefill();
+    }
+  }, [clientId, initialData, prefillStarted, startPrefill, prefillEnabled]);
+
+  // Legacy silent auto-fill only when unified prefill is disabled
   useEffect(() => {
-    // Only auto-fill if we are NOT editing existing data (initialData is empty/minimal)
-    // If coming back from Step 2, initialData will be populated, so we skip this to preserve edits.
-    const isEditing = initialData && Object.keys(initialData).length > 2; // > 2 because defaultValues spreads it
+    if (prefillEnabled) return;
+    const isEditing = initialData && Object.keys(initialData).length > 2;
     if (isEditing) return;
 
     // 1. Profile Data
@@ -126,7 +158,7 @@ export function Step1InputForm({
       if (lateJoinerPenalty !== undefined) form.setValue('existingLJP', lateJoinerPenalty);
       if (dependentsCount !== undefined) form.setValue('existingDependents', dependentsCount);
     }
-  }, [profile, initialData, form, planType, hospitalTariff, totalPremium, msa, lateJoinerPenalty, dependentsCount, isProductKeysLoading]);
+  }, [profile, initialData, form, planType, hospitalTariff, totalPremium, msa, lateJoinerPenalty, dependentsCount, isProductKeysLoading, prefillEnabled]);
 
   const onSubmit = (data: MedicalFNAFormValues) => {
     onNext(data);
@@ -183,6 +215,7 @@ export function Step1InputForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pb-12">
+        {prefillEnabled && PrefillUI}
         
         {/* Section A: Household */}
         <Card>

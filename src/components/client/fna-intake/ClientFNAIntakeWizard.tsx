@@ -72,6 +72,7 @@ export function ClientFNAIntakeWizard({
   const [showProjection, setShowProjection] = useState(false);
 
   const isReadOnly = readOnlyProp || session?.status === 'submitted';
+  const hasSavedInputs = Object.keys(pendingInputs).length > 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -214,7 +215,7 @@ export function ClientFNAIntakeWizard({
           {domain === 'retirement' && (
             <LazyRetirementStep1
               clientId={clientId}
-              initialData={retirementInitial}
+              initialData={hasSavedInputs ? retirementInitial : {}}
               intakeMode
               hideAssumptionsTab
               submitLabel="Continue to submit"
@@ -228,7 +229,7 @@ export function ClientFNAIntakeWizard({
           {domain === 'medical' && (
             <LazyMedicalStep1
               clientId={clientId}
-              initialData={medicalInitial}
+              initialData={hasSavedInputs ? medicalInitial : undefined}
               intakeMode
               submitLabel="Continue to submit"
               onSaveDraft={(data: MedicalFNAInputs) => void persistDraft(data as Record<string, unknown>)}
@@ -239,7 +240,7 @@ export function ClientFNAIntakeWizard({
           {domain === 'risk' && (
             <LazyRiskStep1
               clientId={clientId}
-              initialData={riskInitial}
+              initialData={hasSavedInputs ? riskInitial : undefined}
               intakeMode
               submitLabel="Continue to submit"
               onSaveDraft={(data: InformationGatheringInput) =>
@@ -254,7 +255,7 @@ export function ClientFNAIntakeWizard({
           {domain === 'tax' && (
             <LazyTaxStep1
               clientId={clientId}
-              initialData={taxInitial}
+              initialData={hasSavedInputs ? taxInitial : {}}
               intakeMode
               submitLabel="Continue to submit"
               onSaveDraft={(data: TaxPlanningInputs) => void persistDraft(data as Record<string, unknown>)}
