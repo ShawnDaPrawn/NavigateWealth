@@ -146,10 +146,6 @@ import type { HealthSubScores } from '../utils';
 
 // FNA API — uses batch endpoint via React Query hook for cache control
 import { useFnaBatchStatus } from '../hooks/useFnaBatchStatus';
-import { PrefillDomainPicker } from '../../form-prefill/PrefillDomainPicker';
-import { PrefillHistoryPanel } from '../../form-prefill/PrefillHistoryPanel';
-import { FillExternalFormButton } from '../../form-prefill/FillExternalFormButton';
-import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
 import { getFnaStatusLabel } from '@/shared/fna-intake/fna-intake-labels';
 
 // ── Types ───────────────────────────────────────────────────────────────
@@ -2156,18 +2152,6 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
         generatingPDF={generatingPDF}
         mode={mode}
       />
-
-      {!isClient && isFormPrefillEnabled() && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-wrap gap-2">
-            <PrefillDomainPicker clientId={client.id} />
-            <FillExternalFormButton clientId={client.id} />
-          </div>
-          <div className="w-full sm:max-w-md">
-            <PrefillHistoryPanel clientId={client.id} />
-          </div>
-        </div>
-      )}
 
       {/* ─── 2. Health Pillar Cards ──────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 items-stretch">
