@@ -9,6 +9,7 @@ import type {
   PrefillApplyAuditRequest,
   PrefillResolveRequest,
   PrefillResolveResponse,
+  TemplatePrefillResolveResponse,
 } from '../shared/form-prefill/types';
 
 export async function listPrefillForms(): Promise<FormPrefillId[]> {
@@ -28,6 +29,22 @@ export async function resolveFormPrefill(
 
 export async function logPrefillAudit(request: PrefillApplyAuditRequest): Promise<void> {
   await api.post('/prefill/apply-audit', request);
+}
+
+export interface PrefillAuditRecord {
+  timestamp?: string;
+  formId?: string;
+  appliedFields?: string[];
+  adminUserId?: string;
+  resolverVersion?: string;
+  clientId?: string;
+}
+
+export async function fetchPrefillAudit(clientId: string, limit = 50): Promise<PrefillAuditRecord[]> {
+  const response = await api.get<{ success: boolean; data: PrefillAuditRecord[] }>(
+    `/prefill/audit/${encodeURIComponent(clientId)}?limit=${limit}`,
+  );
+  return response.data;
 }
 
 export async function normalizeIntakeInputs(
@@ -76,10 +93,34 @@ export async function updateTemplateMappings(
 export async function fillFormTemplate(
   templateId: string,
   clientId: string,
-): Promise<{ filledBase64: string; filledFields: string[]; unresolvedFields: string[]; fileName: string }> {
+  options?: { attachToDocuments?: boolean },
+): Promise<{
+  filledBase64: string;
+  filledFields: string[];
+  unresolvedFields: string[];
+  fileName: string;
+  attachedDocument?: { documentId: string; filePath: string };
+}> {
   const response = await api.post<{
     success: boolean;
-    data: { filledBase64: string; filledFields: string[]; unresolvedFields: string[]; fileName: string };
-  }>(`/form-templates/${templateId}/fill`, { clientId });
+    data: {
+      filledBase64: string;
+      filledFields: string[];
+      unresolvedFields: string[];
+      fileName: string;
+      attachedDocument?: { documentId: string; filePath: string };
+    };
+  }>(`/form-templates/${templateId}/fill`, { clientId, attachToDocuments: options?.attachToDocuments ?? false });
+  return response.data;
+}
+
+export async function previewTemplatePrefill(
+  templateId: string,
+  clientId: string,
+): Promise<TemplatePrefillResolveResponse> {
+  const response = await api.post<{ success: boolean; data: TemplatePrefillResolveResponse }>(
+    `/form-templates/${templateId}/preview`,
+    { clientId },
+  );
   return response.data;
 }

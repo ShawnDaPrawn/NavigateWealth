@@ -2,10 +2,12 @@
  * Hook for unified form prefill with review-before-apply flow.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner@2.0.3';
 import type { FormPrefillId, PrefillResolveResponse } from '../../../../shared/form-prefill/types';
 import { logPrefillAudit, resolveFormPrefill } from '../../../../services/form-prefill-api';
+import { isFormPrefillEnabled } from '../../../../utils/formPrefillFeature';
+import { PREFILL_PROFILE_HINTS } from '../../../../shared/form-prefill/form-field-registry';
 import { PrefillReviewModal } from './PrefillReviewModal';
 import { PrefillBanner } from './PrefillBanner';
 
@@ -64,8 +66,10 @@ export function useFormPrefill({
   const [result, setResult] = useState<PrefillResolveResponse | null>(null);
   const [appliedCount, setAppliedCount] = useState(0);
 
+  useEffect(() => () => setReviewOpen(false), []);
+
   const runResolve = useCallback(async () => {
-    if (!clientId) return null;
+    if (!clientId || !isFormPrefillEnabled()) return null;
     setLoading(true);
     try {
       const response = await resolveFormPrefill({
@@ -94,7 +98,7 @@ export function useFormPrefill({
   }, [runResolve]);
 
   const startPrefill = useCallback(async () => {
-    if (!clientId) return;
+    if (!clientId || !isFormPrefillEnabled()) return;
     const response = await runResolve();
     if (!response) return;
 
@@ -132,12 +136,23 @@ export function useFormPrefill({
     }).catch(() => undefined);
   };
 
+  const missingProfileHints = useMemo(() => {
+    if (!result || result.matches.length > 0) return [];
+    const matchedKeys = new Set(result.matches.map((m) => m.canonicalKey));
+    return Object.entries(PREFILL_PROFILE_HINTS)
+      .filter(([key]) => !matchedKeys.has(key))
+      .map(([, label]) => label);
+  }, [result]);
+
   const PrefillUI = (
     <>
       <PrefillBanner
         loading={loading}
         matchCount={result?.matches.length ?? 0}
         appliedCount={appliedCount}
+        resolverVersion={result?.resolverVersion}
+        clientId={clientId}
+        missingProfileHints={missingProfileHints}
         onReview={openReview}
         onReapply={startPrefill}
       />
@@ -146,6 +161,7 @@ export function useFormPrefill({
         onOpenChange={setReviewOpen}
         loading={loading}
         result={result}
+        clientId={clientId}
         onRefresh={runResolve}
         onApply={handleApply}
         onSkip={() => setReviewOpen(false)}

@@ -7,6 +7,7 @@ import { toast } from 'sonner@2.0.3';
 import { Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { BrandSectionLoader } from '../../ui/brand-loader';
+import { Button } from '../../ui/button';
 import { FNAIntakeConsentDialog } from './FNAIntakeConsentDialog';
 import { InvestmentIntakeStep1 } from './InvestmentIntakeStep1';
 import { EstateIntakeStep1 } from './EstateIntakeStep1';
@@ -182,6 +183,17 @@ export function ClientFNAIntakeWizard({
 
   return (
     <div className="space-y-4">
+      {onCancel && !isReadOnly && (
+        <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-gray-600">
+            Your progress is saved as you go. You can leave and return anytime to finish.
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={onCancel} className="shrink-0">
+            Continue later
+          </Button>
+        </div>
+      )}
+
       {session?.requestInfoAt && !isReadOnly && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Your adviser needs more information. Please update your answers and submit again.
@@ -284,14 +296,6 @@ export function ClientFNAIntakeWizard({
           )}
         </Suspense>
         </>
-      )}
-
-      {onCancel && (
-        <div className="flex justify-start">
-          <button type="button" className="text-sm text-gray-500 hover:text-gray-800" onClick={onCancel}>
-            Back
-          </button>
-        </div>
       )}
 
       <FNAIntakeConsentDialog

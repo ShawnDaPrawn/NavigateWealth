@@ -48,6 +48,14 @@ jobs:
           echo "${PIPESTATUS[0]}" > quality-fna-intake-test.exit
           exit 0
 
+      - name: Run form prefill test suite
+        shell: bash
+        run: |
+          set +e
+          npm test -- src/supabase/functions/server/__tests__/form-prefill- src/supabase/functions/server/__tests__/esign-prefill.test.ts src/components/admin/modules/risk-planning-fna/components/__tests__/Step1InformationGathering.prefill-guard.test.ts 2>&1 | tee quality-form-prefill-test.log
+          echo "${PIPESTATUS[0]}" > quality-form-prefill-test.exit
+          exit 0
+
       - name: Run dependency audit
         shell: bash
         run: npm audit --json > quality-npm-audit-report.json || true

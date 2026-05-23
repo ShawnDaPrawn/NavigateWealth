@@ -4,12 +4,15 @@
 
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
-import { authenticateUser } from './fna-auth.ts';
+import { authenticateUser, isFnaUnauthorized } from './fna-auth.ts';
+import { FnaIntakeError } from './fna-intake-errors.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { listFormPrefillIds } from '../../../shared/form-prefill/form-field-registry.ts';
 import type { FormPrefillId } from '../../../shared/form-prefill/types.ts';
 import { normalizeIntakeToWizard } from '../../../shared/form-prefill/intake-field-mapping.ts';
 import { applySelectedMatches, resolveFormPrefill } from './form-prefill-resolver.ts';
+import { assertPrefillClientAccess, requirePrefillUser } from './form-prefill-auth.ts';
+import { assertPrefillResolveRateLimit } from './form-prefill-rate-limit.ts';
 
 const routes = new Hono();
 const log = createModuleLogger('form-prefill-routes');
@@ -27,20 +30,43 @@ function isFormPrefillId(value: string): value is FormPrefillId {
   return listFormPrefillIds().includes(value as FormPrefillId);
 }
 
+function handleRouteError(c: { json: (body: unknown, status?: number) => Response }, error: unknown) {
+  if (isFnaUnauthorized(error)) {
+    return c.json({ success: false, error: 'Unauthorized' }, 401);
+  }
+  if (error instanceof FnaIntakeError) {
+    return c.json({ success: false, error: error.message }, error.status);
+  }
+  log.error('Form prefill route error', error);
+  return c.json(
+    { success: false, error: error instanceof Error ? error.message : 'Request failed' },
+    500,
+  );
+}
+
 routes.get('/forms', async (c) => {
-  await authenticateUser(c.req.header('Authorization'));
-  return c.json({ success: true, data: listFormPrefillIds() });
+  try {
+    requirePrefillUser(await authenticateUser(c.req.header('Authorization')));
+    return c.json({ success: true, data: listFormPrefillIds() });
+  } catch (error) {
+    return handleRouteError(c, error);
+  }
 });
 
 routes.post('/resolve', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
+    requirePrefillUser(user);
+    await assertPrefillResolveRateLimit(user.id);
+
     const body = await c.req.json();
     const { clientId, formId, currentFormValues, options } = body ?? {};
 
     if (!clientId || !formId || !isFormPrefillId(formId)) {
       return c.json({ success: false, error: 'clientId and valid formId are required' }, 400);
     }
+
+    assertPrefillClientAccess(user, clientId);
 
     const result = await resolveFormPrefill(clientId, formId, {
       currentFormValues,
@@ -51,23 +77,23 @@ routes.post('/resolve', async (c) => {
 
     return c.json({ success: true, data: result });
   } catch (error) {
-    log.error('Prefill resolve failed', error);
-    return c.json(
-      { success: false, error: error instanceof Error ? error.message : 'Prefill resolve failed' },
-      500,
-    );
+    return handleRouteError(c, error);
   }
 });
 
 routes.post('/apply-audit', async (c) => {
   try {
     const user = await authenticateUser(c.req.header('Authorization'));
+    requirePrefillUser(user);
+
     const body = await c.req.json();
     const { clientId, formId, appliedFields, resolverVersion } = body ?? {};
 
     if (!clientId || !formId) {
       return c.json({ success: false, error: 'clientId and formId are required' }, 400);
     }
+
+    assertPrefillClientAccess(user, clientId);
 
     const auditKey = `form_prefill_audit:${clientId}:${Date.now()}`;
     await kv.set(auditKey, {
@@ -81,22 +107,52 @@ routes.post('/apply-audit', async (c) => {
 
     return c.json({ success: true, data: { auditKey } });
   } catch (error) {
-    log.error('Prefill audit failed', error);
-    return c.json(
-      { success: false, error: error instanceof Error ? error.message : 'Prefill audit failed' },
-      500,
-    );
+    return handleRouteError(c, error);
+  }
+});
+
+routes.get('/audit/:clientId', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    requirePrefillUser(user);
+
+    const clientId = c.req.param('clientId');
+    assertPrefillClientAccess(user, clientId);
+
+    const limit = Math.min(Number(c.req.query('limit') || 50), 200);
+    const prefix = `form_prefill_audit:${clientId}:`;
+    const records = ((await kv.getByPrefix(prefix)) as Array<Record<string, unknown>>) ?? [];
+
+    const sorted = records
+      .filter((row) => row && typeof row === 'object')
+      .sort((a, b) => {
+        const aTs = String(a.timestamp ?? '');
+        const bTs = String(b.timestamp ?? '');
+        return bTs.localeCompare(aTs);
+      })
+      .slice(0, limit);
+
+    return c.json({ success: true, data: sorted });
+  } catch (error) {
+    return handleRouteError(c, error);
   }
 });
 
 routes.post('/normalize-intake', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
+    requirePrefillUser(user);
+
     const body = await c.req.json();
     const { domain, inputs, clientId } = body ?? {};
 
     if (!domain || !inputs) {
       return c.json({ success: false, error: 'domain and inputs are required' }, 400);
+    }
+
+    if (clientId) {
+      assertPrefillClientAccess(user, clientId);
+      await assertPrefillResolveRateLimit(user.id);
     }
 
     const wizardInputs = normalizeIntakeToWizard(domain, inputs);
@@ -119,11 +175,7 @@ routes.post('/normalize-intake', async (c) => {
 
     return c.json({ success: true, data: { wizardInputs } });
   } catch (error) {
-    log.error('Intake normalize failed', error);
-    return c.json(
-      { success: false, error: error instanceof Error ? error.message : 'Intake normalize failed' },
-      500,
-    );
+    return handleRouteError(c, error);
   }
 });
 

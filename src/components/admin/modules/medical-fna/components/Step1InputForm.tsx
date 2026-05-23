@@ -86,6 +86,7 @@ export function Step1InputForm({
       prefillEnabled && initialData && Object.keys(initialData).length > 0 ? undefined : clientId,
     formId: 'medical-fna-step1',
     currentValues: form.getValues() as Record<string, unknown>,
+    autoOpenReview: !intakeMode,
     onApplyValues: (values) => {
       Object.entries(values).forEach(([key, value]) => {
         if (value === undefined || value === null) return;
@@ -215,7 +216,7 @@ export function Step1InputForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pb-12">
-        {prefillEnabled && PrefillUI}
+        {prefillEnabled && !intakeMode && PrefillUI}
         
         {/* Section A: Household */}
         <Card>

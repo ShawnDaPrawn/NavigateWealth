@@ -9,6 +9,7 @@ import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import { Badge } from '../../../ui/badge';
+import { Checkbox } from '../../../ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -25,16 +26,19 @@ import {
   TableRow,
 } from '../../../ui/table';
 import { FileUp, Loader2, Sparkles } from 'lucide-react';
-import type { FormTemplateRecord } from '../../../../shared/form-prefill/types';
+import { Link } from 'react-router';
+import { Alert, AlertDescription } from '../../../ui/alert';
+import type { FormTemplateRecord, TemplatePrefillResolveResponse } from '../../../../shared/form-prefill/types';
 import {
   fillFormTemplate,
   listFormTemplates,
+  previewTemplatePrefill,
   updateTemplateMappings,
   uploadFormTemplate,
 } from '../../../../services/form-prefill-api';
-import { PrefillReviewModal } from '../form-prefill/PrefillReviewModal';
-import { resolveFormPrefill } from '../../../../services/form-prefill-api';
-import type { PrefillResolveResponse } from '../../../../shared/form-prefill/types';
+import { PrefillReviewModal } from './PrefillReviewModal';
+import { ClientPicker } from '../resources/components/ClientPicker';
+import { projectId } from '../../../../utils/supabase/info';
 
 const KEY_OPTIONS = [
   { value: 'profile_first_name', label: 'First name' },
@@ -52,11 +56,18 @@ const KEY_OPTIONS = [
   { value: 'risk_life_cover_total', label: 'Life cover total' },
 ];
 
+interface ClientOption {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 interface FormTemplatesModuleProps {
   selectedClientId?: string;
 }
 
-export function FormTemplatesModule({ selectedClientId }: FormTemplatesModuleProps) {
+export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: FormTemplatesModuleProps) {
   const [templates, setTemplates] = useState<FormTemplateRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -64,8 +75,56 @@ export function FormTemplatesModule({ selectedClientId }: FormTemplatesModulePro
   const [name, setName] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [prefillResult, setPrefillResult] = useState<PrefillResolveResponse | null>(null);
+  const [prefillResult, setPrefillResult] = useState<TemplatePrefillResolveResponse | null>(null);
   const [prefillLoading, setPrefillLoading] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<ClientOption | null>(null);
+  const [attachToDocuments, setAttachToDocuments] = useState(true);
+  const [linkedClientLabel, setLinkedClientLabel] = useState<string | null>(null);
+
+  const effectiveClientId = selectedClientIdProp ?? selectedClient?.id;
+
+  useEffect(() => {
+    if (!selectedClientIdProp) {
+      setLinkedClientLabel(null);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const storageKey = `sb-${projectId}-auth-token`;
+        const stored = localStorage.getItem(storageKey);
+        const token = stored ? JSON.parse(stored).access_token : '';
+        if (!token) return;
+
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/profile/all-users`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const match = (data.users ?? []).find((u: { id: string }) => u.id === selectedClientIdProp);
+        if (cancelled || !match) return;
+        const first =
+          match.user_metadata?.firstName ||
+          match.profile?.personalInformation?.firstName ||
+          match.name?.split(' ')[0] ||
+          'Client';
+        const last =
+          match.user_metadata?.surname ||
+          match.profile?.personalInformation?.lastName ||
+          match.name?.split(' ').slice(1).join(' ') ||
+          '';
+        setLinkedClientLabel(`${first} ${last}`.trim());
+      } catch {
+        if (!cancelled) setLinkedClientLabel(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClientIdProp]);
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -126,38 +185,56 @@ export function FormTemplatesModule({ selectedClientId }: FormTemplatesModulePro
     }
   };
 
-  const handleFill = async () => {
-    if (!selectedTemplate || !selectedClientId) {
-      toast.error('Select a client before filling a template');
+  const handleFillPreview = async () => {
+    if (!selectedTemplate || !effectiveClientId) {
+      toast.error('Select a client before previewing a template fill');
       return;
     }
 
     setPrefillLoading(true);
     setReviewOpen(true);
     try {
-      const preview = await resolveFormPrefill({
-        clientId: selectedClientId,
-        formId: 'retirement-fna-step1',
-      });
+      const preview = await previewTemplatePrefill(selectedTemplate.id, effectiveClientId);
       setPrefillResult(preview);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Preview failed');
+      setReviewOpen(false);
     } finally {
       setPrefillLoading(false);
     }
   };
 
   const downloadFilledPdf = async () => {
-    if (!selectedTemplate || !selectedClientId) return;
+    if (!selectedTemplate || !effectiveClientId) return;
     try {
-      const result = await fillFormTemplate(selectedTemplate.id, selectedClientId);
+      const result = await fillFormTemplate(selectedTemplate.id, effectiveClientId, {
+        attachToDocuments,
+      });
       const link = document.createElement('a');
       link.href = `data:application/pdf;base64,${result.filledBase64}`;
       link.download = result.fileName;
       link.click();
-      toast.success(`Filled ${result.filledFields.length} field(s)`);
+      const attachMsg = result.attachedDocument
+        ? ' and attached to client documents'
+        : '';
+      toast.success(`Filled ${result.filledFields.length} field(s)${attachMsg}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Fill failed');
     }
   };
+
+  const templateReviewResult = prefillResult
+    ? {
+        formId: 'retirement-fna-step1' as const,
+        clientId: prefillResult.clientId,
+        matches: prefillResult.matches,
+        unmatchedFormFields: prefillResult.unmatchedFormFields,
+        proposedValues: Object.fromEntries(
+          prefillResult.matches.map((m) => [m.formField, m.proposedValue]),
+        ),
+        resolverVersion: prefillResult.resolverVersion,
+      }
+    : null;
 
   return (
     <div className="space-y-6">
@@ -172,6 +249,35 @@ export function FormTemplatesModule({ selectedClientId }: FormTemplatesModulePro
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {selectedClientIdProp && (
+            <Alert className="border-purple-100 bg-purple-50/40">
+              <Sparkles className="h-4 w-4 text-purple-600" />
+              <AlertDescription className="text-sm">
+                Filling for{' '}
+                <span className="font-medium">
+                  {linkedClientLabel ?? 'selected client'}
+                </span>{' '}
+                (from client drawer).{' '}
+                <Link
+                  to={`/admin?module=clients&clientId=${encodeURIComponent(selectedClientIdProp)}`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  Open client record
+                </Link>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!selectedClientIdProp && (
+            <div className="space-y-2">
+              <Label>Client for fill / preview</Label>
+              <ClientPicker
+                selectedClient={selectedClient}
+                onSelect={(client) => setSelectedClient(client as ClientOption | null)}
+              />
+            </div>
+          )}
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="template-name">Template name</Label>
@@ -228,18 +334,26 @@ export function FormTemplatesModule({ selectedClientId }: FormTemplatesModulePro
                       {selectedTemplate.status}
                     </Badge>
                     <Badge variant="secondary">{selectedTemplate.fields.length} fields</Badge>
-                    {selectedClientId && (
-                      <Button size="sm" variant="outline" onClick={() => void handleFill()}>
+                    {effectiveClientId && (
+                      <Button size="sm" variant="outline" onClick={() => void handleFillPreview()}>
                         <Sparkles className="mr-1 h-4 w-4" />
                         Preview client fill
                       </Button>
                     )}
-                    {selectedClientId && (
+                    {effectiveClientId && (
                       <Button size="sm" onClick={() => void downloadFilledPdf()}>
                         Download filled PDF
                       </Button>
                     )}
                   </div>
+
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={attachToDocuments}
+                      onCheckedChange={(v) => setAttachToDocuments(v === true)}
+                    />
+                    Attach filled PDF to client documents when downloading
+                  </label>
 
                   <Table>
                     <TableHeader>
@@ -256,10 +370,7 @@ export function FormTemplatesModule({ selectedClientId }: FormTemplatesModulePro
                             <Select
                               value={field.canonicalKey ?? '__none__'}
                               onValueChange={(v) =>
-                                void handleMappingChange(
-                                  field.id,
-                                  v === '__none__' ? '' : v,
-                                )
+                                void handleMappingChange(field.id, v === '__none__' ? '' : v)
                               }
                             >
                               <SelectTrigger className="h-8">
@@ -290,11 +401,10 @@ export function FormTemplatesModule({ selectedClientId }: FormTemplatesModulePro
         open={reviewOpen}
         onOpenChange={setReviewOpen}
         loading={prefillLoading}
-        result={prefillResult}
-        onApply={() => {
-          setReviewOpen(false);
-          void downloadFilledPdf();
-        }}
+        result={templateReviewResult}
+        clientId={effectiveClientId}
+        previewOnly
+        onApply={() => undefined}
         onSkip={() => setReviewOpen(false)}
       />
     </div>

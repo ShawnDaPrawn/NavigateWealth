@@ -58,3 +58,25 @@ jobs:
           done
           echo "::error::Supabase Edge Function deploy failed after 3 attempts."
           exit "$status"
+
+      - name: Setup Node.js for post-deploy smoke
+        if: success()
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Post-deploy form prefill API smoke
+        if: success()
+        continue-on-error: true
+        env:
+          E2E_FNA_ADVISER_EMAIL: ${{ secrets.E2E_FNA_ADVISER_EMAIL }}
+          E2E_FNA_ADVISER_PASSWORD: ${{ secrets.E2E_FNA_ADVISER_PASSWORD }}
+          E2E_FNA_CLIENT_ID: ${{ secrets.E2E_FNA_CLIENT_ID }}
+        run: |
+          if [ -z "$E2E_FNA_ADVISER_EMAIL" ] || [ -z "$E2E_FNA_ADVISER_PASSWORD" ] || [ -z "$E2E_FNA_CLIENT_ID" ]; then
+            echo "Skipping form-prefill smoke — E2E_FNA_* secrets not configured."
+            exit 0
+          fi
+          npm ci
+          npm run form-prefill:smoke

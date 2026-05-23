@@ -80,6 +80,7 @@ export function Step1InformationGathering({
     clientId: hasPersistedRiskIntake(initialData) ? undefined : clientId,
     formId: 'risk-fna-step1',
     currentValues: form.getValues() as Record<string, unknown>,
+    autoOpenReview: !intakeMode,
     onApplyValues: (values) => {
       Object.entries(values).forEach(([key, value]) => {
         if (value === undefined || value === null) return;
@@ -238,7 +239,7 @@ export function Step1InformationGathering({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {PrefillUI}
+        {!intakeMode && PrefillUI}
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-sm">

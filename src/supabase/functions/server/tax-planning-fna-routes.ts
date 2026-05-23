@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tax Planning FNA Routes
  * Backend API endpoints for Tax Planning Financial Needs Analysis
  */
@@ -22,7 +22,7 @@ const getSupabase = () => createClient(
 
 const TAX_DOCS_BUCKET = 'make-91ed8379-tax-docs';
 
-// Lazy bucket initialization — called on first document request, not at module load time.
+// Lazy bucket initialization â€” called on first document request, not at module load time.
 let taxDocsBucketInitialized = false;
 async function ensureTaxDocsBucket() {
   if (taxDocsBucketInitialized) return;
@@ -58,177 +58,18 @@ async function ensureTaxDocsBucket() {
 taxPlanningRoutes.get('/', (c) => c.json({ service: 'tax-planning-fna', status: 'active' }));
 taxPlanningRoutes.get('', (c) => c.json({ service: 'tax-planning-fna', status: 'active' }));
 
-/**
- * POST /tax-planning-fna/client/:clientId/auto-populate
- * Auto-populate Tax Planning inputs from client profile and existing data
- */
 taxPlanningRoutes.post('/client/:clientId/auto-populate', async (c) => {
   try {
     log.info('POST /tax-planning-fna/client/:clientId/auto-populate');
     await authenticateUser(c.req.header('Authorization'));
-    
+
     const clientId = c.req.param('clientId');
+    const { taxAutoPopulateFromResolver, enrichTaxFromDomainSessions } = await import('./form-prefill-auto-populate.ts');
+    let inputs = await taxAutoPopulateFromResolver(clientId);
+    inputs = await enrichTaxFromDomainSessions(clientId, inputs);
 
-    // Default inputs — returned if no profile or on any sub-lookup failure
-    const defaults: Record<string, unknown> = {
-      age: 45,
-      maritalStatus: 'married_out_community',
-      taxResidency: 'resident',
-      numberOfDependants: 0,
-      employmentIncome: 0,
-      variableIncome: 0,
-      businessIncome: 0,
-      rentalIncome: 0,
-      interestIncome: 0,
-      dividendIncome: 0,
-      foreignIncome: 0,
-      capitalGainsRealised: 0,
-      raContributions: 0,
-      tfsaContributionsLifetime: 0,
-      medicalSchemeMembers: 1,
-    };
-    
-    // Fetch client profile
-    const clientProfile = await kv.get(`user_profile:${clientId}:personal_info`);
-    
-    if (!clientProfile) {
-      log.warn(`Client profile not found for ${clientId}, returning defaults`);
-      return c.json({ success: true, data: defaults });
-    }
-
-    // Support both nested and flat profile structures
-    const p = clientProfile.personalInformation || {};
-    const emp = clientProfile.employmentInformation || {};
-    const flatProfile = clientProfile || {};
-
-    // ── Age ────────────────────────────────────────────────────
-    let age = 45;
-    const dob = p.dateOfBirth || flatProfile.dateOfBirth;
-    if (dob) {
-      try {
-        const birthDate = new Date(dob);
-        if (!isNaN(birthDate.getTime())) {
-          const today = new Date();
-          age = today.getFullYear() - birthDate.getFullYear();
-          const m = today.getMonth() - birthDate.getMonth();
-          if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-          }
-          // Sanity check
-          if (age < 0 || age > 150) age = 45;
-        }
-      } catch {
-        log.warn('Failed to parse date of birth, using default age');
-      }
-    }
-
-    // ── Marital Status ─────────────────────────────────────────
-    const rawMarital = p.maritalStatus || flatProfile.maritalStatus || '';
-    let maritalStatus = 'single';
-    if (typeof rawMarital === 'string') {
-      const lower = rawMarital.toLowerCase();
-      if (lower.includes('community') && lower.includes('in')) {
-        maritalStatus = 'married_in_community';
-      } else if (lower.includes('married') || lower.includes('community')) {
-        maritalStatus = 'married_out_community';
-      }
-    }
-
-    // ── Employment Income ──────────────────────────────────────
-    let annualEmploymentIncome = 0;
-    const monthlyIncome = emp.monthlyIncome || flatProfile.monthlyIncome;
-    const grossIncome = flatProfile.grossIncome;
-    if (grossIncome) {
-      const parsed = parseFloat(String(grossIncome));
-      if (!isNaN(parsed) && parsed >= 0) annualEmploymentIncome = parsed;
-    } else if (monthlyIncome) {
-      const parsed = parseFloat(String(monthlyIncome));
-      if (!isNaN(parsed) && parsed >= 0) annualEmploymentIncome = parsed * 12;
-    }
-
-    // ── Dependants ─────────────────────────────────────────────
-    let dependantsCount = 0;
-    const deps = flatProfile.dependants || clientProfile.additionalInformation?.dependants;
-    if (Array.isArray(deps)) {
-      dependantsCount = deps.length;
-    } else if (typeof deps === 'number' && deps >= 0) {
-      dependantsCount = deps;
-    }
-
-    // ── RA Contributions (from Retirement FNA) ─────────────────
-    let raContributions = 0;
-    try {
-      const retirementFNAs = await kv.getByPrefix(`retirement-fna:${clientId}:`);
-      if (retirementFNAs?.length) {
-        const latestRetirementFNA = retirementFNAs.sort(
-          (a: VersionedSession, b: VersionedSession) => (b.version || 0) - (a.version || 0)
-        )[0];
-        if (latestRetirementFNA?.inputs?.currentMonthlyRAContribution) {
-          const monthly = parseFloat(String(latestRetirementFNA.inputs.currentMonthlyRAContribution));
-          if (!isNaN(monthly) && monthly >= 0) raContributions = monthly * 12;
-        }
-      }
-    } catch (e) {
-      log.warn('Failed to fetch retirement FNA data for RA contributions', e);
-    }
-
-    // ── Medical Members (from Medical FNA) ─────────────────────
-    let medicalMembers = 1;
-    try {
-      const medicalFNAs = await kv.getByPrefix(`medical-fna:${clientId}:`);
-      if (medicalFNAs?.length) {
-        const latestMedicalFNA = medicalFNAs.sort(
-          (a: VersionedSession, b: VersionedSession) => (b.version || 0) - (a.version || 0)
-        )[0];
-        if (latestMedicalFNA?.inputs?.numberOfDependants != null) {
-          const depCount = parseInt(String(latestMedicalFNA.inputs.numberOfDependants), 10);
-          if (!isNaN(depCount) && depCount >= 0) medicalMembers += depCount;
-        }
-      } else {
-        medicalMembers += dependantsCount;
-      }
-    } catch (e) {
-      log.warn('Failed to fetch medical FNA data for member count', e);
-      medicalMembers += dependantsCount;
-    }
-
-    // ── TFSA Lifetime (from Investment INA) ────────────────────
-    let tfsaLifetime = 0;
-    try {
-      const investmentINAs = await kv.getByPrefix(`investment-ina:client:${clientId}:`);
-      if (investmentINAs?.length) {
-        const latestInvestmentINA = investmentINAs.sort(
-          (a: VersionedSession, b: VersionedSession) => (b.version || 0) - (a.version || 0)
-        )[0];
-        if (latestInvestmentINA?.inputs?.tfsaLifetimeContributions != null) {
-          const val = parseFloat(String(latestInvestmentINA.inputs.tfsaLifetimeContributions));
-          if (!isNaN(val) && val >= 0) tfsaLifetime = val;
-        }
-      }
-    } catch (e) {
-      log.warn('Failed to fetch investment INA data for TFSA contributions', e);
-    }
-
-    const inputs = {
-      age,
-      maritalStatus,
-      taxResidency: 'resident',
-      numberOfDependants: dependantsCount,
-      employmentIncome: annualEmploymentIncome,
-      variableIncome: 0,
-      businessIncome: 0,
-      rentalIncome: 0,
-      interestIncome: 0,
-      dividendIncome: 0,
-      foreignIncome: 0,
-      capitalGainsRealised: 0,
-      raContributions,
-      tfsaContributionsLifetime: tfsaLifetime,
-      medicalSchemeMembers: medicalMembers,
-    };
-    
     log.info('Auto-populated Tax Planning inputs for client:', { clientId });
-    
+
     return c.json({
       success: true,
       data: inputs,
@@ -245,7 +86,7 @@ taxPlanningRoutes.post('/client/:clientId/auto-populate', async (c) => {
  */
 taxPlanningRoutes.post('/save', async (c) => {
   try {
-    log.info('📥 POST /tax-planning-fna/save');
+    log.info('ðŸ“¥ POST /tax-planning-fna/save');
     const authUser = await authenticateUser(c.req.header('Authorization'), 'tax-planning-fna');
     
     const body = await c.req.json();
@@ -301,14 +142,14 @@ taxPlanningRoutes.post('/save', async (c) => {
     const key = `tax-planning-fna:client:${clientId}:${sessionId}`;
     await kv.set(key, session);
     
-    log.info('✅ Tax Planning session saved:', { sessionId });
+    log.info('âœ… Tax Planning session saved:', { sessionId });
     
     return c.json({
       success: true,
       data: session,
     });
   } catch (error: unknown) {
-    log.error('❌ Error saving Tax Planning session:', error);
+    log.error('âŒ Error saving Tax Planning session:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -319,7 +160,7 @@ taxPlanningRoutes.post('/save', async (c) => {
  */
 taxPlanningRoutes.get('/client/:clientId', async (c) => {
   try {
-    log.info('📥 GET /tax-planning-fna/client/:clientId');
+    log.info('ðŸ“¥ GET /tax-planning-fna/client/:clientId');
     await authenticateUser(c.req.header('Authorization'));
     
     const clientId = c.req.param('clientId');
@@ -331,7 +172,7 @@ taxPlanningRoutes.get('/client/:clientId', async (c) => {
       data: sortedSessions,
     });
   } catch (error: unknown) {
-    log.error('❌ Error fetching Tax Planning sessions:', error);
+    log.error('âŒ Error fetching Tax Planning sessions:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -357,7 +198,7 @@ taxPlanningRoutes.get('/client/:clientId/latest-published', async (c) => {
 });
 
 // ==================== TAX DOCUMENTS (AD-HOC TAX DOC UPLOADS) ====================
-// IMPORTANT: Tax document routes registered BEFORE /:fnaId catch-all (per Guidelines §14.2)
+// IMPORTANT: Tax document routes registered BEFORE /:fnaId catch-all (per Guidelines Â§14.2)
 
 /**
  * POST /tax-planning-fna/tax-docs/:clientId/upload

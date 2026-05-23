@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Risk Planning FNA (Financial Needs Analysis) Backend Routes
  * Handles Risk Planning FNA calculation, storage, and versioning
  * 
@@ -102,7 +102,7 @@ const LIFE_COVER_MULTIPLES = {
   SINGLE_NO_DEPENDANTS: 5,
   SINGLE_INCOME_HOUSEHOLD_BASE: 14,
   MARRIED_YOUNG_CHILDREN_BASE: 10,
-  ADDITIONAL_PER_DEPENDANT: 1, // Mandatory: +1× per additional dependant
+  ADDITIONAL_PER_DEPENDANT: 1, // Mandatory: +1Ã— per additional dependant
 };
 
 const FUNERAL_FINAL_EXPENSES = 100000; // R100,000
@@ -153,216 +153,14 @@ function calculateAge(dob: string): number {
 }
 
 /**
- * Auto-populate Risk Planning FNA inputs from client profile
+ * Auto-populate Risk Planning FNA inputs via unified resolver.
  */
 async function autoPopulateFromProfile(clientId: string) {
-  try {
-    log.info('📋 Auto-populating Risk Planning FNA for client:', { clientId });
-    
-    // Get client profile
-    const profileKey = `user_profile:${clientId}:personal_info`;
-    const profile = await kv.get(profileKey);
-
-    if (!profile) {
-      log.warn('⚠️ No profile found for client:', { clientId });
-      return null;
-    }
-
-    // Extract income information (newly added fields)
-    const grossMonthlyIncome = profile.grossMonthlyIncome || profile.grossIncome || profile.income?.grossMonthly || 0;
-    const netMonthlyIncome = profile.netMonthlyIncome || profile.netIncome || profile.income?.netMonthly || 0;
-    const grossAnnualIncome = profile.grossAnnualIncome || (grossMonthlyIncome * 12);
-    const netAnnualIncome = profile.netAnnualIncome || (netMonthlyIncome * 12);
-
-    // Calculate client age
-    const currentAge = calculateAge(profile.dateOfBirth || profile.date_of_birth);
-    const retirementAge = profile.retirementAge || 65;
-
-    // Extract employment type
-    const employmentType = profile.employmentStatus === 'Self-Employed' ? 'self-employed' : 'employed';
-
-    // Map dependants from family members
-    const dependants = (profile.familyMembers || [])
-      .filter((fm: FamilyMemberRecord) => fm.isFinanciallyDependent || fm.relationship === 'Child')
-      .map((fm: FamilyMemberRecord, index: number) => ({
-        id: `dep-${index + 1}`,
-        relationship: fm.relationship || 'Child',
-        dependencyTerm: 18 - calculateAge(fm.dateOfBirth || ''), // Default to age 18
-        monthlyEducationCost: 5000, // Default estimate
-      }))
-      .filter((dep: DependantRecord) => dep.dependencyTerm > 0); // Only include those with remaining dependency
-
-    // Extract financial position
-    const totalOutstandingDebts = profile.totalLiabilities || 
-      (Array.isArray(profile.liabilities) ? profile.liabilities.reduce((sum: number, item: LiabilityRecord) => sum + (Number(item.outstandingBalance) || 0), 0) : 0);
-      
-    const totalCurrentAssets = profile.totalAssets || 
-      (Array.isArray(profile.assets) ? profile.assets.reduce((sum: number, item: AssetRecord) => sum + (Number(item.value) || 0), 0) : 0);
-      
-    const totalEstateValue = totalCurrentAssets - totalOutstandingDebts;
-
-    // Spouse information
-    const spouseFullName = profile.spouseName || profile.spouse?.fullName || '';
-    const spouseAverageMonthlyIncome = profile.spouse?.income || 0;
-    const combinedHouseholdIncome = grossMonthlyIncome + spouseAverageMonthlyIncome;
-    const clientIncomePercentage = combinedHouseholdIncome > 0 
-      ? (grossMonthlyIncome / combinedHouseholdIncome) * 100 
-      : 100;
-
-    // Household expenditure (from budget module)
-    const totalHouseholdMonthlyExpenditure = profile.totalMonthlyExpenses || 0;
-
-    // Existing cover (from policies) - Load from correct location
-    const policiesKey = `policies:client:${clientId}`;
-    const allPolicies = await kv.get(policiesKey) || [];
-    
-    // Filter to get only risk-planning policies
-    const riskPolicies = Array.isArray(allPolicies) 
-      ? allPolicies.filter((p: PolicyRecord) => p.categoryId === 'risk-planning')
-      : [];
-    
-    // FIRST: Try to get pre-calculated totals using the exact key names from Key Manager
-    const clientKeysKey = `user_profile:${clientId}:client_keys`;
-    const calculatedTotals = await kv.get(clientKeysKey);
-    
-    log.info('📊 Loading policy data and calculated totals', { 
-      clientId,
-      allPoliciesCount: allPolicies.length,
-      riskPoliciesCount: riskPolicies.length,
-      hasCalculatedTotals: !!calculatedTotals,
-      totals: calculatedTotals
-    });
-    
-    // Helper: Get total from either calculated totals or by summing individual policies
-    const getTotalForKey = (totalKeyId: string, individualKeyId: string): number => {
-      // Strategy 1: Use pre-calculated total if available
-      if (calculatedTotals && calculatedTotals[totalKeyId] !== undefined) {
-        const value = Number(calculatedTotals[totalKeyId]) || 0;
-        log.info(`✅ Using pre-calculated total for ${totalKeyId}: ${value}`);
-        return value;
-      }
-      
-      // Strategy 2: Calculate from individual policy fields
-      if (!riskPolicies || riskPolicies.length === 0) {
-        log.info(`⚠️ No policies found for risk-planning`);
-        return 0;
-      }
-      
-      log.info(`📊 Calculating ${totalKeyId} from ${riskPolicies.length} policies`);
-      
-      let total = 0;
-      
-      // Load the product schema to get field-to-key mappings
-      const schemaKey = 'config:schema:risk-planning';
-      
-      // Simple approach: sum all fields in all policies that match the individual key patterns
-      for (const policy of riskPolicies) {
-        if (!policy.data) continue;
-        
-        for (const [fieldId, value] of Object.entries(policy.data)) {
-          const fieldValue = Number(value) || 0;
-          if (fieldValue <= 0) continue;
-          
-          const fieldIdLower = fieldId.toLowerCase();
-          let matches = false;
-          
-          // Pattern match based on individual key type
-          switch (individualKeyId) {
-            case 'risk_life_cover':
-              matches = fieldIdLower.includes('life') && (fieldIdLower.includes('cover') || fieldIdLower.includes('assurance') || fieldIdLower.includes('sum'));
-              break;
-            case 'risk_severe_illness':
-              matches = fieldIdLower.includes('severe') || fieldIdLower.includes('illness') || 
-                       fieldIdLower.includes('dread') || fieldIdLower.includes('critical');
-              break;
-            case 'risk_disability':
-              matches = (fieldIdLower.includes('disability') || fieldIdLower.includes('tpd')) && 
-                       !fieldIdLower.includes('income');
-              break;
-            case 'risk_temporary_icb':
-              matches = (fieldIdLower.includes('temporary') || fieldIdLower.includes('short')) && 
-                       (fieldIdLower.includes('icb') || fieldIdLower.includes('income'));
-              break;
-            case 'risk_permanent_icb':
-              matches = (fieldIdLower.includes('permanent') || fieldIdLower.includes('long')) && 
-                       (fieldIdLower.includes('icb') || fieldIdLower.includes('income'));
-              break;
-          }
-          
-          if (matches) {
-            total += fieldValue;
-            log.info(`✅ Added ${fieldValue} from field ${fieldId} in policy ${policy.id || 'unknown'}`);
-          }
-        }
-      }
-      
-      log.info(`📊 Calculated total for ${totalKeyId}: ${total}`);
-      return total;
-    };
-    
-    const existingCover = {
-      life: {
-        personal: getTotalForKey('risk_life_cover_total', 'risk_life_cover'),
-        group: 0, // TODO: Separate group vs personal when group data available
-      },
-      disability: {
-        personal: getTotalForKey('risk_disability_total', 'risk_disability'),
-        group: 0,
-      },
-      severeIllness: {
-        personal: getTotalForKey('risk_severe_illness_total', 'risk_severe_illness'),
-        group: 0,
-      },
-      incomeProtection: {
-        temporary: {
-          personal: getTotalForKey('risk_temporary_icb_total', 'risk_temporary_icb'),
-          group: 0,
-        },
-        permanent: {
-          personal: getTotalForKey('risk_permanent_icb_total', 'risk_permanent_icb'),
-          group: 0,
-        },
-      },
-    };
-    
-    log.info('📊 Final existing cover totals:', existingCover);
-    
-    // Default income protection settings
-    const incomeProtectionSettings = {
-      temporary: {
-        benefitPeriod: '12-months' as const,
-      },
-      permanent: {
-        escalation: 'cpi-linked' as const,
-      },
-    };
-
-    return {
-      grossMonthlyIncome,
-      grossAnnualIncome,
-      netMonthlyIncome,
-      netAnnualIncome,
-      incomeEscalationAssumption: 6, // Default 6%
-      currentAge,
-      retirementAge,
-      employmentType,
-      dependants,
-      totalOutstandingDebts,
-      totalCurrentAssets,
-      totalEstateValue,
-      spouseFullName,
-      spouseAverageMonthlyIncome,
-      combinedHouseholdIncome,
-      clientIncomePercentage,
-      totalHouseholdMonthlyExpenditure,
-      existingCover,
-      incomeProtectionSettings,
-    };
-  } catch (error) {
-    log.error('❌ Error auto-populating from profile:', error);
-    throw error;
-  }
+  log.info('ðŸ“‹ Auto-populating Risk Planning FNA for client:', { clientId });
+  const { riskAutoPopulateFromResolver } = await import('./form-prefill-auto-populate.ts');
+  return riskAutoPopulateFromResolver(clientId);
 }
+
 
 /**
  * Calculate Life Cover
@@ -440,7 +238,7 @@ function calculateLifeCover(input: RiskCalcInputData) {
   const netShortfall = Math.max(0, grossNeed - existingCoverData.total);
   
   const assumptions = [
-    `Income multiple: ${incomeMultiple}× (${numDependants} dependant${numDependants !== 1 ? 's' : ''}, ${isSingleIncome ? 'single-income' : 'dual-income'} household)`,
+    `Income multiple: ${incomeMultiple}Ã— (${numDependants} dependant${numDependants !== 1 ? 's' : ''}, ${isSingleIncome ? 'single-income' : 'dual-income'} household)`,
     `Estate costs: ${(ESTATE_COSTS_PERCENTAGE * 100).toFixed(2)}% of net estate value`,
     `Funeral and final expenses: R${FUNERAL_FINAL_EXPENSES.toLocaleString()}`,
     `Net annual income: R${netAnnualIncome.toLocaleString()}`,
@@ -498,14 +296,14 @@ function calculateDisabilityCover(input: RiskCalcInputData) {
   const netShortfall = Math.max(0, grossNeed - existingCoverData.total);
   
   const assumptions = [
-    `Disability income multiple: ${disabilityMultiple}× (base 10× + ${numDependants} dependant${numDependants !== 1 ? 's' : ''})`,
+    `Disability income multiple: ${disabilityMultiple}Ã— (base 10Ã— + ${numDependants} dependant${numDependants !== 1 ? 's' : ''})`,
     `Net annual income: R${netAnnualIncome.toLocaleString()}`,
     'Additional costs: Home modifications, vehicle adaptation, medical equipment, care costs',
   ];
   
   const riskNotes = [
     'Lump sum disability cover provides capital to adapt living environment and replace lost income.',
-    'Does not replace Income Protection (IP) – this is for permanent disability capital needs.',
+    'Does not replace Income Protection (IP) â€“ this is for permanent disability capital needs.',
     'Review if health status changes or dependant structure changes.',
   ];
   
@@ -538,7 +336,7 @@ function calculateSevereIllnessCover(input: RiskCalcInputData) {
   const netShortfall = Math.max(0, grossNeed - existingCoverData.total);
   
   const assumptions = [
-    `Severe illness income multiple: ${incomeMultiple}×`,
+    `Severe illness income multiple: ${incomeMultiple}Ã—`,
     `Gross annual income: R${grossAnnualIncome.toLocaleString()}`,
   ];
   
@@ -600,7 +398,7 @@ function calculateIncomeProtection(input: RiskCalcInputData) {
     'Income Protection (IP) replaces monthly income during temporary or permanent disability.',
     'Temporary IP: Short-term disability with benefit period (e.g., 6, 12, or 24 months).',
     'Permanent IP: Long-term disability paying until retirement or recovery.',
-    'Personal and Group IP do NOT cross-offset – each type must meet its own shortfall.',
+    'Personal and Group IP do NOT cross-offset â€“ each type must meet its own shortfall.',
   ];
   
   return {
@@ -636,7 +434,7 @@ function performCalculations(inputData: RiskCalcInputData, userId: string) {
  */
 riskPlanningFnaRoutes.get('/client-profile/:clientId', async (c) => {
   try {
-    log.info('📥 GET /risk-planning-fna/client-profile/:clientId');
+    log.info('ðŸ“¥ GET /risk-planning-fna/client-profile/:clientId');
     await authenticateUser(c.req.header('Authorization'));
     
     const clientId = c.req.param('clientId');
@@ -647,7 +445,7 @@ riskPlanningFnaRoutes.get('/client-profile/:clientId', async (c) => {
       data: profileData,
     });
   } catch (error) {
-    log.error('❌ Error fetching client profile:', error);
+    log.error('âŒ Error fetching client profile:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -658,7 +456,7 @@ riskPlanningFnaRoutes.get('/client-profile/:clientId', async (c) => {
  */
 riskPlanningFnaRoutes.get('/client/:clientId/latest', async (c) => {
   try {
-    log.info('📥 GET /risk-planning-fna/client/:clientId/latest');
+    log.info('ðŸ“¥ GET /risk-planning-fna/client/:clientId/latest');
     await authenticateUser(c.req.header('Authorization'));
     
     const clientId = c.req.param('clientId');
@@ -677,7 +475,7 @@ riskPlanningFnaRoutes.get('/client/:clientId/latest', async (c) => {
       data: latest,
     });
   } catch (error) {
-    log.error('❌ Error fetching latest FNA:', error);
+    log.error('âŒ Error fetching latest FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -688,7 +486,7 @@ riskPlanningFnaRoutes.get('/client/:clientId/latest', async (c) => {
  */
 riskPlanningFnaRoutes.get('/client/:clientId/list', async (c) => {
   try {
-    log.info('📥 GET /risk-planning-fna/client/:clientId/list');
+    log.info('ðŸ“¥ GET /risk-planning-fna/client/:clientId/list');
     await authenticateUser(c.req.header('Authorization'));
     
     const clientId = c.req.param('clientId');
@@ -721,7 +519,7 @@ riskPlanningFnaRoutes.get('/client/:clientId/list', async (c) => {
       data: validFnas,
     });
   } catch (error) {
-    log.error('❌ Error listing FNAs:', error);
+    log.error('âŒ Error listing FNAs:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -732,7 +530,7 @@ riskPlanningFnaRoutes.get('/client/:clientId/list', async (c) => {
  */
 riskPlanningFnaRoutes.post('/create', async (c) => {
   try {
-    log.info('📥 POST /risk-planning-fna/create');
+    log.info('ðŸ“¥ POST /risk-planning-fna/create');
     const user = await authenticateUser(c.req.header('Authorization'));
     
     const body = await c.req.json();
@@ -808,14 +606,14 @@ riskPlanningFnaRoutes.post('/create', async (c) => {
     list.push(fnaId);
     await kv.set(listKey, list);
     
-    log.info('✅ Risk Planning FNA created:', { fnaId, clientId, version });
+    log.info('âœ… Risk Planning FNA created:', { fnaId, clientId, version });
     
     return c.json({
       success: true,
       data: fna,
     });
   } catch (error) {
-    log.error('❌ Error creating FNA:', error);
+    log.error('âŒ Error creating FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -826,7 +624,7 @@ riskPlanningFnaRoutes.post('/create', async (c) => {
  */
 riskPlanningFnaRoutes.get('/:fnaId', async (c) => {
   try {
-    log.info('📥 GET /risk-planning-fna/:fnaId');
+    log.info('ðŸ“¥ GET /risk-planning-fna/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
     
     const fnaId = c.req.param('fnaId');
@@ -844,7 +642,7 @@ riskPlanningFnaRoutes.get('/:fnaId', async (c) => {
       data: fna,
     });
   } catch (error) {
-    log.error('❌ Error fetching FNA:', error);
+    log.error('âŒ Error fetching FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -855,7 +653,7 @@ riskPlanningFnaRoutes.get('/:fnaId', async (c) => {
  */
 riskPlanningFnaRoutes.put('/update/:fnaId', async (c) => {
   try {
-    log.info('📥 PUT /risk-planning-fna/update/:fnaId');
+    log.info('ðŸ“¥ PUT /risk-planning-fna/update/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
     
     const fnaId = c.req.param('fnaId');
@@ -902,14 +700,14 @@ riskPlanningFnaRoutes.put('/update/:fnaId', async (c) => {
     // Save
     await kv.set(`risk_planning_fna:${fnaId}`, updatedFna);
     
-    log.info('✅ Risk Planning FNA updated:', { fnaId });
+    log.info('âœ… Risk Planning FNA updated:', { fnaId });
     
     return c.json({
       success: true,
       data: updatedFna,
     });
   } catch (error) {
-    log.error('❌ Error updating FNA:', error);
+    log.error('âŒ Error updating FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -920,7 +718,7 @@ riskPlanningFnaRoutes.put('/update/:fnaId', async (c) => {
  */
 riskPlanningFnaRoutes.post('/publish/:fnaId', async (c) => {
   try {
-    log.info('📥 POST /risk-planning-fna/publish/:fnaId');
+    log.info('ðŸ“¥ POST /risk-planning-fna/publish/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
     
     const fnaId = c.req.param('fnaId');
@@ -955,9 +753,9 @@ riskPlanningFnaRoutes.post('/publish/:fnaId', async (c) => {
     // Update latest published for client
     await kv.set(`risk_planning_fna:${fna.clientId}:latest`, publishedFna);
     
-    log.info('✅ Risk Planning FNA published:', { fnaId, clientId: fna.clientId });
+    log.info('âœ… Risk Planning FNA published:', { fnaId, clientId: fna.clientId });
     
-    // Phase 4: Auto-snapshot net worth on FNA publish (fire-and-forget, §13)
+    // Phase 4: Auto-snapshot net worth on FNA publish (fire-and-forget, Â§13)
     if (fna.clientId) {
       snapshotService.autoSnapshotFromKV(fna.clientId, 'risk-fna-publish').catch(() => {});
     }
@@ -967,7 +765,7 @@ riskPlanningFnaRoutes.post('/publish/:fnaId', async (c) => {
       data: publishedFna,
     });
   } catch (error) {
-    log.error('❌ Error publishing FNA:', error);
+    log.error('âŒ Error publishing FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -978,7 +776,7 @@ riskPlanningFnaRoutes.post('/publish/:fnaId', async (c) => {
  */
 riskPlanningFnaRoutes.post('/unpublish/:fnaId', async (c) => {
   try {
-    log.info('📥 POST /risk-planning-fna/unpublish/:fnaId');
+    log.info('ðŸ“¥ POST /risk-planning-fna/unpublish/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
     
     const fnaId = c.req.param('fnaId');
@@ -1010,14 +808,14 @@ riskPlanningFnaRoutes.post('/unpublish/:fnaId', async (c) => {
     // Save
     await kv.set(`risk_planning_fna:${fnaId}`, unpublishedFna);
     
-    log.info('✅ Risk Planning FNA unpublished:', { fnaId });
+    log.info('âœ… Risk Planning FNA unpublished:', { fnaId });
     
     return c.json({
       success: true,
       data: unpublishedFna,
     });
   } catch (error) {
-    log.error('❌ Error unpublishing FNA:', error);
+    log.error('âŒ Error unpublishing FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -1028,7 +826,7 @@ riskPlanningFnaRoutes.post('/unpublish/:fnaId', async (c) => {
  */
 riskPlanningFnaRoutes.delete('/archive/:fnaId', async (c) => {
   try {
-    log.info('📥 DELETE /risk-planning-fna/archive/:fnaId');
+    log.info('ðŸ“¥ DELETE /risk-planning-fna/archive/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
     
     const fnaId = c.req.param('fnaId');
@@ -1057,7 +855,7 @@ riskPlanningFnaRoutes.delete('/archive/:fnaId', async (c) => {
     const latest = await kv.get(latestKey);
     if (latest && latest.id === fnaId) {
       await kv.del(latestKey);
-      log.info('✅ Removed from latest published pointer:', { fnaId });
+      log.info('âœ… Removed from latest published pointer:', { fnaId });
     }
     
     // Remove from client's FNA list
@@ -1065,16 +863,16 @@ riskPlanningFnaRoutes.delete('/archive/:fnaId', async (c) => {
     const list = await kv.get(listKey) || [];
     const updatedList = list.filter((id: string) => id !== fnaId);
     await kv.set(listKey, updatedList);
-    log.info('✅ Removed from client FNA list:', { fnaId });
+    log.info('âœ… Removed from client FNA list:', { fnaId });
     
-    log.info('✅ Risk Planning FNA archived:', { fnaId });
+    log.info('âœ… Risk Planning FNA archived:', { fnaId });
     
     return c.json({
       success: true,
       message: 'FNA archived successfully',
     });
   } catch (error) {
-    log.error('❌ Error archiving FNA:', error);
+    log.error('âŒ Error archiving FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -1086,7 +884,7 @@ riskPlanningFnaRoutes.delete('/archive/:fnaId', async (c) => {
  */
 riskPlanningFnaRoutes.delete('/hard-delete/:fnaId', async (c) => {
   try {
-    log.info('📥 DELETE /risk-planning-fna/hard-delete/:fnaId');
+    log.info('ðŸ“¥ DELETE /risk-planning-fna/hard-delete/:fnaId');
     await authenticateUser(c.req.header('Authorization'));
     
     const fnaId = c.req.param('fnaId');
@@ -1101,14 +899,14 @@ riskPlanningFnaRoutes.delete('/hard-delete/:fnaId', async (c) => {
     
     // Hard delete the FNA record
     await kv.del(`risk_planning_fna:${fnaId}`);
-    log.info('✅ Deleted FNA record:', { fnaId });
+    log.info('âœ… Deleted FNA record:', { fnaId });
     
     // Remove from latest published pointer if this was the latest
     const latestKey = `risk_planning_fna:${fna.clientId}:latest`;
     const latest = await kv.get(latestKey);
     if (latest && latest.id === fnaId) {
       await kv.del(latestKey);
-      log.info('✅ Removed from latest published pointer:', { fnaId });
+      log.info('âœ… Removed from latest published pointer:', { fnaId });
     }
     
     // Remove from client's FNA list
@@ -1116,16 +914,16 @@ riskPlanningFnaRoutes.delete('/hard-delete/:fnaId', async (c) => {
     const list = await kv.get(listKey) || [];
     const updatedList = list.filter((id: string) => id !== fnaId);
     await kv.set(listKey, updatedList);
-    log.info('✅ Removed from client FNA list:', { fnaId });
+    log.info('âœ… Removed from client FNA list:', { fnaId });
     
-    log.info('✅ Risk Planning FNA permanently deleted:', { fnaId });
+    log.info('âœ… Risk Planning FNA permanently deleted:', { fnaId });
     
     return c.json({
       success: true,
       message: 'FNA permanently deleted',
     });
   } catch (error) {
-    log.error('❌ Error deleting FNA:', error);
+    log.error('âŒ Error deleting FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });

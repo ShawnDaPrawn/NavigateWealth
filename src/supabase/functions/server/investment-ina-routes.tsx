@@ -50,36 +50,12 @@ function getDefaultEconomicAssumptions() {
 async function autoPopulateFromProfile(clientId: string) {
   try {
     log.info('📋 Auto-populating Investment INA for client:', { clientId });
-    
-    // Get client profile
-    const profileKey = `profile:${clientId}`;
-    const profile = await kv.get(profileKey);
+    const { investmentAutoPopulateFromResolver } = await import('./form-prefill-auto-populate.ts');
+    const step1 = await investmentAutoPopulateFromResolver(clientId);
 
-    if (!profile) {
-      log.warn('⚠️ No profile found, using defaults');
-      return getDefaultInputs();
-    }
-
-    // Calculate age from date of birth
-    const calculateAge = (dob: string) => {
-      if (!dob) return 0;
-      const birthDate = new Date(dob);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      return age;
-    };
-
-    const clientAge = calculateAge(profile.dateOfBirth || profile.date_of_birth);
-
-    // Get existing policies (to extract discretionary investments)
     const policiesKey = `policies:${clientId}`;
     const policies = await kv.get(policiesKey) || { investments: [] };
-    
-    // Extract discretionary investments from investments tab
+
     const discretionaryInvestments = (policies.investments || [])
       .filter((inv: InvestmentEntry) => inv.isDiscretionary === true)
       .map((inv: InvestmentEntry) => ({
@@ -103,34 +79,15 @@ async function autoPopulateFromProfile(clientId: string) {
       0
     );
 
-    // Get risk profile if available
-    const riskProfileKey = `risk-profile:${clientId}`;
-    const riskProfileData = await kv.get(riskProfileKey);
-    const clientRiskProfile = riskProfileData?.profile || 'balanced';
-
     const economicAssumptions = getDefaultEconomicAssumptions();
 
     return {
-      // Personal information
-      currentAge: clientAge,
-      dateOfBirth: profile.dateOfBirth || profile.date_of_birth || '',
-      householdDependants: profile.dependants?.length || 0,
-      grossMonthlyIncome: parseFloat(profile.grossMonthlyIncome) || 0,
-      netMonthlyIncome: parseFloat(profile.netMonthlyIncome) || 0,
-      
-      // Risk profile
-      clientRiskProfile,
-      
-      // Economic assumptions
+      ...step1,
       longTermInflationRate: economicAssumptions.longTermInflationRate,
       expectedRealReturns: economicAssumptions.expectedRealReturns,
-      
-      // Discretionary investments
       discretionaryInvestments,
       totalDiscretionaryCapitalCurrent,
       totalDiscretionaryMonthlyContributions,
-      
-      // Goals (empty initially - to be added by adviser)
       goals: [],
     };
   } catch (error) {

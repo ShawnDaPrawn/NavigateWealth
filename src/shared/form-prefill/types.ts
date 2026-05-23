@@ -61,6 +61,14 @@ export interface PrefillResolveResponse {
   resolverVersion: string;
 }
 
+export interface TemplatePrefillResolveResponse {
+  templateId: string;
+  clientId: string;
+  matches: PrefillMatch[];
+  unmatchedFormFields: string[];
+  resolverVersion: string;
+}
+
 export interface PrefillApplyAuditRequest {
   clientId: string;
   formId: FormPrefillId;

@@ -66,15 +66,18 @@ const AIManagementModule = React.lazy(() => import('../admin/modules/ai-manageme
 const IssuesModule = React.lazy(() => import('../admin/modules/issues/IssuesModule'));
 
 export function AdminDashboardPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
 
   // ── Deep Link Support ──────────────────────────────────────────────────
-  // URL params like ?module=submissions&type=consultation allow email
-  // notifications and external links to open a specific module with filters.
-  // The `type` param is consumed by individual modules (e.g. SubmissionsModule).
-  const initialModule = (searchParams.get('module') as AdminModule) || 'dashboard';
-  const [activeModule, setActiveModule] = useState<AdminModule>(initialModule);
+  // URL params like ?module=resources&resourcesTab=tools allow drawer links
+  // (Fill external form, prefill profile edit) to open the correct admin module.
+  const moduleFromUrl = (searchParams.get('module') as AdminModule | null) || 'dashboard';
+  const [activeModule, setActiveModule] = useState<AdminModule>(moduleFromUrl);
+
+  React.useEffect(() => {
+    setActiveModule(moduleFromUrl);
+  }, [moduleFromUrl]);
 
   // ── Task Deep Link ──────────────────────────────────────────────────────
   // When a task is clicked in the dashboard's Due Today widget, we store
@@ -90,6 +93,19 @@ export function AdminDashboardPage() {
   // Clear deep-link when navigating away from tasks
   const handleModuleChange = useCallback((module: string) => {
     const applyModuleChange = () => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (module === 'dashboard') {
+            next.delete('module');
+          } else {
+            next.set('module', module);
+          }
+          return next;
+        },
+        { replace: true },
+      );
+
       if (module !== 'tasks') {
         setDeepLinkTaskId(null);
       }
@@ -102,7 +118,7 @@ export function AdminDashboardPage() {
     }
 
     applyModuleChange();
-  }, [unsavedChangesRegistry]);
+  }, [setSearchParams, unsavedChangesRegistry]);
 
   // ── Background Processors ──
   // These run at the AdminDashboardPage level (not inside PublicationsModule)

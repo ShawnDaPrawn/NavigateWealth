@@ -54,6 +54,7 @@ export function Step1InputForm({
     clientId,
     formId: 'tax-fna-step1',
     currentValues: formData as Record<string, unknown>,
+    autoOpenReview: !intakeMode,
     onApplyValues: (values) => {
       setFormData((prev) => ({ ...prev, ...(values as Partial<TaxPlanningInputs>) }));
     },
@@ -99,7 +100,7 @@ export function Step1InputForm({
 
   return (
     <div className="space-y-6">
-      {PrefillUI}
+      {!intakeMode && PrefillUI}
       
       {/* Introduction / Context */}
       <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex gap-3 items-start text-blue-800">

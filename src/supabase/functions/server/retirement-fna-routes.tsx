@@ -78,78 +78,8 @@ function calculateAge(dob: string | Date | undefined): number {
  */
 async function autoPopulateFromProfile(clientId: string) {
   log.info('📋 Auto-populating Retirement FNA for client:', { clientId });
-  
-  // 1. Get Client Profile & Keys
-  // We must fetch BOTH personal info and the dedicated client keys store
-  const profileKey = `user_profile:${clientId}:personal_info`;
-  const clientKeysKey = `user_profile:${clientId}:client_keys`;
-  
-  const [personalInfo, clientKeys] = await Promise.all([
-    kv.get(profileKey) || {},
-    kv.get(clientKeysKey) || {}
-  ]);
-
-  // Merge: clientKeys take precedence for "universal keys"
-  const profile = { ...personalInfo, ...clientKeys };
-  
-  // 2. Get Policies / Products to Aggregate Totals (Fallback)
-  const policiesKey = `policies:${clientId}`;
-  const policiesData = await kv.get(policiesKey) || { investments: [] };
-  const investments = Array.isArray(policiesData.investments) ? policiesData.investments : [];
-
-  // Filter for Retirement Products and Sum values
-  const retirementProducts = investments.filter((inv: InvestmentRecord) => {
-    const name = (inv.name || inv.productName || '').toLowerCase();
-    const category = (inv.category || inv.productCategory || '').toLowerCase();
-    const type = (inv.type || '').toLowerCase();
-    
-    return category.includes('retirement') || 
-           category.includes('pension') || 
-           category.includes('provident') ||
-           category.includes('ra') ||
-           category.includes('preservation') ||
-           type.includes('retirement') ||
-           name.includes('retirement') ||
-           name.includes('pension') ||
-           name.includes('provident') ||
-           name.includes('ra ') ||
-           name.includes('preservation') ||
-           inv.isDiscretionary === false;
-  });
-
-  const aggregatedCapital = retirementProducts.reduce((sum: number, p: InvestmentRecord) => sum + (parseFloat(String(p.currentValue)) || 0), 0);
-  const aggregatedContribution = retirementProducts.reduce((sum: number, p: InvestmentRecord) => sum + (parseFloat(String(p.contribution || p.monthlyContribution)) || 0), 0);
-
-  // 3. Determine Final Values
-  // PRIORITY: Specific keys from Universal Key Manager -> Aggregated from Policies -> Fallbacks
-  const totalContribution = 
-    profile.retirement_total_contribution || 
-    profile.retirement_monthly_contribution ||
-    aggregatedContribution || 
-    profile.totalMonthlyContribution || 
-    profile.retirement_contribution || 
-    0;
-
-  const totalCapital = 
-    profile.retirement_fund_value_total || 
-    profile.retirement_fund_value || 
-    profile.retirement_total_value || 
-    aggregatedCapital || 
-    profile.totalCurrentRetirementCapital || 
-    profile.retirement_capital || 
-    0;
-
-  // Calculate Age
-  const currentAge = calculateAge(profile.dateOfBirth);
-
-  return {
-    currentAge,
-    intendedRetirementAge: 65,
-    grossMonthlyIncome: profile.grossMonthlyIncome || profile.gross_monthly_income || 0,
-    netMonthlyIncome: profile.netMonthlyIncome || profile.net_monthly_income || 0,
-    totalMonthlyContribution: totalContribution,
-    totalCurrentRetirementCapital: totalCapital
-  };
+  const { retirementAutoPopulateFromResolver } = await import('./form-prefill-auto-populate.ts');
+  return retirementAutoPopulateFromResolver(clientId);
 }
 
 // ==================== CALCULATION ENGINE ====================

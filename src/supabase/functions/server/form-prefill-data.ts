@@ -148,11 +148,35 @@ export function totalFromAssets(profile: Record<string, unknown>): number {
 
 export function dependantCount(profile: Record<string, unknown>): number {
   const family = profile.familyMembers;
-  if (!Array.isArray(family)) return 0;
-  return family.filter((fm) => {
-    const row = fm as Record<string, unknown>;
-    return row.isFinanciallyDependent || row.relationship === 'Child';
-  }).length;
+  if (Array.isArray(family)) {
+    return family.filter((fm) => {
+      const row = fm as Record<string, unknown>;
+      return row.isFinanciallyDependent || row.relationship === 'Child';
+    }).length;
+  }
+  const dependants = profile.dependants;
+  if (Array.isArray(dependants)) {
+    return dependants.length;
+  }
+  return 0;
+}
+
+export function childrenDependantCount(profile: Record<string, unknown>): number {
+  const family = profile.familyMembers;
+  if (Array.isArray(family)) {
+    return family.filter((fm) => (fm as Record<string, unknown>).relationship === 'Child').length;
+  }
+  const dependants = profile.dependants;
+  if (Array.isArray(dependants)) {
+    return dependants.filter((d) => (d as Record<string, unknown>).relationship === 'Child').length;
+  }
+  return 0;
+}
+
+export function hasSpousePartner(profile: Record<string, unknown>): boolean {
+  const marital = String(profile.maritalStatus || profile.profile_marital_status || '').toLowerCase();
+  if (marital.includes('married')) return true;
+  return Boolean(profile.spouseFullName || profile.spouseName || profile.profile_spouse_name);
 }
 
 export function dependantsSummaryText(profile: Record<string, unknown>): string {

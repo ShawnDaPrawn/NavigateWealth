@@ -60,6 +60,16 @@ describe('ClientOverviewTab client mode', () => {
     });
   });
 
+  it('does not show adviser prefill controls in client mode', async () => {
+    renderOverview('client');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /prefill fna data/i })).toBeNull();
+      expect(screen.queryByRole('link', { name: /fill external form/i })).toBeNull();
+      expect(screen.queryByText(/prefill history/i)).toBeNull();
+    });
+  });
+
   it('still shows Financial Reviews for adviser mode', async () => {
     renderOverview('adviser');
 

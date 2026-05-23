@@ -47,6 +47,8 @@ import { DEFAULT_ECONOMIC_ASSUMPTIONS, GOAL_TYPE_LABELS, RISK_PROFILE_LABELS } f
 import { InvestmentINAApiService } from '../api';
 import { InvestmentINACalculationService } from '../services/investmentINACalculationService';
 import { toast } from 'sonner@2.0.3';
+import { useFormPrefill } from '../../form-prefill/useFormPrefill';
+import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
 
 interface InvestmentINAWizardProps {
   open: boolean;
@@ -70,6 +72,16 @@ export function InvestmentINAWizard({
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [results, setResults] = useState<Record<string, unknown> | null>(null);
+  const prefillEnabled = isFormPrefillEnabled();
+
+  const { PrefillUI, startPrefill } = useFormPrefill({
+    clientId: open && prefillEnabled && !intakePrefill ? clientId : undefined,
+    formId: 'investment-ina-step1',
+    currentValues: inputs as Record<string, unknown>,
+    onApplyValues: (values) => {
+      setInputs((prev) => ({ ...prev, ...values }));
+    },
+  });
 
   const stepsList: InvestmentINAWizardStep[] = [
     'client-overview',
@@ -111,6 +123,11 @@ export function InvestmentINAWizard({
   const loadInitialData = async () => {
     try {
       setLoading(true);
+      if (prefillEnabled && !intakePrefill) {
+        setInputs({});
+        await startPrefill();
+        return;
+      }
       const autoPopulated = await InvestmentINAApiService.autoPopulateInputs(clientId);
       setInputs(intakePrefill ? { ...autoPopulated, ...intakePrefill } : autoPopulated);
       toast.success('Client data loaded successfully');
@@ -296,7 +313,10 @@ export function InvestmentINAWizard({
     >
       <div className="min-h-[400px]">
         {currentStep === 'client-overview' && (
-          <ClientOverviewStep inputs={inputs} updateInputs={updateInputs} />
+          <div className="space-y-4">
+            {prefillEnabled && !intakePrefill && PrefillUI}
+            <ClientOverviewStep inputs={inputs} updateInputs={updateInputs} />
+          </div>
         )}
         {currentStep === 'discretionary-investments' && (
           <DiscretionaryInvestmentsStep inputs={inputs} updateInputs={updateInputs} />

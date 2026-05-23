@@ -832,9 +832,72 @@ cleanup. Verify before referencing them as real:
 
 ---
 
+## Section 10a - Form Prefill (Tier A production track)
+
+**Status (2026-05-23):** Tier A **production-ready** — Edge Function + frontend deployed, expanded smoke/parity/CI green, Playwright core paths pass on production. Remaining browser rows 4–8 and 10 are optional spot-checks (partially covered by automation below).
+
+### Launch metadata
+
+| Item | Value |
+|------|-------|
+| Edge Function deploy | 2026-05-23 (final publish redeploy) |
+| Production API smoke | **PASS** — 6 `/prefill/resolve` + audit + `/form-templates` → `tmp/form-prefill-smoke-report.json` |
+| Frontend deploy | **Done** — Vercel `https://www.navigatewealth.co` (dpl_9k6nE4EBWh2UuXgaste5USGaQVyM) |
+| Rollback drill | `VITE_FORM_PREFILL_ENABLED=false` build verified — Medical Step 1 legacy gate in `Step1InputForm.tsx` ~L108 |
+| Access model | **Platform-wide** — any adviser/admin (`form-prefill-auth.ts`) |
+| Runbook | [`docs/runbooks/form-prefill.md`](docs/runbooks/form-prefill.md) |
+| E-sign tokens doc | [`docs/compliance/form-prefill-esign-tokens.md`](docs/compliance/form-prefill-esign-tokens.md) |
+| Template KV migration | [`scripts/migrate-form-templates-to-storage.mjs`](scripts/migrate-form-templates-to-storage.mjs) (Tier B) |
+
+### Tier A production-ready checklist
+
+- [x] Edge Function deploy green
+- [x] Expanded `npm run form-prefill:smoke` PASS
+- [x] Parity tests + prefill CI suite in quality-check
+- [x] `npm test` green (306 tests incl. risk prefill guard + client-mode guard)
+- [x] Frontend deployed to production (Vercel, 2026-05-23)
+- [x] Playwright prefill spec — 5/5 on production (2026-05-23; incl. PDF template library deep link)
+- [ ] Optional spot-check: browser rows 4–8, 10 in UAT doc (tax/estate/INA/conflicts/empty profile/intake accept)
+
+### What is landed
+
+| Area | Status | Key files |
+|------|--------|-----------|
+| Shared resolver + registry | Landed | `src/shared/form-prefill/`, `src/supabase/functions/server/form-prefill-resolver.ts` |
+| API routes | Landed — auth, rate limits | `form-prefill-routes.ts`, `form-prefill-auth.ts`, `form-prefill-rate-limit.ts` |
+| Review-before-apply UI | Landed — all 6 FNA Step 1 + client drawer picker | `useFormPrefill.tsx`, `PrefillDomainPicker.tsx`, `PrefillReviewModal.tsx` |
+| Auto-populate API | Landed — all six domain routes delegate to unified resolver | `form-prefill-auto-populate.ts`, `*-fna-routes.*` |
+| Prefill audit | Landed — `GET /prefill/audit/:clientId` + drawer history panel | `form-prefill-routes.ts`, `PrefillHistoryPanel.tsx` |
+| External PDF templates (Tier B) | Storage upload + checkbox/radio fill + drawer deep link | `FormTemplatesModule.tsx`, `form-template-routes.ts`, `FillExternalFormButton.tsx` |
+| Tests | Resolver + parity + risk guard + route auth + E2E spec + CI prefill suite | `__tests__/form-prefill-*.test.ts`, `Step1InformationGathering.prefill-guard.test.ts`, `e2e/form-prefill-smoke.spec.ts` |
+| Ops | Smoke script + UAT matrix | `npm run form-prefill:smoke`, `docs/form-prefill-uat-signoff.md` |
+
+### Deploy verification
+
+```bash
+npx supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir .
+npm run form-prefill:smoke
+```
+
+Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID` (same actors as FNA intake UAT).
+
+### Feature flag / rollback
+
+- `VITE_FORM_PREFILL_ENABLED` — defaults to **enabled** when unset.
+- Set to `false` to disable unified prefill and fall back to legacy silent auto-populate (Medical only).
+
+### Known gaps (Tier C — not blocking Tier A sign-off)
+
+- Legacy KV `:file` base64 templates still readable as fallback until migrated.
+- Registry covers high-value fields, not every wizard input.
+- Postgres audit table deferred (KV audit is v1).
+
+---
+
 ## Section 10 - Changelog
 
 | Date | Change | Author |
 |---|---|---|
 | 2026-04-18 | Initial Claude roadmap draft created, describing a broad production-readiness update and the original CORS incident. | Claude Opus 4.7 |
 | 2026-04-20 | Corrected the roadmap against the clean repository state after the CORS restore. Added deployed verification, stash quarantine status, tooling-hook incident, accurate command list, and landed-vs-proposed inventory. | Codex |
+| 2026-05-23 | Form Prefill refinement: expanded smoke, parity tests, CI hooks, E2E hardening, migration script. | Agent |

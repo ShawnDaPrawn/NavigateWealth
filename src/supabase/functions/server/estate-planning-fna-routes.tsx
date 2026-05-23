@@ -79,43 +79,12 @@ estatePlanningRoutes.get('/client/:clientId/auto-populate', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
     
     const clientId = c.req.param('clientId');
-    
-    // Fetch client profile - gracefully handle if not found
-    const clientProfile = await kv.get(`client-profile:${clientId}`);
-    
-    let personalDetails: Record<string, unknown> = {};
-    let household: Record<string, unknown> = {};
-    
-    if (clientProfile) {
-      personalDetails = clientProfile.personalDetails || {};
-      household = clientProfile.household || {};
-    } else {
-      log.warn('⚠️ Client profile not found, using defaults');
-    }
-    
-    // Build family information
-    const familyInfo = {
-      fullName: `${personalDetails.firstName || ''} ${personalDetails.lastName || ''}`.trim() || 'Client Name',
-      dateOfBirth: personalDetails.dateOfBirth || '',
-      age: personalDetails.age || 0,
-      maritalStatus: personalDetails.maritalStatus || 'single',
-      spouseName: household.spouse?.name || '',
-      spouseId: household.spouse?.id || '',
-      spouseAge: household.spouse?.age || 0,
-      citizenship: 'South Africa',
-      taxResidency: 'South Africa',
-    };
-    
-    // Build dependants list
-    const dependants = (household.dependants || []).map((dep: EstateDep) => ({
-      name: dep.name || '',
-      age: dep.age || 0,
-      relationship: dep.relationship || 'child',
-      specialNeeds: dep.specialNeeds || false,
-    }));
-    
-    // Build will information (default if not stored)
-    const willInfo = {
+
+    const { estateAutoPopulateFromResolver } = await import('./form-prefill-auto-populate.ts');
+    const resolverInputs = await estateAutoPopulateFromResolver(clientId);
+    const familyInfo = (resolverInputs.familyInfo ?? {}) as Record<string, unknown>;
+    const dependants = (resolverInputs.dependants ?? []) as EstateDep[];
+    const willInfo = resolverInputs.willInfo ?? {
       hasValidWill: 'unknown' as const,
       executorNominated: 'unknown' as const,
       guardianNominated: 'unknown' as const,
@@ -195,7 +164,7 @@ estatePlanningRoutes.get('/client/:clientId/auto-populate', async (c) => {
       funeralCostsEstimate: 50000,
       estateDutyRate: 0.20,
       estateDutyAbatement: 3500000,
-      spousalBequest: familyInfo.maritalStatus.startsWith('married'),
+      spousalBequest: String(familyInfo.maritalStatus ?? '').startsWith('married'),
       cgtInclusionRate: 0.40,
     };
     

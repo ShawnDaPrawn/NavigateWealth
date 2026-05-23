@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useMemo, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'react-router';
 import { Card, CardContent } from '../../../ui/card';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
@@ -41,6 +42,7 @@ import { generatePreviewData, getCategoryColor } from './utils';
 import { LEGAL_DOCUMENTS } from './legal-constants';
 import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
 import { Skeleton } from '../../../ui/skeleton';
+import { isFormPrefillEnabled } from '../../../../utils/formPrefillFeature';
 
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 
@@ -92,6 +94,27 @@ interface SelectedClient {
 // ============================================================================
 
 export function ResourcesModule() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const formTemplatesClientId = searchParams.get('formTemplatesClientId') ?? undefined;
+  const resourcesTab = searchParams.get('resourcesTab') ?? 'forms';
+
+  const handleResourcesTabChange = useCallback(
+    (value: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (value === 'forms') {
+            next.delete('resourcesTab');
+          } else {
+            next.set('resourcesTab', value);
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
   const {
     filteredForms,
     forms,
@@ -440,7 +463,7 @@ export function ResourcesModule() {
       </div>
 
       {/* Main Tabs */}
-        <Tabs defaultValue="forms" className="space-y-6">
+        <Tabs value={resourcesTab} onValueChange={handleResourcesTabChange} className="space-y-6">
           <TabsList className="grid w-full grid-cols-6 h-12">
             <TabsTrigger value="forms" className="flex items-center gap-2 text-base">
               <FileText className="h-4 w-4" />
@@ -909,7 +932,19 @@ export function ResourcesModule() {
         <TabsContent value="tools">
           <Suspense fallback={<LazyFallback />}>
             <div className="space-y-6">
-              <FormTemplatesModule />
+              {isFormPrefillEnabled() ? (
+                <FormTemplatesModule selectedClientId={formTemplatesClientId} />
+              ) : (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>PDF form filling unavailable</AlertTitle>
+                  <AlertDescription>
+                    External PDF template filling is disabled. Set{' '}
+                    <code className="text-xs">VITE_FORM_PREFILL_ENABLED=true</code> to restore this
+                    feature.
+                  </AlertDescription>
+                </Alert>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <ZipEncryptTool />
                 <PdfDecryptTool />

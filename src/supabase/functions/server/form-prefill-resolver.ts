@@ -9,6 +9,7 @@ import type {
   PrefillDataSource,
   PrefillMatch,
   PrefillResolveResponse,
+  TemplatePrefillResolveResponse,
 } from '../../../shared/form-prefill/types.ts';
 import { PREFILL_RESOLVER_VERSION } from '../../../shared/form-prefill/types.ts';
 import {
@@ -16,10 +17,12 @@ import {
   aggregateRetirementCapital,
   aggregateRetirementContribution,
   calculateAge,
+  childrenDependantCount,
   dependantCount,
   dependantsSummaryText,
   existingCoverSummaryText,
   getNestedValue,
+  hasSpousePartner,
   isEmptyValue,
   loadClientDataSources,
   normalizeMaritalStatusForTax,
@@ -105,6 +108,18 @@ function resolveCanonicalKey(
           source: 'profile',
           confidence: 'derived',
         };
+      case 'dependant_count_children':
+        return {
+          value: childrenDependantCount(profile),
+          source: 'profile',
+          confidence: 'derived',
+        };
+      case 'has_spouse':
+        return {
+          value: hasSpousePartner(profile),
+          source: 'profile',
+          confidence: 'derived',
+        };
       case 'dependants_summary':
         return {
           value: dependantsSummaryText(profile),
@@ -168,7 +183,9 @@ function resolveCanonicalKey(
     profile_marital_status: ['maritalStatus', 'profile_marital_status'],
     profile_spouse_name: ['spouseName', 'spouseFullName', 'profile_spouse_name'],
     profile_retirement_age: ['retirementAge', 'intendedRetirementAge', 'profile_retirement_age'],
-    profile_risk_tolerance: ['riskTolerance', 'riskAssessment', 'profile_risk_tolerance'],
+    profile_employment_type: ['employmentType', 'employmentStatus', 'profile_employment_type'],
+    profile_monthly_expenses: ['totalMonthlyExpenses', 'monthlyExpenses', 'totalHouseholdMonthlyExpenditure', 'profile_monthly_expenses'],
+    profile_risk_tolerance: ['riskTolerance', 'riskAssessment', 'profile_risk_tolerance', 'clientRiskProfile'],
     profile_investment_horizon: ['investmentHorizonYears', 'investmentHorizon', 'profile_investment_horizon'],
     profile_tfsa_contributions: ['tfsaContributionsLifetime', 'tfsaContributions', 'profile_tfsa_contributions'],
     retirement_fund_value_total: ['retirement_fund_value_total', 'retirement_fund_value', 'retirement_total_value'],
@@ -182,6 +199,12 @@ function resolveCanonicalKey(
     risk_severe_illness_total: ['risk_severe_illness_total'],
     risk_temporary_icb_total: ['risk_temporary_icb_total'],
     risk_permanent_icb_total: ['risk_permanent_icb_total'],
+    medical_aid_plan_type: ['medical_aid_plan_type'],
+    medical_aid_total_premium: ['medical_aid_total_premium', 'medical_aid_monthly_premium'],
+    medical_aid_msa: ['medical_aid_msa'],
+    medical_aid_late_joiner_penalty: ['medical_aid_late_joiner_penalty'],
+    medical_aid_dependents: ['medical_aid_dependents'],
+    medical_aid_hospital_tariff: ['medical_aid_hospital_tariff', 'existingHospitalCover', 'hospitalTariff'],
   };
 
   const keys = aliasMap[canonicalKey] ?? [canonicalKey];
@@ -227,7 +250,9 @@ function formatRiskFormValue(formField: string, value: unknown): unknown {
     formField === 'currentAge' ||
     formField === 'retirementAge' ||
     formField === 'totalOutstandingDebts' ||
-    formField === 'totalCurrentAssets'
+    formField === 'totalCurrentAssets' ||
+    formField === 'totalHouseholdMonthlyExpenditure' ||
+    formField === 'dependantCount'
   ) {
     return String(value);
   }
@@ -236,6 +261,13 @@ function formatRiskFormValue(formField: string, value: unknown): unknown {
 
 function formatFormValue(formId: FormPrefillId, formField: string, value: unknown): unknown {
   if (formId === 'risk-fna-step1') return formatRiskFormValue(formField, value);
+  if (formId === 'medical-fna-step1') {
+    if (formField === 'spousePartner') return Boolean(value);
+    if (typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Number(value))) {
+      return Number(value);
+    }
+    return value;
+  }
   if (formId === 'retirement-fna-step1' && typeof value === 'string') {
     const num = Number(value);
     return Number.isNaN(num) ? value : num;
@@ -322,4 +354,45 @@ export function applySelectedMatches(
   }
 
   return next;
+}
+
+/** Resolve template PDF field mappings against client data. */
+export async function resolveTemplatePrefill(
+  clientId: string,
+  templateId: string,
+  fields: Array<{ id: string; name: string; label: string; canonicalKey?: string }>,
+): Promise<TemplatePrefillResolveResponse> {
+  const sources = await loadClientDataSources(clientId);
+  const matches: PrefillMatch[] = [];
+  const matchedFields = new Set<string>();
+
+  for (const field of fields) {
+    if (!field.canonicalKey) continue;
+    const resolved = resolveCanonicalKey(field.canonicalKey, sources);
+    if (!resolved || isEmptyValue(resolved.value)) continue;
+
+    matches.push({
+      formField: field.name,
+      label: field.label || field.name,
+      proposedValue: resolved.value,
+      canonicalKey: field.canonicalKey,
+      source: resolved.source,
+      confidence: resolved.confidence,
+      conflict: false,
+      sourceDetail: resolved.sourceDetail,
+    });
+    matchedFields.add(field.name);
+  }
+
+  const unmatchedFormFields = fields
+    .filter((f) => f.canonicalKey && !matchedFields.has(f.name))
+    .map((f) => f.name);
+
+  return {
+    templateId,
+    clientId,
+    matches,
+    unmatchedFormFields,
+    resolverVersion: PREFILL_RESOLVER_VERSION,
+  };
 }

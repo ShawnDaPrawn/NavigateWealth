@@ -3,7 +3,7 @@
  * Placeholder wizard for Estate Planning Financial Needs Analysis
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FNAWizardLayout, FNAWizardStepConfig } from '../../fna/FNAWizardLayout';
 import { CheckCircle, FileText } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
@@ -12,6 +12,8 @@ import { EstatePlanningCalculationService } from '../utils';
 import type { EstatePlanningInputs } from '../types';
 import { ESTATE_PLANNING_CONSTANTS } from '../constants';
 import { ReviewStep } from './ReviewStep';
+import { useFormPrefill } from '../../form-prefill/useFormPrefill';
+import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
 
 interface EstatePlanningFNAWizardProps {
   open: boolean;
@@ -19,6 +21,72 @@ interface EstatePlanningFNAWizardProps {
   clientId: string;
   onFNAComplete?: (fnaId: string) => void;
   intakePrefill?: Record<string, unknown>;
+}
+
+function buildDefaultInputs(intakePrefill?: Record<string, unknown>): EstatePlanningInputs {
+  const defaultInputs: EstatePlanningInputs = {
+    familyInfo: {
+      fullName: '',
+      dateOfBirth: '',
+      age: 0,
+      maritalStatus: 'single',
+      citizenship: 'South Africa',
+      taxResidency: 'South Africa',
+    },
+    dependants: [],
+    willInfo: {
+      hasValidWill: 'unknown',
+      executorNominated: 'unknown',
+      guardianNominated: 'unknown',
+      specialBequests: [],
+      willNeedsUpdate: false,
+    },
+    assets: [],
+    liabilities: [],
+    lifePolicies: [],
+    assumptions: {
+      executorFeePercentage: ESTATE_PLANNING_CONSTANTS.DEFAULT_EXECUTOR_FEE_PERCENTAGE,
+      conveyancingFeesPerProperty: ESTATE_PLANNING_CONSTANTS.DEFAULT_CONVEYANCING_FEE_PER_PROPERTY,
+      masterFeesEstimate: ESTATE_PLANNING_CONSTANTS.DEFAULT_MASTER_FEES,
+      funeralCostsEstimate: ESTATE_PLANNING_CONSTANTS.DEFAULT_FUNERAL_COSTS,
+      estateDutyRate: ESTATE_PLANNING_CONSTANTS.ESTATE_DUTY_RATE,
+      estateDutyAbatement: ESTATE_PLANNING_CONSTANTS.ESTATE_DUTY_ABATEMENT,
+      spousalBequest: false,
+      cgtInclusionRate: ESTATE_PLANNING_CONSTANTS.CGT_INCLUSION_RATE_INDIVIDUAL,
+    },
+    hasOffshorAssets: false,
+    hasTrusts: false,
+    planningNotes: '',
+  };
+
+  return { ...defaultInputs, ...(intakePrefill ?? {}) } as EstatePlanningInputs;
+}
+
+function setNestedValue(target: Record<string, unknown>, path: string, value: unknown): void {
+  const parts = path.split('.');
+  let cursor: Record<string, unknown> = target;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const key = parts[i];
+    if (!cursor[key] || typeof cursor[key] !== 'object') cursor[key] = {};
+    cursor = cursor[key] as Record<string, unknown>;
+  }
+  cursor[parts[parts.length - 1]] = value;
+}
+
+function mergePrefillIntoEstateInputs(
+  base: EstatePlanningInputs,
+  values: Record<string, unknown>,
+): EstatePlanningInputs {
+  const next = { ...base, familyInfo: { ...base.familyInfo } } as EstatePlanningInputs & Record<string, unknown>;
+  Object.entries(values).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    if (key.includes('.')) {
+      setNestedValue(next as Record<string, unknown>, key, value);
+    } else if (key in next) {
+      (next as Record<string, unknown>)[key] = value;
+    }
+  });
+  return next as EstatePlanningInputs;
 }
 
 export function EstatePlanningFNAWizard({
@@ -31,110 +99,54 @@ export function EstatePlanningFNAWizard({
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [inputs, setInputs] = useState<EstatePlanningInputs | null>(null);
+  const prefillEnabled = isFormPrefillEnabled();
 
-  useEffect(() => {
-    if (open) {
-      initializeFNA();
-    }
-  }, [open, clientId]);
+  const { PrefillUI, startPrefill } = useFormPrefill({
+    clientId: open && prefillEnabled && !intakePrefill ? clientId : undefined,
+    formId: 'estate-fna-step1',
+    currentValues: (inputs ?? {}) as Record<string, unknown>,
+    onApplyValues: (values) => {
+      setInputs((prev) => (prev ? mergePrefillIntoEstateInputs(prev, values) : prev));
+    },
+  });
 
   const steps: FNAWizardStepConfig[] = [
-    { id: 'review', label: 'Review & Calculate', icon: FileText }
+    { id: 'review', label: 'Review & Calculate', icon: FileText },
   ];
 
-  const initializeFNA = async () => {
+  const initializeFNA = useCallback(async () => {
     setLoading(true);
     try {
-      // Auto-populate from client data
+      const defaults = buildDefaultInputs(intakePrefill);
+      setInputs(defaults);
+
+      if (prefillEnabled && !intakePrefill) {
+        void startPrefill();
+        return;
+      }
+
+      if (intakePrefill) {
+        toast.success('Estate Planning FNA initialized with intake data');
+        return;
+      }
+
+      // Legacy path when prefill disabled
       const autoPopulatedInputs = await EstatePlanningAPI.autoPopulateInputs(clientId);
-      
-      // Merge with defaults
-      const defaultInputs: EstatePlanningInputs = {
-        familyInfo: {
-          fullName: '',
-          dateOfBirth: '',
-          age: 0,
-          maritalStatus: 'single',
-          citizenship: 'South Africa',
-          taxResidency: 'South Africa',
-        },
-        dependants: [],
-        willInfo: {
-          hasValidWill: 'unknown',
-          executorNominated: 'unknown',
-          guardianNominated: 'unknown',
-          specialBequests: [],
-          willNeedsUpdate: false,
-        },
-        assets: [],
-        liabilities: [],
-        lifePolicies: [],
-        assumptions: {
-          executorFeePercentage: ESTATE_PLANNING_CONSTANTS.DEFAULT_EXECUTOR_FEE_PERCENTAGE,
-          conveyancingFeesPerProperty: ESTATE_PLANNING_CONSTANTS.DEFAULT_CONVEYANCING_FEE_PER_PROPERTY,
-          masterFeesEstimate: ESTATE_PLANNING_CONSTANTS.DEFAULT_MASTER_FEES,
-          funeralCostsEstimate: ESTATE_PLANNING_CONSTANTS.DEFAULT_FUNERAL_COSTS,
-          estateDutyRate: ESTATE_PLANNING_CONSTANTS.ESTATE_DUTY_RATE,
-          estateDutyAbatement: ESTATE_PLANNING_CONSTANTS.ESTATE_DUTY_ABATEMENT,
-          spousalBequest: false,
-          cgtInclusionRate: ESTATE_PLANNING_CONSTANTS.CGT_INCLUSION_RATE_INDIVIDUAL,
-        },
-        hasOffshorAssets: false,
-        hasTrusts: false,
-        planningNotes: '',
-      };
-
-      const mergedInputs = {
-        ...defaultInputs,
-        ...autoPopulatedInputs,
-        ...(intakePrefill ?? {}),
-      };
-
-      setInputs(mergedInputs);
+      setInputs({ ...defaults, ...autoPopulatedInputs });
       toast.success('Estate Planning FNA initialized with client data');
     } catch (error: unknown) {
-      // Backend endpoint not available - work in client-side mode
-      // Generate default inputs
-      const defaultInputs: EstatePlanningInputs = {
-        familyInfo: {
-          fullName: '',
-          dateOfBirth: '',
-          age: 0,
-          maritalStatus: 'single',
-          citizenship: 'South Africa',
-          taxResidency: 'South Africa',
-        },
-        dependants: [],
-        willInfo: {
-          hasValidWill: 'unknown',
-          executorNominated: 'unknown',
-          guardianNominated: 'unknown',
-          specialBequests: [],
-          willNeedsUpdate: false,
-        },
-        assets: [],
-        liabilities: [],
-        lifePolicies: [],
-        assumptions: {
-          executorFeePercentage: ESTATE_PLANNING_CONSTANTS.DEFAULT_EXECUTOR_FEE_PERCENTAGE,
-          conveyancingFeesPerProperty: ESTATE_PLANNING_CONSTANTS.DEFAULT_CONVEYANCING_FEE_PER_PROPERTY,
-          masterFeesEstimate: ESTATE_PLANNING_CONSTANTS.DEFAULT_MASTER_FEES,
-          funeralCostsEstimate: ESTATE_PLANNING_CONSTANTS.DEFAULT_FUNERAL_COSTS,
-          estateDutyRate: ESTATE_PLANNING_CONSTANTS.ESTATE_DUTY_RATE,
-          estateDutyAbatement: ESTATE_PLANNING_CONSTANTS.ESTATE_DUTY_ABATEMENT,
-          spousalBequest: false,
-          cgtInclusionRate: ESTATE_PLANNING_CONSTANTS.CGT_INCLUSION_RATE_INDIVIDUAL,
-        },
-        hasOffshorAssets: false,
-        hasTrusts: false,
-        planningNotes: '',
-      };
-      setInputs({ ...defaultInputs, ...(intakePrefill ?? {}) });
+      setInputs(buildDefaultInputs(intakePrefill));
       console.log('⚠️ Estate Planning FNA backend not available - working in client-side mode');
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientId, intakePrefill, prefillEnabled, startPrefill]);
+
+  useEffect(() => {
+    if (open) {
+      void initializeFNA();
+    }
+  }, [open, clientId, initializeFNA]);
 
   const handleCalculate = async () => {
     if (!inputs) {
@@ -144,21 +156,17 @@ export function EstatePlanningFNAWizard({
 
     try {
       setCalculating(true);
-      
-      // Calculate results
       const results = EstatePlanningCalculationService.calculateEstatePlan(inputs);
-
-      // Save as published
       const session = await EstatePlanningAPI.saveSession(
         clientId,
         inputs,
         results,
         'published',
-        'Estate Planning FNA completed via wizard'
+        'Estate Planning FNA completed via wizard',
       );
 
       toast.success('Estate Planning FNA completed and published');
-      onFNAComplete(session.id);
+      onFNAComplete?.(session.id);
       onClose();
     } catch (error: unknown) {
       console.error('❌ Error calculating Estate Planning FNA:', error);
@@ -177,14 +185,15 @@ export function EstatePlanningFNAWizard({
       steps={steps}
       currentStepIndex={0}
       onNext={handleCalculate}
-      onBack={() => {}} // No back button on first step
+      onBack={() => {}}
       loading={loading}
       isSaving={calculating}
       isLastStep={true}
       nextLabel="Calculate & Publish"
       nextIcon={CheckCircle}
     >
-      <div className="min-h-[400px]">
+      <div className="min-h-[400px] space-y-4">
+        {prefillEnabled && !intakePrefill && PrefillUI}
         <ReviewStep inputs={inputs} />
       </div>
     </FNAWizardLayout>
