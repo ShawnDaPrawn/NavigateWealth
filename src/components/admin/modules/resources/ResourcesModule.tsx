@@ -42,7 +42,6 @@ import { generatePreviewData, getCategoryColor } from './utils';
 import { LEGAL_DOCUMENTS } from './legal-constants';
 import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
 import { Skeleton } from '../../../ui/skeleton';
-import { isFormPrefillEnabled } from '../../../../utils/formPrefillFeature';
 
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 
@@ -61,7 +60,7 @@ const LetterRenderer = React.lazy(() => import('./components/LetterRenderer').th
 const ClientConsentForm = React.lazy(() => import('./forms/ClientConsentForm'));
 const ClientPicker = React.lazy(() => import('./components/ClientPicker').then(m => ({ default: m.ClientPicker })));
 const UniversalKeyManager = React.lazy(() => import('./UniversalKeyManager').then(m => ({ default: m.UniversalKeyManager })));
-const FormTemplatesModule = React.lazy(() => import('../form-prefill/FormTemplatesModule').then(m => ({ default: m.FormTemplatesModule })));
+const FormTemplateTool = React.lazy(() => import('./tools/FormTemplateTool').then(m => ({ default: m.FormTemplateTool })));
 const ZipEncryptTool = React.lazy(() => import('./tools/ZipEncryptTool').then(m => ({ default: m.ZipEncryptTool })));
 const PdfDecryptTool = React.lazy(() => import('./tools/PdfDecryptTool').then(m => ({ default: m.PdfDecryptTool })));
 const CorporateIdentityTab = React.lazy(() => import('./components/CorporateIdentityTab').then(m => ({ default: m.CorporateIdentityTab })));
@@ -931,24 +930,10 @@ export function ResourcesModule() {
         {/* Tools Tab */}
         <TabsContent value="tools">
           <Suspense fallback={<LazyFallback />}>
-            <div className="space-y-6">
-              {isFormPrefillEnabled() ? (
-                <FormTemplatesModule selectedClientId={formTemplatesClientId} />
-              ) : (
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>PDF form filling unavailable</AlertTitle>
-                  <AlertDescription>
-                    External PDF template filling is disabled. Set{' '}
-                    <code className="text-xs">VITE_FORM_PREFILL_ENABLED=true</code> to restore this
-                    feature.
-                  </AlertDescription>
-                </Alert>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <ZipEncryptTool />
-                <PdfDecryptTool />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <FormTemplateTool selectedClientId={formTemplatesClientId} />
+              <ZipEncryptTool />
+              <PdfDecryptTool />
             </div>
           </Suspense>
         </TabsContent>
