@@ -30,6 +30,7 @@ export function ClientPicker({ selectedClient, onSelect }: ClientPickerProps) {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [blockBrowserAutofill, setBlockBrowserAutofill] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch clients on mount
@@ -117,25 +118,52 @@ export function ClientPicker({ selectedClient, onSelect }: ClientPickerProps) {
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <form
+        autoComplete="off"
+        className="relative"
+        onSubmit={(event) => event.preventDefault()}
+      >
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
         <Input
           placeholder="Search by name, email, or ID..."
           value={search}
+          readOnly={blockBrowserAutofill}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          name="nw-client-picker-query"
+          id="nw-client-picker-query"
+          type="text"
+          inputMode="search"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={showResults}
+          aria-controls="client-picker-results"
+          data-1p-ignore="true"
+          data-lpignore="true"
+          data-form-type="other"
           onChange={(e) => {
             setSearch(e.target.value);
             setShowResults(true);
           }}
-          onFocus={() => setShowResults(true)}
+          onFocus={() => {
+            setBlockBrowserAutofill(false);
+            setShowResults(true);
+          }}
           className="pl-10 h-10"
         />
         {loading && (
-          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
+          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin pointer-events-none" />
         )}
-      </div>
+      </form>
 
       {showResults && !loading && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div
+          id="client-picker-results"
+          role="listbox"
+          className="absolute z-[200] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+        >
           {filtered.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               <User className="h-8 w-8 mx-auto mb-2 opacity-40" />
@@ -145,6 +173,8 @@ export function ClientPicker({ selectedClient, onSelect }: ClientPickerProps) {
             filtered.slice(0, 20).map((client) => (
               <button
                 key={client.id}
+                type="button"
+                role="option"
                 className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left transition-colors border-b border-gray-50 last:border-0"
                 onClick={() => {
                   onSelect(client);
