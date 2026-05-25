@@ -61,8 +61,8 @@ export function FormTemplateTool({ selectedClientId }: FormTemplateToolProps) {
       </Card>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="w-[min(96vw,72rem)] max-w-5xl overflow-hidden p-0 gap-0">
+          <DialogHeader className="border-b bg-slate-50/80 px-6 py-5 pr-14">
             <DialogTitle className="flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5 text-purple-600" />
               Form Mapping Studio
@@ -72,21 +72,23 @@ export function FormTemplateTool({ selectedClientId }: FormTemplateToolProps) {
             </DialogDescription>
           </DialogHeader>
 
-          {enabled ? (
-            <Suspense fallback={<DialogFallback />}>
-              <FormTemplatesModule selectedClientId={selectedClientId} />
-            </Suspense>
-          ) : (
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>PDF form filling unavailable</AlertTitle>
-              <AlertDescription>
-                External PDF template filling is disabled. Set{' '}
-                <code className="text-xs">VITE_FORM_PREFILL_ENABLED=true</code> to restore this
-                feature.
-              </AlertDescription>
-            </Alert>
-          )}
+          <div className="max-h-[min(82vh,900px)] overflow-y-auto bg-slate-50/40 px-6 py-6">
+            {enabled ? (
+              <Suspense fallback={<DialogFallback />}>
+                <FormTemplatesModule selectedClientId={selectedClientId} />
+              </Suspense>
+            ) : (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>PDF form filling unavailable</AlertTitle>
+                <AlertDescription>
+                  External PDF template filling is disabled. Set{' '}
+                  <code className="text-xs">VITE_FORM_PREFILL_ENABLED=true</code> to restore this
+                  feature.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
