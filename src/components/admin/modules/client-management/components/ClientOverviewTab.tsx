@@ -104,11 +104,6 @@ import { createClient as createSupabaseClient } from '../../../../../utils/supab
 import { getClientProfileQueryOptions } from '../api';
 import { Client, ProfileData } from '../types';
 import { PolicyOverviewTab } from '../../../../admin/profile-sections/PolicyOverviewTab';
-import { FillExternalFormButton } from '../../form-prefill/FillExternalFormButton';
-import { PrefillDomainPicker } from '../../form-prefill/PrefillDomainPicker';
-import { PrefillHistoryPanel } from '../../form-prefill/PrefillHistoryPanel';
-import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
-
 // Phase 1 KPI / Sub-Score imports
 import { HealthScoreBreakdown } from './overview/HealthScoreBreakdown';
 import { KPISummaryTable } from './overview/KPISummaryTable';
@@ -2156,18 +2151,6 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
         generatingPDF={generatingPDF}
         mode={mode}
       />
-
-      {!isClient && isFormPrefillEnabled() && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-wrap gap-2">
-            <PrefillDomainPicker clientId={client.id} />
-            <FillExternalFormButton clientId={client.id} />
-          </div>
-          <div className="w-full sm:max-w-md">
-            <PrefillHistoryPanel clientId={client.id} />
-          </div>
-        </div>
-      )}
 
       {/* ─── 2. Health Pillar Cards ──────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 items-stretch">
