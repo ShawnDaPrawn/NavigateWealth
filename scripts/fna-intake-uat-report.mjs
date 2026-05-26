@@ -39,7 +39,7 @@ const md = `# FNA Intake — Staging UAT Sign-off
 
 Complete on **staging** with dedicated test client + assigned adviser before production launch.
 
-**Environment:** \`VITE_FNA_INTAKE_ENABLED=true\`, Edge Function deployed, Postgres migration applied, \`FNA_INTAKE_READ_FROM=postgres\` after backfill.
+**Environment:** Client intake UI enabled platform-wide, Edge Function deployed, Postgres migration applied, \`FNA_INTAKE_READ_FROM=postgres\` after backfill.
 
 ## Sign-off record
 
@@ -67,8 +67,8 @@ Mark **Pass / Fail / N/A** for each domain: risk, medical, retirement, investmen
 
 ## Global checks
 
-- [x] Feature flag **off**: legacy \`ClientFNAView\` — covered by Vitest \`fna-intake-labels.test.ts\`
-- [x] Feature flag **on**: hub, wizard, queue — API UAT with flag enabled locally
+- [x] Client intake hub, wizard, queue — API UAT with launched UI path
+- [x] Published FNA results still route through \`ClientFNAView\` from \`ClientFNAHub\`
 - [x] Legal consent copy reviewed (automated parity test — hash \`${consentHash}\`)
 - [x] No P0/P1 defects open
 
