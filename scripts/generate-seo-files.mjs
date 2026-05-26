@@ -1,109 +1,36 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  DEFAULT_SITE_URL,
+  DEFAULT_TIMEZONE,
+  absoluteUrl,
+  disallowPaths,
+  escapeXml,
+  normalizeSiteUrl,
+  publicSeoRoutes,
+} from './seo-static-data.mjs';
 
-// Must match src/utils/siteOrigin.ts (SITE_ORIGIN)
-const DEFAULT_SITE_URL = 'https://www.navigatewealth.co';
-const DEFAULT_TIMEZONE = 'Africa/Johannesburg';
 const siteUrl = normalizeSiteUrl(process.env.SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL);
 const buildDate = new Intl.DateTimeFormat('en-CA', {
   timeZone: process.env.SITEMAP_TIMEZONE || DEFAULT_TIMEZONE,
 }).format(new Date());
-const STATIC_CONTENT_LASTMOD = '2026-04-17';
 
-// Google ignores <priority> and <changefreq> — only <loc> and <lastmod> matter.
-// lastmod should reflect genuinely meaningful content changes.
-// Only canonical, indexable public pages belong here. No auth, dashboard, or admin routes.
-const sitemapEntries = [
-  { path: '/', lastmod: STATIC_CONTENT_LASTMOD },
-  { path: '/services', lastmod: STATIC_CONTENT_LASTMOD },
-  { path: '/resources', lastmod: STATIC_CONTENT_LASTMOD },
-  { path: '/about', lastmod: '2026-03-01' },
-  { path: '/team', lastmod: '2026-03-01' },
-  { path: '/contact', lastmod: '2026-03-01' },
-  { path: '/schedule-consultation', lastmod: '2026-03-01' },
-  { path: '/why-us', lastmod: '2026-03-01' },
-  { path: '/risk-management', lastmod: '2026-03-01' },
-  { path: '/retirement-planning', lastmod: '2026-03-01' },
-  { path: '/investment-management', lastmod: '2026-03-01' },
-  { path: '/tax-planning', lastmod: '2026-03-01' },
-  { path: '/estate-planning', lastmod: '2026-03-01' },
-  { path: '/financial-planning', lastmod: '2026-03-01' },
-  { path: '/medical-aid', lastmod: '2026-03-01' },
-  { path: '/employee-benefits', lastmod: '2026-03-01' },
-  { path: '/get-quote', lastmod: '2026-03-01' },
-  { path: '/solutions/individuals', lastmod: '2026-03-01' },
-  { path: '/solutions/businesses', lastmod: '2026-03-01' },
-  { path: '/solutions/advisers', lastmod: '2026-03-01' },
-  { path: '/ask-vasco', lastmod: '2026-03-01' },
-  { path: '/careers', lastmod: '2026-03-01' },
-  { path: '/press', lastmod: '2026-03-01' },
-  { path: '/legal', lastmod: '2026-01-01' },
-];
-
-const disallowPaths = [
-  '/admin',
-  '/dashboard',
-  '/dashboard/',
-  '/products-services-dashboard',
-  '/login',
-  '/signup',
-  '/forgot-password',
-  '/reset-password',
-  '/verify-email',
-  '/auth/',
-  '/account-type',
-  '/get-started',
-  '/application',
-  '/application/',
-  '/onboarding/',
-  '/profile',
-  '/security',
-  '/history',
-  '/communication',
-  '/transactions-documents',
-  '/my-adviser',
-  '/ai-advisor',
-  '/requests/',
-  '/newsletter/',
-  '/sign',
-  '/verify',
-  '/verify-document',
-  '/og-preview',
-  '/links',
-  '/migration-helper',
-  '/design-system',
-  '/preview_page.html',
-];
+// Google ignores priority and changefreq. Keep sitemap entries limited to
+// canonical, indexable public pages only.
+const sitemapEntries = publicSeoRoutes
+  .filter((entry) => entry.sitemap !== false)
+  .map(({ path: routePath, lastmod }) => ({ path: routePath, lastmod }));
 
 const publicDir = path.resolve('public');
 fs.mkdirSync(publicDir, { recursive: true });
 
 main();
 
-function normalizeSiteUrl(value) {
-  const trimmed = value.trim();
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  return withProtocol.replace(/\/+$/, '');
-}
-
-function escapeXml(value) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-function absoluteUrl(routePath) {
-  return routePath === '/' ? siteUrl : `${siteUrl}${routePath}`;
-}
-
 function generateSitemapXml() {
   const urls = sitemapEntries
     .map(
       ({ path: routePath, lastmod }) => `  <url>
-    <loc>${escapeXml(absoluteUrl(routePath))}</loc>
+    <loc>${escapeXml(absoluteUrl(siteUrl, routePath))}</loc>
     <lastmod>${lastmod || buildDate}</lastmod>
   </url>`
     )
@@ -135,7 +62,6 @@ function main() {
         sitemapEntries.push(...articleEntries);
       }
 
-      // De-dupe paths (defensive)
       const seen = new Set();
       const deduped = [];
       for (const e of sitemapEntries) {
@@ -147,6 +73,8 @@ function main() {
       sitemapEntries.length = 0;
       sitemapEntries.push(...deduped);
 
+      assertRobotsAllowsPublicCrawl(generateRobotsTxt());
+
       writeGeneratedFile(path.join(publicDir, 'sitemap.xml'), generateSitemapXml());
       writeGeneratedFile(path.join(publicDir, 'robots.txt'), generateRobotsTxt());
 
@@ -156,6 +84,12 @@ function main() {
       console.error('Failed to generate SEO files:', err);
       process.exitCode = 1;
     });
+}
+
+function assertRobotsAllowsPublicCrawl(robotsTxt) {
+  if (/^Disallow:\s*\/\s*$/im.test(robotsTxt)) {
+    throw new Error('Refusing to generate production robots.txt with Disallow: /');
+  }
 }
 
 function normalizeNewlines(value) {
@@ -185,8 +119,6 @@ function toDateOnly(value) {
 }
 
 async function fetchPublishedArticleEntries() {
-  // Pull published articles from the public Edge Function endpoint.
-  // This ensures the sitemap reflects live content, and avoids listing draft/unpublished posts.
   const projectRef = process.env.SUPABASE_PROJECT_REF || 'vpjmdsltwrnpefzcgdmz';
   const fnBase =
     process.env.SUPABASE_FUNCTIONS_BASE_URL ||
@@ -195,9 +127,8 @@ async function fetchPublishedArticleEntries() {
   const url = `${fnBase}/publications/articles?status=published&limit=1000`;
   try {
     const anonKey = readSupabaseAnonKey();
-    const res = await fetch(url, { headers: { 'accept': 'application/json' } });
+    const res = await fetch(url, { headers: { accept: 'application/json' } });
     if (!res.ok) {
-      // Some Supabase function gateways require an Authorization header even for public routes.
       if (res.status === 401 && anonKey) {
         const retry = await fetch(url, {
           headers: {
@@ -248,7 +179,6 @@ function rowsToArticleEntries(rows) {
 }
 
 function readSupabaseAnonKey() {
-  // Prefer explicit env var for CI; fall back to reading repo constant.
   const envKey =
     process.env.SUPABASE_ANON_KEY ||
     process.env.VITE_SUPABASE_ANON_KEY ||

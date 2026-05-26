@@ -7,6 +7,17 @@
       "statusCode": 301
     }
   ],
+  "headers": [
+    {
+      "source": "/(admin|dashboard|products-services-dashboard|login|signup|forgot-password|reset-password|verify-email|auth|account-type|get-started|application|onboarding|profile|security|history|communication|transactions-documents|my-adviser|ai-advisor|requests|newsletter|sign|verify|verify-document|og-preview|links|migration-helper|design-system)(/.*)?",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ],
   "outputDirectory": "dist",
   "routes": [
     { "handle": "filesystem" },

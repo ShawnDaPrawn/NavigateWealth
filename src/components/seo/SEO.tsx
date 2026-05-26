@@ -46,7 +46,7 @@ interface ServiceOffer {
 const SITE_NAME = 'Navigate Wealth';
 const BASE_URL = SITE_ORIGIN;
 /** Default OG image used when a page-specific one is not supplied. */
-const DEFAULT_OG_IMAGE = `${BASE_URL}/og-default.jpg`;
+const DEFAULT_OG_IMAGE = `${BASE_URL}/brand-assets/navigate-wealth-social.png`;
 
 /* -------------------------------------------------------------------------- */
 /*  SEO Component                                                             */
@@ -149,14 +149,12 @@ export function SEO({
 
 export function createOrganizationSchema(): Record<string, unknown> {
   return {
-    '@type': 'Organization',
+    '@type': ['Organization', 'FinancialService'],
     name: SITE_NAME,
     url: BASE_URL,
     logo: {
       '@type': 'ImageObject',
-      url: `${BASE_URL}/logo.png`,
-      width: 600,
-      height: 60,
+      url: `${BASE_URL}/brand-assets/navigate-wealth-social.png`,
     },
     description:
       'Independent financial advisory firm providing comprehensive wealth management services across South Africa.',

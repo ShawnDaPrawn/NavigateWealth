@@ -112,7 +112,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "node ./scripts/generate-seo-files.mjs && vite build",
+    "build": "node ./scripts/generate-seo-files.mjs && vite build && node ./scripts/apply-static-seo.mjs && node ./scripts/verify-seo-build.mjs",
+    "seo:verify": "node ./scripts/generate-seo-files.mjs && node ./scripts/verify-seo-build.mjs",
     "optimize:images": "node ./scripts/optimize-images.mjs",
     "ui:inspect": "node ./scripts/ui-inspect.mjs",
     "provider:sync": "node ./scripts/provider-portal-worker.mjs",
