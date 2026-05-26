@@ -10,6 +10,7 @@ import { Card, CardContent } from '../../../../../ui/card';
 import { Label } from '../../../../../ui/label';
 import { Input } from '../../../../../ui/input';
 import type { ClientSearchResult } from '../../types';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 interface ClientSearchPanelProps {
   searchTerm: string;
@@ -28,6 +29,8 @@ export function ClientSearchPanel({
   onSelectClient,
   selectedClientId
 }: ClientSearchPanelProps) {
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'advice-engine-client-search-panel' });
+
   return (
     <CardContent className="space-y-4">
       {/* Search Input */}
@@ -36,6 +39,7 @@ export function ClientSearchPanel({
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            {...searchInputGuard}
             id="client-search"
             placeholder="Start typing to search clients..."
             value={searchTerm}

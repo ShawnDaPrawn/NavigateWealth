@@ -58,6 +58,7 @@ import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, LOCATION_TYPE_LABELS } from '../c
 import { useClients } from '../../../../../hooks/useClients';
 import { format, addHours } from 'date-fns';
 import { toast } from 'sonner@2.0.3';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 // System-generated event types that cannot be manually created
 const SYSTEM_EVENT_TYPES: EventType[] = ['birthday', 'renewal'];
@@ -96,6 +97,7 @@ export function EventFormModal({
   events = [],
   isSubmitting = false,
 }: EventFormModalProps) {
+  const clientSearchInputGuard = useSearchInputAutofillGuard({ id: 'calendar-event-client-search' });
   const { data: clients = [], isLoading: isLoadingClients } = useClients();
 
   const [formData, setFormData] = useState({
@@ -769,7 +771,7 @@ export function EventFormModal({
                     </PopoverTrigger>
                     <PopoverContent className="w-[400px] p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Search clients..." />
+                        <CommandInput {...clientSearchInputGuard} placeholder="Search clients..." />
                         <CommandList>
                           <CommandEmpty>
                             {isLoadingClients ? 'Loading clients...' : 'No client found.'}

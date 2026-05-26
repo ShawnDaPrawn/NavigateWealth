@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Avatar, AvatarFallback } from '../../../../ui/avatar';
 import { Skeleton } from '../../../../ui/skeleton';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 import {
   Table,
   TableBody,
@@ -128,6 +129,7 @@ export function ApplicationsTable({
   onCompleteOnBehalf,
   resendingInviteId,
 }: ApplicationsTableProps) {
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'applications-table-search' });
   // Filter applications by tab status
   const statusMap: Record<TabStatus, string[]> = {
     incomplete: ['draft', 'in_progress'],
@@ -246,6 +248,7 @@ export function ApplicationsTable({
             <div className="relative flex-1 sm:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
+                {...searchInputGuard}
                 placeholder="Search by name, email, phone, or application #..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

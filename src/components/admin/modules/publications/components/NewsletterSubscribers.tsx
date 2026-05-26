@@ -81,12 +81,14 @@ import {
   useResubscribe,
   useUpdateSubscriber,
 } from '../hooks/useNewsletterMutations';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
 export function NewsletterSubscribers() {
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'newsletter-subscribers-search' });
   // ── Server state (React Query) ───────────────────────────────────────
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<SubscriberStatusFilter>('all');
@@ -304,6 +306,7 @@ export function NewsletterSubscribers() {
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            {...searchInputGuard}
             placeholder="Search by email or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}

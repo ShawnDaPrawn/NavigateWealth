@@ -23,6 +23,7 @@ import { Badge } from '../../ui/badge';
 import { useGlobalSearchData } from './useGlobalSearchData';
 import { useAdminNavigation } from './AdminNavigationContext';
 import type { SearchableAccount } from './useGlobalSearchData';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 const STATUS_BADGE_CONFIG: Record<string, { label: string; className: string }> = {
   active: { label: 'Active', className: 'bg-green-100 text-green-700 border-green-200' },
@@ -54,6 +55,7 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 export function GlobalSearch() {
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState('');
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'admin-global-search' });
   const debouncedSearch = useDebouncedValue(searchValue, 250);
   const { navigateToAccount } = useAdminNavigation();
   const { clients, personnel, isLoading, hasSearchQuery } = useGlobalSearchData(open, debouncedSearch);
@@ -104,6 +106,7 @@ export function GlobalSearch() {
         description="Search for client and personnel accounts by name or email."
       >
         <CommandInput
+          {...searchInputGuard}
           placeholder="Search by name or email..."
           value={searchValue}
           onValueChange={setSearchValue}
@@ -229,4 +232,3 @@ function AccountItem({ account, onSelect }: AccountItemProps) {
     </CommandItem>
   );
 }
-

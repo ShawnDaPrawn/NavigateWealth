@@ -12,6 +12,7 @@ import { Badge } from '../../../../ui/badge';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import type { PersonnelStatus } from '../types';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 interface PersonnelFiltersProps {
   searchTerm: string;
@@ -43,6 +44,7 @@ export function PersonnelFilters({
   totalCount,
   filteredCount,
 }: PersonnelFiltersProps) {
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'personnel-filters-search' });
   const hasActiveFilters =
     searchTerm !== '' || activeCategory !== 'all' || statusFilter !== 'all';
   const isFiltered = filteredCount !== totalCount;
@@ -54,6 +56,7 @@ export function PersonnelFilters({
         <div className="relative flex-1 w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
+            {...searchInputGuard}
             placeholder="Search by name, email, or title..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}

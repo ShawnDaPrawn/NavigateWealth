@@ -27,6 +27,7 @@ import {
 } from '../../../../ui/popover';
 import { formatClientDisplay, formatClientName, getClientInitials } from '../utils';
 import type { ClientSelectorProps } from '../types';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 /**
  * Client selector with search
@@ -51,6 +52,7 @@ export function ClientSelector({
   placeholder = 'Search clients...',
 }: ClientSelectorProps) {
   const [open, setOpen] = React.useState(false);
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'advice-engine-client-selector-search' });
 
   const handleSelect = (client: ClientSelectorProps['results'][number]) => {
     onSelectClient(client);
@@ -87,6 +89,7 @@ export function ClientSelector({
       <PopoverContent className="w-[300px] p-0" align="end">
         <Command shouldFilter={false}>
           <CommandInput
+            {...searchInputGuard}
             placeholder="Search clients..."
             value={searchTerm}
             onValueChange={onSearchChange}

@@ -55,6 +55,7 @@ import { useAuth } from '../../../../auth/AuthContext';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../../../ui/alert-dialog';
 import { Checkbox } from '../../../../ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 const SUBCATEGORIES = [
   "Compliance",
@@ -103,6 +104,7 @@ interface DocumentItem {
 
 export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   const { user } = useAuth();
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'client-documents-search' });
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -898,6 +900,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
           <div className="flex-1 relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
+              {...searchInputGuard}
               placeholder="Search by title, filename, or policy..."
               className="pl-9"
               value={searchQuery}

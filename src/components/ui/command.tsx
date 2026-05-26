@@ -53,8 +53,17 @@ function CommandDialog({
 
 function CommandInput({
   className,
+  onFocus,
+  autoComplete,
+  autoCorrect,
+  autoCapitalize,
+  spellCheck,
+  readOnly,
+  inputMode,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
+  const [autofillGuardActive, setAutofillGuardActive] = React.useState(true);
+
   return (
     <div
       data-slot="command-input-wrapper"
@@ -67,6 +76,19 @@ function CommandInput({
           "placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
+        inputMode={inputMode ?? "search"}
+        readOnly={readOnly ?? autofillGuardActive}
+        autoComplete={autoComplete ?? "off"}
+        autoCorrect={autoCorrect ?? "off"}
+        autoCapitalize={autoCapitalize ?? "off"}
+        spellCheck={spellCheck ?? false}
+        data-1p-ignore="true"
+        data-lpignore="true"
+        data-form-type="other"
+        onFocus={(event) => {
+          setAutofillGuardActive(false);
+          onFocus?.(event);
+        }}
         {...props}
       />
     </div>

@@ -16,6 +16,7 @@ import {
 } from '../../../../../ui/select';
 import { ProductKeyCategory } from '../types';
 import { KeyAPI } from '../api';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 interface SearchFiltersProps {
   searchTerm: string;
@@ -41,6 +42,7 @@ export function SearchFilters({
   className = ''
 }: SearchFiltersProps) {
   const dataTypes = KeyAPI.getDataTypes();
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'resource-key-manager-search' });
 
   return (
     <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${className}`}>
@@ -50,6 +52,7 @@ export function SearchFilters({
         <div className="relative mt-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            {...searchInputGuard}
             placeholder="Search by name, ID, or description..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}

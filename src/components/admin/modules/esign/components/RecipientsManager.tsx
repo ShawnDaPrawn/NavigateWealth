@@ -43,6 +43,7 @@ import {
 import { clientApi } from '../../client-management/api';
 import { SIGNER_ROLES, SIGNER_COLORS, CURRENT_MAX_SIGNERS } from '../constants';
 import type { SignerFormData, SignerKind } from '../types';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 /**
  * Optional client context — when provided, the client is pre-populated as
@@ -95,6 +96,12 @@ export function RecipientsManager({
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedClient, setSelectedClient] = useState<SystemClient | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputGuard = useSearchInputAutofillGuard({
+    id: 'esign-recipients-system-client-search',
+    role: 'combobox',
+    ariaAutocomplete: 'list',
+    ariaExpanded: showDropdown,
+  });
 
   // Manual entry state
   const [manualName, setManualName] = useState('');
@@ -630,6 +637,7 @@ export function RecipientsManager({
                     <div className="relative">
                       <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                       <Input
+                        {...searchInputGuard}
                         placeholder="Search by name or email..."
                         className="pl-9"
                         value={searchQuery}
@@ -638,7 +646,10 @@ export function RecipientsManager({
                           setShowDropdown(true);
                           setSelectedClient(null);
                         }}
-                        onFocus={() => setShowDropdown(true)}
+                        onFocus={(e) => {
+                          searchInputGuard.onFocus?.(e);
+                          setShowDropdown(true);
+                        }}
                       />
                     </div>
 

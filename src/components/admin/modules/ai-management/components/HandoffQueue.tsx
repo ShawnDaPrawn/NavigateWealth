@@ -21,12 +21,14 @@ import { cn } from '../../../../ui/utils';
 import { useHandoffs, useUpdateHandoffStatus } from '../hooks';
 import { HANDOFF_STATUS_CONFIG } from '../constants';
 import type { HandoffStatus, HandoffRequest } from '../types';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 type FilterStatus = HandoffStatus | 'all';
 
 const STATUS_OPTIONS: HandoffStatus[] = ['new', 'contacted', 'converted', 'closed'];
 
 export function HandoffQueue() {
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'ai-handoff-queue-search' });
   const { data: handoffs, isLoading } = useHandoffs();
   const updateStatus = useUpdateHandoffStatus();
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
@@ -93,6 +95,7 @@ export function HandoffQueue() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
+            {...searchInputGuard}
             placeholder="Search by name, email, or topic..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

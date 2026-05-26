@@ -10,6 +10,7 @@ import { CommunicationDraft, Client, ClientGroup, RecipientType } from '../../ty
 import { CustomGroupManager } from '../CustomGroupManager';
 import { communicationApi } from '../../api';
 import { useVirtualizedRows } from '../../../../../shared/useVirtualizedRows';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 interface Step1Props {
   draft: CommunicationDraft;
@@ -18,6 +19,7 @@ interface Step1Props {
 }
 
 export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'communication-step1-recipients-search' });
   const [activeTab, setActiveTab] = useState<RecipientType>(draft.recipientType || 'single');
   const [searchTerm, setSearchTerm] = useState('');
   const [clients, setClients] = useState<Client[]>([]);
@@ -168,7 +170,8 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
               <div className="space-y-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input 
+                  <Input
+                    {...searchInputGuard}
                     placeholder="Search by name, email, or phone..." 
                     className="pl-10"
                     value={searchTerm}

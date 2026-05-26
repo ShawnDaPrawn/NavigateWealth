@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Checkbox } from '../../../../../ui/checkbox';
 import { Client } from '../../types';
 import { useVirtualizedRows } from '../../../../../shared/useVirtualizedRows';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 interface ManualSelectionProps {
   clients: Client[];
@@ -23,6 +24,7 @@ export function ManualSelection({
   searchTerm, 
   onSearchChange 
 }: ManualSelectionProps) {
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'communication-group-manual-selection-search' });
   
   const filteredClients = clients.filter(c => 
     (c.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -44,7 +46,8 @@ export function ManualSelection({
         <CardDescription>Explicitly include specific clients regardless of filters.</CardDescription>
         <div className="relative mt-2">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
+          <Input
+            {...searchInputGuard}
             placeholder="Search clients..." 
             className="pl-9"
             value={searchTerm}

@@ -30,6 +30,7 @@ import {
 import { RecipientType, Client, ClientGroup, CommunicationChannel } from '../types';
 import { communicationApi } from '../api';
 import { VirtualizedClientList } from './VirtualizedClientList';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 interface RecipientSelectorProps {
   recipientType: RecipientType;
@@ -58,6 +59,7 @@ export function RecipientSelector({
   channel,
 }: RecipientSelectorProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'communication-recipient-selector-search' });
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [allGroups, setAllGroups] = useState<ClientGroup[]>([]);
@@ -278,6 +280,7 @@ export function RecipientSelector({
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
+                  {...searchInputGuard}
                   placeholder="Search by name or email address..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}

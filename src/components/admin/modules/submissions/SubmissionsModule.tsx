@@ -44,6 +44,7 @@ import {
   BOARD_COLUMNS, SUBMISSION_STATUS_CONFIG, SUBMISSION_TYPE_CONFIG
 } from './constants';
 import type { Submission, SubmissionStatus, SubmissionType, SubmissionsFilters } from './types';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 // ── Status config for columns — matches TaskColumn pattern ────────────────────
 
@@ -146,6 +147,7 @@ function KanbanColumn({
 // ── Main Module ───────────────────────────────────────────────────────────────
 
 export function SubmissionsModule() {
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'submissions-module-search' });
   const [searchParams] = useSearchParams();
 
   // ── Deep Link Support ──
@@ -446,7 +448,7 @@ export function SubmissionsModule() {
           <div className="flex-1 relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
-              type="text"
+              {...searchInputGuard}
               placeholder="Search by name, email, or submission ID…"
               value={search}
               onChange={e => setSearch(e.target.value)}

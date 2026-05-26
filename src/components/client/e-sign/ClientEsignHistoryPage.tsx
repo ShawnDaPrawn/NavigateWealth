@@ -31,6 +31,7 @@ import { esignApi } from '../../admin/modules/esign/api';
 import { EnvelopeManagementTableRow } from '../../admin/modules/esign/components/EnvelopeManagementTableRow';
 import { EnvelopeDetailsDialog } from '../../admin/modules/esign/components/EnvelopeDetailsDialog';
 import type { EsignEnvelope, EnvelopeStatus } from '../../admin/modules/esign/types';
+import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 /** Same grouping as Client Management E‑Sign tab ([EsignTab.tsx](client-management/components/EsignTab.tsx)) */
 type StatusFilter = 'all' | 'draft' | 'pending' | 'completed' | 'rejected' | 'expired' | 'voided';
@@ -57,6 +58,7 @@ const STATUS_FILTER_MAP: Record<StatusFilter, EnvelopeStatus[] | null> = {
 
 export function ClientEsignHistoryPage() {
   const { user } = useAuth();
+  const searchInputGuard = useSearchInputAutofillGuard({ id: 'client-esign-history-search' });
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedEnvelope, setSelectedEnvelope] = useState<EsignEnvelope | null>(null);
@@ -239,6 +241,7 @@ export function ClientEsignHistoryPage() {
             <div className="relative flex-1 max-w-xs min-w-[200px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
+                {...searchInputGuard}
                 placeholder="Search by title..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
