@@ -7,9 +7,11 @@ import {
   createArticleRoute,
   createArticleSchema,
   createRouteSchema,
+  createStaticBodyHtml,
   escapeHtml,
   normalizeSiteUrl,
   publicSeoRoutes,
+  resolveImageUrl,
   routeCanonicalPath,
 } from './seo-static-data.mjs';
 
@@ -74,12 +76,14 @@ function outputPathForRoute(routePath) {
 function applySeoToHtml(html, route) {
   const cleaned = removeExistingStaticSeo(html);
   const head = buildHead(route);
-  return cleaned.replace(/<\/head>/i, `${head}\n    </head>`);
+  const withHead = cleaned.replace(/<\/head>/i, `${head}\n    </head>`);
+  return applyStaticBody(withHead, route);
 }
 
 function removeExistingStaticSeo(html) {
   return html
     .replace(/\s*<!-- static-seo:start -->[\s\S]*?<!-- static-seo:end -->/g, '')
+    .replace(/\s*<!-- static-body:start -->[\s\S]*?<!-- static-body:end -->/g, '')
     .replace(/\s*<title>[\s\S]*?<\/title>/i, '')
     .replace(/\s*<meta\s+name=["']description["'][^>]*>/gi, '')
     .replace(/\s*<meta\s+name=["']robots["'][^>]*>/gi, '')
@@ -93,7 +97,7 @@ function removeExistingStaticSeo(html) {
 
 function buildHead(route) {
   const canonicalUrl = absoluteUrl(siteUrl, routeCanonicalPath(route));
-  const ogImageUrl = resolveImageUrl(route.ogImage || DEFAULT_OG_IMAGE_PATH);
+  const ogImageUrl = resolveImageUrl(siteUrl, route.ogImage || DEFAULT_OG_IMAGE_PATH);
   const schema =
     route.schema === 'article'
       ? createArticleSchema(route, siteUrl)
@@ -127,10 +131,13 @@ ${keywordsTag}      <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
       <!-- static-seo:end -->`;
 }
 
-function resolveImageUrl(value) {
-  if (!value) return `${siteUrl}${DEFAULT_OG_IMAGE_PATH}`;
-  if (/^https?:\/\//i.test(value)) return value;
-  return `${siteUrl}${value.startsWith('/') ? value : `/${value}`}`;
+function applyStaticBody(html, route) {
+  const body = createStaticBodyHtml(route, siteUrl);
+  if (/<div\s+id=["']root["']\s*>\s*<\/div>/i.test(html)) {
+    return html.replace(/(<div\s+id=["']root["']\s*>\s*<\/div>)/i, `$1${body}`);
+  }
+
+  return html.replace(/<script\s+type=["']module["']/i, `${body}\n      <script type="module"`);
 }
 
 async function fetchPublishedArticleRoutes() {

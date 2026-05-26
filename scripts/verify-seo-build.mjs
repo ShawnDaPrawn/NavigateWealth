@@ -59,6 +59,9 @@ function verifySitemap() {
     failures.push('sitemap.xml contains no URLs');
     return;
   }
+  if (!/xmlns:image=["']http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1["']/.test(sitemap)) {
+    failures.push('sitemap.xml is missing the image sitemap namespace');
+  }
 
   const disallowedPrefixes = disallowPaths
     .filter((routePath) => routePath !== '/')
@@ -108,6 +111,12 @@ function verifyStaticHtml() {
     }
     if (!/<script\s+id=["']seo-structured-data["']\s+type=["']application\/ld\+json["']>/i.test(html)) {
       failures.push(`${route.path} is missing initial JSON-LD structured data`);
+    }
+    if (!/<noscript\s+data-seo-static-body=["']true["']>/i.test(html)) {
+      failures.push(`${route.path} is missing its static no-JS body snapshot`);
+    }
+    if (!/<main\s+id=["']seo-static-body["']/i.test(html)) {
+      failures.push(`${route.path} is missing semantic static body markup`);
     }
     verifyJsonLd(route.path, html);
   }

@@ -1,6 +1,10 @@
 export const DEFAULT_SITE_URL = 'https://www.navigatewealth.co';
 export const DEFAULT_TIMEZONE = 'Africa/Johannesburg';
 export const DEFAULT_OG_IMAGE_PATH = '/brand-assets/navigate-wealth-social.png';
+export const DEFAULT_LANGUAGE = 'en-ZA';
+export const DEFAULT_BUSINESS_NAME = 'Navigate Wealth';
+export const DEFAULT_BUSINESS_PHONE = '+27126672505';
+export const DEFAULT_BUSINESS_EMAIL = 'info@navigatewealth.co';
 
 export const disallowPaths = [
   '/admin',
@@ -339,6 +343,12 @@ export function absoluteUrl(siteUrl, routePath) {
   return routePath === '/' ? siteUrl : `${siteUrl}${routePath}`;
 }
 
+export function resolveImageUrl(siteUrl, value) {
+  if (!value) return `${siteUrl}${DEFAULT_OG_IMAGE_PATH}`;
+  if (/^https?:\/\//i.test(value)) return value;
+  return `${siteUrl}${value.startsWith('/') ? value : `/${value}`}`;
+}
+
 export function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -361,7 +371,8 @@ export function createOrganizationSchema(siteUrl) {
   return {
     '@type': ['Organization', 'FinancialService'],
     '@id': `${siteUrl}/#organization`,
-    name: 'Navigate Wealth',
+    name: DEFAULT_BUSINESS_NAME,
+    legalName: 'Wealthfront (Pty) Ltd trading as Navigate Wealth',
     url: siteUrl,
     logo: {
       '@type': 'ImageObject',
@@ -384,9 +395,24 @@ export function createOrganizationSchema(siteUrl) {
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
-      telephone: '+27126672505',
+      telephone: DEFAULT_BUSINESS_PHONE,
+      email: DEFAULT_BUSINESS_EMAIL,
       availableLanguage: ['English', 'Afrikaans'],
     },
+    telephone: DEFAULT_BUSINESS_PHONE,
+    email: DEFAULT_BUSINESS_EMAIL,
+    priceRange: '$$',
+    knowsAbout: [
+      'Financial Planning',
+      'Wealth Management',
+      'Investment Management',
+      'Retirement Planning',
+      'Risk Management',
+      'Tax Planning',
+      'Estate Planning',
+      'Employee Benefits',
+      'Medical Aid',
+    ],
     sameAs: [
       'https://www.linkedin.com/company/navigatewealth/',
       'https://www.instagram.com/navigate_wealth?igsh=MTh6bTc2emszbXU0MA==',
@@ -402,6 +428,7 @@ export function createWebSiteSchema(siteUrl) {
     name: 'Navigate Wealth',
     url: siteUrl,
     publisher: { '@id': `${siteUrl}/#organization` },
+    inLanguage: DEFAULT_LANGUAGE,
     potentialAction: {
       '@type': 'SearchAction',
       target: {
@@ -421,8 +448,11 @@ export function createWebPageSchema(route, siteUrl) {
     name: route.title,
     description: route.description,
     url,
+    inLanguage: DEFAULT_LANGUAGE,
+    ...(route.lastmod ? { dateModified: route.lastmod } : {}),
     isPartOf: { '@id': `${siteUrl}/#website` },
     publisher: { '@id': `${siteUrl}/#organization` },
+    breadcrumb: { '@id': `${url}#breadcrumb` },
   };
 }
 
@@ -469,6 +499,7 @@ export function createServiceSchema(route, siteUrl) {
     url: absoluteUrl(siteUrl, route.path),
     serviceType: route.serviceType || 'Financial Advisory Services',
     provider: { '@id': `${siteUrl}/#organization` },
+    inLanguage: DEFAULT_LANGUAGE,
     areaServed: {
       '@type': 'Country',
       name: 'South Africa',
@@ -483,9 +514,7 @@ export function createRouteSchema(route, siteUrl) {
     createWebPageSchema(route, siteUrl),
   ];
 
-  if (route.path !== '/') {
-    graph.push(createBreadcrumbSchema(route, siteUrl));
-  }
+  graph.push(createBreadcrumbSchema(route, siteUrl));
 
   if (route.schema === 'service') {
     graph.push(createServiceSchema(route, siteUrl));
@@ -495,6 +524,72 @@ export function createRouteSchema(route, siteUrl) {
     '@context': 'https://schema.org',
     '@graph': graph,
   };
+}
+
+export function createStaticBodyHtml(route, siteUrl) {
+  const canonicalUrl = absoluteUrl(siteUrl, routeCanonicalPath(route));
+  const pageName = stripTitleSuffix(route.title);
+  const crumbs = breadcrumbItemsForRoute(route, siteUrl);
+  const serviceLine = route.serviceType
+    ? `<p><strong>Service:</strong> ${escapeHtml(route.serviceType)} for clients in South Africa.</p>`
+    : '';
+  const articleLine = route.schema === 'article'
+    ? '<p>This article is part of the Navigate Wealth resources and insights library.</p>'
+    : '';
+
+  return `
+      <!-- static-body:start -->
+      <noscript data-seo-static-body="true">
+        <main id="seo-static-body" aria-label="${escapeHtml(pageName)}">
+          <article>
+            <nav aria-label="Breadcrumb">
+              <ol>
+${crumbs
+  .map(
+    (crumb) =>
+      `                <li><a href="${escapeHtml(crumb.url)}">${escapeHtml(crumb.name)}</a></li>`
+  )
+  .join('\n')}
+              </ol>
+            </nav>
+            <header>
+              <p>${escapeHtml(DEFAULT_BUSINESS_NAME)}</p>
+              <h1>${escapeHtml(pageName)}</h1>
+              <p>${escapeHtml(route.description)}</p>
+            </header>
+            ${serviceLine}
+            ${articleLine}
+            <p><a href="${escapeHtml(canonicalUrl)}">${escapeHtml(pageName)}</a></p>
+          </article>
+        </main>
+      </noscript>
+      <!-- static-body:end -->`;
+}
+
+export function stripTitleSuffix(title) {
+  return String(title || DEFAULT_BUSINESS_NAME)
+    .replace(/\s*\|\s*Navigate Wealth\s*$/i, '')
+    .trim();
+}
+
+function breadcrumbItemsForRoute(route, siteUrl) {
+  const items = [{ name: 'Home', url: siteUrl }];
+  const canonicalPath = routeCanonicalPath(route);
+  if (canonicalPath === '/') return items;
+
+  let partial = '';
+  for (const part of canonicalPath.split('/').filter(Boolean)) {
+    partial += `/${part}`;
+    items.push({
+      name: part
+        .split('-')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' '),
+      url: absoluteUrl(siteUrl, partial),
+    });
+  }
+
+  return items;
 }
 
 export function createArticleRoute(article, siteUrl) {
@@ -531,22 +626,31 @@ export function createArticleRoute(article, siteUrl) {
 export function createArticleSchema(route, siteUrl) {
   const article = route.article || {};
   const canonical = absoluteUrl(siteUrl, route.path);
-  const image = route.ogImage?.startsWith('http') ? route.ogImage : `${siteUrl}${route.ogImage || DEFAULT_OG_IMAGE_PATH}`;
+  const image = resolveImageUrl(siteUrl, route.ogImage);
 
   return {
     '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: article.title || route.title,
-    description: route.description,
-    image,
-    author: {
-      '@type': 'Person',
-      name: article.author_name || 'Navigate Wealth Editorial Team',
-    },
-    publisher: createOrganizationSchema(siteUrl),
-    ...(article.published_at ? { datePublished: article.published_at } : {}),
-    ...(article.updated_at ? { dateModified: article.updated_at } : {}),
-    mainEntityOfPage: canonical,
-    url: canonical,
+    '@graph': [
+      createOrganizationSchema(siteUrl),
+      createWebSiteSchema(siteUrl),
+      createBreadcrumbSchema(route, siteUrl),
+      {
+        '@type': 'Article',
+        '@id': `${canonical}#article`,
+        headline: article.title || route.title,
+        description: route.description,
+        image,
+        inLanguage: DEFAULT_LANGUAGE,
+        author: {
+          '@type': 'Person',
+          name: article.author_name || 'Navigate Wealth Editorial Team',
+        },
+        publisher: { '@id': `${siteUrl}/#organization` },
+        ...(article.published_at ? { datePublished: article.published_at } : {}),
+        ...(article.updated_at ? { dateModified: article.updated_at } : {}),
+        mainEntityOfPage: canonical,
+        url: canonical,
+      },
+    ],
   };
 }

@@ -9,6 +9,13 @@
   ],
   "outputDirectory": "dist",
   "routes": [
+    {
+      "src": "/assets/(.*)",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      },
+      "continue": true
+    },
     { "handle": "filesystem" },
     {
       "src": "/(admin|dashboard|products-services-dashboard|login|signup|forgot-password|reset-password|verify-email|auth|account-type|get-started|application|onboarding|profile|security|history|communication|transactions-documents|my-adviser|ai-advisor|requests|newsletter|sign|verify|verify-document|og-preview|links|migration-helper|design-system)(/.*)?",

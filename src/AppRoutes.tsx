@@ -19,11 +19,6 @@ function RouteFallback() {
 
 // ==================== CRITICAL-PATH (EAGER) IMPORTS ====================
 // Only import what's needed for the initial page load and lightweight pages
-import { LoginPage } from './components/pages/LoginPage';
-import { SignupPage } from './components/pages/SignupPage';
-import { NotFoundPage } from './components/pages/NotFoundPage';
-import AuthCallbackPage from './components/pages/AuthCallbackPage';
-import VerificationSuccessPage from './components/pages/VerificationSuccessPage';
 import { ApplicationStatusGuard } from './components/portal/ApplicationStatusGuard';
 import { FirstLoginTermsGate } from './components/portal/FirstLoginTermsGate';
 
@@ -39,10 +34,14 @@ import {
   PendingRoute,
   DeclinedRoute,
 } from './components/auth/RouteGuards';
-import { AdminDashboardPage } from './components/pages/AdminDashboardPage';
 
 // ==================== LAZY-LOADED PAGES ====================
 // All non-critical pages are lazy-loaded to reduce initial bundle parse time.
+const LoginPage = React.lazy(() => import('./components/pages/LoginPage'));
+const SignupPage = React.lazy(() => import('./components/pages/SignupPage'));
+const NotFoundPage = React.lazy(() => import('./components/pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
+const AuthCallbackPage = React.lazy(() => import('./components/pages/AuthCallbackPage'));
+const VerificationSuccessPage = React.lazy(() => import('./components/pages/VerificationSuccessPage'));
 const HomePage = React.lazy(() => import('./components/pages/HomePage'));
 const ServicesPage = React.lazy(() => import('./components/pages/ServicesPage'));
 const AboutPage = React.lazy(() => import('./components/pages/AboutPage'));
@@ -85,7 +84,7 @@ const ClientEsignHistoryPage = React.lazy(() => import('./components/client/e-si
 const TransactionsDocumentsPage = React.lazy(() => import('./components/pages/TransactionsDocumentsPage'));
 const ProfilePage = React.lazy(() => import('./components/pages/ProfilePage'));
 const SecuritySettingsPage = React.lazy(() => import('./components/pages/SecuritySettingsPage'));
-import { RiskManagementPage } from './components/pages/RiskManagementPage';
+const RiskManagementPage = React.lazy(() => import('./components/pages/RiskManagementPage').then(m => ({ default: m.RiskManagementPage })));
 const RetirementPlanningPage = React.lazy(() => import('./components/pages/RetirementPlanningPage'));
 const InvestmentManagementPage = React.lazy(() => import('./components/pages/InvestmentManagementPage'));
 const TaxPlanningPage = React.lazy(() => import('./components/pages/TaxPlanningPage'));
@@ -111,6 +110,7 @@ const OGImageGeneratorPage = React.lazy(() => import('./components/pages/OGImage
 const LinktreePage = React.lazy(() => import('./components/pages/LinktreePage'));
 const LinkedInCallbackPage = React.lazy(() => import('./components/pages/LinkedInCallbackPage'));
 const AskVascoPage = React.lazy(() => import('./components/pages/AskVascoPage'));
+const AdminDashboardPage = React.lazy(() => import('./components/pages/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
 
 export function AppRoutes() {
   return (

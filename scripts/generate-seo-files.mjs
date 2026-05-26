@@ -8,6 +8,7 @@ import {
   escapeXml,
   normalizeSiteUrl,
   publicSeoRoutes,
+  resolveImageUrl,
 } from './seo-static-data.mjs';
 
 const siteUrl = normalizeSiteUrl(process.env.SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL);
@@ -19,7 +20,7 @@ const buildDate = new Intl.DateTimeFormat('en-CA', {
 // canonical, indexable public pages only.
 const sitemapEntries = publicSeoRoutes
   .filter((entry) => entry.sitemap !== false)
-  .map(({ path: routePath, lastmod }) => ({ path: routePath, lastmod }));
+  .map(({ path: routePath, lastmod, ogImage }) => ({ path: routePath, lastmod, image: resolveImageUrl(siteUrl, ogImage) }));
 
 const publicDir = path.resolve('public');
 fs.mkdirSync(publicDir, { recursive: true });
@@ -29,15 +30,19 @@ main();
 function generateSitemapXml() {
   const urls = sitemapEntries
     .map(
-      ({ path: routePath, lastmod }) => `  <url>
+      ({ path: routePath, lastmod, image }) => `  <url>
     <loc>${escapeXml(absoluteUrl(siteUrl, routePath))}</loc>
     <lastmod>${lastmod || buildDate}</lastmod>
+    <image:image>
+      <image:loc>${escapeXml(image || resolveImageUrl(siteUrl))}</image:loc>
+    </image:image>
   </url>`
     )
     .join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${urls}
 </urlset>
 `;
@@ -173,9 +178,21 @@ function rowsToArticleEntries(rows) {
     entries.push({
       path: `/resources/article/${encodeURIComponent(slug)}`,
       lastmod,
+      image: articleImageUrl(a),
     });
   }
   return entries;
+}
+
+function articleImageUrl(article) {
+  return resolveImageUrl(
+    siteUrl,
+    article.hero_image_url ||
+      article.featured_image_url ||
+      article.feature_image_url ||
+      article.featured_image ||
+      article.thumbnail_image_url
+  );
 }
 
 function readSupabaseAnonKey() {
