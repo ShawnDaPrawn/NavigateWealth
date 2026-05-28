@@ -59,6 +59,7 @@ import {
   ClipboardList,
   Loader2,
   MessageSquare,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConsultationModal } from '../modals/ConsultationModal';

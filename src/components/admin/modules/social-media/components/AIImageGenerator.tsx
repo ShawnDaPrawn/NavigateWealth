@@ -45,7 +45,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useSocialMediaAI } from '../hooks/useSocialMediaAI';
-import type { SocialAIPlatform, ImageStyle } from '../types';
+import type { SocialAIPlatform, ImageStyle, GeneratedImage, GenerateImageInput } from '../types';
 import { BRAND } from '../constants';
 
 // ============================================================================

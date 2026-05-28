@@ -12,6 +12,7 @@ import { FNAIntakeConsentDialog } from './FNAIntakeConsentDialog';
 import { InvestmentIntakeStep1 } from './InvestmentIntakeStep1';
 import { EstateIntakeStep1 } from './EstateIntakeStep1';
 import { IntakeReadOnlyReview } from './IntakeReadOnlyReview';
+import { RetirementIllustrativeProjection } from './RetirementIllustrativeProjection';
 import {
   getIntakeDraft,
   saveIntakeDraft,

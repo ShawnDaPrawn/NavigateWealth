@@ -58,7 +58,7 @@ import {
 } from 'lucide-react';
 import { useSocialMediaAI } from '../hooks/useSocialMediaAI';
 import { useCustomTemplates } from '../hooks/useCustomTemplates';
-import type { SocialAIPlatform, ContentTone, ContentGoal } from '../types';
+import type { SocialAIPlatform, ContentTone, ContentGoal, GeneratedPlatformPost, CustomBrandTemplate, CreateCustomTemplateInput, GeneratePostTextInput } from '../types';
 import { BRAND } from '../constants';
 
 // ============================================================================

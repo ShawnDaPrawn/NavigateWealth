@@ -44,7 +44,7 @@ import {
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { useSocialMediaAI } from '../hooks/useSocialMediaAI';
-import type { SocialAIPlatform, ContentTone, ContentGoal, ImageStyle } from '../types';
+import type { SocialAIPlatform, ContentTone, ContentGoal, ImageStyle, GeneratedPlatformPost, GeneratedImage, GeneratePostTextInput } from '../types';
 import { BRAND } from '../constants';
 
 // ============================================================================

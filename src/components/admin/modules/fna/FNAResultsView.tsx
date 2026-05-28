@@ -25,7 +25,7 @@ import {
   Send
 } from 'lucide-react';
 import { formatCurrency } from '../../../../utils/currencyFormatter';
-import type { FNASession } from './types';
+import type { FNASession, FNAInputs } from './types';
 
 interface FNAResultsViewProps {
   fna: FNASession;

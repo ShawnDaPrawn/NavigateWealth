@@ -43,7 +43,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useSocialMediaAI } from '../hooks/useSocialMediaAI';
-import type { SocialAIPlatform, ContentTone, ContentGoal } from '../types';
+import type { SocialAIPlatform, ContentTone, ContentGoal, GeneratedPlatformPost, GeneratePostTextInput } from '../types';
 import { BRAND } from '../constants';
 
 // ============================================================================

@@ -39,6 +39,7 @@ import { getFNAConfig, hasFNASupport } from './fna-config';
 import { useFNAManagement } from '../modules/fna/hooks/useFNAManagement';
 import { FNACard, PublishFNADialog, ViewPublishedFNADialog } from '../modules/fna';
 import { PolicyTable } from './PolicyTable';
+import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable';
 
 // Heavy FNA management views — lazy-loaded to reduce initial bundle
 const FNAManagementView = React.lazy(() =>

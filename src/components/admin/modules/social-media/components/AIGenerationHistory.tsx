@@ -32,7 +32,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useSocialMediaAI } from '../hooks/useSocialMediaAI';
-import type { SocialAIPlatform } from '../types';
+import type { SocialAIPlatform, GeneratedPlatformPost, AIGenerationRecord, AIImageRecord } from '../types';
 import { BRAND } from '../constants';
 
 // ============================================================================
