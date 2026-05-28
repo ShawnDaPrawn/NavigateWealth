@@ -105,6 +105,7 @@
     "jsdom": "^29.0.2",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.2.2",
+    "typescript": "^5.7.3",
     "vite": "^6.4.2"
   },
   "overrides": {
@@ -119,6 +120,7 @@
     "provider:sync": "node ./scripts/provider-portal-worker.mjs",
     "provider:watch": "set NW_PLAYWRIGHT_HEADED=1&& set NW_PLAYWRIGHT_RECORD_VIDEO=1&& set NW_PLAYWRIGHT_RECORD_TRACE=1&& set NW_PORTAL_DEBUG_DIR=tmp/provider-portal-worker&& node ./scripts/provider-portal-worker.mjs",
     "provider:worker": "node ./scripts/provider-portal-worker.mjs --poll",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
