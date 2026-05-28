@@ -64,6 +64,7 @@ function LazyFallback() {
 export function ClientManagementModule() {
   const { clients, loading, refetch } = useClientList();
   const [filters, setFilters] = useState<ClientFilters>({});
+  const [blockSearchAutofill, setBlockSearchAutofill] = useState(true);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showRepository, setShowRepository] = useState(false);
@@ -392,11 +393,26 @@ export function ClientManagementModule() {
         <div className="flex items-center gap-2 my-4">
           <div className="relative flex-1">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search clients..." 
+            <Input
+              placeholder="Search clients..."
               className="pl-8"
               value={filters.search || ''}
+              readOnly={blockSearchAutofill}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              name="nw-client-management-search"
+              id="nw-client-management-search"
+              type="text"
+              inputMode="search"
+              role="combobox"
+              aria-autocomplete="list"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              data-form-type="other"
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              onFocus={() => setBlockSearchAutofill(false)}
             />
           </div>
 
