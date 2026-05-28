@@ -13,3 +13,7 @@ e2e/.env.local
 
 # Local / IDE tooling logs (Codex, Vite wrappers, etc.)
 .codex-*.log
+
+# Local test/run artifacts
+playwright-report
+test-results
