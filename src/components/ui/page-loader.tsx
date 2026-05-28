@@ -4,8 +4,8 @@ import { BrandPageLoader } from './brand-loader';
 export function PageLoader() {
   return (
     <BrandPageLoader
-      title="Loading page"
-      message="Bringing the next Navigate Wealth screen into view."
+      title="Plotting your course"
+      message="Checking your bearing and bringing the next screen into view."
     />
   );
 }

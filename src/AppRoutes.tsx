@@ -9,8 +9,8 @@ function RouteFallback() {
   return (
     <>
       <BrandPageLoader
-        title="Loading page"
-        message="Preparing the next screen and carrying your session across."
+        title="Plotting your course"
+        message="Setting your bearing and carrying your session to the next screen."
       />
       <span className="sr-only">Loading, please wait…</span>
     </>
