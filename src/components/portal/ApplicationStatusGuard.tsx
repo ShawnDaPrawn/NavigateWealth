@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { EmptyPolicyState } from './EmptyPolicyState';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { SUPER_ADMIN_EMAIL } from '../../utils/auth/constants';
 import { AlertCircle, Clock, CheckCircle } from 'lucide-react';
 import { BrandPageLoader } from '../ui/brand-loader';
 
@@ -28,6 +29,7 @@ export function ApplicationStatusGuard({
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
+  const [personalClientEnabled, setPersonalClientEnabled] = useState(false);
   const [hasPolicies, setHasPolicies] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +63,7 @@ export function ApplicationStatusGuard({
       if (!profileRes.ok) {
         // If profile doesn't exist, user might be new - treat as in_progress
         if (profileRes.status === 404) {
+          setPersonalClientEnabled(false);
           setApplicationStatus('in_progress');
           setLoading(false);
           return;
@@ -70,6 +73,7 @@ export function ApplicationStatusGuard({
 
       const profileResponse = await profileRes.json();
       const profileData = profileResponse.data || profileResponse;
+      setPersonalClientEnabled(profileData?.personalClientEnabled === true);
       const userId = user?.id;
 
       // Get application status from applications endpoint
@@ -147,6 +151,34 @@ export function ApplicationStatusGuard({
           <button
             onClick={fetchUserApplicationStatus}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isSuperAdminEmail =
+    user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+
+  if (isSuperAdminEmail) {
+    if (personalClientEnabled || applicationStatus === 'approved') {
+      return <div className="contents">{children}</div>;
+    }
+
+    return (
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="max-w-2xl w-full bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
+          <AlertCircle className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+          <h3 className="text-gray-900 mb-3">Personal Client Profile Not Enabled</h3>
+          <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+            Your super admin account can use personal client testing, but the client profile has
+            not been enabled yet. Run the one-time enable step from admin tooling, then try again.
+          </p>
+          <button
+            onClick={fetchUserApplicationStatus}
+            className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
           >
             Try Again
           </button>

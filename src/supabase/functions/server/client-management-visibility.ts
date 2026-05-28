@@ -1,7 +1,8 @@
-import { PERSONNEL_ROLES } from './constants.ts';
+import { PERSONNEL_ROLES, SUPER_ADMIN_EMAIL } from './constants.ts';
 
 interface AuthUserLike {
   id: string;
+  email?: string;
   user_metadata?: Record<string, unknown>;
 }
 
@@ -30,6 +31,19 @@ export function isPersonnelAuthUser(
   return personnelIds.has(user.id);
 }
 
+/** Whether to load client profile KV for this auth user (before visibility decision). */
+export function shouldLoadClientManagementProfile(
+  user: AuthUserLike,
+  personnelIds: Set<string>,
+): boolean {
+  // Super admin may have a dual personal-client profile — always load KV first
+  if (user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+    return true;
+  }
+
+  return !isPersonnelAuthUser(user, personnelIds);
+}
+
 export function isRejectedClientStatus(...statuses: unknown[]): boolean {
   return statuses.some((status) => {
     const normalized = normalizeStatus(status);
@@ -43,6 +57,14 @@ export function shouldIncludeInClientManagement({
   profile,
   applicationStatus,
 }: ClientManagementVisibilityInput): boolean {
+  // Shawn-only: super admin can also appear as a test personal client in Client Management
+  if (
+    user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() &&
+    profile?.personalClientEnabled === true
+  ) {
+    return true;
+  }
+
   if (isPersonnelAuthUser(user, personnelIds)) {
     return false;
   }

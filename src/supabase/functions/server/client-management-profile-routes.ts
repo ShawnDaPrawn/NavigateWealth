@@ -12,7 +12,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 import { asyncHandler } from './error.middleware.ts';
-import { isPersonnelAuthUser, shouldIncludeInClientManagement } from './client-management-visibility.ts';
+import { isPersonnelAuthUser, shouldIncludeInClientManagement, shouldLoadClientManagementProfile } from './client-management-visibility.ts';
 import {
   UpdateSuperAdminProfileSchema,
   PersonalInfoQuerySchema,
@@ -25,6 +25,9 @@ import {
   extractUserIdFromProfileKey,
 } from './profile-application-sync.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
+import { requireSuperAdmin } from './auth-mw.ts';
+import { generateApplicationNumber } from './application-number-utils.ts';
+import { clientApplicationsService } from './client-applications-service.ts';
 
 const router = new Hono();
 const log = createModuleLogger('profile-routes');
@@ -232,6 +235,143 @@ router.put("/super-admin", asyncHandler(async (c) => {
 }));
 
 /**
+ * POST /super-admin/enable-personal-client
+ * Bootstrap super admin as a test personal client (same auth UID, client KV domain).
+ * Idempotent — safe to run multiple times.
+ */
+router.post(
+  '/super-admin/enable-personal-client',
+  requireSuperAdmin,
+  asyncHandler(async (c) => {
+    const authUser = c.get('user') as { id: string; email?: string } | undefined;
+    const callerEmail = authUser?.email?.toLowerCase();
+
+    if (callerEmail !== SUPER_ADMIN_EMAIL.toLowerCase()) {
+      return c.json({ error: 'Forbidden: only the super admin account can enable personal client testing' }, 403);
+    }
+
+    const supabase = createServiceClient();
+    const { data: { users }, error } = await supabase.auth.admin.listUsers();
+
+    if (error) {
+      log.error('Error fetching users from Supabase Auth', error);
+      return c.json({ error: 'Failed to fetch users' }, 500);
+    }
+
+    const superAdminUser = users?.find(
+      (u) => u.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase(),
+    );
+
+    if (!superAdminUser) {
+      log.warn('Super admin user not found', { email: SUPER_ADMIN_EMAIL });
+      return c.json({ error: 'Super admin not found' }, 404);
+    }
+
+    const userId = superAdminUser.id;
+    const profileKey = `user_profile:${userId}:personal_info`;
+    const existingProfile = (await kv.get(profileKey)) as Record<string, unknown> | null;
+    const now = new Date().toISOString();
+
+    const metadataName = String(superAdminUser.user_metadata?.name || '').trim();
+    const nameParts = metadataName.split(/\s+/).filter(Boolean);
+    const defaultFirstName = nameParts[0] || 'Shawn';
+    const defaultLastName = nameParts.slice(1).join(' ') || 'Francisco';
+    const personalInfo = (existingProfile?.personalInformation || {}) as Record<string, unknown>;
+
+    let existingApp = await clientApplicationsService.getByUserId(userId);
+    let applicationId: string;
+    let applicationNumber: string;
+
+    if (existingApp?.id) {
+      applicationId = String(existingApp.id);
+      applicationNumber = String(existingApp.application_number || existingProfile?.applicationNumber || '');
+      existingApp = {
+        ...existingApp,
+        user_id: userId,
+        status: 'approved',
+        origin: existingApp.origin || 'super_admin_test',
+        updated_at: now,
+        reviewed_at: now,
+        reviewed_by: userId,
+        review_notes: 'Super admin personal client testing profile',
+      };
+      await kv.set(`application:${applicationId}`, existingApp);
+    } else {
+      applicationId = crypto.randomUUID();
+      applicationNumber = await generateApplicationNumber();
+      await kv.set(`application:${applicationId}`, {
+        id: applicationId,
+        application_number: applicationNumber,
+        user_id: userId,
+        status: 'approved',
+        origin: 'super_admin_test',
+        created_at: now,
+        updated_at: now,
+        submitted_at: now,
+        reviewed_at: now,
+        reviewed_by: userId,
+        review_notes: 'Super admin personal client testing profile',
+        application_data: {
+          firstName: String(personalInfo.firstName || defaultFirstName),
+          lastName: String(personalInfo.lastName || defaultLastName),
+          emailAddress: superAdminUser.email,
+          cellphoneNumber: String(personalInfo.cellphone || ''),
+          nationality: 'South Africa',
+          residentialCountry: 'South Africa',
+          accountReasons: [],
+          existingProducts: [],
+          termsAccepted: true,
+          popiaConsent: true,
+          disclosureAcknowledged: true,
+          accountType: 'Personal Client',
+        },
+      });
+    }
+
+    const updatedProfile = {
+      ...(existingProfile || {}),
+      profileType: 'personal',
+      userId,
+      email: superAdminUser.email,
+      role: 'super_admin',
+      accountStatus: 'approved',
+      accountType: 'Personal Client',
+      applicationStatus: 'approved',
+      applicationId,
+      applicationNumber,
+      personalClientEnabled: true,
+      adviserAssigned: true,
+      personalInformation: {
+        ...personalInfo,
+        firstName: String(personalInfo.firstName || defaultFirstName),
+        lastName: String(personalInfo.lastName || defaultLastName),
+        email: superAdminUser.email,
+        cellphone: String(personalInfo.cellphone || ''),
+        nationality: String(personalInfo.nationality || 'South Africa'),
+        identityDocuments: Array.isArray(personalInfo.identityDocuments)
+          ? personalInfo.identityDocuments
+          : [],
+      },
+      createdAt: existingProfile?.createdAt || now,
+      updatedAt: now,
+    };
+
+    await kv.set(profileKey, updatedProfile);
+
+    log.success('Super admin personal client profile enabled', { userId, applicationId });
+
+    return c.json({
+      success: true,
+      enabled: true,
+      userId,
+      applicationId,
+      applicationNumber,
+      profile: updatedProfile,
+    });
+  }),
+);
+
+/**
  * GET /all-users
  * Get all users with their profiles (for admin use)
  * Includes deleted, suspended, and accountStatus fields for admin filtering.
@@ -281,7 +421,7 @@ router.get("/all-users", async (c) => {
     // Get profiles AND security entries for all users from KV store
     const usersWithProfiles = await Promise.all(
       (users as AuthUserBrief[])
-        .filter(user => !isPersonnelAuthUser(user, personnelIds))
+        .filter(user => shouldLoadClientManagementProfile(user, personnelIds))
         .map(async (user) => {
           const profileKey = `user_profile:${user.id}:personal_info`;
           const [profile, security] = await Promise.all([
@@ -663,8 +803,9 @@ router.post("/create-default", asyncHandler(async (c) => {
   // If this user already has a personnel:profile: entry, they are staff.
   // Do NOT create a client-type user_profile entry — return a minimal
   // response instead so the frontend doesn't break.
+  const isSuperAdmin = email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
   const personnelProfile = await kv.get(`personnel:profile:${userId}`);
-  if (personnelProfile) {
+  if (personnelProfile && !isSuperAdmin) {
     log.info('User is personnel — skipping client profile creation', { userId });
     return c.json({
       success: true,
@@ -679,8 +820,6 @@ router.post("/create-default", asyncHandler(async (c) => {
     });
   }
 
-  // Determine role based on email
-  const isSuperAdmin = email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
   const role = isSuperAdmin ? 'super_admin' : 'client';
   
   // Parse display name

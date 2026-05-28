@@ -343,9 +343,14 @@ export const filterClients = (clients: Client[], filters: ClientFilters): Client
     const profile = client.profile;
     const role = profile?.role;
 
-    // Exclude all personnel roles
+    // Exclude personnel roles unless super admin personal-client testing is enabled
     if (role && (PERSONNEL_ROLES as readonly string[]).includes(role)) {
-      return false;
+      const isSuperAdminPersonalClient =
+        client.email?.toLowerCase() === CONFIG.SUPER_ADMIN_EMAIL.toLowerCase() &&
+        profile?.personalClientEnabled === true;
+      if (!isSuperAdminPersonalClient) {
+        return false;
+      }
     }
 
     if (isRejectedClient(client)) {

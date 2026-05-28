@@ -9,7 +9,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ValidationError, NotFoundError } from './error.middleware.ts';
 import type { Client, ClientFilters, ClientProfile, ClientSecurity, PaginatedClientResponse, GroupMatcherData, CommunicationRecord } from './client-management-types.ts';
-import { shouldIncludeInClientManagement } from './client-management-visibility.ts';
+import { shouldIncludeInClientManagement, shouldLoadClientManagementProfile } from './client-management-visibility.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
 import { autoSubscribeClient, removeSubscriberByEmail } from './newsletter-service.ts';
 
@@ -118,12 +118,7 @@ export class ClientsService {
     );
 
     // Filter out personnel users before the expensive per-user KV reads
-    const clientUsers = users.filter(user => shouldIncludeInClientManagement({
-      user,
-      personnelIds,
-      profile: undefined,
-      applicationStatus: undefined,
-    }));
+    const clientUsers = users.filter(user => shouldLoadClientManagementProfile(user, personnelIds));
 
     log.info('Personnel filtered from client list', {
       totalAuthUsers: users.length,
@@ -188,6 +183,7 @@ export class ClientsService {
     let filteredClients = enhancedUsers.filter(client => shouldIncludeInClientManagement({
       user: {
         id: client.id,
+        email: client.email ?? undefined,
         user_metadata: {
           role: client.role,
           accountStatus: client.accountStatus,

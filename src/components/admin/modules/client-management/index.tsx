@@ -37,7 +37,7 @@ import {
   deriveAccountStatus,
   countByStatus,
 } from './utils';
-import { ACCOUNT_STATUS_CONFIG, ACCOUNT_STATUS_FILTER_OPTIONS } from './constants';
+import { ACCOUNT_STATUS_CONFIG, ACCOUNT_STATUS_FILTER_OPTIONS, CONFIG } from './constants';
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 import { useAdminNavigation } from '../../layout/AdminNavigationContext';
 import { useOptionalUnsavedChangesRegistry } from '../../../shared/unsaved-changes';
@@ -199,7 +199,14 @@ export function ClientManagementModule() {
               )}
             </div>
             <div>
-              <div className="font-medium">{client.firstName} {client.lastName}</div>
+              <div className="font-medium flex items-center gap-2">
+                {client.firstName} {client.lastName}
+                {client.email?.toLowerCase() === CONFIG.SUPER_ADMIN_EMAIL.toLowerCase() && (
+                  <Badge variant="outline" className="text-xs font-normal">
+                    Staff test profile
+                  </Badge>
+                )}
+              </div>
               <div className="text-sm text-muted-foreground">{client.email}</div>
             </div>
           </div>
