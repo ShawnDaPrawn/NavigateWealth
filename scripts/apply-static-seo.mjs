@@ -4,6 +4,7 @@ import {
   DEFAULT_OG_IMAGE_PATH,
   DEFAULT_SITE_URL,
   absoluteUrl,
+  clampSeoDescription,
   createArticleRoute,
   createArticleSchema,
   createRouteSchema,
@@ -31,7 +32,10 @@ async function main() {
 
   const baseHtml = fs.readFileSync(baseIndexPath, 'utf8');
   const articleRoutes = await fetchPublishedArticleRoutes();
-  const routes = dedupeRoutes([...publicSeoRoutes, ...articleRoutes]);
+  const routes = dedupeRoutes([...publicSeoRoutes, ...articleRoutes]).map((route) => ({
+    ...route,
+    description: clampSeoDescription(route.description),
+  }));
 
   for (const route of routes) {
     const html = applySeoToHtml(baseHtml, route);

@@ -47,7 +47,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-04-17',
     title: 'Navigate Wealth | Independent Financial Advisors in South Africa',
     description:
-      'Navigate Wealth provides independent financial planning, investment management, retirement planning, risk management, tax planning and estate planning services across South Africa.',
+      'Independent financial planning, investment management, retirement, risk, tax and estate planning services across South Africa from Navigate Wealth.',
     keywords:
       'financial advisor, wealth management, investment planning, retirement planning, risk management, tax planning, estate planning, South Africa, independent financial advisor',
     ogType: 'website',
@@ -58,7 +58,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-04-17',
     title: 'Our Services | Navigate Wealth',
     description:
-      'Comprehensive wealth management services from Navigate Wealth: risk management, retirement planning, investments, medical aid, estate planning, tax planning, and employee benefits.',
+      'Wealth management services from Navigate Wealth: risk, retirement, investments, medical aid, estate planning, tax planning and employee benefits.',
     keywords:
       'financial services, wealth management, risk management, retirement planning, investment management, medical aid, estate planning, tax planning, employee benefits, South Africa',
     ogType: 'website',
@@ -69,7 +69,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-04-17',
     title: 'Resources & Insights | Navigate Wealth',
     description:
-      'Financial planning articles, market insights, and educational resources from Navigate Wealth. Stay informed with expert commentary on investments, retirement, tax, and more.',
+      'Financial planning articles, market insights and educational resources from Navigate Wealth — expert commentary on investing, retirement, tax and more.',
     keywords:
       'financial planning articles, investment insights, retirement planning resources, tax planning guides, market commentary, Navigate Wealth blog, South Africa',
     ogType: 'website',
@@ -80,7 +80,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'About Us | Navigate Wealth',
     description:
-      'Learn about Navigate Wealth, our mission, values, and the experienced team of independent financial advisors committed to helping you achieve financial independence.',
+      'Learn about Navigate Wealth — our mission, values and experienced team of independent financial advisors helping you achieve financial independence.',
     keywords:
       'about navigate wealth, financial advisors team, independent financial planning, South Africa wealth management',
     ogType: 'website',
@@ -137,7 +137,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Why Choose Navigate Wealth | Independent Financial Advisory',
     description:
-      'Discover why Navigate Wealth is the trusted choice for independent financial advice in South Africa. Our independence, personalised approach, and commitment to long-term relationships set us apart.',
+      "Why Navigate Wealth is South Africa's trusted independent advisory: genuine independence, a personalised approach and long-term client relationships.",
     keywords:
       'why Navigate Wealth, independent financial advisor, best financial planner South Africa, trusted wealth management, personalised financial advice',
     ogType: 'website',
@@ -158,7 +158,7 @@ export const publicSeoRoutes = [
   {
     path: '/retirement-planning',
     lastmod: '2026-03-01',
-    title: 'Retirement Planning | Annuities & Pension Funds | Navigate Wealth',
+    title: 'Retirement Planning | Annuities & Pensions | Navigate Wealth',
     description:
       'Comprehensive retirement planning in South Africa. Retirement annuities, preservation funds, living annuities & pension funds from leading providers.',
     keywords:
@@ -184,7 +184,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Tax Planning & Optimisation | Navigate Wealth',
     description:
-      'Expert tax planning and optimisation for individuals and businesses in South Africa. Tax-efficient structures, estate duty planning, capital gains management, and corporate tax strategies.',
+      'Expert tax planning for individuals and businesses in South Africa — tax-efficient structures, estate duty, capital gains and corporate tax strategies.',
     keywords:
       'tax planning South Africa, tax optimisation, estate duty, capital gains tax, corporate tax, tax-free savings, tax deductions, Navigate Wealth',
     ogType: 'website',
@@ -194,9 +194,9 @@ export const publicSeoRoutes = [
   {
     path: '/estate-planning',
     lastmod: '2026-03-01',
-    title: 'Estate Planning | Wills, Trusts & Succession | Navigate Wealth',
+    title: 'Estate Planning | Wills & Trusts | Navigate Wealth',
     description:
-      'Comprehensive estate planning for individuals and businesses in South Africa. Wills, trusts, succession planning, estate duty optimisation, and business continuity from accredited specialists.',
+      'Comprehensive estate planning in South Africa — wills, trusts, succession planning, estate duty optimisation and business continuity from specialists.',
     keywords:
       'estate planning South Africa, wills, trusts, succession planning, estate duty, inheritance, business succession, Navigate Wealth',
     ogType: 'website',
@@ -220,7 +220,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Medical Aid & Health Insurance | Navigate Wealth',
     description:
-      'Independent medical aid advice for individuals and businesses in South Africa. Comprehensive plans, hospital plans, savings plans, group schemes, and corporate wellness from leading medical schemes.',
+      'Independent medical aid advice in South Africa: hospital and comprehensive plans, savings plans, group schemes and corporate wellness from leading schemes.',
     keywords:
       'medical aid South Africa, health insurance, hospital plan, medical savings, gap cover, group medical scheme, corporate wellness, Discovery Health, Momentum Health, Navigate Wealth',
     ogType: 'website',
@@ -244,7 +244,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Get a Free Quote | Navigate Wealth',
     description:
-      'Request a free, no-obligation quote for financial planning, insurance, investments, retirement, or medical aid. Our independent advisors compare the market to find the best solution for you.',
+      'Request a free, no-obligation quote for financial planning, insurance, investments, retirement or medical aid. We compare the market to find your best fit.',
     keywords:
       'free financial quote, insurance quote South Africa, investment quote, retirement planning quote, medical aid quote, Navigate Wealth',
     ogType: 'website',
@@ -255,7 +255,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Financial Planning for Individuals | Navigate Wealth',
     description:
-      'Personal financial planning services for individuals in South Africa. Risk management, investments, retirement planning, tax optimisation, estate planning, and medical aid from independent advisors.',
+      'Personal financial planning for individuals in South Africa — risk, investments, retirement, tax, estate planning and medical aid from independent advisors.',
     keywords:
       'personal financial planning, individual wealth management, personal insurance, investment advice, retirement planning individual, South Africa, Navigate Wealth',
     ogType: 'website',
@@ -266,7 +266,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Financial Solutions for Businesses | Navigate Wealth',
     description:
-      'Corporate financial services for businesses in South Africa. Employee benefits, group risk cover, business insurance, corporate investments, and tax planning from independent advisors.',
+      'Corporate financial services in South Africa — employee benefits, group risk cover, business insurance, corporate investments and tax planning.',
     keywords:
       'business financial planning, corporate wealth management, employee benefits, group risk cover, business insurance, corporate investments, South Africa, Navigate Wealth',
     ogType: 'website',
@@ -277,7 +277,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'For Financial Advisers | Partner with Navigate Wealth',
     description:
-      'Join Navigate Wealth as an independent financial adviser. Access our technology platform, compliance support, product range, and collaborative network across South Africa.',
+      'Join Navigate Wealth as an independent financial adviser — access our technology platform, compliance support, product range and national network.',
     keywords:
       'financial adviser partnership, independent adviser network, financial services franchise, adviser support platform, Navigate Wealth partnership, South Africa',
     ogType: 'website',
@@ -288,7 +288,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Ask Vasco | AI Financial Navigator | Navigate Wealth',
     description:
-      'Ask Vasco, Navigate Wealth\'s public AI financial navigator, for general South African financial guidance on retirement, tax, risk cover, investing, and estate planning.',
+      'Ask Vasco, Navigate Wealth\'s AI financial navigator, for general South African guidance on retirement, tax, risk cover, investing and estate planning.',
     keywords:
       'AI financial navigator South Africa, financial planning chatbot, retirement questions, tax planning guidance, Navigate Wealth Vasco',
     ogType: 'website',
@@ -299,7 +299,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Careers | Join Our Team | Navigate Wealth',
     description:
-      'Explore career opportunities at Navigate Wealth. Join a dynamic team of independent financial advisors committed to helping South Africans achieve financial independence.',
+      'Explore careers at Navigate Wealth and join a dynamic team of independent financial advisors helping South Africans achieve financial independence.',
     keywords:
       'Navigate Wealth careers, financial advisor jobs, wealth management careers, financial planning jobs South Africa, independent financial advisor vacancy',
     ogType: 'website',
@@ -310,7 +310,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Press & Media | Navigate Wealth',
     description:
-      'Navigate Wealth press releases, media coverage, and company announcements. Access our media kit, brand assets, and the latest news from our financial advisory firm.',
+      'Navigate Wealth press releases, media coverage and announcements. Access our media kit, brand assets and the latest news from our advisory firm.',
     keywords:
       'Navigate Wealth press, media coverage, financial advisor news, press releases, media kit, South Africa financial services news',
     ogType: 'website',
@@ -321,7 +321,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-01-01',
     title: 'Legal & Compliance | Navigate Wealth',
     description:
-      'Navigate Wealth legal documents, privacy policy, terms and conditions, POPIA compliance, FAIS disclosure, and regulatory information for our financial advisory services.',
+      'Navigate Wealth legal information: privacy policy, terms and conditions, POPIA compliance, FAIS disclosure and regulatory details for our services.',
     keywords:
       'Navigate Wealth legal, privacy policy, terms and conditions, POPIA, FAIS disclosure, financial services compliance, South Africa',
     ogType: 'website',
@@ -365,6 +365,47 @@ export function escapeXml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+export const SEO_TITLE_MAX = 60;
+export const SEO_DESCRIPTION_MAX = 160;
+const TITLE_SUFFIX = ' | Navigate Wealth';
+
+function collapseWhitespace(value) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function stripHtml(value) {
+  return String(value ?? '').replace(/<[^>]*>/g, ' ');
+}
+
+/** Truncate to a word boundary within `max` chars, appending an ellipsis. */
+function truncateAtWord(value, max) {
+  const text = collapseWhitespace(value);
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max - 1);
+  const lastSpace = slice.lastIndexOf(' ');
+  const base = lastSpace > max * 0.6 ? slice.slice(0, lastSpace) : slice;
+  return `${base.replace(/[\s.,;:!?\u2013\u2014-]+$/, '')}\u2026`;
+}
+
+/** Clamp a meta description to the SERP-safe length, stripping markup. */
+export function clampSeoDescription(value, max = SEO_DESCRIPTION_MAX) {
+  const text = collapseWhitespace(stripHtml(value));
+  return text.length <= max ? text : truncateAtWord(text, max);
+}
+
+/**
+ * Build a SERP-safe article <title>. Keeps the brand suffix when the whole
+ * tag fits, otherwise prefers the keyword-rich headline and drops/truncates
+ * to stay within `SEO_TITLE_MAX`.
+ */
+export function buildArticleTitle(rawHeadline) {
+  const headline = collapseWhitespace(rawHeadline) || 'Financial Planning Article';
+  const withSuffix = `${headline}${TITLE_SUFFIX}`;
+  if (withSuffix.length <= SEO_TITLE_MAX) return withSuffix;
+  if (headline.length <= SEO_TITLE_MAX) return headline;
+  return truncateAtWord(headline, SEO_TITLE_MAX);
 }
 
 export function createOrganizationSchema(siteUrl) {
@@ -597,11 +638,12 @@ export function createArticleRoute(article, siteUrl) {
   if (!slug) return null;
 
   const path = `/resources/article/${encodeURIComponent(slug)}`;
-  const title = `${article.title || 'Financial Planning Article'} | Navigate Wealth`;
-  const description =
+  const title = buildArticleTitle(article.title);
+  const description = clampSeoDescription(
     article.excerpt ||
-    article.subtitle ||
-    'Financial planning article from Navigate Wealth with insights on investments, retirement, tax, risk management, and estate planning.';
+      article.subtitle ||
+      'Financial planning article from Navigate Wealth with insights on investments, retirement, tax, risk management, and estate planning.',
+  );
   const image =
     article.hero_image_url ||
     article.featured_image_url ||
