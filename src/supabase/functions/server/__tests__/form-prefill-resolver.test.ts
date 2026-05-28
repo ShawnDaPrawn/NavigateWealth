@@ -10,7 +10,7 @@ vi.mock('../form-prefill-data.ts', async (importOriginal) => {
   };
 });
 
-import { resolveFormPrefill } from '../form-prefill-resolver.ts';
+import { resolveFormPrefill, resolveTemplatePrefill } from '../form-prefill-resolver.ts';
 
 const clientId = '11111111-1111-1111-1111-111111111111';
 
@@ -53,6 +53,19 @@ const nestedProfileFixture = {
     profile_marital_status: 'Single',
     firstName: 'Sam',
     lastName: 'Client',
+  },
+  clientKeys: {},
+  policiesLegacy: { investments: [] },
+  policiesClient: [],
+  intakeInputs: {},
+};
+
+const contactProfileFixture = {
+  profile: {
+    firstName: 'Sam',
+    email: 'sam@example.com',
+    phoneNumber: '0820000000',
+    idNumber: '9001010000000',
   },
   clientKeys: {},
   policiesLegacy: { investments: [] },
@@ -135,5 +148,19 @@ describe('form-prefill-resolver', () => {
     const investment = await resolveFormPrefill(clientId, 'investment-ina-step1');
     expect(investment.matches.find((m) => m.formField === 'clientRiskProfile')?.proposedValue).toBe('growth');
     expect(investment.matches.find((m) => m.formField === 'investmentHorizonYears')?.proposedValue).toBe(15);
+  });
+
+  it('resolves email, phone, and ID aliases for template-prefill mappings', async () => {
+    loadClientDataSources.mockResolvedValue(contactProfileFixture);
+
+    const result = await resolveTemplatePrefill(clientId, 'template-1', [
+      { id: '1', name: 'EmailAddress', label: 'Email Address', canonicalKey: 'profile_email' },
+      { id: '2', name: 'CellNumber', label: 'Cell Number', canonicalKey: 'profile_phone_number' },
+      { id: '3', name: 'IdNumber', label: 'ID Number', canonicalKey: 'profile_id_number' },
+    ]);
+
+    expect(result.matches.find((m) => m.canonicalKey === 'profile_email')?.proposedValue).toBe('sam@example.com');
+    expect(result.matches.find((m) => m.canonicalKey === 'profile_phone_number')?.proposedValue).toBe('0820000000');
+    expect(result.matches.find((m) => m.canonicalKey === 'profile_id_number')?.proposedValue).toBe('9001010000000');
   });
 });

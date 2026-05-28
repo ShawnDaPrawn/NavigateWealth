@@ -176,6 +176,9 @@ function resolveCanonicalKey(
   const aliasMap: Record<string, string[]> = {
     profile_first_name: ['firstName', 'profile_first_name'],
     profile_last_name: ['lastName', 'profile_last_name'],
+    profile_email: ['email', 'emailAddress', 'profile_email'],
+    profile_phone_number: ['phone', 'phoneNumber', 'cellphone', 'cellphoneNumber', 'mobileNumber', 'profile_phone_number'],
+    profile_id_number: ['idNumber', 'identityNumber', 'passportNumber', 'profile_id_number'],
     profile_date_of_birth: ['dateOfBirth', 'date_of_birth', 'profile_date_of_birth'],
     profile_gross_monthly_income: ['grossMonthlyIncome', 'gross_monthly_income', 'grossIncome', 'profile_gross_monthly_income'],
     profile_net_monthly_income: ['netMonthlyIncome', 'net_monthly_income', 'netIncome', 'profile_net_monthly_income'],

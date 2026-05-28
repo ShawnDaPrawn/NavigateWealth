@@ -1,9 +1,11 @@
 /**
- * External Form Templates — upload PDFs, map fields, fill from client data (Phase 2).
+ * External Form Templates - upload PDFs, map fields, fill from client data.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { FileUp, Loader2, Sparkles } from 'lucide-react';
+import { Link } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
@@ -25,10 +27,9 @@ import {
   TableHeader,
   TableRow,
 } from '../../../ui/table';
-import { FileUp, Loader2, Sparkles } from 'lucide-react';
-import { Link } from 'react-router';
 import { Alert, AlertDescription } from '../../../ui/alert';
 import type { FormTemplateRecord, TemplatePrefillResolveResponse } from '../../../../shared/form-prefill/types';
+import { autoMapTemplateFields, TEMPLATE_MAPPING_OPTIONS } from '../../../../shared/form-prefill/template-field-mapping';
 import {
   fillFormTemplate,
   listFormTemplates,
@@ -39,22 +40,6 @@ import {
 import { PrefillReviewModal } from './PrefillReviewModal';
 import { ClientPicker } from '../resources/components/ClientPicker';
 import { projectId } from '../../../../utils/supabase/info';
-
-const KEY_OPTIONS = [
-  { value: 'profile_first_name', label: 'First name' },
-  { value: 'profile_last_name', label: 'Last name' },
-  { value: 'profile_email', label: 'Email' },
-  { value: 'profile_phone_number', label: 'Phone' },
-  { value: 'profile_id_number', label: 'ID number' },
-  { value: 'profile_tax_number', label: 'Tax number' },
-  { value: 'profile_date_of_birth', label: 'Date of birth' },
-  { value: 'profile_marital_status', label: 'Marital status' },
-  { value: 'profile_gross_monthly_income', label: 'Gross monthly income' },
-  { value: 'profile_net_monthly_income', label: 'Net monthly income' },
-  { value: 'derived:full_name', label: 'Full name (derived)' },
-  { value: 'derived:age_from_dob', label: 'Age (derived)' },
-  { value: 'risk_life_cover_total', label: 'Life cover total' },
-];
 
 interface ClientOption {
   id: string;
@@ -143,13 +128,15 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
     void loadTemplates();
   }, [loadTemplates]);
 
-  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId) ?? null;
+  const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? null;
+  const mappedFieldCount = selectedTemplate?.fields.filter((field) => Boolean(field.canonicalKey)).length ?? 0;
 
   const handleUpload = async () => {
     if (!file || !name.trim()) {
       toast.error('Provide a template name and PDF file');
       return;
     }
+
     setUploading(true);
     try {
       const base64Content = await fileToBase64(file);
@@ -159,7 +146,8 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
         mimeType: file.type || 'application/pdf',
         base64Content,
       });
-      toast.success(`Template uploaded — ${created.fields.length} fields detected`);
+      const autoAssignedCount = created.fields.filter((field) => Boolean(field.canonicalKey)).length;
+      toast.success(`Template uploaded - auto-assigned ${autoAssignedCount} of ${created.fields.length} field(s)`);
       setName('');
       setFile(null);
       setSelectedTemplateId(created.id);
@@ -171,14 +159,39 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
     }
   };
 
+  const handleAutoMap = async () => {
+    if (!selectedTemplate) return;
+
+    const { fields } = autoMapTemplateFields(selectedTemplate.fields, { onlyUnmapped: true });
+    const assignedCount = fields.reduce((count, field, index) => {
+      const previous = selectedTemplate.fields[index];
+      return !previous?.canonicalKey && field.canonicalKey ? count + 1 : count;
+    }, 0);
+
+    if (assignedCount === 0) {
+      toast.message('No additional field matches found');
+      return;
+    }
+
+    try {
+      const updated = await updateTemplateMappings(selectedTemplate.id, fields);
+      setTemplates((prev) => prev.map((template) => (template.id === updated.id ? updated : template)));
+      toast.success(`Auto-assigned ${assignedCount} field(s)`);
+    } catch {
+      toast.error('Failed to auto-assign fields');
+    }
+  };
+
   const handleMappingChange = async (fieldId: string, canonicalKey: string) => {
     if (!selectedTemplate) return;
+
     const fields = selectedTemplate.fields.map((field) =>
       field.id === fieldId ? { ...field, canonicalKey } : field,
     );
+
     try {
-      const updated = await updateTemplateMappings(selectedTemplate.id, fields, 'ready');
-      setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      const updated = await updateTemplateMappings(selectedTemplate.id, fields);
+      setTemplates((prev) => prev.map((template) => (template.id === updated.id ? updated : template)));
       toast.success('Field mapping saved');
     } catch {
       toast.error('Failed to save mapping');
@@ -206,6 +219,7 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
 
   const downloadFilledPdf = async () => {
     if (!selectedTemplate || !effectiveClientId) return;
+
     try {
       const result = await fillFormTemplate(selectedTemplate.id, effectiveClientId, {
         attachToDocuments,
@@ -214,9 +228,7 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
       link.href = `data:application/pdf;base64,${result.filledBase64}`;
       link.download = result.fileName;
       link.click();
-      const attachMsg = result.attachedDocument
-        ? ' and attached to client documents'
-        : '';
+      const attachMsg = result.attachedDocument ? ' and attached to client documents' : '';
       toast.success(`Filled ${result.filledFields.length} field(s)${attachMsg}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Fill failed');
@@ -230,7 +242,7 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
         matches: prefillResult.matches,
         unmatchedFormFields: prefillResult.unmatchedFormFields,
         proposedValues: Object.fromEntries(
-          prefillResult.matches.map((m) => [m.formField, m.proposedValue]),
+          prefillResult.matches.map((match) => [match.formField, match.proposedValue]),
         ),
         resolverVersion: prefillResult.resolverVersion,
       }
@@ -245,7 +257,7 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
             Form Template Library
           </CardTitle>
           <CardDescription>
-            Upload insurer or provider PDFs once, map fields to client data keys, then fill for any client.
+            Upload insurer or provider PDFs once, auto-assign obvious fields, then fine-tune any exceptions.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -281,7 +293,7 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="template-name">Template name</Label>
-              <Input id="template-name" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input id="template-name" value={name} onChange={(event) => setName(event.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="template-file">PDF file</Label>
@@ -289,7 +301,7 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
                 id="template-file"
                 type="file"
                 accept="application/pdf,.pdf"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               />
             </div>
           </div>
@@ -303,12 +315,15 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Mapping studio</CardTitle>
+          <CardDescription>
+            The tool now auto-assigns what it can on upload, and you can re-run it for older templates.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading templates…
+              Loading templates...
             </div>
           ) : templates.length === 0 ? (
             <p className="text-sm text-muted-foreground">No templates uploaded yet.</p>
@@ -334,6 +349,11 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
                       {selectedTemplate.status}
                     </Badge>
                     <Badge variant="secondary">{selectedTemplate.fields.length} fields</Badge>
+                    <Badge variant="outline">{mappedFieldCount}/{selectedTemplate.fields.length} mapped</Badge>
+                    <Button size="sm" variant="outline" onClick={() => void handleAutoMap()}>
+                      <Sparkles className="mr-1 h-4 w-4" />
+                      Auto-assign unmapped
+                    </Button>
                     {effectiveClientId && (
                       <Button size="sm" variant="outline" onClick={() => void handleFillPreview()}>
                         <Sparkles className="mr-1 h-4 w-4" />
@@ -350,7 +370,7 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
                   <label className="flex items-center gap-2 text-sm">
                     <Checkbox
                       checked={attachToDocuments}
-                      onCheckedChange={(v) => setAttachToDocuments(v === true)}
+                      onCheckedChange={(value) => setAttachToDocuments(value === true)}
                     />
                     Attach filled PDF to client documents when downloading
                   </label>
@@ -369,8 +389,8 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
                           <TableCell>
                             <Select
                               value={field.canonicalKey ?? '__none__'}
-                              onValueChange={(v) =>
-                                void handleMappingChange(field.id, v === '__none__' ? '' : v)
+                              onValueChange={(value) =>
+                                void handleMappingChange(field.id, value === '__none__' ? '' : value)
                               }
                             >
                               <SelectTrigger className="h-8">
@@ -378,9 +398,9 @@ export function FormTemplatesModule({ selectedClientId: selectedClientIdProp }: 
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="__none__">Not mapped</SelectItem>
-                                {KEY_OPTIONS.map((opt) => (
-                                  <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
+                                {TEMPLATE_MAPPING_OPTIONS.map((option) => (
+                                  <SelectItem key={option.canonicalKey} value={option.canonicalKey}>
+                                    {option.label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

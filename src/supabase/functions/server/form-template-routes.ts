@@ -9,6 +9,7 @@ import { authenticateUser, isFnaUnauthorized } from './fna-auth.ts';
 import { FnaIntakeError } from './fna-intake-errors.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import type { FormTemplateField, FormTemplateRecord } from '../../../shared/form-prefill/types.ts';
+import { autoMapTemplateFields } from '../../../shared/form-prefill/template-field-mapping.ts';
 import { resolveCanonicalValueForClient, resolveTemplatePrefill } from './form-prefill-resolver.ts';
 import { assertPrefillClientAccess, requirePrefillUser } from './form-prefill-auth.ts';
 import {
@@ -51,12 +52,14 @@ async function extractPdfFields(base64Content: string): Promise<FormTemplateFiel
     const form = pdf.getForm();
     const fields = form.getFields();
 
-    return fields.map((field, index) => ({
+    const extractedFields = fields.map((field, index) => ({
       id: `field_${index}`,
       name: field.getName(),
-      label: field.getName().replace(/_/g, ' '),
+      label: field.getName().replace(/[_\-.]+/g, ' '),
       type: 'unknown' as const,
     }));
+
+    return autoMapTemplateFields(extractedFields).fields;
   } catch (error) {
     log.warn('PDF field extraction failed', error);
     return [];
@@ -104,7 +107,7 @@ routes.post('/', async (c) => {
       fileName,
       mimeType: mimeType || 'application/pdf',
       storagePath,
-      status: fields.length > 0 ? 'draft' : 'draft',
+      status: fields.length > 0 && fields.every((field) => field.canonicalKey) ? 'ready' : 'draft',
       fields,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -139,7 +142,7 @@ routes.put('/:id/mappings', async (c) => {
     const updated: FormTemplateRecord = {
       ...existing,
       fields: fields ?? existing.fields,
-      status: status ?? (fields?.every((f: FormTemplateField) => f.canonicalKey) ? 'ready' : existing.status),
+      status: status ?? (fields ? (fields.every((f: FormTemplateField) => f.canonicalKey) ? 'ready' : 'draft') : existing.status),
       updatedAt: new Date().toISOString(),
     };
 
