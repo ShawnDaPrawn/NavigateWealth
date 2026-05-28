@@ -5,9 +5,7 @@
 import React, { forwardRef } from 'react';
 import { Calculator } from 'lucide-react';
 import { ClientFNAHub } from '../client/fna-intake/ClientFNAHub';
-import { ClientFNAView } from '../client/ClientFNAView';
 import { useFnaBatchStatus } from '@/shared/fna-intake/hooks/useFnaBatchStatus';
-import { isFnaIntakeFeatureEnabled } from '@/shared/fna-intake/fna-intake-labels';
 import type { FnaIntakeDomain } from '@/services/fna-intake-api';
 
 type ServiceFnaType = FnaIntakeDomain;
@@ -34,7 +32,6 @@ export const ServiceFnaPanel = forwardRef<HTMLDivElement, ServiceFnaPanelProps>(
     },
     ref,
   ) {
-    const intakeEnabled = isFnaIntakeFeatureEnabled();
     const {
       data: batchFnaData,
       error: batchStatusError,
@@ -62,19 +59,15 @@ export const ServiceFnaPanel = forwardRef<HTMLDivElement, ServiceFnaPanelProps>(
           </div>
         )}
         <div className={showHeader ? 'px-5 py-5 sm:px-6' : ''}>
-          {intakeEnabled ? (
-            <ClientFNAHub
-              clientId={clientId}
-              fnaType={fnaType}
-              batchItem={batchFnaData?.find((item) => item.key === fnaType)}
-              title={title}
-              statusError={batchStatusError?.message ?? null}
-              onRetryStatus={() => void refetchBatchStatus()}
-              isStatusLoading={batchStatusLoading}
-            />
-          ) : (
-            <ClientFNAView clientId={clientId} fnaType={fnaType} />
-          )}
+          <ClientFNAHub
+            clientId={clientId}
+            fnaType={fnaType}
+            batchItem={batchFnaData?.find((item) => item.key === fnaType)}
+            title={title}
+            statusError={batchStatusError?.message ?? null}
+            onRetryStatus={() => void refetchBatchStatus()}
+            isStatusLoading={batchStatusLoading}
+          />
         </div>
       </div>
     );

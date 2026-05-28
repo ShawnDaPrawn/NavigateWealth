@@ -42,7 +42,6 @@ import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 import { useAdminNavigation } from '../../layout/AdminNavigationContext';
 import { useOptionalUnsavedChangesRegistry } from '../../../shared/unsaved-changes';
 import type { IntakeHandoffState } from './components/IntakeWizardHandoff';
-import { isFnaIntakeFeatureEnabled } from '@/shared/fna-intake/fna-intake-labels';
 
 // Heavy sub-components — lazy-loaded (only rendered on user action)
 const ClientDrawer = React.lazy(() => import('./components/ClientDrawer').then(m => ({ default: m.ClientDrawer })));
@@ -302,7 +301,6 @@ export function ClientManagementModule() {
         </div>
       </div>
 
-      {isFnaIntakeFeatureEnabled() && (
       <Suspense fallback={<LazyFallback />}>
         <FNAIntakeQueue
           onOpenClient={(clientId) => {
@@ -318,7 +316,6 @@ export function ClientManagementModule() {
           }}
         />
       </Suspense>
-      )}
 
       {/* Stat Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

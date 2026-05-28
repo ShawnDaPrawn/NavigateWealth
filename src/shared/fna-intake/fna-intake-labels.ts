@@ -88,8 +88,3 @@ export function getFnaStatusDescription(
       return '';
   }
 }
-
-export function isFnaIntakeFeatureEnabled(): boolean {
-  const flag = import.meta.env.VITE_FNA_INTAKE_ENABLED;
-  return flag === 'true' || flag === '1';
-}
