@@ -31,7 +31,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../../utils/api';
 import { vascoKeys } from '../../../../../utils/queryKeys';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface VascoConfig {
   enabled: boolean;

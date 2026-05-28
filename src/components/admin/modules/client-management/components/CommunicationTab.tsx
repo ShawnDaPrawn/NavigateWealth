@@ -20,7 +20,7 @@ import { Client } from '../types';
 import { communicationApi } from '../../communication/api';
 import { CommunicationLog, SendMessageResponse, AttachmentFile } from '../../communication/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { clientKeys } from '../hooks/queryKeys';
 

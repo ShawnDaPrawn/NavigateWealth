@@ -3,7 +3,7 @@
  */
 
 import React, { Suspense, useCallback, useEffect, useState } from 'react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { BrandSectionLoader } from '../../ui/brand-loader';

@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getQuoteServiceContactSEO } from '../seo/seo-config';
 import { Button } from '../ui/button';

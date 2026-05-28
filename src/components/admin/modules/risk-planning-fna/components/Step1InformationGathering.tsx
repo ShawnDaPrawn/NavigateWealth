@@ -9,11 +9,11 @@
  */
 
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form@7.55.0';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, ArrowLeft, Info, AlertCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';

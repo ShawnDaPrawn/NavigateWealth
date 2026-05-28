@@ -9,7 +9,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { resourcesApi } from '../api';
 import { FormDefinition, FormFilters, ResourceResponse } from '../types';
 import { resourceKeys } from './queryKeys';

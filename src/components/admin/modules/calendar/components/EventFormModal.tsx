@@ -57,7 +57,7 @@ import type { CalendarEvent, EventType, LocationType, CreateEventInput } from '.
 import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, LOCATION_TYPE_LABELS } from '../constants';
 import { useClients } from '../../../../../hooks/useClients';
 import { format, addHours } from 'date-fns';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 // System-generated event types that cannot be manually created

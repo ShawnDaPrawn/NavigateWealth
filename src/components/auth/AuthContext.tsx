@@ -13,10 +13,10 @@ import {
   updateUserProfile,
 } from '../../utils/auth/profileService';
 import type { AuthUser } from '../../utils/auth/types';
-import type { User as SupabaseSessionUser } from '@supabase/supabase-js@2.39.3';
+import type { User as SupabaseSessionUser } from '@supabase/supabase-js';
 import { broadcastLogout, onLogoutBroadcast, broadcastNavigate } from '../../utils/auth/sessionSync';
 import { AUTH_SESSION_EXPIRED_EVENT } from '../../utils/api/client';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // Context Type Definition
 interface AuthContextType {

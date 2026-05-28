@@ -39,7 +39,7 @@ import {
   UserPlus, ExternalLink, ClipboardList,
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import type { Submission, SubmissionStatus, SubmissionType } from '../types';
 import {
   SUBMISSION_STATUS_CONFIG,

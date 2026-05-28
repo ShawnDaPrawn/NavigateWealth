@@ -22,7 +22,7 @@ import { signUp } from '../../utils/auth/authService';
 import { validatePassword, getPasswordStrengthColor, getPasswordStrengthLabel } from '../../utils/auth/passwordValidation';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { getUserErrorMessage, isError } from '../../utils/errorUtils';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useLegalDocumentViewer, LegalDocumentDialog } from '../shared/LegalDocumentViewer';
 import { SIGNUP_FEATURES } from './auth/authConstants';
 import { AuthShowcasePanel } from './auth/AuthShowcasePanel';

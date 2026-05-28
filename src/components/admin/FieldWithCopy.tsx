@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Copy, Check } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { copyToClipboard } from '../../utils/clipboard';
 
 interface FieldWithCopyProps extends React.InputHTMLAttributes<HTMLInputElement> {

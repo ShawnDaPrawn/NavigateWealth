@@ -24,7 +24,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Alert, AlertDescription } from '../../ui/alert';
 import { Separator } from '../../ui/separator';
 import { Badge } from '../../ui/badge';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useAuth } from '../../auth/AuthContext';
 
 import { TRANSACTIONAL_EXAMPLES, MARKETING_EXAMPLES, DEFAULT_PREFERENCES } from './constants';

@@ -21,7 +21,7 @@ import {
   type PostFilters,
 } from '../api';
 import type { SocialPost, PostStatus } from '../types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { socialMediaKeys } from './queryKeys';
 
 // ============================================================================

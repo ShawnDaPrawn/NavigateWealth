@@ -47,7 +47,7 @@ import type {
   CalendarEvent,
   Category,
 } from '../types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { ContentSourcesManager } from './ContentSourcesManager';
 import { Switch } from '../../../../ui/switch';
 

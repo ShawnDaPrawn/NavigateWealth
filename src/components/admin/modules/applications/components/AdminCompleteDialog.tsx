@@ -26,7 +26,7 @@ import {
   CheckCircle2, AlertCircle,
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useOnboarding } from '../../../../modules/onboarding/hooks/useOnboarding';
 import { Step1Personal } from '../../../../modules/onboarding/components/Step1Personal';
 import { Step2Contact } from '../../../../modules/onboarding/components/Step2Contact';

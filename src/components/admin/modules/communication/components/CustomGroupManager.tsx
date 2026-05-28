@@ -30,7 +30,7 @@ import {
 } from '../../../../ui/alert-dialog';
 import { ClientGroup, Client } from '../types';
 import { communicationApi } from '../api';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Provider } from '../../product-management/types';
 import { GroupEditor } from './groups/GroupEditor';
 

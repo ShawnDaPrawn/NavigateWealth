@@ -43,7 +43,7 @@ import {
   Check,
   XCircle,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { createClient } from '../../../../../utils/supabase/client';
 import { useProviders } from '../hooks/useProviders';

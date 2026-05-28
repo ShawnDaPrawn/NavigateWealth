@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useForm, Controller } from 'react-hook-form@7.55.0';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Dialog,

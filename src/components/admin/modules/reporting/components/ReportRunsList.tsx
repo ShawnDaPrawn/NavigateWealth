@@ -4,7 +4,7 @@ import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Progress } from '../../../../ui/progress';
 import { CheckCircle2, Download, XCircle, FileSpreadsheet, Clock, Users, ClipboardList, ShieldCheck, TrendingUp } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { ReportRun, Report, ReportCategory } from '../types';
 import { redownloadReport } from '../utils';
 

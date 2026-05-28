@@ -51,7 +51,7 @@ import { VoidEnvelopeDialog } from './VoidEnvelopeDialog';
 import { DiscardEnvelopeDialog } from './DiscardEnvelopeDialog';
 import { BulkRemindDialog, BulkVoidDialog } from './BulkActionDialogs';
 import { EnvelopeThumbnail } from './EnvelopeThumbnail';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface EnvelopesListProps {
   onViewEnvelope: (envelope: EsignEnvelope) => void;

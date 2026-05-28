@@ -6,7 +6,7 @@ import { BrandInlineLoader, BrandSectionLoader } from '../ui/brand-loader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useAuth } from '../auth/AuthContext';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { 
   FileText, 
   Download, 

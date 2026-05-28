@@ -4,7 +4,7 @@
  * Fixed: Using versioned import to prevent Node.js process module errors
  */
 
-import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js@2.39.3';
+import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
 import { publicAnonKey, supabaseUrl } from './info';
 
 // Create a singleton instance to avoid creating multiple clients

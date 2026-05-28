@@ -54,7 +54,7 @@ import {
   FileDown,
   Pencil,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // ── Module imports (types, constants, utils, hooks) ──────────────────
 import type { SubscriberStatusFilter, UnsubTimeRange, Subscriber } from '../types';

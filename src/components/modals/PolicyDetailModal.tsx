@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { getSupabaseClient } from '../../utils/supabase/client';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;

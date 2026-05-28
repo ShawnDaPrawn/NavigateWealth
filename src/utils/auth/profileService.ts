@@ -3,7 +3,7 @@
 import { projectId, publicAnonKey } from '../supabase/info';
 import { AppUser, UserProfile, UserSuspensionStatus, AccountStatus } from './types';
 import { AUTH_ERRORS, DEFAULT_APPLICATION_STATUS, DEFAULT_ACCOUNT_STATUS, DEFAULT_ROLE, SUPER_ADMIN_EMAIL } from './constants';
-import { User as SupabaseAuthUser } from '@supabase/supabase-js@2.39.3';
+import { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { getCurrentUserWithMetadata, mapSupabaseUserToMetadataSnapshot } from './authService';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;

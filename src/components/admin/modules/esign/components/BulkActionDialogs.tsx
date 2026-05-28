@@ -38,7 +38,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { esignApi } from '../api';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // ============================================================================
 // BULK REMIND DIALOG

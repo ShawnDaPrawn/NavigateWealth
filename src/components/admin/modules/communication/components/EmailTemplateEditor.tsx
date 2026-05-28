@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Loader2, ArrowLeft, Save, RefreshCw, Eye, ZoomIn, ZoomOut } from 'lucide-react';
 import { communicationApi } from '../api';
 import { EmailTemplate, EmailFooterSettings } from '../types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface EmailTemplateEditorProps {
   templateId: string;

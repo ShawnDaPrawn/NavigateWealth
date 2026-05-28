@@ -36,7 +36,7 @@ import { FieldPropertiesPanel } from './FieldPropertiesPanel';
 import type { EsignEnvelope, EsignField, SignerFormData } from '../types';
 import { esignApi, type EnvelopeDocumentRef } from '../api';
 import { SIGNER_COLORS } from '../constants';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,

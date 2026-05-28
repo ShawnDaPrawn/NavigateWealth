@@ -60,7 +60,7 @@ import {
   ExternalLink,
   Mail,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import {
   brandApi,
   LOGO_THEME_GROUPS,

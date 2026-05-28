@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { RetirementFnaAPI } from '../api';
 import { RETIREMENT_FNA_QUERY_KEYS } from './useRetirementFNAData';
 import type { RetirementFNAInputs } from '../types';

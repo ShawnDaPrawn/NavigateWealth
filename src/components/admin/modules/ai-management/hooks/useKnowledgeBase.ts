@@ -10,7 +10,7 @@ import { aiManagementKeys } from './queryKeys';
 import { kbApi } from '../api';
 import { QUERY_STALE_TIME } from '../constants';
 import type { CreateKBEntryInput, UpdateKBEntryInput } from '../types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // ============================================================================
 // READ — Entries List & Stats

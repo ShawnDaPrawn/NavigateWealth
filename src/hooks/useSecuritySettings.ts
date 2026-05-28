@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { securityService } from '../utils/auth/securityService';
 import { 
   ActivityLogEntry, 

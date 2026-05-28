@@ -50,7 +50,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { api } from '../../../../../utils/api/client';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useAuth } from '../../../../auth/AuthContext';
 import { securityService } from '../../../../../utils/auth/securityService';
 import type { PendingEmailChangeSummary } from '../../../../../utils/auth/securityTypes';

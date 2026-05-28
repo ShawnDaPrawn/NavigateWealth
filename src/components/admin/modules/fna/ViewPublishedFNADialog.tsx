@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
 } from '../../../ui/alert-dialog';
 import { Loader2, Trash2 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { api, resolveApiEndpoint } from '../../../../utils/api';
 
 // ==================== TYPES ====================

@@ -11,7 +11,7 @@ import { usePolicyRenewals } from './hooks/usePolicyRenewals';
 import { useTasks } from '../tasks/hooks/useTaskQueries';
 import type { CalendarEvent, CalendarFilters, CreateEventInput } from './types';
 import type { Task } from '../tasks/types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 import {

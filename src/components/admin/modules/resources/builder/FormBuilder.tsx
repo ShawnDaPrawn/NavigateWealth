@@ -22,7 +22,7 @@ import {
   TooltipTrigger,
 } from '../../../../ui/tooltip';
 import { ArrowLeft, Save, Loader2, Undo2, Redo2, Check, AlertCircle, Cloud, CloudOff, Eye, PenTool } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { getBlockDefinition } from './registry';
 import type { LetterMeta } from '../templates/LetterheadPdfLayout';

@@ -8,7 +8,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { socialMediaAIApi } from '../api';
 import { socialMediaKeys } from './queryKeys';
 import type {

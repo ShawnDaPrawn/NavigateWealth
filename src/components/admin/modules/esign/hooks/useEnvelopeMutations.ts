@@ -6,7 +6,7 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { esignApi } from '../api';
 import { esignKeys } from './useEnvelopesQuery';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../constants';

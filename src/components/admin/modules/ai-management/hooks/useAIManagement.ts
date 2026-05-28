@@ -10,7 +10,7 @@ import { aiManagementKeys } from './queryKeys';
 import { agentApi, vascoConfigApi, analyticsApi, feedbackApi, handoffApi, ragIndexApi } from '../api';
 import { QUERY_STALE_TIME, ANALYTICS_STALE_TIME } from '../constants';
 import type { HandoffStatus } from '../types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // ============================================================================
 // AGENT REGISTRY

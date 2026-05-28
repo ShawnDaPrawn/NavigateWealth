@@ -33,7 +33,7 @@ import {
   AlertCircle, Filter, Send,
 } from 'lucide-react';
 import { cn } from '../../../ui/utils';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useSubmissions } from './hooks/useSubmissions';
 import { submissionsApi } from './api';
 import { SubmissionCard } from './components/SubmissionCard';

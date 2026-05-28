@@ -38,7 +38,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clientKeys, noteKeys } from '../../../../utils/queryKeys';
 import { api } from '../../../../utils/api/client';
 import { NotesAPI } from './api';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';

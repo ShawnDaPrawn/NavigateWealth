@@ -33,7 +33,7 @@ import {
   Database, Scale, Loader2, MoreHorizontal, Eye, Edit, Trash2,
   CheckSquare, Square, Users, ChevronRight, X, Mail, Palette
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // Module imports
 import { useResources } from './hooks/useResources';

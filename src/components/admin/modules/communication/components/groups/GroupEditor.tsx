@@ -8,7 +8,7 @@ import { ClientGroup, Client, GroupFilterConfig, ExternalContact } from '../../t
 import { Provider } from '../../../product-management/types';
 import { FilterBuilder } from './FilterBuilder';
 import { ManualSelection } from './ManualSelection';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface GroupEditorProps {
   group: Partial<ClientGroup> | null;

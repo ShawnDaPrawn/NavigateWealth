@@ -16,7 +16,7 @@ import {
   Save, X, CheckCircle, AlertCircle, Calendar, Globe, Copy, Eye, Download,
   Home, ReceiptText
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { copyToClipboard } from '../../../utils/clipboard';
 
 type IdentityDocumentType =

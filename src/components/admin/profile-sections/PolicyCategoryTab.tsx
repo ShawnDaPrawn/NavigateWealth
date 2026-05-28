@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { PolicyFormDialog } from './PolicyFormDialog';
 import { ArchivePolicyDialog } from './ArchivePolicyDialog';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 import { DEFAULT_SCHEMAS } from './default-schemas';
 import {

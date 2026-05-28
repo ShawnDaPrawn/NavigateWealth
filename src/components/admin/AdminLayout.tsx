@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { usePendingCounts } from './hooks/usePendingCounts';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { 
   Menu,
 } from 'lucide-react';

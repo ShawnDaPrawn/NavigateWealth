@@ -16,7 +16,7 @@ import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profilesApi, type ConnectProfileRequest, type UpdateProfileRequest } from '../api';
 import type { SocialProfile, SocialPlatform } from '../types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { socialMediaKeys } from './queryKeys';
 
 // ============================================================================

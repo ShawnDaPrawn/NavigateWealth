@@ -5,7 +5,7 @@ import { Label } from '../../../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
 import { Checkbox } from '../../../../ui/checkbox';
 import { Badge } from '../../../../ui/badge';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import {
   Loader2,
   User,

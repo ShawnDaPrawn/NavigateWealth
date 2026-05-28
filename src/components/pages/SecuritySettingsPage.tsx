@@ -26,7 +26,7 @@ import { VerificationCodeField } from '../security/VerificationCodeField';
 import { useSecuritySettings } from '../../hooks/useSecuritySettings';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { ACTIVE_THEME } from '../portal/portal-theme';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import {
   Shield,
   Lock,

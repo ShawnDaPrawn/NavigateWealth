@@ -63,7 +63,24 @@ function main() {
   Promise.resolve()
     .then(async () => {
       const articleEntries = await fetchPublishedArticleEntries();
-      if (articleEntries.length) {
+      if (articleEntries === null) {
+        // Fetch failed (not "zero articles"). Fall back to the article URLs
+        // already present in the committed sitemap so a transient outage does
+        // not silently drop them from the production sitemap.
+        const cached = readCachedArticleEntries();
+        const strict = /^(1|true)$/i.test(process.env.SEO_REQUIRE_ARTICLES || '');
+        console.error('============================================================');
+        console.error('[sitemap] WARNING: could not fetch published articles.');
+        console.error(`[sitemap] Reusing ${cached.length} article URL(s) from the existing sitemap.`);
+        console.error('[sitemap] These URLs may be stale until the next successful build.');
+        console.error('============================================================');
+        if (strict) {
+          throw new Error('SEO_REQUIRE_ARTICLES is set and the article fetch failed.');
+        }
+        if (cached.length) {
+          sitemapEntries.push(...cached);
+        }
+      } else if (articleEntries.length) {
         sitemapEntries.push(...articleEntries);
       }
 
@@ -123,6 +140,24 @@ function toDateOnly(value) {
   }).format(d);
 }
 
+function readCachedArticleEntries() {
+  try {
+    const xml = fs.readFileSync(path.join(publicDir, 'sitemap.xml'), 'utf8');
+    const entries = [];
+    const blocks = xml.match(/<url>[\s\S]*?<\/url>/g) || [];
+    for (const block of blocks) {
+      const loc = block.match(/<loc>([^<]+)<\/loc>/)?.[1] || '';
+      const image = block.match(/<image:loc>([^<]+)<\/image:loc>/)?.[1];
+      const idx = loc.indexOf('/resources/article/');
+      if (idx === -1) continue;
+      entries.push({ path: loc.slice(idx), image });
+    }
+    return entries;
+  } catch {
+    return [];
+  }
+}
+
 async function fetchPublishedArticleEntries() {
   const projectRef = process.env.SUPABASE_PROJECT_REF || 'vpjmdsltwrnpefzcgdmz';
   const fnBase =
@@ -142,24 +177,24 @@ async function fetchPublishedArticleEntries() {
           },
         });
         if (!retry.ok) {
-          console.warn(`[sitemap] Skipping articles (HTTP ${retry.status})`);
-          return [];
+          console.warn(`[sitemap] Article fetch failed (HTTP ${retry.status})`);
+          return null;
         }
         const json = await retry.json();
         const rows = Array.isArray(json?.data) ? json.data : [];
         return rowsToArticleEntries(rows);
       }
 
-      console.warn(`[sitemap] Skipping articles (HTTP ${res.status})`);
-      return [];
+      console.warn(`[sitemap] Article fetch failed (HTTP ${res.status})`);
+      return null;
     }
 
     const json = await res.json();
     const rows = Array.isArray(json?.data) ? json.data : [];
     return rowsToArticleEntries(rows);
   } catch (e) {
-    console.warn('[sitemap] Skipping articles (fetch failed)', e?.message || e);
-    return [];
+    console.warn('[sitemap] Article fetch failed', e?.message || e);
+    return null;
   }
 }
 

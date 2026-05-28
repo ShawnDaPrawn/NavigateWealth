@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { aiIntelligenceApi } from '../api';
 import { buildConversationHistory } from '../utils';
 import { adviceEngineKeys } from './queryKeys';

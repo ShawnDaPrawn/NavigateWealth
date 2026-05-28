@@ -46,7 +46,7 @@ import type {
 import { DEFAULT_ECONOMIC_ASSUMPTIONS, GOAL_TYPE_LABELS, RISK_PROFILE_LABELS } from '../constants';
 import { InvestmentINAApiService } from '../api';
 import { InvestmentINACalculationService } from '../services/investmentINACalculationService';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useFormPrefill } from '../../form-prefill/useFormPrefill';
 import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
 

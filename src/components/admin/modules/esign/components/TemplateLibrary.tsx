@@ -55,7 +55,7 @@ import {
   RefreshCw,
   Bookmark,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { esignApi } from '../api';
 import { cn } from '../../../../ui/utils';
 import { format } from 'date-fns';

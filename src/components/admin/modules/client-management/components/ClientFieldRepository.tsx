@@ -19,7 +19,7 @@ import { Badge } from '../../../../ui/badge';
 import { Search, Copy } from 'lucide-react';
 import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { copyToClipboard as copyToClipboardUtil } from '../../../../../utils/clipboard';
 
 interface FieldDefinition {

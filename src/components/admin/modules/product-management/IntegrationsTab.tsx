@@ -22,7 +22,7 @@ import { IntegrationHeader } from './integrations/IntegrationHeader';
 import { UploadTab } from './integrations/UploadTab';
 import { MappingTab } from './integrations/MappingTab';
 import { PortalAutomationTab } from './integrations/PortalAutomationTab';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Inbox, LayoutList } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { integrationsKeys } from '../../../../utils/queryKeys';

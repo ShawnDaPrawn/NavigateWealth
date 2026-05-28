@@ -28,7 +28,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { advisorKeys } from '../../utils/queryKeys';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { ACTIVE_THEME } from '../portal/portal-theme';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { ConfirmDialog } from '../admin/modules/publications/components/ConfirmDialog';
 import {
   VascoInlineChatCard,

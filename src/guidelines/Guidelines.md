@@ -502,8 +502,8 @@ Platform-Specific Constraints (Figma Make):
 
 Use react-router — never react-router-dom (not available in this environment)
 Use <div className="contents"> instead of React.Fragment (<>) when wrapping elements that need to avoid layout interference — this prevents data-fg-* attribute warnings
-Use import { toast } from 'sonner@2.0.3' — the version specifier is required
-Use import { useForm } from 'react-hook-form@7.55.0' — the version specifier is required
+Use import { toast } from 'sonner' — bare package imports only (the legacy version-suffixed specifiers like 'sonner@2.0.3' were removed in the Phase 2 dependency-hardening; do not reintroduce them)
+Use import { useForm } from 'react-hook-form' — bare package imports only
 Icon resolution helpers (resolveIconComponent() / resolveIcon()) convert slug strings from config maps to Lucide components with FileText as the fallback — use these instead of hard-coding icon imports in config-driven UI
 TypeScript Standards
 

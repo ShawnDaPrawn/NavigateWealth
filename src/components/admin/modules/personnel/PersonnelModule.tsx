@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
 import { Badge } from '../../../ui/badge';

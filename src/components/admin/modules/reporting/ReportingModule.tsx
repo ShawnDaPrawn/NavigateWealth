@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '../../../ui/button';
 import { Plus } from 'lucide-react';
 import { Badge } from '../../../ui/badge';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // Import types
 import { Report, ReportRun } from './types';

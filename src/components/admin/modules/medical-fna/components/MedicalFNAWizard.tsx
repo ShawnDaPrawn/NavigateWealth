@@ -14,7 +14,7 @@
 
 import React, { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { Card } from '../../../../ui/card';
 import { Step1InputForm } from './Step1InputForm';

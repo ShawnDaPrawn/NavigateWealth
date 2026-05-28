@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from '../../../ui/dialog';
 import { Calendar } from '../../../ui/calendar';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { 
   Upload, 
   X, 

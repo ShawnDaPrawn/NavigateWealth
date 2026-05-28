@@ -5,7 +5,7 @@ import { Checkbox } from '../ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Separator } from '../ui/separator';
 import { Shield, FileText, Lock, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { api } from '../../utils/api/client';
 import { createClient } from '../../utils/supabase/client';
 import { BrandPageLoader } from '../ui/brand-loader';

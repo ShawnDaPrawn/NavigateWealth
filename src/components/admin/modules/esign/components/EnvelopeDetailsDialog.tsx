@@ -70,7 +70,7 @@ import type { EsignEnvelope, EsignAuditEvent } from '../types';
 import { esignApi } from '../api';
 import { format, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { VoidEnvelopeDialog } from './VoidEnvelopeDialog';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // ==================== HELPERS ====================
 

@@ -15,7 +15,7 @@ import {
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Send, Loader2, Mail, User, Phone } from 'lucide-react';
 import { applicationsApi } from '../api';
 

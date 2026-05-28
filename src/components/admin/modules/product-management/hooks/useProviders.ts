@@ -7,7 +7,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { productManagementApi } from '../api';
 import { Provider, SaveProviderRequest } from '../types';
 import { productKeys } from './queryKeys';

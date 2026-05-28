@@ -21,7 +21,7 @@ import { COMPLIANCE_DISCLAIMERS } from '../constants';
 import type { RiskCalculations, Adjustments, FinalRiskNeed } from '../types';
 import { RiskPlanningFNAPdfExport } from './RiskPlanningFNAPdfExport';
 import { exportComponentToPdf } from '../utils/pdfExport';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface Step4Props {
   calculations: RiskCalculations;

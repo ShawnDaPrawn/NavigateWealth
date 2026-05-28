@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/table';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { api, APIError, resolveApiEndpoint } from '../../../../../utils/api';
 import { normalizeFnaListResponse } from '../../fna/fnaListUtils';
 

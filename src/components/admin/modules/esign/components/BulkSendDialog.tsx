@@ -44,7 +44,7 @@ import {
   Send,
   Download,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { esignApi } from '../api';
 import type { EsignTemplateRecord, CampaignRecord, CampaignRecipientResult } from '../types';
 import { logger } from '../../../../../utils/logger';

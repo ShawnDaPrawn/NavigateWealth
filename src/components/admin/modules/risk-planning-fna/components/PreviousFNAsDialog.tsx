@@ -21,7 +21,7 @@ import {
   TableRow,
 } from '../../../../ui/table';
 import { Eye, Loader2, FileText, Calendar, User } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { api, resolveApiEndpoint } from '../../../../../utils/api';
 import { normalizeFnaListResponse } from '../../fna/fnaListUtils';
 

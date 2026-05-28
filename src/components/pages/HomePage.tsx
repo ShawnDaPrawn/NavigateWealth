@@ -24,7 +24,7 @@ const ProvidersModal = React.lazy(() =>
 const FeaturedInsights = React.lazy(() =>
   import('../shared/FeaturedInsights').then((m) => ({ default: m.FeaturedInsights })),
 );
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import saFlag from 'figma:asset/543ae964645db88228743731ee3eebbbc2e3686e.png';
 import medicalAidImage from 'figma:asset/0e2b917f64eba502a24068ea5244bd25b0dfc9d5.png';

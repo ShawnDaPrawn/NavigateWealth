@@ -24,7 +24,7 @@ import { Plus, Edit, Trash2, Settings, UserCheck, Check } from 'lucide-react';
 // Justified: UserGroupManager manages communication groups from the client management context.
 import { communicationApi } from '../../communication/api';
 import { ClientGroup } from '../../communication/types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface UserGroupManagerProps {
   open: boolean;

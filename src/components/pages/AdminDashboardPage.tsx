@@ -10,7 +10,7 @@ import { useArticleNotificationProcessor } from '../admin/modules/publications/h
 import { useScheduledPublishProcessor } from '../admin/modules/publications/hooks/useScheduledPublishProcessor';
 import { useOverdueDigestProcessor } from '../admin/modules/tasks/hooks/useOverdueDigestProcessor';
 import { useMaintenanceCronProcessor } from '../admin/modules/client-management/hooks/useMaintenanceCronProcessor';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // ============================================================================
 // EAGERLY IMPORTED SKELETONS

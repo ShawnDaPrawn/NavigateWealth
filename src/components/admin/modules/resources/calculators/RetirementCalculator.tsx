@@ -9,7 +9,7 @@ import { Separator } from '../../../../ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../ui/table';
 import { ArrowLeft, Save, Calculator, RefreshCw, Download, ChevronDown, ChevronUp, History, Trash2 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { RetirementInputs, RetirementResults, RetirementScenario, ProjectionYear } from './types';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';

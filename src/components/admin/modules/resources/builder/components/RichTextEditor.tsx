@@ -27,7 +27,7 @@ import {
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
 import { KeySelector } from './KeySelector';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // ============================================================================
 // RichTextEditor — lightweight WYSIWYG for the TextBlock editor panel.

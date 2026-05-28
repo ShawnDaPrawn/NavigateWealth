@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from '../ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { EmptyState } from '../pages/profile/EmptyState';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { formatCurrency, formatCurrencyInput, cleanCurrencyInput, formatCurrencyDisplay } from '../../utils/currencyFormatter';
 import { 
   User, Mail, Phone, MapPin, Briefcase, Heart, Users, CreditCard, Shield, Target,

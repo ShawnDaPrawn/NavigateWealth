@@ -9,7 +9,7 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';

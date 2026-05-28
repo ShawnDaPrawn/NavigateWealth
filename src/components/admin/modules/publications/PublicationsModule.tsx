@@ -77,7 +77,7 @@ import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 // Types
 import type { Article, ArticleStatus, ContentTemplate } from './types';
 import type { GenerateArticleResult } from './types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 export function PublicationsModule() {
   const [activeTab, setActiveTab] = useState('analytics');

@@ -1,6 +1,6 @@
 // Authentication Type Definitions
 
-import { Session, User as SupabaseUser } from '@supabase/supabase-js@2.39.3';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 // User roles in the system
 export type UserRole = 'client' | 'admin' | 'super_admin';

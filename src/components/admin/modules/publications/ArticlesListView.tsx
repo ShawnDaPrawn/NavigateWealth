@@ -50,7 +50,7 @@ import { StatusBadge } from './components/StatusBadge';
 import { ConfirmDialog, useConfirmDialog } from './components/ConfirmDialog';
 import { formatDate, getRelativeTime, truncateText } from './utils';
 import type { Article, ArticleStatus } from './types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface ArticlesListViewProps {
   onCreateNew: () => void;

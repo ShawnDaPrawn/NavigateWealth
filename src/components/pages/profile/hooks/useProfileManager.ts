@@ -58,7 +58,7 @@ import { formatCurrency } from '../../../../utils/currencyFormatter';
 import { deepSanitize } from '../../../../utils/sanitization';
 import { getSession } from '../../../../utils/auth/authService';
 import { api } from '../../../../utils/api/client';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { getUserErrorMessage, isAbortError } from '../../../../utils/errorUtils';
 import { projectId } from '../../../../utils/supabase/info';
 

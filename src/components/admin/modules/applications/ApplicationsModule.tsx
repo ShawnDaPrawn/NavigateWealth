@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../../ui/button';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { AdminAuthNotice } from '../../AdminAuthNotice';
 import { useAuth } from '../../../auth/AuthContext';
 import {

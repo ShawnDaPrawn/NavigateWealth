@@ -10,7 +10,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback, useEffect } from 'react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { productManagementApi } from '../api';
 import { ProductCategoryId, ProductField, SaveSchemaRequest } from '../types';
 import { DEFAULT_SCHEMAS } from '../defaults';

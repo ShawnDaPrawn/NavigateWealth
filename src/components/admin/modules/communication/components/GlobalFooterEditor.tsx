@@ -8,7 +8,7 @@ import { Separator } from '../../../../ui/separator';
 import { Loader2, ArrowLeft, Save, Globe, Mail, Phone, MapPin, Building } from 'lucide-react';
 import { communicationApi } from '../api';
 import { EmailFooterSettings } from '../types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface GlobalFooterEditorProps {
   onBack: () => void;

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useFormContext } from 'react-hook-form@7.55.0';
+import { useFormContext } from 'react-hook-form';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../../../ui/card';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';

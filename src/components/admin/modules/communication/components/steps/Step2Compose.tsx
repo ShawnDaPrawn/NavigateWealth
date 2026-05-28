@@ -20,7 +20,7 @@ import {
 } from '../../../../../ui/dialog';
 import { CommunicationDraft } from '../../types';
 import { communicationApi } from '../../api';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface Step2Props {
   draft: CommunicationDraft;

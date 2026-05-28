@@ -14,15 +14,14 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      'sonner@2.0.3': 'sonner',
-      'react-hook-form@7.55.0': 'react-hook-form',
+      // Deno edge-function specifiers, rewritten so Vitest (Node) can resolve
+      // them; edge test files `vi.mock(...)` these so no real network calls run.
       'pdf-lib@1.17.1': 'pdf-lib',
       'npm:pdf-lib@1.17.1': 'pdf-lib',
       'npm:docx': 'docx',
       'npm:zod': 'zod',
       'npm:hono': 'hono',
       'node-forge@1.3.1': 'node-forge',
-      '@supabase/supabase-js@2.39.3': '@supabase/supabase-js',
       '@jsr/supabase__supabase-js@2.49.8': '@jsr/supabase__supabase-js',
       // Edge functions import via the Deno `jsr:` specifier; rewrite to the
       // npm package so Vitest can resolve it. The test files separately

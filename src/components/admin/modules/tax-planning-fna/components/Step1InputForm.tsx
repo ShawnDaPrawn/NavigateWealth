@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
 import { TaxPlanningInputs } from '../types';
 import { ArrowRight, Info, User, Wallet, Calculator, Loader2 } from 'lucide-react';
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { formatCurrencyInput, cleanCurrencyInput } from '../../../../../utils/currencyFormatter';
 import { useFormPrefill } from '../../form-prefill/useFormPrefill';
 

@@ -38,7 +38,7 @@ import {
   Sparkles,
   Loader2,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { format, startOfDay, addDays, isBefore } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';

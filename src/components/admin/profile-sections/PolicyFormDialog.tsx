@@ -28,7 +28,7 @@ import {
 } from '../../ui/select';
 import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
 import { AlertCircle, ChevronRight, ChevronLeft, Loader2, Building2, Calculator, PiggyBank, Coins, TrendingUp, Lock, FileText, Upload, X, ExternalLink } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 import { createClient } from '../../../utils/supabase/client';
 import { formatCurrency } from '../../../utils/currencyFormatter';

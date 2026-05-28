@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { InvestmentINAFnaAPI } from '../api';
 import { INVESTMENT_INA_QUERY_KEYS } from './useInvestmentINAData';
 import type { InvestmentINAInputs, InvestmentINAResults } from '../types';

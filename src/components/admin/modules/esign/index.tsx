@@ -20,7 +20,7 @@ import {
   ArrowRight,
   Loader2,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { logger } from '../../../../utils/logger';
 
 import { useEnvelopeActions } from './hooks/useEnvelopeActions';

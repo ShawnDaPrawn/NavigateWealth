@@ -28,7 +28,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from '../../../../ui/alert';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Client } from '../types';
 import { KEY_CATEGORIES } from '../../product-management/keyManagerConstants';
 import { ProductKeyCategory } from '../../product-management/types';

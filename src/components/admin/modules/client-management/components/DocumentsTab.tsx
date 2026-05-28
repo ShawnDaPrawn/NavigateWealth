@@ -50,7 +50,7 @@ import {
   Mail
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useAuth } from '../../../../auth/AuthContext';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../../../ui/alert-dialog';
 import { Checkbox } from '../../../../ui/checkbox';

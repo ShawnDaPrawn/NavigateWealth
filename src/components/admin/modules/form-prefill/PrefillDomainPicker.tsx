@@ -13,7 +13,7 @@ import type { FormPrefillId } from '../../../../shared/form-prefill/types';
 import { resolveFormPrefill } from '../../../../services/form-prefill-api';
 import { isFormPrefillEnabled } from '../../../../utils/formPrefillFeature';
 import { PrefillReviewModal } from './PrefillReviewModal';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 const DOMAIN_OPTIONS: { label: string; formId: FormPrefillId }[] = [
   { label: 'Retirement FNA', formId: 'retirement-fna-step1' },

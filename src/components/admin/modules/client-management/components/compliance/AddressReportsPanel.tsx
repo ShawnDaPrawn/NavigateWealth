@@ -20,7 +20,7 @@ import {
   ChevronUp,
   Home,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { projectId } from '../../../../../../utils/supabase/info';
 import { getAuthToken } from './compliance-auth';
 

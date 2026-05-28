@@ -15,7 +15,7 @@ import {
 } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Loader2, Printer, X, Download } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { projectId } from '../../../../../utils/supabase/info';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
 import { BasePdfLayout, BASE_PDF_CSS } from '../../resources/templates/BasePdfLayout';

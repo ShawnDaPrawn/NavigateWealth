@@ -1,7 +1,7 @@
 import React from 'react';
 import { Download } from 'lucide-react';
 import { DropdownMenuItem } from '../../ui/dropdown-menu';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface InstallAppMenuItemProps {
   isInstalling?: boolean;

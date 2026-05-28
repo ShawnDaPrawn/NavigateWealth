@@ -26,7 +26,7 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { MessageRenderer } from '../MessageRenderer';
 import { VascoAvatar } from './VascoAvatar';
 import { VascoChatArtifacts } from './VascoChatArtifacts';

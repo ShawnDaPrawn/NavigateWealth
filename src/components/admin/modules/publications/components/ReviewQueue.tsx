@@ -36,7 +36,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { PublicationsAPI } from '../api';
 import { StatusBadge } from './StatusBadge';
 import { formatDate, getRelativeTime, truncateText } from '../utils';

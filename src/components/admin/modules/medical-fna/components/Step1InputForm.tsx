@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form@7.55.0';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, Info, Users, Shield, Wallet, Clock, AlertCircle, Heart, RefreshCw, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
@@ -23,7 +23,7 @@ import { useClientProfile } from '../hooks/useClientProfile';
 import { useClientProductKeys } from '../hooks/useClientProductKeys';
 import { MedicalFNAInputSchema, MedicalFNAFormValues } from '../schema';
 import { MedicalFNAInputs } from '../types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useFormPrefill } from '../../form-prefill/useFormPrefill';
 import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
 

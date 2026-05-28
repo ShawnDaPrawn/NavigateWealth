@@ -32,7 +32,7 @@ import {
 } from '../../ui/table';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 import { withNavigateWealthPrintTitle } from '../../../utils/pdfPrintTitle';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { DEFAULT_SCHEMAS } from './default-schemas';
 import { Goal } from '../modules/client-management/components/goals/types';

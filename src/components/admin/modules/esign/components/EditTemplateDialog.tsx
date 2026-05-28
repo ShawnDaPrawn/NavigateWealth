@@ -33,7 +33,7 @@ import {
   Users,
   FileText,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { esignApi } from '../api';
 import type { EsignTemplateRecord } from '../types';
 import { TEMPLATE_CATEGORIES } from '../types';

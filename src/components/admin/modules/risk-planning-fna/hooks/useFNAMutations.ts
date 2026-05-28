@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { RiskPlanningFnaAPI } from '../api';
 import type { InformationGatheringInput, PublishedFNA } from '../types';
 import { logError } from '../../../../../utils/errorUtils';

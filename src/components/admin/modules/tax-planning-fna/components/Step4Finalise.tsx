@@ -8,7 +8,7 @@ import { ArrowLeft, CheckCircle, FileText, Printer, Lock, Save } from 'lucide-re
 import { Badge } from '../../../../ui/badge';
 import { Textarea } from '../../../../ui/textarea';
 import { Label } from '../../../../ui/label';
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 interface Step4Props {
   finalInputs: TaxPlanningInputs;

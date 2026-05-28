@@ -19,7 +19,7 @@ import { EmailTemplateEditor } from './EmailTemplateEditor';
 import { GlobalFooterEditor } from './GlobalFooterEditor';
 import { communicationApi } from '../api';
 import { EmailTemplate } from '../types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface TransactionalEmailsManagerProps {
   onBack: () => void;

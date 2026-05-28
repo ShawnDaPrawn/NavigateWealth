@@ -17,7 +17,7 @@ import { useCommunications } from '../client/communication/hooks/useCommunicatio
 import { deriveInboxStats } from '../client/communication/utils';
 import { Button } from '../ui/button';
 import { useAuth } from '../auth/AuthContext';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 export function DashboardNavigation() {
   const location = useLocation();

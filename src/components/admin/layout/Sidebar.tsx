@@ -25,7 +25,7 @@ import { alwaysShowCounterModules, moduleConfig, moduleGroups, operationsModules
 import { useAuth } from '../../auth/AuthContext';
 import { useCurrentUserPermissions } from '../modules/personnel/hooks/usePermissions';
 import { useNavigate } from 'react-router';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { InstallAppMenuItem } from './InstallAppMenuItem';
 import { InstallHelpDialog } from './InstallHelpDialog';
 import { usePWAInstall } from '../../../hooks/usePWAInstall';

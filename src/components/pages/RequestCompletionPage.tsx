@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from '../ui/switch';
 import { Checkbox } from '../ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Loader2, CheckCircle2, Calendar, Mail, Phone, MapPin } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { Logo } from '../layout/Logo';

@@ -30,7 +30,7 @@ import {
   Save,
   Sparkles,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { RichTextEditor } from '../../publications/RichTextEditor';
 import { resourcesApi } from '../api';
 import { LEGAL_SECTION_LABELS } from '../legal-constants';

@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '../../../ui/select';
 import { Calendar, Loader2, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBookMeeting } from '../hooks';
 

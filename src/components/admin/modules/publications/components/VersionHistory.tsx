@@ -31,7 +31,7 @@ import { Badge } from '../../../../ui/badge';
 import { cn } from '../../../../ui/utils';
 import { PublicationsAPI } from '../api';
 import type { ArticleVersion } from '../types';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // ---------------------------------------------------------------------------
 // Types

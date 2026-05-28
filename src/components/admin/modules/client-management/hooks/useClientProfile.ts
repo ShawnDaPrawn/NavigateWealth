@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { clientApi, getClientProfileQueryOptions } from '../api';
 import { clientKeys } from './queryKeys';
 import { 

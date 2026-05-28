@@ -36,7 +36,7 @@ import {
 } from '../../../../ui/alert-dialog';
 import { Paperclip, X, File as FileIcon, Trash2, Upload, Loader2, Plus, CheckSquare, GripVertical, MessageSquare, Send, User, Activity, AlignLeft, Calendar, Tag as TagIcon, Layout, Eye, CreditCard, ChevronDown, Bell, Pencil } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface Attachment {
   id: string;

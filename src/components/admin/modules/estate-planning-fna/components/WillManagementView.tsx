@@ -66,7 +66,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../../../../ui/tooltip';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { projectId } from '../../../../../utils/supabase/info';
 import { getEstatePlanningAuthToken } from '../utils/auth';
 import { downloadWillPdf, type WillRecord } from '../utils/will-pdf-generator';

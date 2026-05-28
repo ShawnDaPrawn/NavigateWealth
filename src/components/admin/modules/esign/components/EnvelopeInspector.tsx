@@ -63,7 +63,7 @@ import type { EsignEnvelope, EsignSigner, EsignAuditEvent } from '../types';
 import type { SigningMode } from '../types';
 import { esignApi } from '../api';
 import { format } from 'date-fns';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { cn } from '../../../../ui/utils';
 import { VoidEnvelopeDialog } from './VoidEnvelopeDialog';
 import { DiscardEnvelopeDialog } from './DiscardEnvelopeDialog';

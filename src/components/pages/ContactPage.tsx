@@ -12,7 +12,7 @@ import { Badge } from '../ui/badge';
 import { MapPin, Phone, Mail, Clock, Calendar, ArrowRight, MessageCircle, Users, CheckCircle, Headphones, Building, UserCheck, Briefcase, Loader2 } from 'lucide-react';
 import { ThankYouModal } from '../modals/ThankYouModal';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 export function ContactPage() {
   const navigate = useNavigate();

@@ -1,7 +1,7 @@
 // Authentication Service - Core Supabase auth operations
 
 import { getSupabaseClient } from '../supabase/client';
-import { User } from '@supabase/supabase-js@2.39.3';
+import { User } from '@supabase/supabase-js';
 import { AuthUser, SignUpResult, SignInResult, AuthCallback } from './types';
 import { AuthError, parseAuthError } from './errorHandler';
 import { AUTH_ERRORS, AUTH_ROUTES } from './constants';

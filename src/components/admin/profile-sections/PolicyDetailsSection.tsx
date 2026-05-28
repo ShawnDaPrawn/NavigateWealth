@@ -36,7 +36,7 @@ import {
 import { PolicyFormDialog } from './PolicyFormDialog';
 import { PolicyCategoryTab } from './PolicyCategoryTab';
 import { PolicyOverviewTab, CategoryOverviewData } from './PolicyOverviewTab';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;

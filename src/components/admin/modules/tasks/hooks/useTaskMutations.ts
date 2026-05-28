@@ -12,7 +12,7 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { pendingCountsKeys, tasksKeys } from '../../../../../utils/queryKeys';
 import { TasksAPI } from '../api';
 import { taskKeys } from './useTaskQueries';

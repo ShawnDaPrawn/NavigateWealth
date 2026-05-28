@@ -60,7 +60,7 @@ import {
   Loader2,
   MessageSquare,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
