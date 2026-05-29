@@ -112,8 +112,11 @@ export function BudgetingPage({
   const navigate = useNavigate();
   
   // Use profileData if in embedded mode, otherwise use props
-  const netIncome = embedded && profileData ? (profileData.netMonthlyIncome || 0) : (propNetIncome || 0);
-  const grossIncome = embedded && profileData ? (profileData.grossMonthlyIncome || 0) : (propGrossIncome || 0);
+  // profileData is Record<string, unknown>, so coerce the income fields to a
+  // number (Number(undefined) -> NaN -> 0) instead of letting `unknown || 0`
+  // collapse to the `{}` type, which poisons all downstream arithmetic.
+  const netIncome = embedded && profileData ? (Number(profileData.netMonthlyIncome) || 0) : (propNetIncome || 0);
+  const grossIncome = embedded && profileData ? (Number(profileData.grossMonthlyIncome) || 0) : (propGrossIncome || 0);
   
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
