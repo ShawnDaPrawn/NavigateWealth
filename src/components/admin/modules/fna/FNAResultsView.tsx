@@ -82,33 +82,33 @@ export function FNAResultsView({ fna, onPublish, onDraft, isClientView = false }
         <SummaryCard
           title="Life Cover"
           icon={Shield}
-          required={results.lifeCover.requiredLifeCover}
+          required={results.lifeCover.finalRecommendedNeed}
           existing={results.lifeCover.existingLifeCover}
-          gap={results.lifeCover.lifeCoverGap}
+          gap={results.lifeCover.shortfallSurplus}
           color="blue"
         />
         <SummaryCard
           title="Severe Illness"
           icon={Heart}
-          required={results.severeIllness.ciRequired}
-          existing={results.severeIllness.existingCICover}
-          gap={results.severeIllness.ciGap}
+          required={results.severeIllness.finalRecommendedNeed}
+          existing={results.severeIllness.existingSevereIllnessCover}
+          gap={results.severeIllness.shortfallSurplus}
           color="red"
         />
         <SummaryCard
           title="Capital Disability"
           icon={Activity}
-          required={results.capitalDisability.capitalDisabilityRequired}
-          existing={results.capitalDisability.existingCapitalDisabilityCover}
-          gap={results.capitalDisability.capitalDisabilityGap}
+          required={results.capitalDisability.finalRecommendedNeed}
+          existing={results.capitalDisability.existingDisabilityCover}
+          gap={results.capitalDisability.shortfallSurplus}
           color="orange"
         />
         <SummaryCard
           title="Income Protection"
           icon={DollarSign}
-          required={results.incomeProtection.targetIncomeProtectionMonthly}
-          existing={results.incomeProtection.existingIPMonthlyTotal}
-          gap={results.incomeProtection.incomeProtectionGapMonthly}
+          required={results.incomeProtection.finalRecommendedNeed}
+          existing={results.incomeProtection.existingIP}
+          gap={results.incomeProtection.shortfallSurplus}
           color="green"
           isMonthly
         />
