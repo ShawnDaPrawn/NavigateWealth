@@ -33,9 +33,11 @@ describe('FNAResultsView summary cards (characterization)', () => {
     render(<FNAResultsView fna={fna} />);
 
     expect(screen.getByText('Life Cover')).toBeTruthy();
-    // Unique to the summary card (the still-untyped detail breakdown renders R0.00 here):
-    expect(screen.getByText('R1,000,000.00')).toBeTruthy(); // life-cover required = finalRecommendedNeed
-    expect(screen.getByText('R800,000.00')).toBeTruthy();   // life-cover gap = shortfallSurplus
-    expect(screen.getByText('R500,000.00')).toBeTruthy();   // severe-illness required
+    // finalRecommendedNeed/shortfallSurplus now render correctly in BOTH the
+    // summary card and the (now typed) detail breakdown, so each value can
+    // appear more than once — assert presence rather than uniqueness.
+    expect(screen.getAllByText('R1,000,000.00').length).toBeGreaterThan(0); // life-cover required = finalRecommendedNeed
+    expect(screen.getAllByText('R800,000.00').length).toBeGreaterThan(0);   // life-cover gap = shortfallSurplus
+    expect(screen.getAllByText('R500,000.00').length).toBeGreaterThan(0);   // severe-illness required
   });
 });

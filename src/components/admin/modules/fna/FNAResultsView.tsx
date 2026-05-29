@@ -25,7 +25,14 @@ import {
   Send
 } from 'lucide-react';
 import { formatCurrency } from '../../../../utils/currencyFormatter';
-import type { FNASession, FNAInputs } from './types';
+import type {
+  FNASession,
+  FNAInputs,
+  LifeCoverBreakdown as LifeCoverBreakdownData,
+  SevereIllnessBreakdown as SevereIllnessBreakdownData,
+  CapitalDisabilityBreakdown as CapitalDisabilityBreakdownData,
+  IncomeProtectionBreakdown as IncomeProtectionBreakdownData,
+} from './types';
 
 interface FNAResultsViewProps {
   fna: FNASession;
@@ -197,13 +204,7 @@ function SummaryCard({ title, icon: Icon, required, existing, gap, color, isMont
 
 // ==================== BREAKDOWN COMPONENTS ====================
 
-/** Shared props for FNA breakdown components */
-interface FNABreakdownProps {
-  data: Record<string, unknown>;
-  inputs: Partial<FNAInputs>;
-}
-
-function LifeCoverBreakdown({ data, inputs }: FNABreakdownProps) {
+function LifeCoverBreakdown({ data }: { data: LifeCoverBreakdownData; inputs: Partial<FNAInputs> }) {
   const [open, setOpen] = useState(true);
 
   return (
@@ -217,7 +218,7 @@ function LifeCoverBreakdown({ data, inputs }: FNABreakdownProps) {
                 <div className="text-left">
                   <CardTitle className="text-base">Life Cover Analysis</CardTitle>
                   <CardDescription>
-                    Gap: {formatCurrency(data.lifeCoverGap)}
+                    Shortfall: {formatCurrency(data.shortfallSurplus)}
                   </CardDescription>
                 </div>
               </div>
@@ -228,50 +229,30 @@ function LifeCoverBreakdown({ data, inputs }: FNABreakdownProps) {
         <CollapsibleContent>
           <CardContent className="space-y-4">
             {/* Summary Grid */}
-            <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
               <div>
-                <p className="text-sm text-muted-foreground">Required Cover</p>
-                <p>{formatCurrency(data.requiredLifeCover)}</p>
+                <p className="text-sm text-muted-foreground">Recommended Cover</p>
+                <p>{formatCurrency(data.finalRecommendedNeed)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Existing Cover</p>
                 <p>{formatCurrency(data.existingLifeCover)}</p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Available Assets</p>
-                <p>{formatCurrency(data.availableLiquidAssets)}</p>
-              </div>
             </div>
 
             <Separator />
 
-            {/* Lump Sum Needs */}
+            {/* Needs Breakdown */}
             <div>
               <p className="text-sm mb-3">
-                <strong>Immediate Lump Sum Needs:</strong> {formatCurrency(data.lumpSumNeeds)}
+                <strong>Calculated Need:</strong> {formatCurrency(data.calculatedNeed)}
               </p>
               <div className="space-y-2 ml-4">
-                <BreakdownItem label="Debt Settlement" value={data.totalDebtToSettle} />
-                <BreakdownItem label="Emergency Fund" value={data.emergencyFundNeed} />
-                <BreakdownItem label="Final Expenses" value={data.finalExpensesNeed} />
-                <BreakdownItem label="Education Capital" value={data.educationNeed} />
-                <BreakdownItem label="Bequests" value={data.bequestsNeed} />
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Income Replacement */}
-            <div>
-              <p className="text-sm mb-3">
-                <strong>Income Replacement Capital:</strong> {formatCurrency(data.incomeReplacementCapital)}
-              </p>
-              <div className="space-y-2 ml-4 text-sm">
-                <p>Target monthly income: {formatCurrency(data.targetFamilyIncomePerMonth)}/mo</p>
-                <p>Years of support needed: {data.yearsSupportForIncomeReplacement} years</p>
-                <p className="text-muted-foreground">
-                  (Based on {data.yearsToRetirement} years to retirement and {data.maxYearsSupportDependants} years for dependants)
-                </p>
+                <BreakdownItem label="Debt Settlement" value={data.debt} />
+                <BreakdownItem label="Final Expenses" value={data.finalExpenses} />
+                <BreakdownItem label="Income Replacement" value={data.incomeReplacement} />
+                <BreakdownItem label="Education Funding" value={data.educationFunding} />
+                <BreakdownItem label="Estate Costs" value={data.estateCosts} />
               </div>
             </div>
           </CardContent>
@@ -281,7 +262,7 @@ function LifeCoverBreakdown({ data, inputs }: FNABreakdownProps) {
   );
 }
 
-function SevereIllnessBreakdown({ data, inputs }: FNABreakdownProps) {
+function SevereIllnessBreakdown({ data }: { data: SevereIllnessBreakdownData; inputs: Partial<FNAInputs> }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -295,7 +276,7 @@ function SevereIllnessBreakdown({ data, inputs }: FNABreakdownProps) {
                 <div className="text-left">
                   <CardTitle className="text-base">Severe / Critical Illness Analysis</CardTitle>
                   <CardDescription>
-                    Gap: {formatCurrency(data.ciGap)}
+                    Shortfall: {formatCurrency(data.shortfallSurplus)}
                   </CardDescription>
                 </div>
               </div>
@@ -307,21 +288,22 @@ function SevereIllnessBreakdown({ data, inputs }: FNABreakdownProps) {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
               <div>
-                <p className="text-sm text-muted-foreground">Required CI Cover</p>
-                <p>{formatCurrency(data.ciRequired)}</p>
+                <p className="text-sm text-muted-foreground">Recommended CI Cover</p>
+                <p>{formatCurrency(data.finalRecommendedNeed)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Existing CI Cover</p>
-                <p>{formatCurrency(data.existingCICover)}</p>
+                <p>{formatCurrency(data.existingSevereIllnessCover)}</p>
               </div>
             </div>
 
             <Separator />
 
             <div className="space-y-2">
-              <BreakdownItem label="Medical Gap Buffer" value={data.medicalGapNeed} />
-              <BreakdownItem label="Lifestyle Adjustment Buffer" value={data.lifestyleAdjustmentNeed} />
-              <BreakdownItem label="Debt to Settle" value={data.debtToSettleOnCI} />
+              <BreakdownItem label="Medical Shortfalls" value={data.medicalShortfalls} />
+              <BreakdownItem label="Lifestyle Adjustments" value={data.lifestyleAdjustments} />
+              <BreakdownItem label="Income Gap" value={data.incomeGap} />
+              <BreakdownItem label="Debt Buffer" value={data.debtBuffer} />
             </div>
           </CardContent>
         </CollapsibleContent>
@@ -330,7 +312,7 @@ function SevereIllnessBreakdown({ data, inputs }: FNABreakdownProps) {
   );
 }
 
-function CapitalDisabilityBreakdown({ data, inputs }: FNABreakdownProps) {
+function CapitalDisabilityBreakdown({ data }: { data: CapitalDisabilityBreakdownData; inputs: Partial<FNAInputs> }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -344,7 +326,7 @@ function CapitalDisabilityBreakdown({ data, inputs }: FNABreakdownProps) {
                 <div className="text-left">
                   <CardTitle className="text-base">Capital Disability Analysis</CardTitle>
                   <CardDescription>
-                    Gap: {formatCurrency(data.capitalDisabilityGap)}
+                    Shortfall: {formatCurrency(data.shortfallSurplus)}
                   </CardDescription>
                 </div>
               </div>
@@ -354,27 +336,24 @@ function CapitalDisabilityBreakdown({ data, inputs }: FNABreakdownProps) {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
               <div>
-                <p className="text-sm text-muted-foreground">Required</p>
-                <p>{formatCurrency(data.capitalDisabilityRequired)}</p>
+                <p className="text-sm text-muted-foreground">Recommended</p>
+                <p>{formatCurrency(data.finalRecommendedNeed)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Existing</p>
-                <p>{formatCurrency(data.existingCapitalDisabilityCover)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Assets</p>
-                <p>{formatCurrency(data.availableLiquidAssetsForDisability)}</p>
+                <p>{formatCurrency(data.existingDisabilityCover)}</p>
               </div>
             </div>
 
             <Separator />
 
             <div className="space-y-2">
-              <BreakdownItem label="Debt Settlement" value={data.debtOnDisability} />
-              <BreakdownItem label="Home/Vehicle Adaptation" value={data.homeVehicleAdaptationNeed} />
-              <BreakdownItem label="Retirement Contribution Gap" value={data.retirementContributionGapCapital} />
+              <BreakdownItem label="Debt Settlement" value={data.debt} />
+              <BreakdownItem label="Income Capitalisation" value={data.incomeCapitalisation} />
+              <BreakdownItem label="Lifestyle Modifications" value={data.lifestyleModifications} />
+              <BreakdownItem label="Medical Adaptation" value={data.medicalAdaptation} />
             </div>
           </CardContent>
         </CollapsibleContent>
@@ -383,7 +362,7 @@ function CapitalDisabilityBreakdown({ data, inputs }: FNABreakdownProps) {
   );
 }
 
-function IncomeProtectionBreakdown({ data, inputs }: FNABreakdownProps) {
+function IncomeProtectionBreakdown({ data }: { data: IncomeProtectionBreakdownData; inputs: Partial<FNAInputs> }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -397,7 +376,7 @@ function IncomeProtectionBreakdown({ data, inputs }: FNABreakdownProps) {
                 <div className="text-left">
                   <CardTitle className="text-base">Income Protection Analysis</CardTitle>
                   <CardDescription>
-                    Gap: {formatCurrency(data.incomeProtectionGapMonthly)}/mo
+                    Shortfall: {formatCurrency(data.shortfallSurplus)}/mo
                   </CardDescription>
                 </div>
               </div>
@@ -407,29 +386,22 @@ function IncomeProtectionBreakdown({ data, inputs }: FNABreakdownProps) {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
               <div>
-                <p className="text-sm text-muted-foreground">Target Monthly</p>
-                <p>{formatCurrency(data.targetIncomeProtectionMonthly)}</p>
+                <p className="text-sm text-muted-foreground">Recommended Monthly</p>
+                <p>{formatCurrency(data.finalRecommendedNeed)}/mo</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Existing</p>
-                <p>{formatCurrency(data.existingIPMonthlyTotal)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Other Income</p>
-                <p>{formatCurrency(data.reliableOtherIncome)}</p>
+                <p>{formatCurrency(data.existingIP)}/mo</p>
               </div>
             </div>
 
             <Separator />
 
             <div className="space-y-2 text-sm">
-              <p>Regulatory limit (75% of gross): {formatCurrency(data.regulatoryLimit)}/mo</p>
-              <p>Planning target ({inputs.assumptions?.targetIncomeReplacementPercent || 70}% of net): {formatCurrency(data.planningTarget)}/mo</p>
-              <p className="text-muted-foreground">
-                Recommended benefit is the lower of these two amounts.
-              </p>
+              <p>Monthly required: {formatCurrency(data.monthlyRequired)}/mo</p>
+              <p>Calculated need: {formatCurrency(data.calculatedNeed)}/mo</p>
             </div>
           </CardContent>
         </CollapsibleContent>
