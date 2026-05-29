@@ -64,6 +64,20 @@ interface SavePayload {
   letterMeta?: LetterMeta;
 }
 
+// initialData arrives as a loose Record from callers; this is the subset of
+// fields the builder actually reads. Aliased locally (not on the prop) so
+// callers passing a looser record are unaffected.
+interface FormResourceData {
+  id?: string;
+  name?: string;
+  category?: string;
+  description?: string;
+  blocks?: FormBlock[];
+  letterMeta?: LetterMeta;
+  clientTypes?: string[];
+  version?: string;
+}
+
 // ============================================================================
 // Core API save — shared by manual save and autosave
 // Returns the response data on success, throws on failure.
@@ -124,8 +138,9 @@ interface FormBuilderProps {
 }
 
 export const FormBuilder = ({ onBack, onSave, initialData, mode = 'form' }: FormBuilderProps) => {
+  const resource = initialData as FormResourceData | undefined;
   // Determine if this is letter mode (from prop or from loaded category)
-  const isLetterMode = mode === 'letter' || initialData?.category === 'Letters';
+  const isLetterMode = mode === 'letter' || resource?.category === 'Letters';
 
   // -- Phase 1: Template Gallery for new resources --
   const [showTemplateGallery, setShowTemplateGallery] = useState(
@@ -161,9 +176,9 @@ export const FormBuilder = ({ onBack, onSave, initialData, mode = 'form' }: Form
   }
 
   // Resolve initial blocks: template selection > initialData > defaults
-  const resolvedInitialBlocks = templateBlocks ?? initialData?.blocks ?? (isLetterMode && !initialData ? getLetterStarterBlocks() : []);
-  const resolvedCategory = templateCategory ?? initialData?.category ?? (isLetterMode ? 'Letters' : 'Forms');
-  const resolvedTitle = templateTitle ?? initialData?.name ?? (isLetterMode ? 'Company Letter' : 'Client Consent Form');
+  const resolvedInitialBlocks = templateBlocks ?? resource?.blocks ?? (isLetterMode && !initialData ? getLetterStarterBlocks() : []);
+  const resolvedCategory = templateCategory ?? resource?.category ?? (isLetterMode ? 'Letters' : 'Forms');
+  const resolvedTitle = templateTitle ?? resource?.name ?? (isLetterMode ? 'Company Letter' : 'Client Consent Form');
 
   return (
     <FormBuilderWorkspace
@@ -200,6 +215,7 @@ const FormBuilderWorkspace = ({
   resolvedTitle,
   isLetterMode,
 }: FormBuilderWorkspaceProps) => {
+  const resource = initialData as FormResourceData | undefined;
 
   // -- UNDO/REDO HISTORY --
   const {
@@ -229,7 +245,7 @@ const FormBuilderWorkspace = ({
 
   // -- Letter metadata state (only relevant for letter-category resources) --
   const [letterMeta, setLetterMeta] = useState<LetterMeta>(
-    initialData?.letterMeta || (isLetterMode && !initialData ? {
+    resource?.letterMeta || (isLetterMode && !initialData ? {
       closing: 'Yours faithfully',
       recipients: [{ name: '', title: '', company: '', address: '' }],
       signatories: [{ name: '', title: '' }],
@@ -238,30 +254,30 @@ const FormBuilderWorkspace = ({
 
   // Resource ID — stateful so a new resource transitions to update mode after first save.
   // This prevents duplicate creation on subsequent saves and enables autosave.
-  const [resourceId, setResourceId] = useState<string | undefined>(initialData?.id);
+  const [resourceId, setResourceId] = useState<string | undefined>(resource?.id);
   const isNewResource = !resourceId;
 
   // If initialData changes (e.g. fresh edit), reset history
   React.useEffect(() => {
-    if (initialData) {
-      resetBlocks(initialData.blocks || []);
-      setFormTitle(initialData.name || "Client Consent Form");
-      setFormCategory(initialData.category || "Forms");
-      setLetterMeta(initialData.letterMeta || {});
-      setResourceId(initialData.id);
+    if (resource) {
+      resetBlocks(resource.blocks || []);
+      setFormTitle(resource.name || "Client Consent Form");
+      setFormCategory(resource.category || "Forms");
+      setLetterMeta(resource.letterMeta || {});
+      setResourceId(resource.id);
     }
   }, [initialData, resetBlocks]);
 
   // -- Memoised payload to track in autosave --
   const currentPayload: SavePayload = useMemo(() => ({
     title: formTitle,
-    description: initialData?.description || "Created with Form Builder",
+    description: resource?.description || "Created with Form Builder",
     category: formCategory,
     blocks: blocks,
-    clientTypes: initialData?.clientTypes || ["Universal"],
-    version: initialData?.version || "1.0",
+    clientTypes: resource?.clientTypes || ["Universal"],
+    version: resource?.version || "1.0",
     letterMeta: formCategory === 'Letters' ? letterMeta : undefined,
-  }), [formTitle, formCategory, blocks, letterMeta, initialData?.description, initialData?.clientTypes, initialData?.version]);
+  }), [formTitle, formCategory, blocks, letterMeta, resource?.description, resource?.clientTypes, resource?.version]);
 
   // -- AUTOSAVE (only for existing resources) --
   const autosaveOnSave = useCallback(
@@ -395,7 +411,7 @@ const FormBuilderWorkspace = ({
       // Add to container's nested blocks
       return withoutBlock.map(b => {
         if (b.id === containerId && b.type === 'container') {
-          const containerBlocks = b.data.blocks || [];
+          const containerBlocks = (b.data.blocks as FormBlock[] | undefined) || [];
           return {
             ...b,
             data: {
@@ -424,7 +440,7 @@ const FormBuilderWorkspace = ({
     setBlocks((prevBlocks: FormBlock[]) =>
       prevBlocks.map(b => {
         if (b.id === containerId && b.type === 'container') {
-          const containerBlocks = b.data.blocks || [];
+          const containerBlocks = (b.data.blocks as FormBlock[] | undefined) || [];
           return {
             ...b,
             data: {
@@ -464,7 +480,7 @@ const FormBuilderWorkspace = ({
   const handleManualSave = useCallback(async () => {
     setManualSaving(true);
     try {
-      const data = await saveToApi(currentPayload, resourceId);
+      const data = await saveToApi(currentPayload, resourceId) as { resource?: { id?: string } };
       const isCreate = !resourceId;
       toast.success(`${isLetterMode ? 'Letter' : 'Form template'} ${isCreate ? 'created' : 'updated'} successfully`);
 
