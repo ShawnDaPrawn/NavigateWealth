@@ -55,6 +55,19 @@ jobs:
           echo "${PIPESTATUS[0]}" > quality-typecheck.exit
           exit 0
 
+      - name: Run middleware typecheck (blocking)
+        # middleware.ts is compiled ONLY by Vercel's Edge build — invisible to
+        # the Vite build and the SPA typecheck. This dedicated check is GATED
+        # (see "Enforce quality gates") so a broken middleware (e.g. importing
+        # the non-existent 'next/server') fails CI instead of only failing the
+        # Vercel production deploy.
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck:middleware 2>&1 | tee quality-typecheck-middleware.log
+          echo "${PIPESTATUS[0]}" > quality-typecheck-middleware.exit
+          exit 0
+
       - name: Run FNA intake test suite
         shell: bash
         run: |
@@ -94,6 +107,8 @@ jobs:
             quality-test.exit
             quality-typecheck.log
             quality-typecheck.exit
+            quality-typecheck-middleware.log
+            quality-typecheck-middleware.exit
             quality-vitest-report.json
             quality-npm-audit-report.json
             quality-issues-payload.json
@@ -111,12 +126,15 @@ jobs:
           build_exit="$(cat quality-build.exit 2>/dev/null || echo 1)"
           test_exit="$(cat quality-test.exit 2>/dev/null || echo 1)"
           typecheck_exit="$(cat quality-typecheck.exit 2>/dev/null || echo 'n/a')"
-          echo "build exit code:     $build_exit"
-          echo "test exit code:      $test_exit"
-          echo "typecheck exit code: $typecheck_exit (informational, not gated)"
+          mw_exit="$(cat quality-typecheck-middleware.exit 2>/dev/null || echo 1)"
+          echo "build exit code:           $build_exit"
+          echo "test exit code:            $test_exit"
+          echo "typecheck exit code:       $typecheck_exit (informational, not gated)"
+          echo "middleware typecheck code: $mw_exit"
           failed=0
           if [ "$build_exit" != "0" ]; then echo "::error::Production build failed (see quality-build.log)"; failed=1; fi
           if [ "$test_exit" != "0" ]; then echo "::error::Vitest suite failed (see quality-test.log)"; failed=1; fi
+          if [ "$mw_exit" != "0" ]; then echo "::error::Middleware typecheck failed — middleware.ts must not import 'next/server' (see quality-typecheck-middleware.log)"; failed=1; fi
           if [ "$failed" != "0" ]; then
             echo "Quality gates FAILED."
             exit 1

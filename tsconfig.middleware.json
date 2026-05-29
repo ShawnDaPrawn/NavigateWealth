@@ -1,0 +1,17 @@
+{
+  "//": "Blocking typecheck for the Vercel routing middleware (middleware.ts) and its route-policy helper. middleware.ts lives at the repo root, outside the main src/** typecheck scope, and is compiled ONLY by Vercel's Edge build — invisible to `npm run build` and the SPA typecheck. This config catches problems (e.g. importing the non-existent 'next/server') locally and in CI. Run via `npm run typecheck:middleware`.",
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "types": []
+  },
+  "include": ["middleware.ts", "src/middleware/**/*.ts"]
+}
