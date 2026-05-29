@@ -21,17 +21,17 @@ export type AccountStatus =
 
 export type UserRole = 'admin' | 'client';
 
-/** Minimal user shape required by route guard logic */
+/** Minimal user shape required by route guard logic. No index signature, so
+ *  the concrete AppUser interface (which has no index signature) is assignable. */
 interface RouteGuardUser {
   id?: string;
   role?: string;
   accountStatus?: string;
   applicationStatus?: string;
-  [key: string]: unknown;
 }
 
 // Helper function to check if user has admin privileges
-function isAdminUser(user: RouteGuardUser): boolean {
+function isAdminUser(user: RouteGuardUser | null): boolean {
   return user?.role === 'admin' || user?.role === 'super_admin';
 }
 
@@ -89,7 +89,7 @@ function canAccessRoute(
   }
   
   // Get current status
-  const currentStatus: AccountStatus = user.accountStatus || user.applicationStatus || 'no_application';
+  const currentStatus = (user.accountStatus || user.applicationStatus || 'no_application') as AccountStatus;
   
   // If 'any' authenticated user can access
   if (requiredStatus === 'any') {
