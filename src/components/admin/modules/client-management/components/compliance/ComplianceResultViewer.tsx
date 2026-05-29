@@ -477,20 +477,32 @@ function FormattedResult({ activityType, result }: { activityType: string; resul
 
 // ─── Type-specific result views ───────────────────────────────────────────────
 
+/**
+ * Coerce an unknown value (from the untyped third-party rawResponse) into a
+ * renderable ReactNode: React elements and primitives pass through unchanged;
+ * plain objects are stringified instead of crashing React.
+ */
+function toNode(value: unknown): React.ReactNode {
+  if (value == null) return null;
+  if (React.isValidElement(value)) return value;
+  if (typeof value === 'object') return JSON.stringify(value);
+  return value as string | number | boolean;
+}
+
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return <h4 className="text-sm font-semibold text-gray-800 mb-2">{children}</h4>;
 }
 
-function DataRow({ label, value, className }: { label: string; value: React.ReactNode; className?: string }) {
+function DataRow({ label, value, className }: { label: string; value: unknown; className?: string }) {
   return (
     <div className={`flex items-start justify-between py-1.5 border-b border-gray-100 last:border-0 ${className || ''}`}>
       <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-xs font-medium text-right max-w-[60%]">{value ?? '—'}</span>
+      <span className="text-xs font-medium text-right max-w-[60%]">{toNode(value) ?? '—'}</span>
     </div>
   );
 }
 
-function StatusIndicator({ pass, label }: { pass: boolean | undefined | null; label: string }) {
+function StatusIndicator({ pass, label }: { pass: unknown; label: string }) {
   if (pass == null) return <DataRow label={label} value="—" />;
   return (
     <DataRow
@@ -992,7 +1004,7 @@ function GenericResultView({ data }: { data: ComplianceCheckData }) {
 
 // ─── Shared Components ──────────────────────────────────────────────────────
 
-function StatBox({ label, value, colour }: { label: string; value: number; colour: string }) {
+function StatBox({ label, value, colour }: { label: string; value: unknown; colour: string }) {
   const colours: Record<string, string> = {
     blue: 'bg-blue-50 border-blue-200 text-blue-700',
     green: 'bg-green-50 border-green-200 text-green-700',
@@ -1000,7 +1012,7 @@ function StatBox({ label, value, colour }: { label: string; value: number; colou
   };
   return (
     <div className={`rounded-lg border p-2 ${colours[colour] || colours.blue}`}>
-      <div className="text-lg font-bold">{value}</div>
+      <div className="text-lg font-bold">{toNode(value)}</div>
       <div className="text-xs">{label}</div>
     </div>
   );
