@@ -737,7 +737,7 @@ export interface ComplianceStats {
 export interface ComplianceColumn {
   key: string;
   label: string;
-  type: 'text' | 'date' | 'badge' | 'number' | 'custom';
+  type: 'text' | 'date' | 'badge' | 'number' | 'currency' | 'custom';
   render?: (value: unknown, record: ComplianceRecord) => React.ReactNode;
   sortable?: boolean;
   width?: string;

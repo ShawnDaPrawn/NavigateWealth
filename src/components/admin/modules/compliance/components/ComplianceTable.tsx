@@ -59,13 +59,13 @@ export function ComplianceTable({
       record.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       record.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (record.notes && record.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      record.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      (record.tags || []).some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
 
     // Additional filters
     const matchesFilters = Object.entries(selectedFilters).every(([key, value]) => {
       if (!value) return true;
       // Dynamic property access on compliance records
-      return (record as Record<string, unknown>)[key] === value;
+      return (record as unknown as Record<string, unknown>)[key] === value;
     });
 
     return matchesSearch && matchesFilters;
@@ -75,8 +75,8 @@ export function ComplianceTable({
   const sortedRecords = [...filteredRecords].sort((a, b) => {
     if (!sortColumn) return 0;
     
-    const aValue = (a as Record<string, unknown>)[sortColumn];
-    const bValue = (b as Record<string, unknown>)[sortColumn];
+    const aValue = (a as unknown as Record<string, unknown>)[sortColumn] as string | number;
+    const bValue = (b as unknown as Record<string, unknown>)[sortColumn] as string | number;
     
     if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
     if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
@@ -121,7 +121,7 @@ export function ComplianceTable({
 
   const renderCellValue = (column: ComplianceColumn, record: ComplianceRecord) => {
     // Dynamic property access on compliance records
-    const value = (record as Record<string, unknown>)[column.key];
+    const value = (record as unknown as Record<string, unknown>)[column.key];
     
     if (column.render) {
       return column.render(value, record);
@@ -228,7 +228,7 @@ export function ComplianceTable({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All {filter.label}</SelectItem>
-                    {filter.options.map((option) => (
+                    {(filter.options || []).map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -305,7 +305,7 @@ export function ComplianceTable({
                       </TableCell>
                     ))}
                     <TableCell className="text-center whitespace-nowrap min-w-[120px]">
-                      {record.attachments > 0 && (
+                      {(record.attachments ?? 0) > 0 && (
                         <Button variant="ghost" size="sm">
                           <Paperclip className="h-4 w-4" />
                           <span className="ml-1">{record.attachments}</span>
