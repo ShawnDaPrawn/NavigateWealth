@@ -66,7 +66,7 @@ export function Step3ManualAdjustment({
 
   const getPercent = (field: keyof RetirementFNAAdjustments, fallback: number) => {
     const val = adjustments[field] !== undefined ? adjustments[field] : fallback;
-    return (val! * 100).toFixed(1);
+    return (Number(val) * 100).toFixed(1);
   };
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
