@@ -52,20 +52,23 @@ import {
 
 // Wrapper component for input with copy button using the reusable FieldWithCopy
 const InputWithCopy = ({ 
-  label, 
-  value, 
-  fieldName, 
-  ...inputProps 
-}: { 
-  label: string; 
-  value: string | number; 
-  fieldName: string; 
+  label,
+  value,
+  fieldName,
+  id,
+  ...inputProps
+}: {
+  label: string;
+  value: string | number;
+  fieldName: string;
+  id?: string;
   [key: string]: unknown;
 }) => {
   return (
     <div>
-      <Label htmlFor={inputProps.id}>{label}</Label>
+      <Label htmlFor={id}>{label}</Label>
       <FieldWithCopy
+        id={id ?? fieldName}
         {...inputProps}
         value={value}
         className="mt-1.5"
@@ -157,6 +160,16 @@ const ADMIN_CLIENT_PROFILE_REGISTRY_ID = 'admin-client-profile';
 export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileViewerFullProps) {
   const [activeSection, setActiveSection] = useState('personal');
   const { state, actions } = useClientProfile(clientData, onSave);
+  // The profile-section child components declare looser prop contracts
+  // (profileData: Record<string, unknown>; handleInputChange: (field: string,
+  // value: string | number | boolean) => void) than the strongly-typed hook
+  // state/actions. Adapt at this single call boundary rather than weakening the
+  // hook's types.
+  const profileDataLoose = state.profileData as unknown as Record<string, unknown>;
+  const handleInputChangeLoose = actions.handleInputChange as unknown as (
+    field: string,
+    value: string | number | boolean,
+  ) => void;
   const registry = useUnsavedChangesRegistry();
 
   const unsavedChangesGuard = useUnsavedChangesGuard({
@@ -759,7 +772,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
         {/* KYC Section */}
         {activeSection === 'kyc' && (
           <IdentitySection
-            profileData={state.profileData}
+            profileData={profileDataLoose}
             identityDocsInEditMode={state.identityDocsInEditMode}
             hasDocumentType={actions.hasDocumentType}
             addIdentityDocument={actions.addIdentityDocument}
@@ -781,8 +794,8 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
         {/* Address Section */}
         {activeSection === 'address' && (
           <AddressSection
-            profileData={state.profileData}
-            handleInputChange={actions.handleInputChange}
+            profileData={profileDataLoose}
+            handleInputChange={handleInputChangeLoose}
             proofOfResidenceInEditMode={state.proofOfResidenceInEditMode}
             handleProofOfResidenceUpload={actions.handleProofOfResidenceUpload}
             saveProofOfResidence={actions.saveProofOfResidence}
@@ -798,8 +811,8 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
         {/* Employment Section */}
         {activeSection === 'employment' && (
           <EmploymentSection
-            profileData={state.profileData}
-            handleInputChange={actions.handleInputChange}
+            profileData={profileDataLoose}
+            handleInputChange={handleInputChangeLoose}
             employersInEditMode={state.employersInEditMode}
             selfEmployedInEditMode={state.selfEmployedInEditMode}
             addEmployer={actions.addEmployer}
@@ -821,8 +834,8 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
         {/* Health Section */}
         {activeSection === 'health' && (
           <HealthSection
-            profileData={state.profileData}
-            handleInputChange={actions.handleInputChange}
+            profileData={profileDataLoose}
+            handleInputChange={handleInputChangeLoose}
             chronicConditionsInEditMode={state.chronicConditionsInEditMode}
             addChronicCondition={actions.addChronicCondition}
             updateChronicCondition={actions.updateChronicCondition}
@@ -839,7 +852,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
         {/* Family Section */}
         {activeSection === 'family' && (
           <FamilySection
-            profileData={state.profileData}
+            profileData={profileDataLoose}
             familyMembersInEditMode={state.familyMembersInEditMode}
             addFamilyMember={actions.addFamilyMember}
             updateFamilyMember={actions.updateFamilyMember}
@@ -856,7 +869,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
         {/* Banking Section */}
         {activeSection === 'banking' && (
           <BankingSection
-            profileData={state.profileData}
+            profileData={profileDataLoose}
             bankAccountsInEditMode={state.bankAccountsInEditMode}
             addBankAccount={actions.addBankAccount}
             updateBankAccount={actions.updateBankAccount}
@@ -929,17 +942,17 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
         {/* Budgeting Section - Reusing the BudgetingPage component */}
         {activeSection === 'budgeting' && (
           <div className="h-full">
-            <BudgetingPage 
-              userId={clientData.id} 
+            <BudgetingPage
+              userId={clientData.id}
               embedded={true}
               incomeValidationError={state.incomeValidationError}
-              setIncomeValidationError={actions.setIncomeValidationError}
-              grossIncomeDisplay={state.grossIncomeDisplay}
+              setIncomeValidationError={actions.setIncomeValidationError as (error: string | null) => void}
+              grossIncomeDisplay={state.grossIncomeDisplay ?? undefined}
               setGrossIncomeDisplay={actions.setGrossIncomeDisplay}
-              netIncomeDisplay={state.netIncomeDisplay}
+              netIncomeDisplay={state.netIncomeDisplay ?? undefined}
               setNetIncomeDisplay={actions.setNetIncomeDisplay}
-              profileData={state.profileData}
-              handleInputChange={actions.handleInputChange}
+              profileData={profileDataLoose}
+              handleInputChange={handleInputChangeLoose}
             />
           </div>
         )}

@@ -1390,6 +1390,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       editIdentityDocument,
       getDocumentTypeLabel,
       getDocumentTypeIcon,
+      hasDocumentType,
       handleProofOfResidenceUpload,
       editProofOfResidence,
       saveProofOfResidence,
