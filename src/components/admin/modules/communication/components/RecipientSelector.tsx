@@ -42,6 +42,11 @@ interface RecipientSelectorProps {
   channel: CommunicationChannel;
 }
 
+// VirtualizedClientList declares a loose VirtualClient ({ id; [key]: unknown });
+// our Client data and Client-typed callbacks are structurally compatible at
+// runtime, so adapt to its prop types at the call boundary.
+type VLProps = React.ComponentProps<typeof VirtualizedClientList>;
+
 // Helper: derive display name from communication Client type (Guidelines §7.1)
 function getClientDisplayName(client: Client): string {
   const first = client.firstName || '';
@@ -305,7 +310,7 @@ export function RecipientSelector({
                 </div>
                 
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {selectedClients.map((client: { id: string; [key: string]: unknown }) => {
+                  {selectedClients.map((client) => {
                     const status = getClientStatus(client);
                     const displayName = getClientDisplayName(client);
                     return (
@@ -357,15 +362,15 @@ export function RecipientSelector({
               </div>
               
               <VirtualizedClientList
-                clients={filteredClients.filter(client => !selectedClients.some(s => s.id === client.id))}
+                clients={filteredClients.filter(client => !selectedClients.some(s => s.id === client.id)) as unknown as VLProps['clients']}
                 maxHeightClass="max-h-64"
                 rowHeight={72}
                 threshold={50}
-                getDisplayName={getClientDisplayName}
-                getStatus={getClientStatus}
-                isEligible={isClientEligible}
-                onClientClick={handleClientSelect}
-                contactDetail={(client) => channel === 'email' ? client.email || 'No email address' : client.phone || 'No phone number'}
+                getDisplayName={getClientDisplayName as unknown as VLProps['getDisplayName']}
+                getStatus={getClientStatus as unknown as VLProps['getStatus']}
+                isEligible={isClientEligible as unknown as VLProps['isEligible']}
+                onClientClick={handleClientSelect as unknown as VLProps['onClientClick']}
+                contactDetail={(client) => channel === 'email' ? (client.email as string) || 'No email address' : (client.phone as string) || 'No phone number'}
                 showCheckbox
                 showHoverAction
                 emptyMessage="No available clients found"
@@ -448,17 +453,17 @@ export function RecipientSelector({
                 <div className="space-y-3">
                   <Label className="text-sm font-medium text-muted-foreground">GROUP MEMBERS</Label>
                   <VirtualizedClientList
-                    clients={getGroupClients(selectedGroup)}
+                    clients={getGroupClients(selectedGroup) as unknown as VLProps['clients']}
                     maxHeightClass="max-h-64"
                     rowHeight={72}
                     threshold={50}
-                    getDisplayName={getClientDisplayName}
-                    getStatus={getClientStatus}
-                    isEligible={isClientEligible}
+                    getDisplayName={getClientDisplayName as unknown as VLProps['getDisplayName']}
+                    getStatus={getClientStatus as unknown as VLProps['getStatus']}
+                    isEligible={isClientEligible as unknown as VLProps['isEligible']}
                     onClientClick={() => {}}
-                    contactDetail={(client) => channel === 'email' ? client.email || 'No email address' : client.phone || 'No phone number'}
+                    contactDetail={(client) => channel === 'email' ? (client.email as string) || 'No email address' : (client.phone as string) || 'No phone number'}
                     emptyMessage="No group members"
-                    getRowClassName={(client) => isClientEligible(client) ? 'bg-green-50/50 border-green-200/60' : 'bg-orange-50/50 border-orange-200'}
+                    getRowClassName={(client) => isClientEligible(client as unknown as Client) ? 'bg-green-50/50 border-green-200/60' : 'bg-orange-50/50 border-orange-200'}
                   />
                 </div>
               </div>
