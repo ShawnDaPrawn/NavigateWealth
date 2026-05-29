@@ -797,7 +797,9 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
       return;
     }
 
-    const data = will.data;
+    // The living_will branch returned above, so this is a standard will:
+    // narrow will.data (a non-discriminated union) to WillDataPayload.
+    const data = will.data as WillDataPayload;
     const displayDate = formatDate(will.createdAt);
     const status = will.status === 'draft' ? 'DRAFT' : will.status.toUpperCase();
     const fullName = (data.personalDetails.fullName || '').trim();
