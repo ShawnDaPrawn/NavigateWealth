@@ -32,6 +32,7 @@ import {
   CATEGORY_ICON_MAP,
   formatDate
 } from '../admin/modules/publications';
+import type { Article } from '../admin/modules/publications';
 
 // ---------------------------------------------------------------------------
 // Treat CATEGORY_ICON_MAP as a flexible Record for runtime lookups.
@@ -153,7 +154,7 @@ export function ResourcesPage() {
   // Group articles by category — uses a dynamic name→id lookup built from the
   // current insightsCategories instead of a hardcoded slug map.
   const groupedArticles = useMemo(() => {
-    const map: Record<string, Array<{ category_id?: string; category_slug?: string; category_name?: string; [key: string]: unknown }>> = {};
+    const map: Record<string, Article[]> = {};
 
     // Build a dynamic name → category-id map from live API categories
     const categoryNameToId: Record<string, string> = {};
@@ -163,21 +164,21 @@ export function ResourcesPage() {
       categoryNameToId[cat.name] = cat.id;
     });
 
-    articlesList.forEach((article: { category_id?: string; category_slug?: string; category_name?: string; [key: string]: unknown }) => {
+    articlesList.forEach((article) => {
       // Always add to the synthetic "All" bucket
       if (map['__all__']) {
         map['__all__'].push(article);
       }
 
       // Try to find matching bucket by ID first, then slug, then name
-      let catKey = article.category_id;
+      let catKey: string = article.category_id || '';
 
       if (!map[catKey]) {
         catKey = article.category_slug || '';
       }
 
       if (!map[catKey] && article.category_name) {
-        catKey = categoryNameToId[article.category_name];
+        catKey = categoryNameToId[article.category_name] ?? '';
       }
 
       if (catKey && map[catKey] !== undefined) {
@@ -230,7 +231,7 @@ export function ResourcesPage() {
     const q = query.toLowerCase();
 
     // Search articles
-    articlesList.forEach((article: { category_id?: string; category_slug?: string; category_name?: string; [key: string]: unknown }) => {
+    articlesList.forEach((article) => {
       const categoryName = article.category_name || article.category?.name || '';
       if (
         article.title.toLowerCase().includes(q) || 
@@ -242,7 +243,7 @@ export function ResourcesPage() {
           type: 'article',
           slug: article.slug,
           id: article.id,
-          link: article.link,
+          link: (article as { link?: string }).link,
           excerpt: article.excerpt,
           category_name: categoryName,
           author_name: article.author_name,
