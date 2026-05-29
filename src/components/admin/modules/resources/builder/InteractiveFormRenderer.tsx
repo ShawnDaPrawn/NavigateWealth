@@ -1,6 +1,21 @@
 import React from 'react';
 import DOMPurify from 'dompurify';
-import { FormBlock, FieldGridItem, RepeaterColumn } from './types';
+import {
+  FormBlock,
+  FieldGridItem,
+  RepeaterColumn,
+  TextData,
+  SectionHeaderData,
+  FieldGridData,
+  CheckboxTableData,
+  RadioOptionsData,
+  ComplianceQuestionData,
+  SignatureData,
+  InstructionalCalloutData,
+  SpacerData,
+  ContainerData,
+  RepeaterData,
+} from './types';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Checkbox } from '../../../../ui/checkbox';
@@ -31,7 +46,7 @@ export const InteractiveFormRenderer = ({
         return (
           <div 
             className="prose max-w-none mb-4 text-sm text-gray-700"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.data.content) }} 
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize((block.data as TextData).content) }}
           />
         );
 
@@ -39,20 +54,20 @@ export const InteractiveFormRenderer = ({
         return (
           <div className="mt-8 mb-4 pb-2 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">
-              {block.data.number && <span className="mr-2 text-gray-500">{block.data.number}</span>}
-              {block.data.title}
+              {!!(block.data as SectionHeaderData).number && <span className="mr-2 text-gray-500">{(block.data as SectionHeaderData).number}</span>}
+              {(block.data as SectionHeaderData).title}
             </h3>
           </div>
         );
 
       case 'field_grid':
-        const gridClass = block.data.columns === 3 ? 'grid-cols-1 md:grid-cols-3' : 
-                         block.data.columns === 4 ? 'grid-cols-1 md:grid-cols-4' : 
+        const gridClass = (block.data as FieldGridData).columns === 3 ? 'grid-cols-1 md:grid-cols-3' :
+                         (block.data as FieldGridData).columns === 4 ? 'grid-cols-1 md:grid-cols-4' :
                          'grid-cols-1 md:grid-cols-2';
         
         return (
           <div className={`grid ${gridClass} gap-6 mb-6`}>
-            {block.data.fields.map((field: FieldGridItem, idx: number) => {
+            {(block.data as FieldGridData).fields.map((field: FieldGridItem, idx: number) => {
                const fieldKey = field.key || `field_${block.id}_${idx}`;
                
                return (
@@ -62,7 +77,7 @@ export const InteractiveFormRenderer = ({
                      {field.required && <span className="text-red-500 ml-1">*</span>}
                    </Label>
                    <Input 
-                     value={responses[fieldKey] || ''}
+                     value={String(responses[fieldKey] ?? '')}
                      onChange={(e) => onChange(fieldKey, e.target.value)}
                      placeholder={field.placeholder}
                      disabled={readOnly}
@@ -78,14 +93,14 @@ export const InteractiveFormRenderer = ({
         const radioKey = (block.data.key as string) || `radio_${block.id}`;
         return (
             <div className="mb-6 space-y-3">
-                <Label className="text-base font-semibold text-gray-900">{block.data.label}</Label>
-                <RadioGroup 
-                    value={responses[radioKey]} 
+                <Label className="text-base font-semibold text-gray-900">{(block.data as RadioOptionsData).label}</Label>
+                <RadioGroup
+                    value={responses[radioKey] as string}
                     onValueChange={(val) => onChange(radioKey, val)}
                     disabled={readOnly}
-                    className={cn("gap-3", block.data.layout === 'horizontal' ? "flex flex-wrap" : "flex flex-col")}
+                    className={cn("gap-3", (block.data as RadioOptionsData).layout === 'horizontal' ? "flex flex-wrap" : "flex flex-col")}
                 >
-                    {block.data.options?.map((opt: string, idx: number) => (
+                    {(block.data as RadioOptionsData).options?.map((opt: string, idx: number) => (
                         <div key={idx} className="flex items-center space-x-2">
                             <RadioGroupItem value={opt} id={`${block.id}-${idx}`} />
                             <Label htmlFor={`${block.id}-${idx}`} className="font-normal">{opt}</Label>
@@ -104,23 +119,23 @@ export const InteractiveFormRenderer = ({
                     <TableHeader className="bg-gray-50">
                         <TableRow>
                             <TableHead className="w-[40%]">Item</TableHead>
-                            {block.data.columns?.map((col: string, idx: number) => (
+                            {(block.data as CheckboxTableData).columns?.map((col: string, idx: number) => (
                                 <TableHead key={idx} className="text-center">{col}</TableHead>
                             ))}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {block.data.rows?.map((row: string, rowIdx: number) => (
+                        {(block.data as CheckboxTableData).rows?.map((row: string, rowIdx: number) => (
                             <TableRow key={rowIdx}>
                                 <TableCell className="font-medium">{row}</TableCell>
-                                {block.data.columns?.map((col: string, colIdx: number) => {
+                                {(block.data as CheckboxTableData).columns?.map((col: string, colIdx: number) => {
                                     // Key strategy: table_blockId_rowIdx_colIdx or table_blockId_rowIdx (value = col)
                                     // Let's use boolean for each cell: table_blockId_row_col
                                     const cellKey = `chk_${block.id}_${rowIdx}_${colIdx}`;
                                     return (
                                         <TableCell key={colIdx} className="text-center">
                                             <Checkbox 
-                                                checked={responses[cellKey] || false}
+                                                checked={(responses[cellKey] as boolean) || false}
                                                 onCheckedChange={(c) => onChange(cellKey, c)}
                                                 disabled={readOnly}
                                             />
@@ -144,10 +159,10 @@ export const InteractiveFormRenderer = ({
                     <AlertCircle className="h-5 w-5 text-indigo-600 mt-0.5" />
                     <div className="flex-1 space-y-3">
                         <Label className="text-base font-medium text-slate-900 block">
-                            {block.data.question}
+                            {(block.data as ComplianceQuestionData).question}
                         </Label>
-                        <RadioGroup 
-                            value={responses[compKey]} 
+                        <RadioGroup
+                            value={responses[compKey] as string}
                             onValueChange={(val) => onChange(compKey, val)}
                             disabled={readOnly}
                             className="flex gap-6"
@@ -162,13 +177,13 @@ export const InteractiveFormRenderer = ({
                             </div>
                         </RadioGroup>
 
-                        {block.data.showDetails && (
+                        {!!(block.data as ComplianceQuestionData).showDetails && (
                             <div className="pt-2">
                                 <Label className="text-sm text-slate-600 mb-1 block">
-                                    {block.data.detailsLabel || "Please provide details:"}
+                                    {(block.data as ComplianceQuestionData).detailsLabel || "Please provide details:"}
                                 </Label>
-                                <Textarea 
-                                    value={responses[detailsKey] || ''}
+                                <Textarea
+                                    value={String(responses[detailsKey] ?? '')}
                                     onChange={(e) => onChange(detailsKey, e.target.value)}
                                     disabled={readOnly}
                                     className="bg-white"
@@ -183,7 +198,7 @@ export const InteractiveFormRenderer = ({
       case 'signature':
         return (
             <div className="mb-8 space-y-6">
-                {block.data.signatories?.map((sig: { label: string; key: string }, idx: number) => {
+                {(block.data as SignatureData).signatories?.map((sig: { label: string; key: string }, idx: number) => {
                     const sigKey = sig.key || `sig_${block.id}_${idx}`;
                     return (
                         <div key={idx} className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
@@ -191,7 +206,7 @@ export const InteractiveFormRenderer = ({
                             <div className="h-32 bg-white border border-gray-200 rounded flex items-center justify-center cursor-pointer hover:border-indigo-400 transition-colors relative">
                                 {responses[sigKey] ? (
                                     <div className="text-center">
-                                        <p className="font-handwriting text-2xl text-indigo-900">{responses[sigKey]}</p>
+                                        <p className="font-handwriting text-2xl text-indigo-900">{String(responses[sigKey] ?? '')}</p>
                                         <p className="text-xs text-gray-400 mt-1">Digitally Signed on {new Date().toLocaleDateString()}</p>
                                     </div>
                                 ) : (
@@ -201,7 +216,7 @@ export const InteractiveFormRenderer = ({
                                     </div>
                                 )}
                             </div>
-                            {block.data.showDate && (
+                            {!!(block.data as SignatureData).showDate && (
                                 <div className="mt-2 text-xs text-gray-500 text-right">
                                     Date: {new Date().toLocaleDateString()}
                                 </div>
@@ -228,22 +243,23 @@ export const InteractiveFormRenderer = ({
         return (
             <div className={cn("mb-6 p-4 rounded-md border flex gap-3", colors[block.data.type as keyof typeof colors] || colors.info)}>
                 <Icon className="h-5 w-5 flex-shrink-0" />
-                <p className="text-sm leading-relaxed">{block.data.text}</p>
+                <p className="text-sm leading-relaxed">{(block.data as InstructionalCalloutData).text}</p>
             </div>
         );
         
       case 'spacer':
-        return <div style={{ height: block.data.height || '20px' }}></div>;
+        return <div style={{ height: (block.data as SpacerData).height || '20px' }}></div>;
 
       case 'page_break':
         return <hr className="my-8 border-t-2 border-dashed border-gray-200" />;
 
       case 'container': {
         // Conditional container — in interactive mode, evaluate condition and render children
-        const containerBlocks: FormBlock[] = block.data.blocks || [];
-        const condVar = block.data.conditionVariable;
-        const condVal = block.data.conditionValue;
-        const condOp = block.data.conditionOperator || 'equals';
+        const cData = block.data as ContainerData;
+        const containerBlocks: FormBlock[] = (cData.blocks as FormBlock[]) || [];
+        const condVar = cData.conditionVariable as string | undefined;
+        const condVal = cData.conditionValue;
+        const condOp = cData.conditionOperator || 'equals';
 
         // Evaluate condition against current responses
         const actualValue = condVar ? responses[condVar] : undefined;
@@ -280,7 +296,7 @@ export const InteractiveFormRenderer = ({
 
       case 'repeater': {
         // Repeater — iterate over array data in responses
-        const repData = block.data;
+        const repData = block.data as RepeaterData;
         const items: Record<string, unknown>[] = (responses[repData.variableName] as Record<string, unknown>[]) || [];
         const columns: RepeaterColumn[] = (repData.columns as RepeaterColumn[]) || [];
         const isUserPopulated = !!repData.userPopulated;
@@ -364,14 +380,14 @@ export const InteractiveFormRenderer = ({
                           >
                             {isUserPopulated && !readOnly ? (
                               <Input
-                                value={item[col.key] ?? ''}
+                                value={String(item[col.key] ?? '')}
                                 onChange={(e) => updateCell(ri, col.key, e.target.value)}
                                 placeholder={col.header}
                                 className="h-8 text-sm border-transparent hover:border-gray-200 focus:border-indigo-300 bg-transparent"
                               />
                             ) : (
                               <span className="px-1.5 py-1 text-gray-700">
-                                {item[col.key] ?? ''}
+                                {String(item[col.key] ?? '')}
                               </span>
                             )}
                           </td>
