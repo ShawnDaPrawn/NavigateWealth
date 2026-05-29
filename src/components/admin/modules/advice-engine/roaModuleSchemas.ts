@@ -1,4 +1,4 @@
-import { RoAModule } from './DraftRoAInterface';
+import { RoAModule } from './components/DraftRoAInterface';
 
 export const ROA_MODULE_SCHEMAS: Record<string, RoAModule> = {
   medical_aid: {

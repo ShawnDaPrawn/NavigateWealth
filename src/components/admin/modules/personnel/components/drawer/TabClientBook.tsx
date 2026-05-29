@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from '../../../../../ui/avatar';
 import { Badge } from '../../../../../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Briefcase, Users } from 'lucide-react';
-import { ClientSummary } from '../../PersonnelApi';
+import { ClientSummary } from '../../types';
 
 interface TabClientBookProps {
   clients: ClientSummary[];

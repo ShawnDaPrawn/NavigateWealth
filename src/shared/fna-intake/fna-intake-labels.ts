@@ -1,4 +1,4 @@
-import type { BatchFNAStatusItem } from '../hooks/useFnaBatchStatus';
+import type { BatchFNAStatusItem } from './hooks/useFnaBatchStatus';
 
 export type FnaHubView = 'results' | 'intake' | 'waiting' | 'start';
 
