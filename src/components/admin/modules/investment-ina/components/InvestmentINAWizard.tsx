@@ -41,7 +41,9 @@ import type {
   RiskProfile,
   GoalType,
   PriorityLevel,
-  InvestmentINAWizardStep
+  InvestmentINAWizardStep,
+  InvestmentINAResults,
+  RiskProfileReturns
 } from '../types';
 import { DEFAULT_ECONOMIC_ASSUMPTIONS, GOAL_TYPE_LABELS, RISK_PROFILE_LABELS } from '../constants';
 import { InvestmentINAApiService } from '../api';
@@ -71,7 +73,7 @@ export function InvestmentINAWizard({
   const [inputs, setInputs] = useState<Partial<InvestmentINAInputs>>({});
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
-  const [results, setResults] = useState<Record<string, unknown> | null>(null);
+  const [results, setResults] = useState<InvestmentINAResults | null>(null);
   const prefillEnabled = isFormPrefillEnabled();
 
   const { PrefillUI, startPrefill } = useFormPrefill({
@@ -346,7 +348,7 @@ export function InvestmentINAWizard({
 /** Shared props for Investment INA step components */
 interface INAStepProps {
   inputs: Partial<InvestmentINAInputs>;
-  updateInputs?: (updates: Partial<InvestmentINAInputs>) => void;
+  updateInputs: (updates: Partial<InvestmentINAInputs>) => void;
 }
 
 function ClientOverviewStep({ inputs, updateInputs }: INAStepProps) {
@@ -536,7 +538,7 @@ function EconomicAssumptionsStep({ inputs, updateInputs }: INAStepProps) {
                       expectedRealReturns: {
                         ...inputs.expectedRealReturns,
                         [profile]: parseFloat(e.target.value) / 100
-                      }
+                      } as RiskProfileReturns
                     })}
                   />
                 </div>
@@ -689,7 +691,7 @@ function GoalEditorCard({ goal, index, isEditing, onEdit, onCollapse, onUpdate, 
           </div>
           <div className="space-y-2">
             <Label>Goal Type</Label>
-            <Select value={goal.goalType} onValueChange={(value) => onUpdate({ goalType: value })}>
+            <Select value={goal.goalType} onValueChange={(value) => onUpdate({ goalType: value as GoalType })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -702,7 +704,7 @@ function GoalEditorCard({ goal, index, isEditing, onEdit, onCollapse, onUpdate, 
           </div>
           <div className="space-y-2">
             <Label>Priority</Label>
-            <Select value={goal.priorityLevel} onValueChange={(value) => onUpdate({ priorityLevel: value })}>
+            <Select value={goal.priorityLevel} onValueChange={(value) => onUpdate({ priorityLevel: value as PriorityLevel })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -808,7 +810,7 @@ function ReviewStep({ inputs }: { inputs: Partial<InvestmentINAInputs> }) {
   );
 }
 
-function ResultsStep({ results }: { results: Record<string, unknown> | null }) {
+function ResultsStep({ results }: { results: InvestmentINAResults | null }) {
   if (!results) {
     return (
       <div className="text-center py-12">
