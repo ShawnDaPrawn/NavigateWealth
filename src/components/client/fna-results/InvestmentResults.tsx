@@ -31,6 +31,32 @@ interface InvestmentResultsProps {
   fna: InvestmentINA;
 }
 
+// fna-api types results.goalResults as Array<Record<string, unknown>>; this is
+// the shape this view actually reads. Leaf numbers consumed by arithmetic /
+// formatCurrency are declared required so their guarded reads stay numeric.
+interface GoalResult {
+  goalId?: string;
+  goalName?: string;
+  goalType?: string;
+  goalStatus?: string;
+  statusRationale?: string;
+  requiredMonthly?: number;
+  targetAmount?: number;
+  fundingGap?: {
+    fundingPercentage?: number;
+    shortfall?: number;
+    goalRequiredReal: number;
+    hasShortfall?: boolean;
+  };
+  projectedCapital?: { totalProjectedCapital: number };
+  timeHorizon?: { yearsToGoal?: number };
+  requiredContributions?: {
+    canMeetGoal?: boolean;
+    requiredAdditionalMonthly: number;
+    alternativeLumpSumToday: number;
+  };
+}
+
 export function InvestmentResults({ fna }: InvestmentResultsProps) {
   const { results, inputs } = fna;
 
@@ -57,7 +83,7 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
 
   // Safely access nested data
   const portfolioSummary = results?.portfolioSummary;
-  const goalResults = results?.goalResults || [];
+  const goalResults = (results?.goalResults || []) as unknown as GoalResult[];
   const recommendations = results?.recommendations || [];
   const economicAssumptions = results?.economicAssumptions;
 
@@ -232,7 +258,7 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {goalResults.map((goal: { goalId?: string; goalName?: string; goalStatus?: string; fundingGap?: { fundingPercentage?: number; shortfall?: number }; requiredMonthly?: number; targetAmount?: number; timeHorizon?: number; [key: string]: unknown }, index: number) => {
+            {goalResults.map((goal, index) => {
               const isOnTrack = goal.goalStatus === 'on-track';
               const fundingPct = goal.fundingGap?.fundingPercentage || 0;
               
