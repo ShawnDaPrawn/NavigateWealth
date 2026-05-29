@@ -16,18 +16,18 @@ const columns = [
     render: (_: unknown, record: ComplianceRecord) => (
       <div className="space-y-1">
         <div className="text-sm font-medium">
-          {record.tatDays}/{record.targetTAT} days
+          {(record.tatDays ?? 0)}/{(record.targetTAT ?? 0)} days
         </div>
         <div className="w-full bg-gray-200 rounded-full h-1.5">
           <div 
             className={`h-1.5 rounded-full ${
-              record.tatDays <= record.targetTAT * 0.7
+              (record.tatDays ?? 0) <= (record.targetTAT ?? 0) * 0.7
                 ? 'bg-green-500' 
-                : record.tatDays <= record.targetTAT 
+                : (record.tatDays ?? 0) <= (record.targetTAT ?? 0) 
                 ? 'bg-yellow-500' 
                 : 'bg-red-500'
             }`}
-            style={{ width: `${Math.min((record.tatDays / record.targetTAT) * 100, 100)}%` }}
+            style={{ width: `${Math.min(((record.tatDays ?? 0) / (record.targetTAT ?? 0)) * 100, 100)}%` }}
           />
         </div>
       </div>

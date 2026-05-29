@@ -142,6 +142,18 @@ export interface ComplianceRecord {
   notes?: string;
   attachments?: number;
   tags?: string[];
+  // Subtype-specific fields surfaced on compliance record views (POPIA/PAIA,
+  // Complaints/TCF, Debarment/Supervision tabs). Optional on the base record.
+  checkpointsCompleted?: number;
+  checkpointsTotal?: number;
+  checkResult?: string;
+  complianceStatus?: string;
+  consentStatus?: string;
+  mitigationStatus?: string;
+  publicationStatus?: string;
+  requestStatus?: string;
+  targetTAT?: number;
+  tatDays?: number;
 }
 
 // ============================================================================
