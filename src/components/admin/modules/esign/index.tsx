@@ -27,7 +27,7 @@ import { useEnvelopeActions } from './hooks/useEnvelopeActions';
 import { EsignDashboard } from './components/EsignDashboard';
 import { esignApi } from './api';
 
-import type { EsignEnvelope, SignerFormData, EsignField, EsignTemplateRecord } from './types';
+import type { EsignEnvelope, SignerFormData, EsignField, EsignTemplateRecord, EsignSigner } from './types';
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 
 // Heavy wizard / inspector components — lazy-loaded (only rendered on user action)
@@ -227,7 +227,7 @@ export function EsignModule() {
       Object.values(params.documentMap || {})[0];
 
     const fields = params.template.fields
-      .map((templateField, index) => {
+      .map((templateField, index): EsignField | null => {
         const recipient = params.signers[templateField.recipientIndex];
         if (!recipient) return null;
 
@@ -285,7 +285,7 @@ export function EsignModule() {
     try {
       await syncDraftSigners(result.envelope.id, wizardData.signers);
     } catch (draftErr) {
-      logger.warn('Failed to persist draft signers on template draft (non-critical):', draftErr);
+      logger.warn('Failed to persist draft signers on template draft (non-critical):', { error: draftErr });
     }
 
     const hydratedFields = await hydrateTemplateFieldsOntoEnvelope({
@@ -441,7 +441,7 @@ export function EsignModule() {
       try {
         await syncDraftSigners(activeEnvelope.id, wizardData.signers);
       } catch (draftErr) {
-        logger.warn('Failed to update draft signers on existing envelope (non-critical):', draftErr);
+        logger.warn('Failed to update draft signers on existing envelope (non-critical):', { error: draftErr });
       }
       return { envelope: activeEnvelope, fields: activeEnvelope.fields ?? [] };
     }
@@ -486,7 +486,7 @@ export function EsignModule() {
     try {
       await syncDraftSigners(result.id, wizardData.signers);
     } catch (draftErr) {
-      logger.warn('Failed to persist draft signers (non-critical):', draftErr);
+      logger.warn('Failed to persist draft signers (non-critical):', { error: draftErr });
     }
 
     let hydratedFields: EsignField[] = [];
@@ -498,7 +498,7 @@ export function EsignModule() {
           signers: wizardData.signers,
         });
       } catch (hydrateErr) {
-        logger.warn('Failed to hydrate template fields (non-critical):', hydrateErr);
+        logger.warn('Failed to hydrate template fields (non-critical):', { error: hydrateErr });
       }
     }
 
@@ -525,7 +525,7 @@ export function EsignModule() {
       try {
         await syncDraftSigners(activeEnvelope.id, wizardData.signers);
       } catch (draftErr) {
-        logger.warn('Failed to update draft signers on existing envelope (non-critical):', draftErr);
+        logger.warn('Failed to update draft signers on existing envelope (non-critical):', { error: draftErr });
       }
       setView('prepare');
       return;
@@ -562,7 +562,7 @@ export function EsignModule() {
        setActiveEnvelope({ ...activeEnvelope, fields });
        toast.success('Fields saved successfully');
     } catch (err) {
-       logger.error(err);
+       logger.error('Failed to save esign fields', err);
        toast.error('Failed to save fields');
     }
   };
@@ -646,7 +646,7 @@ export function EsignModule() {
         try {
           await deleteEnvelope(activeEnvelope.id);
         } catch (cleanupErr) {
-          logger.warn('Template builder draft cleanup failed (non-critical):', cleanupErr);
+          logger.warn('Template builder draft cleanup failed (non-critical):', { error: cleanupErr });
         }
       }
 
@@ -767,7 +767,7 @@ export function EsignModule() {
 
       if (realSigners.length > 0) {
         // Sent envelopes or envelopes that already went through invite
-        signers = realSigners.map((s: { name: string; email: string; role?: string; order?: number; otp_required?: boolean; requires_otp?: boolean; access_code?: string; client_id?: string }) => ({
+        signers = realSigners.map((s: EsignSigner & { requires_otp?: boolean }) => ({
           name: s.name,
           email: s.email,
           role: s.role || 'Signer',
