@@ -149,7 +149,7 @@ export const renderBlock = (
       return null;
     
     default:
-      console.warn('[renderBlock] Unknown block type:', (block as Record<string, unknown>).type);
+      console.warn('[renderBlock] Unknown block type:', (block as unknown as Record<string, unknown>).type);
       return null;
   }
 };
@@ -206,7 +206,7 @@ function renderFieldGrid(
               {field.label}
             </div>
             <div className="min-h-8 border border-gray-200 p-1 text-[9.5px] font-medium text-blue-900">
-              {value || ''}
+              {(value as React.ReactNode) || ''}
             </div>
           </div>
         );
@@ -281,12 +281,12 @@ function renderTable(
                 
                 if (cell.type === 'field') {
                   const resolvedValue = resolveNestedKey(formData, cell.value);
-                  content = resolvedValue || '';
+                  content = (resolvedValue as string) || '';
                 } else {
                   // Replace {{key}} template expressions in static text
                   content = content.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (_match: string, key: string) => {
                     const resolvedValue = resolveNestedKey(formData, key);
-                    return resolvedValue || _match;
+                    return (resolvedValue as string) || _match;
                   });
                 }
 
@@ -386,7 +386,7 @@ function renderClientSummary(
           <div key={i}>
             <div className="text-[8px] text-gray-500 uppercase tracking-wide mb-0.5">{item.l}</div>
             <div className="font-medium text-gray-900 border-b border-gray-300 pb-0.5 min-h-[14px]">
-              {item.v}
+              {item.v as React.ReactNode}
             </div>
           </div>
         ))}
@@ -621,7 +621,7 @@ function renderCombInput(
 ) {
   const count = data.charCount || 13;
   // Resolve value from data binding key, fall back to static value
-  const value = data.key ? (resolveNestedKey(formData, data.key) || data.value || '') : (data.value || '');
+  const value = (data.key ? (resolveNestedKey(formData, data.key) || data.value || '') : (data.value || '')) as string;
   
   return (
     <div className="mb-2">
@@ -650,10 +650,10 @@ function renderBankDetails(
   formData: Record<string, unknown>,
   resolveNestedKey: ResolveFunction
 ) {
-  const bankName = resolveNestedKey(formData, 'banking.bankName') || resolveNestedKey(formData, 'bank.bankName') || '';
-  const branchCode = resolveNestedKey(formData, 'banking.branchCode') || resolveNestedKey(formData, 'bank.branchCode') || '';
-  const accountNumber = resolveNestedKey(formData, 'banking.accountNumber') || resolveNestedKey(formData, 'bank.accountNumber') || '';
-  const accountHolder = resolveNestedKey(formData, 'banking.accountHolderName') || resolveNestedKey(formData, 'bank.accountHolderName') || '';
+  const bankName = (resolveNestedKey(formData, 'banking.bankName') || resolveNestedKey(formData, 'bank.bankName') || '') as React.ReactNode;
+  const branchCode = (resolveNestedKey(formData, 'banking.branchCode') || resolveNestedKey(formData, 'bank.branchCode') || '') as React.ReactNode;
+  const accountNumber = (resolveNestedKey(formData, 'banking.accountNumber') || resolveNestedKey(formData, 'bank.accountNumber') || '') as React.ReactNode;
+  const accountHolder = (resolveNestedKey(formData, 'banking.accountHolderName') || resolveNestedKey(formData, 'bank.accountHolderName') || '') as React.ReactNode;
 
   return (
     <div className="border border-gray-300 rounded-sm p-4 bg-gray-50/50">
@@ -780,10 +780,10 @@ function renderAddressBlock(
   resolveNestedKey: ResolveFunction
 ) {
   // Attempt to resolve address data if available
-  const physLine1 = resolveNestedKey(formData, 'address.physicalLine1') || '';
-  const physLine2 = resolveNestedKey(formData, 'address.physicalLine2') || '';
-  const physSuburb = resolveNestedKey(formData, 'address.physicalSuburb') || resolveNestedKey(formData, 'address.physicalCity') || '';
-  const physCode = resolveNestedKey(formData, 'address.physicalCode') || '';
+  const physLine1 = (resolveNestedKey(formData, 'address.physicalLine1') || '') as React.ReactNode;
+  const physLine2 = (resolveNestedKey(formData, 'address.physicalLine2') || '') as React.ReactNode;
+  const physSuburb = (resolveNestedKey(formData, 'address.physicalSuburb') || resolveNestedKey(formData, 'address.physicalCity') || '') as React.ReactNode;
+  const physCode = (resolveNestedKey(formData, 'address.physicalCode') || '') as React.ReactNode;
 
   return (
     <div className="grid grid-cols-2 gap-8">
@@ -925,7 +925,7 @@ function renderRepeater(
                   className="p-2 border-r last:border-r-0 border-gray-300"
                   style={{ width: col.width || 'auto', flex: col.width ? 'none' : 1 }}
                 >
-                  {item[col.key] ?? ''}
+                  {(item[col.key] ?? '') as React.ReactNode}
                 </div>
               ))}
             </div>
