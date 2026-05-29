@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, Info, Users, Shield, Wallet, Clock, AlertCircle, Heart, RefreshCw, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
@@ -56,7 +56,12 @@ export function Step1InputForm({
   } = useClientProductKeys(clientId);
   
   const form = useForm<MedicalFNAFormValues>({
-    resolver: zodResolver(MedicalFNAInputSchema),
+    // zodResolver infers its INPUT type from the schema, where every field with
+    // a .default() is optional; MedicalFNAFormValues (z.infer = OUTPUT) has them
+    // required. The form operates on the OUTPUT shape (defaults are always
+    // present), so assert the resolver to that shape. Runtime behaviour is
+    // unchanged — zod still applies the defaults.
+    resolver: zodResolver(MedicalFNAInputSchema) as unknown as Resolver<MedicalFNAFormValues>,
     defaultValues: {
       spousePartner: initialData?.spousePartner ?? false,
       childrenCount: initialData?.childrenCount ?? 0,
@@ -118,11 +123,14 @@ export function Step1InputForm({
 
     // 1. Profile Data
     if (profile) {
-      if (profile.spouseFullName || profile.maritalStatus === 'Married') {
+      // Some legacy auto-fill fields (spouseFullName, dependants, currentAge)
+      // are present at runtime but not on the typed ProfileData shape.
+      const legacy = profile as unknown as Record<string, unknown>;
+      if (legacy.spouseFullName || profile.maritalStatus === 'Married') {
         form.setValue('spousePartner', true);
       }
-      
-      const childCount = (profile.dependants || []).filter((d: { relationship?: string }) => d.relationship === 'Child').length;
+
+      const childCount = ((legacy.dependants as Array<{ relationship?: string }> | undefined) || []).filter((d) => d.relationship === 'Child').length;
       if (childCount > 0) form.setValue('childrenCount', childCount);
 
       // Calculate age from DOB if available
@@ -135,9 +143,9 @@ export function Step1InputForm({
           age--;
         }
         form.setValue('currentAge', age);
-      } else if ((profile as Record<string, unknown>).currentAge) {
+      } else if (legacy.currentAge) {
         // Fallback: direct currentAge field
-        form.setValue('currentAge', (profile as Record<string, unknown>).currentAge as number);
+        form.setValue('currentAge', legacy.currentAge as number);
       }
     }
 
