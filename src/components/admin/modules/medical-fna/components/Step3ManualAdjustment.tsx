@@ -49,8 +49,8 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
     icon: React.ComponentType<{ className?: string }>;
     systemValue: string;
     overrideValue: string | number | boolean | undefined;
-    onOverrideChange: (value: string) => void;
-    options?: Array<{ value: string; label: string }>;
+    onOverrideChange: (value: string | boolean) => void;
+    options?: string[];
     type?: string;
   }) => (
     <Card>
@@ -74,23 +74,23 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
             Adviser Override
           </Label>
           {type === 'select' ? (
-            <Select 
-              value={overrideValue || systemValue} 
+            <Select
+              value={String(overrideValue || systemValue)}
               onValueChange={onOverrideChange}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select override..." />
               </SelectTrigger>
               <SelectContent>
-                {options.map((opt: { value: string; label: string }) => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                {options?.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           ) : type === 'switch' ? (
             <div className="flex items-center space-x-2 pt-2">
-               <Switch 
-                 checked={overrideValue !== undefined ? overrideValue : (systemValue === 'Recommended')} 
+               <Switch
+                 checked={overrideValue !== undefined ? Boolean(overrideValue) : (systemValue === 'Recommended')}
                  onCheckedChange={onOverrideChange}
                />
                <span className="text-sm">
@@ -98,8 +98,8 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
                </span>
             </div>
           ) : (
-            <Input 
-              value={overrideValue || systemValue}
+            <Input
+              value={String(overrideValue || systemValue)}
               onChange={(e) => onOverrideChange(e.target.value)}
             />
           )}
@@ -123,7 +123,7 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
           icon={Shield}
           systemValue={calculations.recommendedInHospitalCover}
           overrideValue={adjustments.hospitalCoverOverride}
-          onOverrideChange={(val: string) => handleOverrideChange('hospitalCoverOverride', val)}
+          onOverrideChange={(val: string | boolean) => handleOverrideChange('hospitalCoverOverride', val)}
           options={['100%', '200%']}
         />
         
@@ -132,7 +132,7 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
           icon={Wallet}
           systemValue={calculations.msaRecommended ? "Recommended" : "Not Recommended"}
           overrideValue={adjustments.msaOverride}
-          onOverrideChange={(val: boolean) => handleOverrideChange('msaOverride', val)}
+          onOverrideChange={(val: string | boolean) => handleOverrideChange('msaOverride', val)}
           type="switch"
         />
 
@@ -141,7 +141,7 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
           icon={Users}
           systemValue={calculations.recommendedDependents}
           overrideValue={adjustments.dependentsOverride}
-          onOverrideChange={(val: string) => handleOverrideChange('dependentsOverride', val)}
+          onOverrideChange={(val: string | boolean) => handleOverrideChange('dependentsOverride', val)}
           type="text"
         />
 
@@ -150,7 +150,7 @@ export function Step3ManualAdjustment({ calculations, initialAdjustments, onNext
           icon={Clock}
           systemValue={calculations.ljpBand}
           overrideValue={adjustments.ljpBandOverride}
-          onOverrideChange={(val: string) => handleOverrideChange('ljpBandOverride', val)}
+          onOverrideChange={(val: string | boolean) => handleOverrideChange('ljpBandOverride', val)}
           options={['0%', '5%', '25%', '50%', '75%']}
         />
       </div>
