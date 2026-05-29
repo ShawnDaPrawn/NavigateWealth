@@ -75,11 +75,24 @@ const LazyFNAResultsView = React.lazy(() =>
 
 // ==================== CONFIG TYPE ====================
 
+// The registry is a dynamic dispatch table: each module's concrete session /
+// result type is erased to a generic Record so consumers can share one config
+// shape (they spread props into the components and index into the results,
+// e.g. `fnaData.results`). These helpers coerce each module's typed API promise
+// to that generic shape at this single boundary.
+const asRecordOrNull = <T,>(p: Promise<T | null>): Promise<Record<string, unknown> | null> =>
+  p as unknown as Promise<Record<string, unknown> | null>;
+const asRecord = <T,>(p: Promise<T>): Promise<Record<string, unknown>> =>
+  p as unknown as Promise<Record<string, unknown>>;
+
 export interface FNAConfig {
   type: 'risk' | 'medical' | 'retirement' | 'investment' | 'estate' | 'tax';
   name: string;
-  Wizard: React.ComponentType<Record<string, unknown>>;
-  ResultsView: React.ComponentType<Record<string, unknown>>;
+  // Wizard/ResultsView are rendered with dynamically-spread props
+  // (`<config.Wizard {...props} />`), so each module's specific prop type is
+  // intentionally erased here.
+  Wizard: React.ComponentType<any>;
+  ResultsView: React.ComponentType<any>;
   // API functions
   getLatestPublished: (clientId: string) => Promise<Record<string, unknown> | null>;
   deleteFNA: (fnaId: string) => Promise<void>;
@@ -101,10 +114,10 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Risk Planning FNA',
     Wizard: LazyRiskPlanningFNAWizard,
     ResultsView: LazyRiskPlanningFNAResultsView,
-    getLatestPublished: (clientId) => RiskPlanningFnaAPI.getLatestPublished(clientId),
+    getLatestPublished: (clientId) => asRecordOrNull(RiskPlanningFnaAPI.getLatestPublished(clientId)),
     deleteFNA: (fnaId) => RiskPlanningFnaAPI.delete(fnaId),
-    publishFNA: (fnaId) => RiskPlanningFnaAPI.publish(fnaId),
-    unpublishFNA: (fnaId) => RiskPlanningFnaAPI.unpublish(fnaId),
+    publishFNA: (fnaId) => asRecord(RiskPlanningFnaAPI.publish(fnaId)),
+    unpublishFNA: (fnaId) => asRecord(RiskPlanningFnaAPI.unpublish(fnaId)),
     wizardProps: {
       onCompleteKey: 'onFNAComplete',
     },
@@ -131,10 +144,10 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Retirement FNA',
     Wizard: LazyRetirementFNAWizard,
     ResultsView: LazyRetirementFNAResultsView,
-    getLatestPublished: (clientId) => RetirementFnaAPI.getLatestPublished(clientId),
+    getLatestPublished: (clientId) => asRecordOrNull(RetirementFnaAPI.getLatestPublished(clientId)),
     deleteFNA: (fnaId) => RetirementFnaAPI.delete(fnaId),
-    publishFNA: (fnaId) => RetirementFnaAPI.publish(fnaId),
-    unpublishFNA: (fnaId) => RetirementFnaAPI.unpublish(fnaId),
+    publishFNA: (fnaId) => asRecord(RetirementFnaAPI.publish(fnaId)),
+    unpublishFNA: (fnaId) => asRecord(RetirementFnaAPI.unpublish(fnaId)),
     wizardProps: {
       onCompleteKey: 'onFNAComplete',
     },
@@ -146,10 +159,10 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Estate Planning FNA',
     Wizard: LazyEstatePlanningFNAWizard,
     ResultsView: LazyEstatePlanningResultsView,
-    getLatestPublished: (clientId) => EstatePlanningApiService.getLatestPublished(clientId),
+    getLatestPublished: (clientId) => asRecordOrNull(EstatePlanningApiService.getLatestPublished(clientId)),
     deleteFNA: (sessionId) => EstatePlanningApiService.deleteSession(sessionId),
-    publishFNA: (sessionId) => EstatePlanningApiService.publishSession(sessionId),
-    unpublishFNA: (sessionId) => EstatePlanningApiService.unpublishSession(sessionId),
+    publishFNA: (sessionId) => asRecord(EstatePlanningApiService.publishSession(sessionId)),
+    unpublishFNA: (sessionId) => asRecord(EstatePlanningApiService.unpublishSession(sessionId)),
     wizardProps: {
       onCompleteKey: 'onFNAComplete',
     },
@@ -161,10 +174,10 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Investment INA',
     Wizard: LazyInvestmentINAWizard,
     ResultsView: LazyInvestmentINAResultsView,
-    getLatestPublished: (clientId) => InvestmentINAApiService.getLatestPublished(clientId),
+    getLatestPublished: (clientId) => asRecordOrNull(InvestmentINAApiService.getLatestPublished(clientId)),
     deleteFNA: (sessionId) => InvestmentINAApiService.deleteSession(sessionId),
-    publishFNA: (sessionId) => InvestmentINAApiService.publishSession(sessionId),
-    unpublishFNA: (sessionId) => InvestmentINAApiService.unpublishSession(sessionId),
+    publishFNA: (sessionId) => asRecord(InvestmentINAApiService.publishSession(sessionId)),
+    unpublishFNA: (sessionId) => asRecord(InvestmentINAApiService.unpublishSession(sessionId)),
     wizardProps: {
       onCompleteKey: 'onComplete',
     },
@@ -176,7 +189,7 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Tax Planning FNA',
     Wizard: LazyTaxPlanningFNAWizard,
     ResultsView: LazyTaxPlanningResultsView,
-    getLatestPublished: (clientId) => TaxPlanningFnaAPI.getLatestPublished(clientId),
+    getLatestPublished: (clientId) => asRecordOrNull(TaxPlanningFnaAPI.getLatestPublished(clientId)),
     deleteFNA: async () => { /* tax sessions managed via saveSession */ },
     publishFNA: async (sessionId) => { await TaxPlanningFnaAPI.publishSession(sessionId); return {}; },
     unpublishFNA: async (sessionId) => { await TaxPlanningFnaAPI.unpublishSession(sessionId); return {}; },
