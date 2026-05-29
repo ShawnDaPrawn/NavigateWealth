@@ -3,9 +3,11 @@ import { BasePdfLayout } from '../templates/BasePdfLayout';
 
 export const NavigateClientConsentForm = ({ 
   data = {} 
-}: { 
-  data?: Record<string, unknown> 
+}: {
+  data?: Record<string, unknown>
 }) => {
+  // Form values are rendered as text; read them as an optional-string record.
+  const d = data as Record<string, string | undefined>;
   const fspList = [
     "AC&E Engineering Underwriting Managers (Pty) Ltd",
     "Alexander Forbes Ltd",
@@ -69,12 +71,12 @@ export const NavigateClientConsentForm = ({
         <h3 className="text-[9.5px] font-bold mb-1.5 uppercase">Main member</h3>
         <table>
           <tbody>
-            <tr><th>First name</th><td className="field">{data.firstName || ''}</td></tr>
-            <tr><th>Surname</th><td className="field">{data.lastName || ''}</td></tr>
-            <tr><th>Identity number</th><td className="field">{data.idNumber || ''}</td></tr>
-            <tr><th>Cellphone number</th><td className="field">{data.mobile || ''}</td></tr>
-            <tr><th>Email address</th><td className="field">{data.email || ''}</td></tr>
-            <tr><th>Office landline (optional)</th><td className="field">{data.officeLine || ''}</td></tr>
+            <tr><th>First name</th><td className="field">{d.firstName || ''}</td></tr>
+            <tr><th>Surname</th><td className="field">{d.lastName || ''}</td></tr>
+            <tr><th>Identity number</th><td className="field">{d.idNumber || ''}</td></tr>
+            <tr><th>Cellphone number</th><td className="field">{d.mobile || ''}</td></tr>
+            <tr><th>Email address</th><td className="field">{d.email || ''}</td></tr>
+            <tr><th>Office landline (optional)</th><td className="field">{d.officeLine || ''}</td></tr>
           </tbody>
         </table>
       </section>
@@ -88,11 +90,11 @@ export const NavigateClientConsentForm = ({
         <h3 className="text-[9.5px] font-bold mb-1.5 uppercase">Company, Trust, or Juristic Entity</h3>
         <table>
           <tbody>
-            <tr><th>Name of the legal entity</th><td className="field">{data.entityName || ''}</td></tr>
-            <tr><th>Trading as (if applicable)</th><td className="field">{data.tradingAs || ''}</td></tr>
-            <tr><th>Registration number</th><td className="field">{data.regNumber || ''}</td></tr>
-            <tr><th>Email address</th><td className="field">{data.entityEmail || ''}</td></tr>
-            <tr><th>Office landline or other contact</th><td className="field">{data.entityContact || ''}</td></tr>
+            <tr><th>Name of the legal entity</th><td className="field">{d.entityName || ''}</td></tr>
+            <tr><th>Trading as (if applicable)</th><td className="field">{d.tradingAs || ''}</td></tr>
+            <tr><th>Registration number</th><td className="field">{d.regNumber || ''}</td></tr>
+            <tr><th>Email address</th><td className="field">{d.entityEmail || ''}</td></tr>
+            <tr><th>Office landline or other contact</th><td className="field">{d.entityContact || ''}</td></tr>
           </tbody>
         </table>
       </section>
@@ -287,7 +289,7 @@ export const NavigateClientConsentForm = ({
   return (
     <BasePdfLayout 
       docTitle="Client Consent Form"
-      issueDate={data.issueDate}
+      issueDate={d.issueDate}
       pages={[Page1, Page2]}
     />
   );
