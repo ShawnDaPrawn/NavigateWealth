@@ -161,18 +161,19 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function formatShortDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-ZA', {
+function formatShortDate(dateStr: unknown): string {
+  return new Date(dateStr as string | number).toLocaleDateString('en-ZA', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   });
 }
 
-function formatCurrency(val: number | undefined | null): string {
-  if (val == null) return '—';
-  const isNeg = val < 0;
-  const abs = Math.abs(val);
+function formatCurrency(val: unknown): string {
+  const n = typeof val === 'number' ? val : Number(val);
+  if (val == null || !Number.isFinite(n)) return '—';
+  const isNeg = n < 0;
+  const abs = Math.abs(n);
   const fixed = abs.toFixed(2);
   const [intPart, decPart] = fixed.split('.');
   const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -489,6 +490,17 @@ function toNode(value: unknown): React.ReactNode {
   return value as string | number | boolean;
 }
 
+/** Coerce an unknown rawResponse value to a string for display / string args. */
+function str(value: unknown): string {
+  return value == null ? '' : String(value);
+}
+
+/** Coerce an unknown rawResponse value to a finite number (0 fallback). */
+function num(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return <h4 className="text-sm font-semibold text-gray-800 mb-2">{children}</h4>;
 }
@@ -533,20 +545,20 @@ function IdvResultView({ data, hasPhoto }: { data: ComplianceCheckData; hasPhoto
       <StatusIndicator pass={data.idVerified ?? data.verified} label="ID Verified" />
       {hasPhoto && <StatusIndicator pass={data.photoMatch} label="Photo Match" />}
       <DataRow label="Verification Status" value={data.verificationStatus || data.status} />
-      {data.verificationDetails && (
+      {!!data.verificationDetails && (
         <div className="contents">
-          {Object.entries(data.verificationDetails).map(([key, val]) => (
+          {Object.entries(data.verificationDetails as Record<string, unknown>).map(([key, val]) => (
             <DataRow key={key} label={key.replace(/([A-Z])/g, ' $1').trim()} value={String(val)} />
           ))}
         </div>
       )}
-      {data.failureReason && (
+      {!!data.failureReason && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 mt-2">
           <div className="flex items-center gap-1.5 text-xs text-red-700">
             <AlertOctagon className="h-3.5 w-3.5" />
             <span className="font-medium">Failure Reason:</span>
           </div>
-          <p className="text-xs text-red-600 mt-1">{data.failureReason}</p>
+          <p className="text-xs text-red-600 mt-1">{toNode(data.failureReason)}</p>
         </div>
       )}
       <RawDataToggle data={data} />
@@ -577,7 +589,7 @@ function BulkIdvResultView({ data }: { data: ComplianceCheckData }) {
                     : 'bg-red-50 text-red-700 border-red-200'
                 }
               >
-                {r.status || r.matchResult || 'unknown'}
+                {toNode(r.status || r.matchResult || 'unknown')}
               </Badge>
             </div>
           ))}
@@ -612,7 +624,7 @@ function CreditCheckResultView({ data }: { data: ComplianceCheckData }) {
       <SectionHeader>Consumer Credit Report</SectionHeader>
       {data.creditScore != null && (
         <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div className="text-2xl font-bold text-blue-700">{data.creditScore}</div>
+          <div className="text-2xl font-bold text-blue-700">{toNode(data.creditScore)}</div>
           <div className="text-xs text-blue-600">Credit Score</div>
         </div>
       )}
@@ -653,7 +665,7 @@ function ConsumerTraceResultView({ data }: { data: ComplianceCheckData }) {
               {[addr.line1, addr.line2, addr.suburb, addr.city, addr.province, addr.postalCode]
                 .filter(Boolean)
                 .join(', ')}
-              {addr.source && <span className="text-gray-400 ml-1">({addr.source})</span>}
+              {!!addr.source && <span className="text-gray-400 ml-1">({str(addr.source)})</span>}
             </div>
           ))}
         </div>
@@ -679,8 +691,8 @@ function DebtReviewResultView({ data }: { data: ComplianceCheckData }) {
         </div>
       ) : null}
       <DataRow label="Debt Counsellor" value={data.debtCounsellor} />
-      <DataRow label="Application Date" value={data.applicationDate ? formatShortDate(data.applicationDate) : null} />
-      <DataRow label="Status Date" value={data.statusDate ? formatShortDate(data.statusDate) : null} />
+      <DataRow label="Application Date" value={data.applicationDate ? formatShortDate(str(data.applicationDate)) : null} />
+      <DataRow label="Status Date" value={data.statusDate ? formatShortDate(str(data.statusDate)) : null} />
       {Array.isArray(data.accounts) && data.accounts.length > 0 && (
         <DataRow label="Accounts Under Review" value={data.accounts.length} />
       )}
@@ -691,7 +703,7 @@ function DebtReviewResultView({ data }: { data: ComplianceCheckData }) {
 
 function SanctionsResultView({ data }: { data: ComplianceCheckData }) {
   const results = Array.isArray(data.results) ? data.results : [];
-  const totalMatches = data.totalMatches ?? results.length;
+  const totalMatches = num(data.totalMatches ?? results.length);
   return (
     <div className="space-y-3">
       <SectionHeader>Sanctions Search Results</SectionHeader>
@@ -714,9 +726,9 @@ function SanctionsResultView({ data }: { data: ComplianceCheckData }) {
           {results.map((match: Record<string, unknown>, i: number) => (
             <div key={i} className="p-2 bg-red-50 border border-red-100 rounded text-xs space-y-1">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-red-800">{match.name || 'Unknown'}</span>
+                <span className="font-medium text-red-800">{toNode(match.name || 'Unknown')}</span>
                 {match.matchScore != null && (
-                  <Badge variant="outline" className="text-xs">{match.matchScore}% match</Badge>
+                  <Badge variant="outline" className="text-xs">{toNode(match.matchScore)}% match</Badge>
                 )}
               </div>
               <DataRow label="Source" value={match.source} />
@@ -826,11 +838,11 @@ function DirectorResultView({ data }: { data: ComplianceCheckData }) {
 
 function AddressResultView({ data }: { data: ComplianceCheckData }) {
   const addresses = Array.isArray(data.addresses) ? data.addresses : [];
-  const best = data.bestKnownAddress;
+  const best = data.bestKnownAddress as HoneycombAddress | undefined;
   return (
     <div className="space-y-3">
       <SectionHeader>Address Report</SectionHeader>
-      {best && (
+      {!!best && (
         <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs">
           <span className="text-blue-700 font-medium block mb-1">Best Known Address</span>
           <span className="text-blue-800">
@@ -849,7 +861,7 @@ function AddressResultView({ data }: { data: ComplianceCheckData }) {
           {[addr.line1, addr.line2, addr.suburb, addr.city, addr.province, addr.postalCode]
             .filter(Boolean)
             .join(', ')}
-          {addr.source && <span className="text-gray-400 ml-1">({addr.source})</span>}
+          {!!addr.source && <span className="text-gray-400 ml-1">({str(addr.source)})</span>}
         </div>
       ))}
       <RawDataToggle data={data} />
@@ -879,14 +891,14 @@ function LifestyleAuditResultView({ data }: { data: ComplianceCheckData }) {
       <SectionHeader>Lifestyle Audit</SectionHeader>
       {data.lifestyleScore != null && (
         <div className="flex items-center gap-3 bg-purple-50 border border-purple-200 rounded-lg p-3">
-          <div className="text-2xl font-bold text-purple-700">{data.lifestyleScore}</div>
+          <div className="text-2xl font-bold text-purple-700">{toNode(data.lifestyleScore)}</div>
           <div className="text-xs text-purple-600">Lifestyle Score</div>
         </div>
       )}
       <DataRow label="Estimated Income" value={data.estimatedIncome != null ? formatCurrency(data.estimatedIncome) : null} />
       <DataRow label="Properties" value={properties.length} />
       <DataRow label="Vehicles" value={vehicles.length} />
-      {data.spendingProfile && Object.keys(data.spendingProfile).length > 0 && (
+      {!!data.spendingProfile && Object.keys(data.spendingProfile as Record<string, unknown>).length > 0 && (
         <div className="mt-1">
           <span className="text-xs font-medium text-gray-700 block mb-1">Spending Profile</span>
           {Object.entries(data.spendingProfile).map(([key, val]) => (
@@ -910,10 +922,10 @@ function IncomePredictorResultView({ data }: { data: ComplianceCheckData }) {
         </div>
       )}
       <DataRow label="Confidence" value={data.confidenceLevel} />
-      {data.incomeRange && (
+      {!!data.incomeRange && (
         <DataRow
           label="Income Range"
-          value={`${formatCurrency(data.incomeRange.min)} – ${formatCurrency(data.incomeRange.max)}`}
+          value={`${formatCurrency((data.incomeRange as Record<string, unknown>).min)} – ${formatCurrency((data.incomeRange as Record<string, unknown>).max)}`}
         />
       )}
       <DataRow label="Methodology" value={data.methodology} />
@@ -958,7 +970,7 @@ function RiskAssessmentResultView({ data }: { data: ComplianceCheckData }) {
       <SectionHeader>Risk Assessment</SectionHeader>
       <DataRow label="Assessment Name" value={data.assessmentName} />
       <DataRow label="Screening Outcome" value={data.screeningOutcome} />
-      {data.riskLevel && (
+      {!!data.riskLevel && (
         <DataRow
           label="Risk Level"
           value={
@@ -972,7 +984,7 @@ function RiskAssessmentResultView({ data }: { data: ComplianceCheckData }) {
                   : 'bg-red-50 text-red-700 border-red-200'
               }
             >
-              {data.riskLevel}
+              {toNode(data.riskLevel)}
             </Badge>
           }
         />
@@ -987,7 +999,7 @@ function RegistrationResultView({ data }: { data: ComplianceCheckData }) {
     <div className="space-y-3">
       <SectionHeader>Client Registration</SectionHeader>
       <DataRow label="Honeycomb ID" value={data.honeycombId || data.uniqueId} />
-      <DataRow label="Registered At" value={data.registeredAt ? formatDate(data.registeredAt) : null} />
+      <DataRow label="Registered At" value={data.registeredAt ? formatDate(str(data.registeredAt)) : null} />
       <RawDataToggle data={data} />
     </div>
   );
@@ -1088,7 +1100,7 @@ function generateReportHtml(activity: ComplianceActivity, result: CheckResult, c
       break;
     case 'Sanctions Search':
       summaryHtml = `
-        <tr><th>Matches Found</th><td style="color:${(raw?.totalMatches ?? 0) > 0 ? '#dc2626' : '#16a34a'};font-weight:bold">
+        <tr><th>Matches Found</th><td style="color:${num(raw?.totalMatches) > 0 ? '#dc2626' : '#16a34a'};font-weight:bold">
           ${raw?.totalMatches ?? 0}
         </td></tr>
         <tr><th>Lists Searched</th><td>${Array.isArray(raw?.searchedLists) ? raw.searchedLists.join(', ') : 'All'}</td></tr>
