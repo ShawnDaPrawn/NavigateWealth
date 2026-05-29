@@ -95,8 +95,8 @@ function getAuditDisplayInfo(action: string, metadata?: Record<string, unknown>)
       return {
         icon: <ArrowDownToLine className="h-4 w-4" />,
         label: 'Document Uploaded',
-        description: metadata?.fileCount > 1 
-          ? `${metadata.fileCount} documents merged and uploaded` 
+        description: Number(metadata?.fileCount) > 1
+          ? `${metadata?.fileCount} documents merged and uploaded`
           : `Document "${metadata?.filename || ''}" uploaded (${metadata?.pageCount || '?'} pages)`,
         color: 'text-blue-600',
         bgColor: 'bg-blue-50 border-blue-200',
@@ -129,7 +129,7 @@ function getAuditDisplayInfo(action: string, metadata?: Record<string, unknown>)
       return {
         icon: <ShieldCheck className="h-4 w-4" />,
         label: 'OTP Sent',
-        description: metadata?.note || 'Verification code sent to signer',
+        description: (metadata?.note as string) || 'Verification code sent to signer',
         color: 'text-amber-600',
         bgColor: 'bg-amber-50 border-amber-200',
       };
@@ -187,7 +187,7 @@ function getAuditDisplayInfo(action: string, metadata?: Record<string, unknown>)
       return {
         icon: <AlertTriangle className="h-4 w-4" />,
         label: 'Completion Failed',
-        description: metadata?.error || 'Envelope completion workflow failed',
+        description: (metadata?.error as string) || 'Envelope completion workflow failed',
         color: 'text-red-600',
         bgColor: 'bg-red-50 border-red-200',
       };
@@ -204,7 +204,7 @@ function getAuditDisplayInfo(action: string, metadata?: Record<string, unknown>)
       return {
         icon: <Ban className="h-4 w-4" />,
         label: 'Envelope Voided',
-        description: metadata?.reason || 'Envelope was voided by admin',
+        description: (metadata?.reason as string) || 'Envelope was voided by admin',
         color: 'text-red-600',
         bgColor: 'bg-red-50 border-red-200',
       };
@@ -361,8 +361,8 @@ export function EnvelopeInspector({
 
   // Sort audit events chronologically (newest first)
   const sortedAuditEvents = [...auditEvents].sort((a, b) => {
-    const dateA = new Date(a.at || a.created_at || 0).getTime();
-    const dateB = new Date(b.at || b.created_at || 0).getTime();
+    const dateA = new Date(a.at || 0).getTime();
+    const dateB = new Date(b.at || 0).getTime();
     return dateB - dateA;
   });
 
@@ -691,7 +691,7 @@ export function EnvelopeInspector({
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">
-                            {envelopeData.document?.original_filename || envelopeData.document?.filename || 'Document.pdf'}
+                            {envelopeData.document?.filename || 'Document.pdf'}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {envelopeData.document?.page_count ? `${envelopeData.document.page_count} pages` : 'PDF Document'}
@@ -736,7 +736,7 @@ export function EnvelopeInspector({
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { label: 'Created', value: formatShortDateTime(envelope.created_at) },
-                      { label: 'Last Updated', value: formatShortDateTime(envelope.updated_at || (envelope as Record<string, unknown>).updatedAt as string) },
+                      { label: 'Last Updated', value: formatShortDateTime(envelope.updated_at) },
                       { label: 'Expires', value: envelope.expires_at ? formatShortDateTime(envelope.expires_at) : 'Never' },
                       { label: 'Completed', value: envelope.completed_at ? formatShortDateTime(envelope.completed_at) : isCompleted ? 'Yes' : '—' },
                     ].map(item => (
@@ -803,7 +803,7 @@ export function EnvelopeInspector({
                       <div className="space-y-0">
                         {sortedAuditEvents.map((event, index) => {
                           const display = getAuditDisplayInfo(event.action, event.metadata);
-                          const eventTime = event.at || (event as Record<string, unknown>).created_at as string;
+                          const eventTime = event.at;
                           const isFirst = index === 0;
 
                           return (
@@ -869,9 +869,9 @@ export function EnvelopeInspector({
       <VoidEnvelopeDialog 
         open={voidDialogOpen} 
         onOpenChange={setVoidDialogOpen}
-        onConfirm={(reason) => {
+        onConfirm={async (reason) => {
           if (onVoidEnvelope) {
-            onVoidEnvelope(envelope.id, reason);
+            await onVoidEnvelope(envelope.id, reason);
             setVoidDialogOpen(false);
             onOpenChange(false);
           }
