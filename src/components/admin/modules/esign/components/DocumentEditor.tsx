@@ -51,8 +51,8 @@ export function DocumentEditor({
       email: s.email,
       role: s.role || '',
       order: s.order,
-      otpRequired: s.otpRequired || false,
-      accessCode: s.accessCode || '',
+      otpRequired: s.otp_required || false,
+      accessCode: s.access_code || '',
     })) || []
   );
 
@@ -78,7 +78,7 @@ export function DocumentEditor({
 
     // Check each signer has at least one signature field
     signers.forEach((signer) => {
-      const signerFields = fields.filter((f) => f.signerId === signer.email);
+      const signerFields = fields.filter((f) => f.signer_id === signer.email);
       const hasSignature = signerFields.some((f) => f.type === 'signature');
       if (!hasSignature) {
         errors.push(`${signer.name} needs at least one signature field`);
@@ -123,9 +123,9 @@ export function DocumentEditor({
     setHasUnsavedChanges(true);
   }, []);
 
-  const handleFieldClick = useCallback((field: EsignField) => {
+  const handleFieldClick = useCallback((field: EsignField | null) => {
     // Select the signer for this field
-    setSelectedSignerId(field.signerId);
+    if (field) setSelectedSignerId(field.signer_id ?? undefined);
   }, []);
 
   // ==================== SIGNER MANAGEMENT ====================
@@ -345,8 +345,8 @@ export function DocumentEditor({
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{signer.name}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {fields.filter((f) => f.signerId === signer.email).length} field
-                        {fields.filter((f) => f.signerId === signer.email).length !== 1
+                        {fields.filter((f) => f.signer_id === signer.email).length} field
+                        {fields.filter((f) => f.signer_id === signer.email).length !== 1
                           ? 's'
                           : ''}
                       </p>
@@ -360,7 +360,7 @@ export function DocumentEditor({
               signers={signers}
               onChange={handleSignersChange}
               clientEmail={client.email}
-              clientName={client.name}
+              clientName={`${client.firstName} ${client.lastName}`.trim()}
             />
           </Card>
         </div>
@@ -369,9 +369,9 @@ export function DocumentEditor({
         <div className="col-span-6">
           <PDFViewer
             documentUrl={envelope.documentUrl}
-            documentName={envelope.documentName || envelope.title}
+            documentName={envelope.document?.filename || envelope.title}
             fields={fields}
-            onFieldPlace={handleFieldPlace}
+            onFieldPlace={handleFieldPlace as (field: Partial<EsignField>) => void}
             onFieldClick={handleFieldClick}
             selectedSignerId={selectedSignerId}
             showFields={true}
