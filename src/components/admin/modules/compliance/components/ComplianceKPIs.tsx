@@ -32,21 +32,21 @@ export function ComplianceKPIs({ stats }: ComplianceKPIsProps) {
     },
     cpdCycle: {
       required: 30,
-      earned: stats ? Math.floor(stats.complianceScore * 0.3) : 18, // Mock derivation
+      earned: stats ? Math.floor((stats.complianceScore ?? 0) * 0.3) : 18, // Mock derivation
       progress: stats ? stats.complianceScore : 60,
       deadline: new Date('2024-12-31')
     },
     statutoryReturns: {
       afsStatus: 'Submitted',
       afsDate: new Date('2024-03-31'),
-      liquidityStatus: stats && stats.overdueItems > 0 ? 'Due Soon' : 'Submitted',
+      liquidityStatus: stats && (stats.overdueItems ?? 0) > 0 ? 'Due Soon' : 'Submitted',
       liquidityDue: new Date('2024-04-30')
     },
     ficaAlerts: {
-      kycPending: stats ? stats.pendingReviews : 12,
+      kycPending: stats?.pendingReviews ?? 12,
       kycExpiring: 5,
       ctrPending: 2,
-      strPending: stats ? stats.riskIssues : 0
+      strPending: stats?.riskIssues ?? 0
     },
   };
 

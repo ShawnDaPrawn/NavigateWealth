@@ -289,6 +289,10 @@ export interface PAIARequest {
  * Statutory Return Record
  */
 export interface StatutoryRecord extends ComplianceRecord {
+  // Prudential metrics (capital adequacy / liquidity returns)
+  capitalRatio?: number;
+  liquidityRatio?: number;
+  minimumRequired?: number;
   returnType: string;  // e.g., 'FSCA Annual Return', 'VAT Return', 'Tax Return'
   period: string;      // e.g., '2024 Q1', '2023 FY'
   authority: string;   // e.g., 'FSCA', 'SARS', 'Companies House'
@@ -658,6 +662,12 @@ export interface ComplianceDeadline {
  * Overall Compliance Statistics
  */
 export interface ComplianceStats {
+  // Summary headline metrics
+  complianceScore?: number;
+  overdueItems?: number;
+  pendingReviews?: number;
+  riskIssues?: number;
+
   // FAIS
   fais: {
     total: number;
