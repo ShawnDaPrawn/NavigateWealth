@@ -51,8 +51,49 @@ async function main() {
     sitemap: route.sitemap !== false,
   }));
   fs.writeFileSync(path.join(distDir, 'seo-routes.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  writeRouteManifest(routes);
+  writeNotFoundHtml(baseIndexPath);
 
   console.log(`Applied static SEO head tags to ${routes.length} routes`);
+}
+
+function writeRouteManifest(routes) {
+  const paths = new Set();
+  for (const route of routes) {
+    if (route.path) paths.add(route.path);
+    const canonical = route.canonicalPath;
+    if (canonical && canonical !== route.path) paths.add(canonical);
+  }
+
+  const articleSlugs = [
+    ...new Set(
+      routes
+        .filter((route) => route.path?.startsWith('/resources/article/'))
+        .map((route) => {
+          const encoded = route.path.replace('/resources/article/', '');
+          try {
+            return decodeURIComponent(encoded);
+          } catch {
+            return encoded;
+          }
+        }),
+    ),
+  ].sort();
+
+  const edgeManifest = {
+    generated: true,
+    generatedAt: new Date().toISOString(),
+    paths: [...paths].sort(),
+    articleSlugs,
+  };
+
+  const json = `${JSON.stringify(edgeManifest, null, 2)}\n`;
+  fs.writeFileSync(path.resolve('seo-route-manifest.json'), json, 'utf8');
+  fs.writeFileSync(path.join(distDir, 'seo-route-manifest.json'), json, 'utf8');
+}
+
+function writeNotFoundHtml(baseIndexPath) {
+  fs.copyFileSync(baseIndexPath, path.join(distDir, '404.html'));
 }
 
 function dedupeRoutes(routes) {

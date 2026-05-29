@@ -14,6 +14,7 @@ const failures = [];
 verifyRobots();
 verifySitemap();
 verifyStaticHtml();
+verifyEdgeNotFound();
 
 if (failures.length) {
   console.error('SEO verification failed:');
@@ -149,4 +150,35 @@ function decodeXml(value) {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'");
+}
+
+function verifyEdgeNotFound() {
+  const notFoundPath = path.join(distDir, '404.html');
+  if (!fs.existsSync(notFoundPath)) {
+    failures.push('dist/404.html is missing; edge middleware cannot serve a real 404 body');
+  }
+
+  const manifestPath = path.resolve('seo-route-manifest.json');
+  if (!fs.existsSync(manifestPath)) {
+    failures.push('seo-route-manifest.json is missing at project root');
+    return;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  } catch (error) {
+    failures.push(`seo-route-manifest.json is invalid JSON: ${error.message}`);
+    return;
+  }
+
+  if (parsed.generated !== true) {
+    failures.push('seo-route-manifest.json was not marked generated=true by the build');
+  }
+  if (!Array.isArray(parsed.paths) || parsed.paths.length === 0) {
+    failures.push('seo-route-manifest.json contains no paths');
+  }
+  if (!Array.isArray(parsed.articleSlugs)) {
+    failures.push('seo-route-manifest.json is missing articleSlugs');
+  }
 }
