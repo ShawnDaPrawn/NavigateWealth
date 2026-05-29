@@ -166,8 +166,9 @@ export function PolicyFormDialog({
         setActiveCategoryId(editingPolicy.categoryId || initialCategoryId);
         setStep('details');
         setSelectedProvider({
-          id: editingPolicy.providerId,
-          name: editingPolicy.providerName,
+          // editingPolicy has an index signature, so these read as `unknown`.
+          id: editingPolicy.providerId as string,
+          name: editingPolicy.providerName as string,
           description: '',
           categoryIds: [],
         });
@@ -482,7 +483,7 @@ export function PolicyFormDialog({
       handleClose();
     } catch (err: unknown) {
       console.error('Error saving policy:', err);
-      toast.error(err.message || 'Failed to save policy', { id: toastId });
+      toast.error(err instanceof Error ? err.message : 'Failed to save policy', { id: toastId });
     } finally {
       setIsSaving(false);
     }
@@ -529,7 +530,7 @@ export function PolicyFormDialog({
     const escalationNum = Number.isFinite(escalation) ? escalation : 0;
     const currentValue = currentValueField ? (Number(formData[currentValueField.id]) || 0) : 0;
     const contribution = contributionField ? (Number(formData[contributionField.id]) || 0) : 0;
-    const maturityDate = maturityDateField ? formData[maturityDateField.id] : null;
+    const maturityDate = maturityDateField ? (formData[maturityDateField.id] as string | number | Date | null) : null;
     const inceptionRaw = inceptionField ? formData[inceptionField.id] : null;
 
     // Temporary state for the modal
@@ -626,8 +627,8 @@ export function PolicyFormDialog({
                   <Input 
                     id="growth" 
                     type="number" 
-                    value={tempGrowth} 
-                    onChange={(e) => setTempGrowth(e.target.value)}
+                    value={tempGrowth}
+                    onChange={(e) => setTempGrowth(Number(e.target.value))}
                     className="h-9 pr-8"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
@@ -642,8 +643,8 @@ export function PolicyFormDialog({
                   <Input 
                     id="escalation" 
                     type="number" 
-                    value={tempEscalation} 
-                    onChange={(e) => setTempEscalation(e.target.value)}
+                    value={tempEscalation}
+                    onChange={(e) => setTempEscalation(Number(e.target.value))}
                     className="h-9 pr-8"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
@@ -662,7 +663,9 @@ export function PolicyFormDialog({
   };
 
   const renderFieldInput = (field: ProductField) => {
-    const value = formData[field.id] || '';
+    // formData is Record<string, unknown>; coerce to string for input/select
+    // bindings (the boolean case below reads formData[field.id] directly).
+    const value = (formData[field.id] || '') as string;
     const hasError = !!errors[field.id];
 
     // Normalize type to lowercase for safety
@@ -796,7 +799,7 @@ export function PolicyFormDialog({
             </Label>
             <Switch
               id={field.id}
-              checked={value === true || value === 'true'}
+              checked={formData[field.id] === true || formData[field.id] === 'true'}
               onCheckedChange={(checked) => handleFieldChange(field.id, checked)}
             />
           </div>
@@ -1109,8 +1112,8 @@ export function PolicyFormDialog({
                       <PolicyDocumentUpload
                         policyId={editingPolicy.id}
                         clientId={clientId}
-                        existingDocument={editingPolicy.document || null}
-                        existingExtraction={editingPolicy.extraction || null}
+                        existingDocument={(editingPolicy.document ?? null) as React.ComponentProps<typeof PolicyDocumentUpload>['existingDocument']}
+                        existingExtraction={(editingPolicy.extraction ?? null) as React.ComponentProps<typeof PolicyDocumentUpload>['existingExtraction']}
                         existingExtractionHistory={
                           Array.isArray(editingPolicy.extractionHistory)
                             ? editingPolicy.extractionHistory
