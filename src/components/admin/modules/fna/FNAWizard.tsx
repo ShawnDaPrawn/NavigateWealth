@@ -29,8 +29,8 @@ import { FNAWizardLayout, FNAWizardStepConfig } from './FNAWizardLayout';
 /** Shared props for FNA wizard step components */
 interface FNAStepProps {
   inputs: Partial<FNAInputs>;
-  updateInput?: (field: string, value: string | number | boolean) => void;
-  updateNestedInput?: (parent: string, field: string, value: string | number | boolean) => void;
+  updateInput: (field: string, value: string | number | boolean | unknown[]) => void;
+  updateNestedInput: (parent: string, field: string, value: string | number | boolean) => void;
 }
 
 interface FNAWizardProps {
@@ -63,7 +63,8 @@ export function FNAWizard({ clientId, clientName = '', open, onClose, onFNACompl
     liabilities: { id: 'liabilities', label: 'Liabilities', icon: CreditCard },
     assets: { id: 'assets', label: 'Assets', icon: PiggyBank },
     assumptions: { id: 'assumptions', label: 'Assumptions', icon: Settings },
-    review: { id: 'review', label: 'Review & Calculate', icon: Calculator }
+    review: { id: 'review', label: 'Review & Calculate', icon: Calculator },
+    'existing-cover': { id: 'existing-cover', label: 'Existing Cover', icon: Settings }
   };
 
   const wizardSteps = stepsList.map(step => stepConfig[step]);
@@ -110,7 +111,7 @@ export function FNAWizard({ clientId, clientName = '', open, onClose, onFNACompl
     }
   };
 
-  const updateInput = (field: string, value: string | number | boolean) => {
+  const updateInput = (field: string, value: string | number | boolean | unknown[]) => {
     setInputs(prev => ({ ...prev, [field]: value }));
   };
 
@@ -221,13 +222,13 @@ export function FNAWizard({ clientId, clientName = '', open, onClose, onFNACompl
     >
       <div className="min-h-[400px]">
         {currentStep === 'personal' && (
-          <PersonalStep inputs={inputs} updateInput={updateInput} />
+          <PersonalStep inputs={inputs} updateInput={updateInput} updateNestedInput={updateNestedInput} />
         )}
         {currentStep === 'income' && (
-          <IncomeStep inputs={inputs} updateInput={updateInput} />
+          <IncomeStep inputs={inputs} updateInput={updateInput} updateNestedInput={updateNestedInput} />
         )}
         {currentStep === 'liabilities' && (
-          <LiabilitiesStep inputs={inputs} updateInput={updateInput} />
+          <LiabilitiesStep inputs={inputs} updateInput={updateInput} updateNestedInput={updateNestedInput} />
         )}
         {currentStep === 'assets' && (
           <AssetsStep inputs={inputs} updateInput={updateInput} updateNestedInput={updateNestedInput} />
@@ -236,7 +237,7 @@ export function FNAWizard({ clientId, clientName = '', open, onClose, onFNACompl
           <AssumptionsStep inputs={inputs} updateNestedInput={updateNestedInput} updateInput={updateInput} />
         )}
         {currentStep === 'review' && (
-          <ReviewStep inputs={inputs} updateNestedInput={updateNestedInput} />
+          <ReviewStep inputs={inputs} updateNestedInput={updateNestedInput} updateInput={updateInput} />
         )}
       </div>
     </FNAWizardLayout>
@@ -423,7 +424,7 @@ function LiabilitiesStep({ inputs, updateInput }: FNAStepProps) {
 }
 
 function AssetsStep({ inputs, updateInput, updateNestedInput }: FNAStepProps) {
-  const assets = inputs.assets || {};
+  const assets = (inputs.assets || {}) as Record<string, number>;
 
   return (
     <div className="space-y-6">
@@ -483,7 +484,7 @@ function AssetsStep({ inputs, updateInput, updateNestedInput }: FNAStepProps) {
 }
 
 function AssumptionsStep({ inputs, updateNestedInput, updateInput }: FNAStepProps) {
-  const assumptions = inputs.assumptions || {};
+  const assumptions = (inputs.assumptions || {}) as Record<string, number>;
 
   return (
     <div className="space-y-8">
