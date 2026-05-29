@@ -164,9 +164,10 @@ export function ResourcesModule() {
     if (!prefillClient) return generatePreviewData();
 
     const profile = prefillClient.profile || {};
-    const pi = profile.personalInformation || {};
-    const contact = profile.contactInformation || {};
-    const addr = profile.residentialAddress || {};
+    // These nested sections are loosely typed ({}); read them as string records.
+    const pi = (profile.personalInformation || {}) as Record<string, string | undefined>;
+    const contact = (profile.contactInformation || {}) as Record<string, string | undefined>;
+    const addr = (profile.residentialAddress || {}) as Record<string, string | undefined>;
 
     return generatePreviewData(
       {
@@ -367,7 +368,7 @@ export function ResourcesModule() {
     return (
       <Suspense fallback={<LazyFallback />}>
         <FormBuilder
-          initialData={formToEdit}
+          initialData={(formToEdit ?? undefined) as unknown as Record<string, unknown> | undefined}
           mode={builderMode}
           onBack={() => {
             setIsBuilderMode(false);
