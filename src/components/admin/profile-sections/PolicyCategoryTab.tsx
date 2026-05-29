@@ -254,7 +254,7 @@ export function PolicyCategoryTab({
         }
       }
       // Final fallback to client-side defaults
-      return DEFAULT_SCHEMAS[catId]?.fields || [];
+      return (DEFAULT_SCHEMAS[catId]?.fields || []) as unknown as SchemaField[];
     };
 
     // Load main structure
@@ -322,7 +322,8 @@ export function PolicyCategoryTab({
   };
 
   const handleEditPolicy = (policy: Record<string, unknown>) => {
-    setEditingPolicy(policy);
+    // onEdit hands back a loose record; it is in fact a PolicyRecord row.
+    setEditingPolicy(policy as unknown as PolicyRecord);
     setIsFormOpen(true);
   };
 
@@ -412,7 +413,7 @@ export function PolicyCategoryTab({
     }
   };
 
-  const formatFieldValue = (field: { type?: string; options?: string[]; [key: string]: unknown }, value: unknown) => {
+  const formatFieldValue = (field: { type?: string; options?: string[]; [key: string]: unknown }, value: unknown): React.ReactNode => {
     if (!value && value !== 0) return '-';
 
     switch (field.type) {
@@ -426,7 +427,7 @@ export function PolicyCategoryTab({
       case 'boolean':
         return value === true || value === 'true' ? 'Yes' : 'No';
       default:
-        return value;
+        return value as React.ReactNode;
     }
   };
 
@@ -833,7 +834,7 @@ export function PolicyCategoryTab({
               onPublish={() => fnaManagement.setPublishDialogOpen(true)}
               onView={() => {
                 if (fnaManagement.fna) {
-                  setSelectedHistoricalFnaId(fnaManagement.fna.id);
+                  setSelectedHistoricalFnaId(fnaManagement.fna.id as string);
                   setViewFNADialogOpen(true);
                 }
               }}
@@ -873,9 +874,9 @@ export function PolicyCategoryTab({
               <GoalDashboard 
                 clientId={clientId} 
                 policies={policies}
-                onGoalsUpdate={setGoals} 
-                schemas={subCategorySchemas}
-                mainSchema={tableStructure}
+                onGoalsUpdate={setGoals}
+                schemas={subCategorySchemas as unknown as React.ComponentProps<typeof GoalDashboard>['schemas']}
+                mainSchema={tableStructure as unknown as React.ComponentProps<typeof GoalDashboard>['mainSchema']}
               />
            </Suspense>
         </DialogContent>
@@ -891,7 +892,7 @@ export function PolicyCategoryTab({
         categorySubtabId={categorySubtabId}
         categoryName={categoryName}
         clientId={clientId}
-        editingPolicy={editingPolicy}
+        editingPolicy={editingPolicy as unknown as React.ComponentProps<typeof PolicyFormDialog>['editingPolicy']}
         onSave={() => {
           loadPolicies();
         }}
@@ -987,7 +988,7 @@ export function PolicyCategoryTab({
           fnaType={fnaConfig.type}
           fnaTypeName={fnaConfig.name}
           fnaData={fnaManagement.fna}
-          currentStatus={fnaManagement.fna.status || 'draft'}
+          currentStatus={(fnaManagement.fna.status || 'draft') as 'draft' | 'published' | 'archived'}
           onPublishSuccess={() => fnaManagement.loadFNA()}
           publishFunction={fnaManagement.handlePublishFNA}
           unpublishFunction={fnaManagement.handleUnpublishFNA}
