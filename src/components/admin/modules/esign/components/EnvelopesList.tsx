@@ -133,13 +133,13 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
   const filteredEnvelopes = useMemo(() => envelopes.filter(envelope => {
     const matchesSearch = 
       envelope.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      envelope.recipients?.some(r => r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.email.toLowerCase().includes(searchQuery.toLowerCase()));
+      envelope.signers?.some(r => r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.email.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesStatus = statusFilter === 'all' || envelope.status === statusFilter;
 
     let matchesDate = true;
     if (dateRange?.from) {
-      const envelopeDate = new Date(envelope.updated_at || envelope.updatedAt || envelope.created_at || envelope.createdAt);
+      const envelopeDate = new Date(envelope.updated_at || envelope.created_at);
       const start = startOfDay(dateRange.from);
       const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
       matchesDate = isWithinInterval(envelopeDate, { start, end });
@@ -378,7 +378,7 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                       {/* P8.1 — page-1 PDF thumbnail (60x80, lazy + cached). */}
                       <EnvelopeThumbnail
                         envelopeId={envelope.id}
-                        version={envelope.updated_at || envelope.updatedAt}
+                        version={envelope.updated_at}
                       />
                       <div className="flex flex-col min-w-0">
                         <span className="font-medium truncate" title={envelope.title}>{envelope.title}</span>
@@ -391,7 +391,7 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      {envelope.recipients?.slice(0, 2).map((r: { id: string; name: string; status?: string }) => (
+                      {envelope.signers?.slice(0, 2).map((r) => (
                         <div key={r.id} className="text-sm flex items-center gap-1">
                            <span className={r.status === 'signed' ? 'text-green-600 font-medium' : ''}>
                              {r.name}
@@ -401,12 +401,12 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                            )}
                         </div>
                       ))}
-                      {(envelope.recipients?.length || 0) > 2 && (
+                      {(envelope.signers?.length || 0) > 2 && (
                         <span className="text-xs text-muted-foreground">
-                          +{envelope.recipients!.length - 2} more
+                          +{envelope.signers!.length - 2} more
                         </span>
                       )}
-                      {envelope.signedCount != null && envelope.totalSigners > 0 && (
+                      {envelope.signedCount != null && (envelope.totalSigners ?? 0) > 0 && (
                         <span className="text-xs text-muted-foreground">
                           {envelope.signedCount}/{envelope.totalSigners} signed
                         </span>
@@ -415,7 +415,7 @@ export function EnvelopesList({ onViewEnvelope, onCreateNew, onResumePrepare, re
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      {format(new Date(envelope.updated_at || envelope.updatedAt || envelope.created_at || envelope.createdAt), 'MMM d, yyyy HH:mm')}
+                      {format(new Date(envelope.updated_at || envelope.created_at), 'MMM d, yyyy HH:mm')}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
