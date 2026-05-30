@@ -438,7 +438,7 @@ export function HomePage() {
                 height={17}
                 priority={true}
                 className="w-6 h-[17px] rounded-[2px] border border-white/15 object-cover"
-                fetchPriority="high"
+                fetchpriority="high"
                 loading="eager"
               />
               <span className="text-[12px] font-medium text-gray-400 tracking-wide">Proudly South African · Independent · FSP 54606</span>
@@ -467,7 +467,7 @@ export function HomePage() {
                   </Link>
                 </Button>
               ) : (
-                <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-200 px-8 h-12 shadow-lg shadow-purple-600/20" onClick={currentSlide.primaryAction.action}>
+                <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-200 px-8 h-12 shadow-lg shadow-purple-600/20" onClick={(currentSlide.primaryAction as { action?: () => void }).action}>
                   {currentSlide.primaryAction.text}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -479,7 +479,7 @@ export function HomePage() {
                   </Link>
                 </Button>
               ) : (
-                <Button size="lg" variant="outline" className="border-purple-400/30 bg-transparent text-purple-300 hover:bg-purple-500/15 hover:border-purple-400/50 hover:text-purple-200 transition-colors duration-200 px-8 h-12" onClick={currentSlide.secondaryAction.action}>
+                <Button size="lg" variant="outline" className="border-purple-400/30 bg-transparent text-purple-300 hover:bg-purple-500/15 hover:border-purple-400/50 hover:text-purple-200 transition-colors duration-200 px-8 h-12" onClick={(currentSlide.secondaryAction as { action?: () => void }).action}>
                   {currentSlide.secondaryAction.text}
                 </Button>
               )}
@@ -583,7 +583,7 @@ export function HomePage() {
                       priority={isPrimaryCard}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 high-quality-image"
                       loading={isPrimaryCard ? "eager" : "lazy"}
-                      fetchPriority={isPrimaryCard ? "high" : "auto"}
+                      fetchpriority={isPrimaryCard ? "high" : "auto"}
                       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
                     />
                   )}
@@ -732,7 +732,7 @@ export function HomePage() {
                           height={100}
                           className="h-12 sm:h-14 lg:h-20 xl:h-24 w-full max-w-full object-contain opacity-85 group-hover:opacity-100 transition-all duration-300 group-hover:scale-105 high-quality-image filter grayscale-0"
                           loading="lazy"
-                          fetchPriority="auto"
+                          fetchpriority="auto"
                           sizes="(max-width: 640px) 120px, (max-width: 768px) 150px, (max-width: 1024px) 180px, 200px"
                           decoding="async"
                         />

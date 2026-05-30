@@ -9,7 +9,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, ArrowLeft, Info, AlertCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -69,8 +69,10 @@ export function Step1InformationGathering({
   }, [activeTab]);
   
   const form = useForm<InformationGatheringFormValues>({
-    resolver: zodResolver(InformationGatheringSchema),
-    defaultValues: DEFAULT_FORM_VALUES,
+    // zodResolver infers the schema INPUT type (defaulted fields optional);
+    // the form operates on the OUTPUT shape, so assert to that.
+    resolver: zodResolver(InformationGatheringSchema) as unknown as Resolver<InformationGatheringFormValues>,
+    defaultValues: DEFAULT_FORM_VALUES as unknown as InformationGatheringFormValues,
     mode: 'onChange',
   });
 
@@ -101,7 +103,7 @@ export function Step1InformationGathering({
   // Auto-populate from saved intake / handoff data only
   useEffect(() => {
     if (hasPersistedRiskIntake(initialData)) {
-      populateFromInitialData(initialData);
+      populateFromInitialData(initialData!);
     }
   }, [initialData]);
   
@@ -201,8 +203,8 @@ export function Step1InformationGathering({
         Object.entries(keyToFieldMap).forEach(([keyId, fieldName]) => {
           const keyData = newKeys.keys.find(k => k.keyId === keyId);
           
-          if (keyData && keyData.value > 0) {
-            form.setValue(fieldName, keyData.value.toString());
+          if (keyData && Number(keyData.value) > 0) {
+            form.setValue(fieldName, String(keyData.value));
             updatedCount++;
           }
         });

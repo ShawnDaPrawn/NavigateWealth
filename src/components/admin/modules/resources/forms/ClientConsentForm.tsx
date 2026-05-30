@@ -3,14 +3,15 @@ import { BasePdfLayout } from '../templates/BasePdfLayout';
 
 export const ClientConsentForm = ({ 
   data = {} 
-}: { 
-  data?: Record<string, unknown> 
+}: {
+  data?: Record<string, unknown>
 }) => {
+  const d = data as Record<string, string | undefined>;
   return (
     <BasePdfLayout 
       docTitle="Client Consent Form"
       formCode="NW_CONSENT_01"
-      issueDate={data.issueDate}
+      issueDate={d.issueDate}
       version="1.0"
     >
         <section className="section">
@@ -29,11 +30,11 @@ export const ClientConsentForm = ({
             </div>
             <table>
               <tbody>
-                <tr><th>First Name</th><td className="field">{data.firstName || ''}</td></tr>
-                <tr><th>Surname</th><td className="field">{data.lastName || ''}</td></tr>
-                <tr><th>ID / Passport Number</th><td className="field">{data.idNumber || ''}</td></tr>
-                <tr><th>Email Address</th><td className="field">{data.email || ''}</td></tr>
-                <tr><th>Mobile Number</th><td className="field">{data.mobile || ''}</td></tr>
+                <tr><th>First Name</th><td className="field">{d.firstName || ''}</td></tr>
+                <tr><th>Surname</th><td className="field">{d.lastName || ''}</td></tr>
+                <tr><th>ID / Passport Number</th><td className="field">{d.idNumber || ''}</td></tr>
+                <tr><th>Email Address</th><td className="field">{d.email || ''}</td></tr>
+                <tr><th>Mobile Number</th><td className="field">{d.mobile || ''}</td></tr>
               </tbody>
             </table>
           </section>

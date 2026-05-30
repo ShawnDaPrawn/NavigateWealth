@@ -245,8 +245,8 @@ export function ClientFNAIntakeWizard({
               initialData={hasSavedInputs ? medicalInitial : undefined}
               intakeMode
               submitLabel="Continue to submit"
-              onSaveDraft={(data: MedicalFNAInputs) => void persistDraft(data as Record<string, unknown>)}
-              onNext={(data: MedicalFNAInputs) => void handleContinue(data as Record<string, unknown>)}
+              onSaveDraft={(data: MedicalFNAInputs) => void persistDraft(data as unknown as Record<string, unknown>)}
+              onNext={(data: MedicalFNAInputs) => void handleContinue(data as unknown as Record<string, unknown>)}
             />
           )}
 
@@ -257,10 +257,10 @@ export function ClientFNAIntakeWizard({
               intakeMode
               submitLabel="Continue to submit"
               onSaveDraft={(data: InformationGatheringInput) =>
-                void persistDraft(data as Record<string, unknown>)
+                void persistDraft(data as unknown as Record<string, unknown>)
               }
               onNext={(data: InformationGatheringInput) =>
-                void handleContinue(data as Record<string, unknown>)
+                void handleContinue(data as unknown as Record<string, unknown>)
               }
             />
           )}
@@ -271,8 +271,8 @@ export function ClientFNAIntakeWizard({
               initialData={hasSavedInputs ? taxInitial : {}}
               intakeMode
               submitLabel="Continue to submit"
-              onSaveDraft={(data: TaxPlanningInputs) => void persistDraft(data as Record<string, unknown>)}
-              onNext={(data: TaxPlanningInputs) => void handleContinue(data as Record<string, unknown>)}
+              onSaveDraft={(data: TaxPlanningInputs) => void persistDraft(data as unknown as Record<string, unknown>)}
+              onNext={(data: TaxPlanningInputs) => void handleContinue(data as unknown as Record<string, unknown>)}
             />
           )}
 
