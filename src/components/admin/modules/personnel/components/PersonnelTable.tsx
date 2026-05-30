@@ -96,7 +96,7 @@ export function PersonnelTable({ data, onRowClick, roles }: PersonnelTableProps)
       render: (title) =>
         title ? (
           <span className="text-sm text-gray-600 truncate max-w-[180px] inline-block">
-            {title}
+            {String(title)}
           </span>
         ) : (
           <span className="text-sm text-gray-300">—</span>
@@ -126,9 +126,9 @@ export function PersonnelTable({ data, onRowClick, roles }: PersonnelTableProps)
       key: 'commissionSplit',
       title: 'Commission',
       render: (split) =>
-        split != null && split > 0 ? (
+        split != null && Number(split) > 0 ? (
           <span className="text-sm font-medium text-gray-700">
-            {(split * 100).toFixed(0)}%
+            {(Number(split) * 100).toFixed(0)}%
           </span>
         ) : (
           <span className="text-sm text-gray-300">—</span>
@@ -139,9 +139,9 @@ export function PersonnelTable({ data, onRowClick, roles }: PersonnelTableProps)
 
   return (
     <DataTable
-      columns={columns}
-      data={data}
-      onRowClick={onRowClick}
+      columns={columns as unknown as React.ComponentProps<typeof DataTable>['columns']}
+      data={data as unknown as React.ComponentProps<typeof DataTable>['data']}
+      onRowClick={onRowClick as unknown as React.ComponentProps<typeof DataTable>['onRowClick']}
       searchable={false}
       exportable={false}
     />

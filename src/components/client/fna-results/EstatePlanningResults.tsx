@@ -180,7 +180,7 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
                           <p className="text-gray-900">{dep.name}</p>
                           <p className="text-gray-600 capitalize">{dep.relationship} - Age {dep.age}</p>
                         </div>
-                        {dep.specialNeeds && (
+                        {!!dep.specialNeeds && (
                           <Badge variant="outline" className="text-xs">Special Needs</Badge>
                         )}
                       </div>
@@ -225,7 +225,7 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
                   {assets.map((asset: EstateAsset, index: number) => (
                     <div key={index} className="flex justify-between items-center text-xs p-2 bg-gray-50 rounded">
                       <div className="flex-1">
-                        <p className="text-gray-900">{asset.description || asset.name || 'Asset'}</p>
+                        <p className="text-gray-900">{String(asset.description || asset.name || 'Asset')}</p>
                         {asset.type && (
                           <p className="text-gray-600 text-xs capitalize">{asset.type} {asset.subType ? `- ${asset.subType}` : ''}</p>
                         )}
@@ -248,9 +248,9 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
                   {liabilities.map((liability: EstateLiability, index: number) => (
                     <div key={index} className="flex justify-between items-center text-xs p-2 bg-gray-50 rounded">
                       <div className="flex-1">
-                        <p className="text-gray-900">{liability.description || liability.name || 'Liability'}</p>
-                        {liability.type && (
-                          <p className="text-gray-600 text-xs capitalize">{liability.type}</p>
+                        <p className="text-gray-900">{String(liability.description || liability.name || 'Liability')}</p>
+                        {!!liability.type && (
+                          <p className="text-gray-600 text-xs capitalize">{String(liability.type)}</p>
                         )}
                       </div>
                       <p className="text-gray-900">{formatCurrency(liability.outstandingBalance || liability.amount || 0)}</p>
@@ -414,7 +414,7 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
               {lifePolicies.map((policy: LifePolicy, index: number) => (
                 <div key={index} className="flex justify-between items-center text-xs p-3 bg-teal-50 rounded-lg border border-teal-100">
                   <div>
-                    <p className="text-gray-900 capitalize">{(policy.policyType || 'Life Cover').replace(/_/g, ' ')}</p>
+                    <p className="text-gray-900 capitalize">{String(policy.policyType || 'Life Cover').replace(/_/g, ' ')}</p>
                     <p className="text-gray-600">
                       {policy.payableToEstate ? 'Payable to Estate' : 'Nominated Beneficiary'}
                       {policy.cededTo ? ` (Ceded to ${policy.cededTo})` : ''}

@@ -90,7 +90,7 @@ export function BankingSection({
           </div>
         </CardHeader>
         <CardContent>
-          {profileData.bankAccounts.length === 0 ? (
+          {(profileData.bankAccounts as BankAccount[]).length === 0 ? (
             <EmptyState
               icon={emptyStateConfigs.banking.icon}
               title={emptyStateConfigs.banking.title}
@@ -104,12 +104,12 @@ export function BankingSection({
             />
           ) : (
             <div className="space-y-4">
-              {profileData.bankAccounts.map((account: BankAccount, index: number) => {
+              {(profileData.bankAccounts as BankAccount[]).map((account: BankAccount, index: number) => {
                 const isInEditMode = bankAccountsInEditMode.has(account.id);
                 const isOtherBank = account.bankName === 'Other';
                 
                 // Validation logic
-                let isValid = account.accountHolderName && account.bankName && account.accountNumber && account.accountType;
+                let isValid = !!(account.accountHolderName && account.bankName && account.accountNumber && account.accountType);
                 if (isOtherBank) {
                   isValid = isValid && !!account.customBankName && !!account.customBranchCode;
                 } else {
@@ -151,7 +151,7 @@ export function BankingSection({
                               <Edit2 className="h-4 w-4 mr-1" />
                               Edit
                             </Button>
-                            {profileData.bankAccounts.length > 1 && (
+                            {(profileData.bankAccounts as BankAccount[]).length > 1 && (
                               <Button
                                 variant="outline"
                                 size="sm"

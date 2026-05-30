@@ -156,7 +156,7 @@ export function IdentitySection({
 }: IdentitySectionProps) {
   const [addMenuOpen, setAddMenuOpen] = useState(false);
 
-  const identityDocuments = profileData?.identityDocuments || [];
+  const identityDocuments = (profileData?.identityDocuments as IdentityDocument[]) || [];
 
   const handleEdit = (docId: string) => {
     editIdentityDocument(docId);
@@ -568,7 +568,7 @@ export function IdentitySection({
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleView(doc.fileUrl)}
+                                    onClick={() => handleView(doc.fileUrl ?? '')}
                                     className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9] hover:text-white"
                                   >
                                     <Eye className="h-4 w-4 mr-1.5" />
@@ -577,7 +577,7 @@ export function IdentitySection({
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleDownload(doc.fileUrl, doc.fileName!)}
+                                    onClick={() => handleDownload(doc.fileUrl ?? '', doc.fileName!)}
                                     className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9] hover:text-white"
                                   >
                                     <Download className="h-4 w-4 mr-1.5" />
