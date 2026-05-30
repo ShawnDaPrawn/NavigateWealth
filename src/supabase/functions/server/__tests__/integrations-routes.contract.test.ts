@@ -208,4 +208,62 @@ describe('integrations.tsx route contracts', () => {
       expect(body.policies.map((p) => p.id)).toEqual(['p2']);
     });
   });
+
+  describe('GET /schemas', () => {
+    it('returns 400 when categoryId is missing', async () => {
+      const res = await integrationsApp.request('/schemas');
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Missing categoryId' });
+    });
+
+    it('falls back to a default schema (with a fields array) when none is stored', async () => {
+      const res = await integrationsApp.request('/schemas?categoryId=risk_planning');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { fields?: unknown };
+      expect(Array.isArray(body.fields)).toBe(true);
+    });
+
+    it('returns the stored schema when one exists', async () => {
+      kvStore.set('config:schema:risk_planning', {
+        fields: [{ id: 'sumAssured', label: 'Sum Assured' }],
+      });
+      const res = await integrationsApp.request('/schemas?categoryId=risk_planning');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { fields: Array<{ id: string }> };
+      expect(body.fields.map((f) => f.id)).toEqual(['sumAssured']);
+    });
+  });
+
+  describe('GET /custom-keys', () => {
+    it('returns 400 when categoryId is missing', async () => {
+      const res = await integrationsApp.request('/custom-keys');
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Missing categoryId' });
+    });
+
+    it('returns the stored custom keys under a customKeys envelope', async () => {
+      kvStore.set('config:custom_keys:risk_planning', [{ keyId: 'k1', name: 'Custom 1' }]);
+      const res = await integrationsApp.request('/custom-keys?categoryId=risk_planning');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { customKeys: Array<{ keyId: string }> };
+      expect(body.customKeys.map((k) => k.keyId)).toEqual(['k1']);
+    });
+  });
+
+  describe('GET /history', () => {
+    it('returns 400 when providerId or categoryId is missing', async () => {
+      const res = await integrationsApp.request('/history?providerId=p1');
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: expect.stringContaining('Missing') });
+    });
+
+    it('returns upload history sorted by uploadedAt descending', async () => {
+      kvStore.set('history:p1:risk:older', { id: 'older', uploadedAt: '2026-01-01T00:00:00.000Z' });
+      kvStore.set('history:p1:risk:newer', { id: 'newer', uploadedAt: '2026-03-01T00:00:00.000Z' });
+      const res = await integrationsApp.request('/history?providerId=p1&categoryId=risk');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as Array<{ id: string }>;
+      expect(body.map((h) => h.id)).toEqual(['newer', 'older']);
+    });
+  });
 });
