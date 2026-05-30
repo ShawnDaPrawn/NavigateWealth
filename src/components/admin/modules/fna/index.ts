@@ -10,8 +10,6 @@
 // ── Components ──────────────────────────────────────────────────────────────
 export { FNACard } from './components/FNACard';
 export { FNAStatusBadge } from './components/FNAStatusBadge';
-export { FNAResultsView } from './FNAResultsView';
-export { FNAWizard } from './FNAWizard';
 export { FNAWizardLayout } from './FNAWizardLayout';
 export type { FNAWizardStepConfig } from './FNAWizardLayout';
 export { PublishFNADialog } from './PublishFNADialog';

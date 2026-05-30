@@ -65,13 +65,6 @@ const LazyTaxPlanningResultsView = React.lazy(() =>
   import('../modules/tax-planning-fna/components/TaxPlanningResultsView').then(m => ({ default: m.TaxPlanningResultsView }))
 );
 
-// Generic FNA components (shared module — also lazy)
-const LazyFNAWizard = React.lazy(() =>
-  import('../modules/fna/FNAWizard').then(m => ({ default: m.FNAWizard }))
-);
-const LazyFNAResultsView = React.lazy(() =>
-  import('../modules/fna/FNAResultsView').then(m => ({ default: m.FNAResultsView }))
-);
 
 // ==================== CONFIG TYPE ====================
 
