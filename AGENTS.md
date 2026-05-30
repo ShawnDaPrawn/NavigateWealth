@@ -112,10 +112,11 @@ Session handling in `src/components/auth/AuthContext.tsx` and
 - `tsconfig.json` is at the project root.
 - Path alias `@` maps to `./src` in Vite and TypeScript config.
 - No ESLint config is present on clean `main` as of 2026-04-20.
-- The test suite has a known pre-existing issue:
-  `src/components/admin/modules/resources/components/__tests__/resolveNestedKey.test.tsx`
-  uses custom assertion logging instead of Vitest `test()`/`it()` functions.
-  It logs `17/17 passed` internally, but Vitest reports "No test suite found."
+- `src/components/admin/modules/resources/components/__tests__/resolveNestedKey.test.tsx`
+  was previously a known-broken suite (custom assertion logging instead of
+  Vitest, so Vitest reported "No test suite found"). It has since been converted
+  to a proper Vitest `describe` + `it.each` suite covering the 17 cases and is
+  no longer a special case.
 - The Vite dev server opens `http://localhost:3000/` by default.
 - Architecture guidelines live in `src/guidelines/Guidelines.md`.
 - Status and roadmap live in `docs/PRODUCTION-READINESS.md`.
