@@ -5,6 +5,7 @@ import {
   absoluteUrl,
   disallowPaths,
   normalizeSiteUrl,
+  resolveSiteVerificationToken,
 } from './seo-static-data.mjs';
 
 const siteUrl = normalizeSiteUrl(process.env.SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL);
@@ -14,6 +15,7 @@ const failures = [];
 verifyRobots();
 verifySitemap();
 verifyStaticHtml();
+verifySiteVerification();
 verifyEdgeNotFound();
 
 if (failures.length) {
@@ -150,6 +152,31 @@ function decodeXml(value) {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'");
+}
+
+/**
+ * When a Google Search Console token is configured, assert it was injected into
+ * the home page head so a misconfigured build can't silently ship unverified.
+ */
+function verifySiteVerification() {
+  const token = resolveSiteVerificationToken();
+  if (!token) return;
+
+  const homePath = path.join(distDir, 'index.html');
+  if (!fs.existsSync(homePath)) {
+    failures.push('dist/index.html is missing; cannot verify google-site-verification tag');
+    return;
+  }
+
+  const html = fs.readFileSync(homePath, 'utf8');
+  const match = html.match(
+    /<meta\s+name=["']google-site-verification["']\s+content=["']([^"']+)["']\s*\/?>/i,
+  );
+  if (!match) {
+    failures.push('GOOGLE_SITE_VERIFICATION is set but no verification meta tag was injected');
+  } else if (decodeXml(match[1]) !== token) {
+    failures.push('google-site-verification meta tag content does not match the configured token');
+  }
 }
 
 function verifyEdgeNotFound() {

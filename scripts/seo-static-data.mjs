@@ -6,6 +6,37 @@ export const DEFAULT_BUSINESS_NAME = 'Navigate Wealth';
 export const DEFAULT_BUSINESS_PHONE = '+27126672505';
 export const DEFAULT_BUSINESS_EMAIL = 'info@navigatewealth.co';
 
+/**
+ * Whether a failure to fetch published articles should hard-fail the build
+ * instead of silently degrading to the cached/empty article set.
+ *
+ * Resolution order:
+ *   1. Explicit `SEO_REQUIRE_ARTICLES` (1/true/yes → strict, 0/false/no → lenient).
+ *   2. Otherwise default to strict on automated production builds (Vercel / CI),
+ *      and lenient for local development so offline `npm run build` still works.
+ */
+export function requireArticles() {
+  const explicit = process.env.SEO_REQUIRE_ARTICLES;
+  if (explicit != null && explicit.trim() !== '') {
+    return /^(1|true|yes)$/i.test(explicit.trim());
+  }
+  return Boolean(process.env.VERCEL || process.env.CI);
+}
+
+/**
+ * Google Search Console "HTML tag" verification token, injected into the
+ * prerendered <head> at build time when present. Set via the
+ * `GOOGLE_SITE_VERIFICATION` (or `VITE_GOOGLE_SITE_VERIFICATION`) env var in the
+ * deployment environment; a no-op when unset.
+ */
+export function resolveSiteVerificationToken() {
+  const token =
+    process.env.GOOGLE_SITE_VERIFICATION ||
+    process.env.VITE_GOOGLE_SITE_VERIFICATION ||
+    '';
+  return token.trim();
+}
+
 export const disallowPaths = [
   '/admin',
   '/dashboard',
