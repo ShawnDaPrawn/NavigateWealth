@@ -126,20 +126,20 @@ export function RequestCompletionPage() {
   const renderField = (field: TemplateField) => {
     // ... Legacy render logic ...
     const value = responses[field.id];
-    const handleChange = (val: string | number | boolean) => setResponses(prev => ({ ...prev, [field.id]: val }));
+    const handleChange = (val: string | number | boolean | string[]) => setResponses(prev => ({ ...prev, [field.id]: val }));
 
     switch (field.type) {
       case 'text':
       case 'email':
       case 'phone':
-        return <Input value={value || ''} onChange={e => handleChange(e.target.value)} placeholder={field.placeholder} />;
+        return <Input value={(value as string) || ''} onChange={e => handleChange(e.target.value)} placeholder={field.placeholder} />;
       case 'number':
-        return <Input type="number" value={value || ''} onChange={e => handleChange(e.target.value)} placeholder={field.placeholder} />;
+        return <Input type="number" value={(value as string) || ''} onChange={e => handleChange(e.target.value)} placeholder={field.placeholder} />;
       case 'textarea':
-        return <Textarea value={value || ''} onChange={e => handleChange(e.target.value)} placeholder={field.placeholder} />;
+        return <Textarea value={(value as string) || ''} onChange={e => handleChange(e.target.value)} placeholder={field.placeholder} />;
       case 'select':
         return (
-          <Select value={value} onValueChange={handleChange}>
+          <Select value={value as string | undefined} onValueChange={handleChange}>
             <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
             <SelectContent>
               {field.options?.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -148,7 +148,7 @@ export function RequestCompletionPage() {
         );
       case 'radio':
         return (
-          <RadioGroup value={value} onValueChange={handleChange}>
+          <RadioGroup value={value as string | undefined} onValueChange={handleChange}>
             {field.options?.map(opt => (
               <div key={opt} className="flex items-center space-x-2">
                 <RadioGroupItem value={opt} id={`${field.id}-${opt}`} />
@@ -179,7 +179,7 @@ export function RequestCompletionPage() {
       case 'toggle':
         return <Switch checked={!!value} onCheckedChange={handleChange} />;
       case 'date':
-        return <Input type="date" value={value || ''} onChange={e => handleChange(e.target.value)} />;
+        return <Input type="date" value={(value as string) || ''} onChange={e => handleChange(e.target.value)} />;
       case 'header':
         return <h3 className="text-lg font-semibold mt-6 mb-2 border-b pb-1">{field.label}</h3>;
       case 'paragraph':
@@ -279,7 +279,7 @@ export function RequestCompletionPage() {
             {request.blocks && request.blocks.length > 0 ? (
                 // --- NEW BLOCK RENDERER ---
                 <InteractiveFormRenderer 
-                    blocks={request.blocks}
+                    blocks={request.blocks as unknown as React.ComponentProps<typeof InteractiveFormRenderer>['blocks']}
                     responses={responses}
                     onChange={(key, val) => setResponses(prev => ({ ...prev, [key]: val }))}
                 />
