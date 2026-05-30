@@ -29,10 +29,12 @@ export function MedicalFNAResultsView({ results: propResults, fna }: MedicalFNAR
   // The 'fna' prop is the most reliable source for the full session (inputs, calculations, adjustments)
   // 'propResults' might be the session object (if passed as results={data}) or just the calculations
   
-  const session = fna || (propResults?.inputs ? propResults : null);
-  
+  // propResults can be either a raw MedicalFNAResults or a session wrapper; read it as the wrapper shape.
+  const pr = propResults as { inputs?: MedicalFNAInputs; calculations?: MedicalFNAResults; results?: MedicalFNAResults; adjustments?: MedicalFNAAdjustments; rationale?: string; [key: string]: unknown } | undefined;
+  const session = fna || (pr?.inputs ? pr : null);
+
   const inputs: MedicalFNAInputs | undefined = session?.inputs;
-  const calculations: MedicalFNAResults | undefined = session?.calculations || session?.results || (propResults?.rationale ? propResults : null);
+  const calculations: MedicalFNAResults | undefined = session?.calculations || session?.results || (pr?.rationale ? (pr as unknown as MedicalFNAResults) : undefined);
   const adjustments: MedicalFNAAdjustments = session?.adjustments || { notes: '' };
   
   // If we don't have calculations, we can't show anything meaningful

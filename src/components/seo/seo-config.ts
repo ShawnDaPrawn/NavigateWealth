@@ -234,7 +234,7 @@ const seoPages: Record<string, SEOPageData> = {
  * SEO for shareable quote contact landing pages: /get-quote/:service/contact
  */
 export function getQuoteServiceContactSEO(serviceId: QuoteServiceId): SEOPageData {
-  const cfg = getServiceConfig(serviceId);
+  const cfg = getServiceConfig(serviceId)!;
   const description =
     cfg.heroDescription.length > 155 ? `${cfg.heroDescription.slice(0, 152)}…` : cfg.heroDescription;
   return {

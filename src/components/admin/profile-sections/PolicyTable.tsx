@@ -162,10 +162,10 @@ export function PolicyTable({
                         <div className="flex items-center gap-2">
                           <Building2 className={`h-4 w-4 ${policy.archived ? "text-gray-300" : "text-gray-400"}`} />
                           <span className={`font-medium ${policy.archived ? "text-gray-500 line-through" : ""}`}>
-                            {policy.providerName}
+                            {String(policy.providerName ?? '')}
                           </span>
                           {/* Document attachment indicator */}
-                          {(policy as Record<string, unknown>).document && !policy.archived && (
+                          {!!(policy as Record<string, unknown>).document && !policy.archived && (
                             <button
                               onClick={() => clientId && handleViewDocument(policy)}
                               title="View policy document"
@@ -195,7 +195,7 @@ export function PolicyTable({
   
                         {policy.archived && (
                           <span className="inline-flex items-center w-fit px-2 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                            Archived: {policy.archivedReason}
+                            Archived: {String(policy.archivedReason ?? '')}
                           </span>
                         )}
                       </div>
@@ -246,10 +246,10 @@ export function PolicyTable({
                               field.id === 'invest_premium' || 
                               fieldLabel === 'Premium'
                           ) {
-                              const isShortfall = linkedGoal.requiredMonthly > 0;
+                              const isShortfall = (linkedGoal.requiredMonthly ?? 0) > 0;
                               goalContent = isShortfall ? (
                                   <div className="text-[10px] mt-1 font-bold text-red-600 bg-red-50 inline-block px-1.5 py-0.5 rounded border border-red-100">
-                                      +{Math.round(linkedGoal.requiredMonthly).toLocaleString()} /pm req
+                                      +{Math.round(linkedGoal.requiredMonthly ?? 0).toLocaleString()} /pm req
                                   </div>
                               ) : (
                                   <div className="text-[10px] mt-1 font-bold text-green-600 flex items-center gap-1">
