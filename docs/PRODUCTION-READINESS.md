@@ -461,6 +461,14 @@ Historical context (kept for the incident trail): the file previously logged
 `src/supabase/functions/server/integrations.tsx` is still large and high-risk.
 The first priority is reducing it without changing behavior.
 
+> **A concrete, slice-by-slice execution plan now exists:**
+> [`docs/integrations-split-plan.md`](integrations-split-plan.md). It is grounded
+> in the actual file (6,613 lines, 68 routes, ~108 helpers as of 2026-05-30),
+> maps every route group to a target `*-routes.ts` file following the existing
+> 59-file convention, orders the slices low→high risk, flags `/portal-worker` as
+> an external public contract, and gives a per-slice checklist. Execution is
+> gated on `npm.jsr.io` being reachable (deps must install to verify each slice).
+
 Rules:
 
 - One route group per PR/commit.
@@ -899,3 +907,4 @@ Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`
 | 2026-05-23 | Form Prefill refinement: expanded smoke, parity tests, CI hooks, E2E hardening, migration script. | Agent |
 | 2026-05-30 | Doc reconciliation: marked `typecheck`/`typecheck:middleware`/`test:e2e` (and Playwright/`e2e/`) as landed; removed stray `temp_pr41.diff`/`temp_pr42.diff` and added `*.diff` to `.gitignore`. Lint/format (ESLint/Prettier) toolchain still pending — could not be installed/verified in the web sandbox because its network policy blocks `npm.jsr.io` (`npm ci` returns 403 for `@jsr/supabase__supabase-js`). | Agent |
 | 2026-05-30 | Closed Section 4.3: confirmed `resolveNestedKey.test.tsx` is already a proper Vitest `it.each` suite (export + 17 cases verified statically); corrected the stale "No test suite found" claims in §1.1, §4.3, §7, and AGENTS.md. | Agent |
+| 2026-05-30 | Added [`docs/integrations-split-plan.md`](integrations-split-plan.md): grounded, slice-by-slice execution plan for the §4.4 `integrations.tsx` split (68 routes / ~108 helpers mapped to target `*-routes.ts` files, risk-ordered, per-slice checklist). Execution gated on `npm.jsr.io` access. | Agent |
