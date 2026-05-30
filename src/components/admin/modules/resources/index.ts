@@ -9,7 +9,7 @@
 export { ResourcesModule } from './ResourcesModule';
 
 // Types (re-export only the public-facing types)
-export type { FormDefinition, ResourceCategory, BuilderBlock } from './types';
+export type { FormDefinition, ResourceCategory } from './types';
 
 // Hooks
 export { useResources } from './hooks/useResources';

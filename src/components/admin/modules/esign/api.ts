@@ -132,7 +132,7 @@ export const esignApi = {
         : `/esign/clients/${clientId}/envelopes`;
       return await api.get<GetClientEnvelopesResponse>(endpoint);
     } catch (error) {
-      logger.warn('E-Sign backend not available or error fetching client envelopes', error, { clientId });
+      logger.warn('E-Sign backend not available or error fetching client envelopes', { error, clientId });
       return { envelopes: [] };
     }
   },

@@ -320,7 +320,7 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit, canDelete }: C
           {/* 2. Policy Details Section */}
           <TabsContent value="policies" className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
-              <PolicyDetailsSection selectedClient={client} />
+              <PolicyDetailsSection selectedClient={client as unknown as React.ComponentProps<typeof PolicyDetailsSection>['selectedClient']} />
             </Suspense>
           </TabsContent>
 

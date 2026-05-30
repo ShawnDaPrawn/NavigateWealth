@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
-import { Provider, SaveProviderRequest, getPortalAutomationCategoryOptions, getProductCategoryLabel } from './types';
+import { Provider, SaveProviderRequest, getPortalAutomationCategoryOptions, getProductCategoryLabel, type ProductCategoryId } from './types';
 import { useProviders } from './hooks/useProviders';
 import { ProviderList } from './components/ProviderList';
 import { ProviderFormDialog } from './components/ProviderFormDialog';
@@ -114,7 +114,7 @@ export function ProviderManagementTab() {
         initialData={editingProvider ? {
             name: editingProvider.name,
             description: editingProvider.description || '',
-            categoryIds: editingProvider.categoryIds as string[],
+            categoryIds: editingProvider.categoryIds as unknown as ProductCategoryId[],
             logo: editingProvider.logo || ''
         } : undefined}
         onSave={handleSave}

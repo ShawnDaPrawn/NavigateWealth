@@ -47,7 +47,7 @@ export function InstallAppMenuItem({
 
   return (
     <DropdownMenuItem
-      onSelect={handleInstall}
+      onSelect={handleInstall as unknown as (event: Event) => void}
       disabled={isInstalling}
       className="text-purple-600 focus:text-purple-600 focus:bg-purple-50"
     >

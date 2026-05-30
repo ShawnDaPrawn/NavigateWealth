@@ -30,13 +30,13 @@ export function Logo({ variant = 'default', className = '' }: LogoProps) {
         className={`w-auto high-quality-image ${variant === 'admin-white' ? 'mix-blend-screen' : ''}`}
         loading="eager"
         decoding="sync"
-        style={{ 
+        style={{
           height,
           width: 'auto',
           maxWidth: 'none',
           imageRendering: 'auto',
           WebkitImageRendering: '-webkit-optimize-contrast'
-        }}
+        } as React.CSSProperties}
       />
     </div>
   );

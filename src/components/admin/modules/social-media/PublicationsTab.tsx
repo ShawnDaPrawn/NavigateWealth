@@ -172,7 +172,7 @@ export function PublicationsTab() {
         <TabsContent value="articles" className="mt-6">
           <ArticlesListView 
             onCreateNew={handleCreateNew}
-            onEditArticle={handleEditArticle}
+            onEditArticle={handleEditArticle as React.ComponentProps<typeof ArticlesListView>['onEditArticle']}
           />
         </TabsContent>
 

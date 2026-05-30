@@ -55,9 +55,9 @@ export function useClients(search?: string) {
             phone: user.profile?.contactDetails?.mobileNumber || null,
             date_of_birth: user.profile?.personalInformation?.dateOfBirth || null,
             created_by: 'system', 
-            created_at: user.created_at || new Date().toISOString(),
-            updated_at: user.updated_at || new Date().toISOString(),
-          };
+            created_at: String(user.created_at || new Date().toISOString()),
+            updated_at: String(user.updated_at || new Date().toISOString()),
+          } as Client;
         });
 
         // Client-side filtering if search is provided

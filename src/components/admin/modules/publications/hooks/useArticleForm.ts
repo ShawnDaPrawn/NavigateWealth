@@ -164,7 +164,7 @@ export function useArticleForm(options: UseArticleFormOptions = {}): UseArticleF
         });
       } else {
         // Create new article
-        savedArticle = await PublicationsAPI.Articles.createArticle(apiInput);
+        savedArticle = await PublicationsAPI.Articles.createArticle(apiInput as unknown as Parameters<typeof PublicationsAPI.Articles.createArticle>[0]);
       }
 
       // Update initial form data to current state

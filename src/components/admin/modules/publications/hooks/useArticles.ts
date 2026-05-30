@@ -21,7 +21,7 @@ interface UseArticlesReturn {
 
 export function useArticles(params?: ArticleFilters): UseArticlesReturn {
   const { data: articles = [], isLoading, isFetching, error, refetch: queryRefetch } = useQuery({
-    queryKey: publicationKeys.articleList(params),
+    queryKey: publicationKeys.articleList(params as Record<string, unknown> | undefined),
     queryFn: () => PublicationsAPI.Articles.getArticles(params),
     staleTime: 5 * 60 * 1000,
   });

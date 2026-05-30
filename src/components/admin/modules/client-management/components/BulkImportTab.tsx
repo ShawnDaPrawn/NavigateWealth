@@ -196,7 +196,7 @@ function parseExcel(file: File): Promise<ParsedRow[]> {
         const rows: ParsedRow[] = [];
         for (let i = 1; i < raw.length; i++) {
           const row = raw[i];
-          if (!row || row.every(cell => !cell && cell !== 0)) continue;
+          if (!row || row.every(cell => !cell && (cell as unknown) !== 0)) continue;
 
           const rowData: Record<string, string> = {};
           Object.entries(headerToField).forEach(([idxStr, field]) => {

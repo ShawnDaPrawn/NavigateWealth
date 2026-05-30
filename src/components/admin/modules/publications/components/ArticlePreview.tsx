@@ -253,7 +253,7 @@ export function ArticlePreview({
 }: ArticlePreviewProps) {
   const categoryName = categories.find((c) => c.id === article.category_id)?.name;
   const bodyContent = article.body || article.content || '';
-  const imageUrl = getArticleImageUrl(article);
+  const imageUrl = getArticleImageUrl(article as Parameters<typeof getArticleImageUrl>[0]);
 
   const previewHtml = useMemo(() => buildPreviewHtml(bodyContent), [bodyContent]);
 

@@ -56,7 +56,7 @@ export default function VerificationSuccessPage() {
         {/* Logo */}
         <div className="text-center">
           <Link to="/" className="inline-block">
-            <Logo size="lg" />
+            <Logo />
           </Link>
         </div>
 

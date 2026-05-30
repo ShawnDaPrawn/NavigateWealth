@@ -211,7 +211,7 @@ export function FieldPropertiesPanel({
           <div className="relative">
             <select 
               className="w-full p-2 border rounded-md text-sm bg-white focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
-              value={field.signer_id}
+              value={field.signer_id ?? ''}
               onChange={(e) => onUpdate(field.id, { signer_id: e.target.value })}
             >
               {signers.map(signer => (

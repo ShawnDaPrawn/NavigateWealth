@@ -31,7 +31,7 @@ import type {
 export async function fetchPersonnel(filters?: Partial<PersonnelFilters>): Promise<Personnel[]> {
   try {
     const response = await api.get<{ data: Personnel[] }>('personnel/list');
-    const personnel = (response.data || []).map(normalisePersonnel);
+    const personnel = (response.data || []).map((p) => normalisePersonnel(p as Parameters<typeof normalisePersonnel>[0]));
 
     // Client-side filtering if needed (though backend handles role filtering)
     // The backend returns all personnel visible to the user.

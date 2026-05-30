@@ -634,7 +634,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
                         <Label htmlFor="frequency">Frequency</Label>
                         <Select 
                             value={inputs.contributionFrequency} 
-                            onValueChange={(v: string) => setInputs({...inputs, contributionFrequency: v})}
+                            onValueChange={(v: string) => setInputs({...inputs, contributionFrequency: v as typeof inputs.contributionFrequency})}
                         >
                             <SelectTrigger>
                                 <SelectValue />

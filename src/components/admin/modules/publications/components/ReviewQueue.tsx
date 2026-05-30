@@ -398,7 +398,6 @@ export function ReviewQueue({ articles, categories, onEditArticle, onRefresh }: 
               <div className="flex items-center gap-3 px-4 py-2 bg-gray-50/60 text-xs text-gray-500">
                 <Checkbox
                   checked={allSelected}
-                  // @ts-expect-error — indeterminate mapped to data-state internally
                   data-state={someSelected ? 'indeterminate' : allSelected ? 'checked' : 'unchecked'}
                   onCheckedChange={toggleSelectAll}
                   className="h-3.5 w-3.5"

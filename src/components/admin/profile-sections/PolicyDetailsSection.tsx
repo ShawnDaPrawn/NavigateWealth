@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { PolicyFormDialog } from './PolicyFormDialog';
 import { PolicyCategoryTab } from './PolicyCategoryTab';
-import { PolicyOverviewTab, CategoryOverviewData } from './PolicyOverviewTab';
+import { PolicyOverviewTab } from './PolicyOverviewTab';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 

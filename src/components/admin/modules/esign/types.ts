@@ -789,8 +789,8 @@ export function canEnvelopeBeEdited(envelope: EsignEnvelope): boolean {
 }
 
 export function canEnvelopeBeSent(envelope: EsignEnvelope): boolean {
-  return envelope.status === 'draft' && 
-         envelope.signers && 
+  return envelope.status === 'draft' &&
+         !!envelope.signers &&
          envelope.signers.length > 0;
 }
 

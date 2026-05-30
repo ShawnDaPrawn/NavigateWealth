@@ -186,7 +186,7 @@ export function ApplicationsTable({
   };
 
   const getExistingProductsCount = (app: Application) => {
-    return normalizeApplicationData(app.application_data).existingProducts.filter((p) => p !== 'None of the above').length;
+    return (normalizeApplicationData(app.application_data).existingProducts ?? []).filter((p) => p !== 'None of the above').length;
   };
 
   const isPendingLike = activeTab === 'pending' || activeTab === 'invited' || activeTab === 'incomplete';

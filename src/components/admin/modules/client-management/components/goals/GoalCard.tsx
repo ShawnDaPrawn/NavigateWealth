@@ -15,7 +15,7 @@ interface GoalCardProps {
 }
 
 export function GoalCard({ goal, policies, onEdit }: GoalCardProps) {
-  const result = useMemo(() => calculateGoalStatus(goal, policies), [goal, policies]);
+  const result = useMemo(() => calculateGoalStatus(goal, policies as Parameters<typeof calculateGoalStatus>[1]), [goal, policies]);
   
   const percentage = Math.min(100, Math.max(0, (result.projectedValue / goal.targetAmount) * 100));
   

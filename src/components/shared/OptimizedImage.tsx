@@ -129,7 +129,7 @@ export function OptimizedImage({
         }`}
         loading={imageLoading}
         decoding={decoding}
-        fetchpriority={imageFetchPriority}
+        fetchPriority={imageFetchPriority}
         sizes={sizes || (width ? `${width}px` : '100vw')}
         onLoad={handleLoad}
         onError={handleError}

@@ -207,7 +207,7 @@ export function HeroSection({
                 height={27}
                 priority={true}
                 className="w-9 h-[27px] rounded-[3px] border border-white/20 object-cover"
-                fetchPriority="high"
+                fetchpriority="high"
                 loading="eager"
               />
               <span className="text-[13px] font-medium text-gray-400 tracking-wide">

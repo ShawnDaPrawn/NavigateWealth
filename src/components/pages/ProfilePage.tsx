@@ -247,7 +247,7 @@ export function ProfilePage() {
                 removeIdentityDocument={pm.removeIdentityDocument}
                 handleDocumentUpload={pm.handleDocumentUpload}
                 getDocumentTypeLabel={pm.getDocumentTypeLabel}
-                getDocumentTypeIcon={pm.getDocumentTypeIcon}
+                getDocumentTypeIcon={pm.getDocumentTypeIcon as unknown as (type: 'passport' | 'national-id' | 'drivers-license') => { icon: React.ComponentType<{ className?: string }>; color: string }}
               />
             )}
 

@@ -27,8 +27,8 @@ export function SearchInput({
 
   // Debounced onChange
   useEffect(() => {
-    const debouncedChange = debounce((val: string) => {
-      onChange(val);
+    const debouncedChange = debounce((val: unknown) => {
+      onChange(val as string);
     }, debounceMs);
 
     debouncedChange(localValue);
