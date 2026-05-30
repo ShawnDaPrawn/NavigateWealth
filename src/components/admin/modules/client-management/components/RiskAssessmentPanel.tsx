@@ -130,9 +130,10 @@ function parseFormJson(raw: string): FormField[] {
       fields.push(...normaliseFormItem(item));
     }
   } else if (parsed && typeof parsed === 'object') {
-    // Object with sections/questions/fields
-    if (parsed.sections && Array.isArray(parsed.sections)) {
-      for (const section of parsed.sections) {
+    // Object with sections/questions/fields (parsed narrows to `object`; read loosely)
+    const obj = parsed as Record<string, unknown>;
+    if (obj.sections && Array.isArray(obj.sections)) {
+      for (const section of obj.sections) {
         fields.push({
           id: `section_${section.name || section.title || section.id || Math.random()}`,
           label: section.name || section.title || 'Section',
@@ -144,17 +145,17 @@ function parseFormJson(raw: string): FormField[] {
           fields.push(...normaliseFormItem(q));
         }
       }
-    } else if (parsed.questions && Array.isArray(parsed.questions)) {
-      for (const q of parsed.questions) {
+    } else if (obj.questions && Array.isArray(obj.questions)) {
+      for (const q of obj.questions) {
         fields.push(...normaliseFormItem(q));
       }
-    } else if (parsed.fields && Array.isArray(parsed.fields)) {
-      for (const q of parsed.fields) {
+    } else if (obj.fields && Array.isArray(obj.fields)) {
+      for (const q of obj.fields) {
         fields.push(...normaliseFormItem(q));
       }
     } else {
       // Single object — try to interpret as one question or a flat set of questions
-      fields.push(...normaliseFormItem(parsed));
+      fields.push(...normaliseFormItem(obj));
     }
   }
 
