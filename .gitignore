@@ -17,3 +17,6 @@ e2e/.env.local
 # Local test/run artifacts
 playwright-report
 test-results
+
+# Stray patch/diff exports (e.g. saved PR diffs)
+*.diff

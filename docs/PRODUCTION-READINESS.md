@@ -680,25 +680,27 @@ Editing rules:
 
 ### Current Day-To-Day Commands
 
-These exist in the clean `package.json` as of 2026-04-20:
+These exist in `package.json` as of 2026-05-30:
 
 ```powershell
 npm run dev
 npm run build
 npm test
 npm run test:watch
+npm run test:e2e
+npm run typecheck
+npm run typecheck:middleware
 npm run ui:inspect -- --path /admin --output tmp/ui-inspect/admin.png
 npm run provider:sync
 npm run provider:worker
 ```
 
-These do **not** exist on clean `main` as of 2026-04-20:
+These do **not** exist on `main` as of 2026-05-30:
 
 ```text
 npm run lint
-npm run typecheck
-npm run test:coverage
 npm run format
+npm run test:coverage
 npm run deps:audit
 npm run deps:boundaries
 npm run check-env
@@ -901,3 +903,4 @@ Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`
 | 2026-04-18 | Initial Claude roadmap draft created, describing a broad production-readiness update and the original CORS incident. | Claude Opus 4.7 |
 | 2026-04-20 | Corrected the roadmap against the clean repository state after the CORS restore. Added deployed verification, stash quarantine status, tooling-hook incident, accurate command list, and landed-vs-proposed inventory. | Codex |
 | 2026-05-23 | Form Prefill refinement: expanded smoke, parity tests, CI hooks, E2E hardening, migration script. | Agent |
+| 2026-05-30 | Doc reconciliation: marked `typecheck`/`typecheck:middleware`/`test:e2e` (and Playwright/`e2e/`) as landed; removed stray `temp_pr41.diff`/`temp_pr42.diff` and added `*.diff` to `.gitignore`. Lint/format (ESLint/Prettier) toolchain still pending — could not be installed/verified in the web sandbox because its network policy blocks `npm.jsr.io` (`npm ci` returns 403 for `@jsr/supabase__supabase-js`). | Agent |
