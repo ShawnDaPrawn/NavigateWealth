@@ -49,6 +49,17 @@ export function HealthSection({
   updateChronicCondition,
   setChronicConditionToDelete
 }: HealthSectionProps) {
+  // profileData is a loose Record; read the health fields this section uses.
+  const pd = profileData as {
+    height?: number;
+    heightUnit?: 'cm' | 'ft';
+    weight?: number;
+    weightUnit?: 'kg' | 'lbs';
+    bloodType?: string;
+    smokerStatus?: boolean;
+    hasChronicConditions?: boolean;
+    chronicConditions?: ChronicCondition[];
+  };
   return (
     <div className="contents">
       <Card>
@@ -70,7 +81,7 @@ export function HealthSection({
               <Input
                 id="height"
                 type="number"
-                value={profileData.height || ''}
+                value={pd.height || ''}
                 onChange={(e) => handleInputChange('height', parseFloat(e.target.value) || 0)}
                 placeholder="0"
                 className="mt-1.5"
@@ -80,7 +91,7 @@ export function HealthSection({
             <div>
               <Label htmlFor="heightUnit">Unit</Label>
               <Select
-                value={profileData.heightUnit}
+                value={pd.heightUnit}
                 onValueChange={(value: 'cm' | 'ft') => handleInputChange('heightUnit', value)}
               >
                 <SelectTrigger id="heightUnit" className="mt-1.5">
@@ -98,7 +109,7 @@ export function HealthSection({
               <Input
                 id="weight"
                 type="number"
-                value={profileData.weight || ''}
+                value={pd.weight || ''}
                 onChange={(e) => handleInputChange('weight', parseFloat(e.target.value) || 0)}
                 placeholder="0"
                 className="mt-1.5"
@@ -108,7 +119,7 @@ export function HealthSection({
             <div>
               <Label htmlFor="weightUnit">Unit</Label>
               <Select
-                value={profileData.weightUnit}
+                value={pd.weightUnit}
                 onValueChange={(value: 'kg' | 'lbs') => handleInputChange('weightUnit', value)}
               >
                 <SelectTrigger id="weightUnit" className="mt-1.5">
@@ -124,7 +135,7 @@ export function HealthSection({
             <div className="sm:col-span-2">
               <Label htmlFor="bloodType">Blood Type</Label>
               <Select
-                value={profileData.bloodType}
+                value={pd.bloodType}
                 onValueChange={(value) => handleInputChange('bloodType', value)}
               >
                 <SelectTrigger id="bloodType" className="mt-1.5">
@@ -154,7 +165,7 @@ export function HealthSection({
                 <p className="text-xs text-gray-500">Does the client currently smoke?</p>
               </div>
               <Switch
-                checked={profileData.smokerStatus}
+                checked={pd.smokerStatus}
                 onCheckedChange={(checked) => handleInputChange('smokerStatus', checked)}
               />
             </div>
@@ -165,13 +176,13 @@ export function HealthSection({
                 <p className="text-xs text-gray-500">Does the client have any health conditions?</p>
               </div>
               <Switch
-                checked={profileData.hasChronicConditions}
+                checked={pd.hasChronicConditions}
                 onCheckedChange={(checked) => handleInputChange('hasChronicConditions', checked)}
               />
             </div>
           </div>
 
-          {profileData.hasChronicConditions && (
+          {pd.hasChronicConditions && (
             <div className="contents">
               <Separator />
               <div className="space-y-4">
@@ -192,7 +203,7 @@ export function HealthSection({
                   </Button>
                 </div>
 
-                {profileData.chronicConditions.length === 0 ? (
+                {(pd.chronicConditions?.length ?? 0) === 0 ? (
                   <EmptyState
                     icon={emptyStateConfigs.chronicConditions.icon}
                     title={emptyStateConfigs.chronicConditions.title}
@@ -206,7 +217,7 @@ export function HealthSection({
                   />
                 ) : (
                   <div className="space-y-4">
-                    {profileData.chronicConditions.map((condition: ChronicCondition) => {
+                    {(pd.chronicConditions ?? []).map((condition: ChronicCondition) => {
                       const isInEditMode = chronicConditionsInEditMode.has(condition.id);
                       const isValid = condition.conditionName;
                       
