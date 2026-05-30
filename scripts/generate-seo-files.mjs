@@ -8,6 +8,7 @@ import {
   escapeXml,
   normalizeSiteUrl,
   publicSeoRoutes,
+  requireArticles,
   resolveImageUrl,
 } from './seo-static-data.mjs';
 
@@ -68,7 +69,7 @@ function main() {
         // already present in the committed sitemap so a transient outage does
         // not silently drop them from the production sitemap.
         const cached = readCachedArticleEntries();
-        const strict = /^(1|true)$/i.test(process.env.SEO_REQUIRE_ARTICLES || '');
+        const strict = requireArticles();
         console.error('============================================================');
         console.error('[sitemap] WARNING: could not fetch published articles.');
         console.error(`[sitemap] Reusing ${cached.length} article URL(s) from the existing sitemap.`);

@@ -12,7 +12,9 @@ import {
   escapeHtml,
   normalizeSiteUrl,
   publicSeoRoutes,
+  requireArticles,
   resolveImageUrl,
+  resolveSiteVerificationToken,
   routeCanonicalPath,
 } from './seo-static-data.mjs';
 
@@ -30,7 +32,7 @@ async function main() {
     throw new Error('dist/index.html was not found. Run vite build before applying static SEO.');
   }
 
-  const baseHtml = fs.readFileSync(baseIndexPath, 'utf8');
+  const baseHtml = injectSiteVerification(fs.readFileSync(baseIndexPath, 'utf8'));
   const articleRoutes = await fetchPublishedArticleRoutes();
   const routes = dedupeRoutes([...publicSeoRoutes, ...articleRoutes]).map((route) => ({
     ...route,
@@ -94,6 +96,23 @@ function writeRouteManifest(routes) {
 
 function writeNotFoundHtml(baseIndexPath) {
   fs.copyFileSync(baseIndexPath, path.join(distDir, '404.html'));
+}
+
+/**
+ * Injects the Google Search Console verification <meta> into the document head
+ * so it is present on every prerendered route (and the SPA fallback shell).
+ * No-op when no token is configured or when one is already present.
+ */
+function injectSiteVerification(html) {
+  const token = resolveSiteVerificationToken();
+  if (!token) return html;
+  if (/<meta\s+name=["']google-site-verification["']/i.test(html)) return html;
+
+  const tag = `<meta name="google-site-verification" content="${escapeHtml(token)}" />`;
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/(<head[^>]*>)/i, `$1\n      ${tag}`);
+  }
+  return html.replace(/<\/head>/i, `      ${tag}\n    </head>`);
 }
 
 function dedupeRoutes(routes) {
@@ -196,17 +215,32 @@ async function fetchPublishedArticleRoutes() {
     const anonKey = readSupabaseAnonKey();
     const res = await fetchWithOptionalAuth(url, anonKey);
     if (!res.ok) {
-      console.warn(`[static-seo] Skipping article pages (HTTP ${res.status})`);
-      return [];
+      return onArticleFetchFailure(`HTTP ${res.status}`);
     }
 
     const json = await res.json();
     const rows = Array.isArray(json?.data) ? json.data : [];
     return rows.map((row) => createArticleRoute(row, siteUrl)).filter(Boolean);
   } catch (e) {
-    console.warn('[static-seo] Skipping article pages (fetch failed)', e?.message || e);
-    return [];
+    return onArticleFetchFailure(e?.message || String(e));
   }
+}
+
+/**
+ * Decides how to handle a failed article fetch. In strict mode (see
+ * requireArticles()) the build hard-fails so a transient outage cannot silently
+ * ship a deploy with no prerendered article pages; otherwise it degrades to the
+ * static public routes only.
+ */
+function onArticleFetchFailure(reason) {
+  if (requireArticles()) {
+    throw new Error(
+      `[static-seo] Article fetch failed (${reason}) and SEO_REQUIRE_ARTICLES is in effect. ` +
+        'Refusing to prerender without published article pages.',
+    );
+  }
+  console.warn(`[static-seo] Skipping article pages (${reason})`);
+  return [];
 }
 
 async function fetchWithOptionalAuth(url, anonKey) {
