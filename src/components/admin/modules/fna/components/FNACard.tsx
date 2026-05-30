@@ -28,16 +28,16 @@ export function FNACard({ fna, config, onEdit, onDelete, onPublish, onView }: FN
             <div>
               <CardTitle className="text-base flex items-center gap-2">
                 {config.name}
-                {fna.status && (
-                  <FNAStatusBadge status={fna.status} size="sm" />
+                {!!fna.status && (
+                  <FNAStatusBadge status={fna.status as React.ComponentProps<typeof FNAStatusBadge>['status']} size="sm" />
                 )}
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
-                {fna.status === 'published' 
-                  ? `Published on ${new Date(fna.publishedAt || fna.createdAt).toLocaleDateString()}`
-                  : `Created on ${new Date(fna.createdAt).toLocaleDateString()}`
+                {fna.status === 'published'
+                  ? `Published on ${new Date((fna.publishedAt || fna.createdAt) as string).toLocaleDateString()}`
+                  : `Created on ${new Date(fna.createdAt as string).toLocaleDateString()}`
                 }
-                {fna.version && ` • Version ${fna.version}`}
+                {!!fna.version && ` • Version ${fna.version}`}
               </p>
             </div>
           </div>

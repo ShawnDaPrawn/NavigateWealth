@@ -135,11 +135,11 @@ export function RecipientsManager({
           const pi = (u.profile?.personalInformation as Record<string, unknown> | undefined) || u.profile;
           return {
             id: u.id,
-            firstName: u.user_metadata?.firstName || pi?.firstName || u.name?.split(' ')[0] || '',
-            lastName: u.user_metadata?.surname || pi?.lastName || u.name?.split(' ').slice(1).join(' ') || '',
+            firstName: String(u.user_metadata?.firstName || pi?.firstName || u.name?.split(' ')[0] || ''),
+            lastName: String(u.user_metadata?.surname || pi?.lastName || u.name?.split(' ').slice(1).join(' ') || ''),
             email: u.email || '',
             status: u.application_status || 'active',
-            nationalId: u.user_metadata?.nationalId || pi?.idNumber || pi?.passportNumber || undefined,
+            nationalId: (u.user_metadata?.nationalId || pi?.idNumber || pi?.passportNumber || undefined) as string | undefined,
           };
         })
         .filter((client: SystemClient) => {
@@ -954,7 +954,7 @@ export function RecipientsManager({
           </div>
 
           {/* Future multi-signer note */}
-          {CURRENT_MAX_SIGNERS === 1 && signers.length >= 1 && (
+          {(CURRENT_MAX_SIGNERS as number) === 1 && signers.length >= 1 && (
             <div className="flex items-start gap-2 pt-2 border-t border-gray-200">
               <ExternalLink className="h-4 w-4 text-purple-500 mt-0.5 shrink-0" />
               <p className="text-xs text-gray-500">

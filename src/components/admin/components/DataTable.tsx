@@ -127,8 +127,8 @@ export function DataTable<T extends Record<string, unknown>>({
   // Sort data
   const sortedData = sortColumn
     ? [...filteredData].sort((a, b) => {
-        const aVal = a[sortColumn];
-        const bVal = b[sortColumn];
+        const aVal = a[sortColumn] as string | number;
+        const bVal = b[sortColumn] as string | number;
         
         if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
         if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;

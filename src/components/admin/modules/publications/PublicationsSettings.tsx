@@ -100,7 +100,7 @@ export function PublicationsSettings() {
     setMessage(null);
 
     try {
-      const result = await PublicationsAPI.Settings.exportData();
+      const result = await PublicationsAPI.Settings.exportData() as { data?: unknown };
       
       // Create downloadable JSON file
       const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: 'application/json' });
@@ -137,7 +137,7 @@ export function PublicationsSettings() {
       const text = await file.text();
       const data = JSON.parse(text);
 
-      const result = await PublicationsAPI.Settings.importData(data);
+      const result = await PublicationsAPI.Settings.importData(data) as { imported: { articles: number; categories: number; types: number } };
       setMessage({ 
         type: 'success', 
         text: `Imported ${result.imported.articles} articles, ${result.imported.categories} categories, ${result.imported.types} types` 

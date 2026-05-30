@@ -51,12 +51,12 @@ export function ClientPicker({ selectedClient, onSelect }: ClientPickerProps) {
       const data = await res.json();
       const users = data.users || [];
 
-      const mapped: ClientOption[] = users.map((u: { id: string; email?: string; name?: string; user_metadata?: Record<string, unknown>; profile?: Record<string, unknown> }) => ({
+      const mapped: ClientOption[] = users.map((u: { id: string; email?: string; name?: string; user_metadata?: Record<string, unknown>; profile?: { personalInformation?: Record<string, unknown>; [key: string]: unknown } }) => ({
         id: u.id,
-        firstName: u.user_metadata?.firstName || u.profile?.personalInformation?.firstName || u.name?.split(' ')[0] || 'Unknown',
-        lastName: u.user_metadata?.surname || u.profile?.personalInformation?.lastName || u.name?.split(' ').slice(1).join(' ') || '',
+        firstName: String(u.user_metadata?.firstName || u.profile?.personalInformation?.firstName || u.name?.split(' ')[0] || 'Unknown'),
+        lastName: String(u.user_metadata?.surname || u.profile?.personalInformation?.lastName || u.name?.split(' ').slice(1).join(' ') || ''),
         email: u.email || '',
-        idNumber: u.profile?.personalInformation?.idNumber || u.profile?.personalInformation?.passportNumber || '',
+        idNumber: String(u.profile?.personalInformation?.idNumber || u.profile?.personalInformation?.passportNumber || ''),
         profile: u.profile,
       }));
 
