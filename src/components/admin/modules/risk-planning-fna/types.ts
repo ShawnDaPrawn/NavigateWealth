@@ -181,6 +181,8 @@ export interface SevereIllnessCoverCalculation {
 export interface IncomeProtectionCalculation {
   temporary: {
     calculatedNeed: number; // 100% of Net Monthly Income
+    insurableMaximum: number; // regulatory cap (max % of gross income)
+    exceedsLimit: boolean; // calculatedNeed > insurableMaximum
     benefitPeriod: IPBenefitPeriod;
     existingCover: {
       personal: number;
@@ -191,6 +193,8 @@ export interface IncomeProtectionCalculation {
   };
   permanent: {
     calculatedNeed: number; // 100% of Net Monthly Income
+    insurableMaximum: number; // regulatory cap (max % of gross income)
+    exceedsLimit: boolean; // calculatedNeed > insurableMaximum
     escalation: IPEscalationType;
     benefitTerm: number; // retirementAge - currentAge
     existingCover: {

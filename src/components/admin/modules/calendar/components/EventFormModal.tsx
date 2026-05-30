@@ -382,7 +382,7 @@ export function EventFormModal({
       location: formData.location || null,
       video_link: formData.video_link || null,
       client_id: selectedClientIds.length > 0 ? selectedClientIds[0] : null,
-      attendees: attendees,
+      attendees: attendees as unknown as Record<string, unknown>[],
       recurrence_rule: recurrenceRule,
       create_reminder: sendReminders,
     });

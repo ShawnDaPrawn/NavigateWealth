@@ -420,7 +420,7 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
                       {field.required && <span className="text-red-500">*</span>}
                       {field.source && <Badge variant="outline">{field.source}</Badge>}
                     </Label>
-                    {renderField(field)}
+                    {renderField(field as Parameters<typeof renderField>[0])}
                     {field.helpText && (
                       <p className="text-xs text-muted-foreground">{field.helpText}</p>
                     )}

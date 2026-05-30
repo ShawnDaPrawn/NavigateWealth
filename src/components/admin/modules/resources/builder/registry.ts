@@ -65,7 +65,7 @@ registerBlock(TableBlock);
 registerBlock(RepeaterBlock);
 registerBlock(SmartClauseBlock);
 registerBlock(ContainerBlock);
-registerBlock(NonBreakingSignatureBlock);
+registerBlock(NonBreakingSignatureBlock as unknown as Parameters<typeof registerBlock>[0]);
 registerBlock(PageBreakBlock);
 registerBlock(BankDetailsBlock);
 registerBlock(BeneficiaryTableBlock);

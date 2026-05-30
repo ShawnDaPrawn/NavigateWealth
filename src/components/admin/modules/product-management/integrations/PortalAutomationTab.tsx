@@ -433,7 +433,7 @@ export function PortalAutomationTab({
     waitForDownloadMs: flow?.policySchedule?.waitForDownloadMs || 45000,
   });
 
-  const buildFlowDraft = () => {
+  const buildFlowDraft = (): PortalProviderFlow | null => {
     if (!flow) return null;
     let policyListSteps = flow.navigation.policyListSteps || [];
     try {

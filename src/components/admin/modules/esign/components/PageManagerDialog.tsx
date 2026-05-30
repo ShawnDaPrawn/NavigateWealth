@@ -286,8 +286,11 @@ export function PageManagerDialog({
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
                             ref={prov.innerRef}
-                            {...prov.draggableProps}
-                            {...prov.dragHandleProps}
+                            // react-beautiful-dnd provided props are type-incompatible
+                            // with framer-motion's HTMLMotionProps (onDrag* signatures);
+                            // cast preserves the runtime drag behavior.
+                            {...(prov.draggableProps as unknown as Record<string, never>)}
+                            {...(prov.dragHandleProps as unknown as Record<string, never>)}
                             className={`group relative bg-white border rounded-lg overflow-hidden shadow-sm transition ${
                               snap.isDragging ? 'ring-2 ring-purple-500 shadow-lg' : 'hover:shadow-md'
                             }`}

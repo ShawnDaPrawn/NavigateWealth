@@ -115,7 +115,7 @@ export function RichTextEditor({
         // includes both, unlike the standard @tiptap/starter-kit package.
         link: false,
         underline: false,
-      }),
+      } as Parameters<typeof StarterKit.configure>[0]),
       Underline,
       LinkExtension.configure({
         openOnClick: false,

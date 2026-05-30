@@ -175,7 +175,7 @@ export function suggestTemplateFieldMapping(
 export function autoMapTemplateFields<T extends Pick<FormTemplateField, 'name' | 'label' | 'canonicalKey'>>(
   fields: T[],
   options: { onlyUnmapped?: boolean } = {},
-): { fields: T[]; assignedCount: number } {
+): { fields: Array<T & { canonicalKey?: string }>; assignedCount: number } {
   const onlyUnmapped = options.onlyUnmapped ?? false;
   let assignedCount = 0;
 

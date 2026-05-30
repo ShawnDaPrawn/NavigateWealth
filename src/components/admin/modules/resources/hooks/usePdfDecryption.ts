@@ -36,9 +36,13 @@ export function usePdfDecryption(): UsePdfDecryptionResult {
       console.warn = () => {};
       console.error = () => {};
 
-      // Load the PDF with the provided password.
-      // If the password is blank, we pass an empty string.
-      const pdfDoc = await PDFDocument.load(arrayBuffer, { password: password || '' });
+      // NOTE: pdf-lib's LoadOptions has no `password` field — it cannot decrypt
+      // content-encrypted PDFs (the user-supplied `password` is unused here). Real
+      // password decryption would require pdfjs-dist or a server-side tool; this
+      // path only handles non-encrypted / permission-locked PDFs and surfaces a
+      // graceful "unsupported encryption" message otherwise (see catch below).
+      void password;
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
       
       // Restore console methods before saving, in case save() has useful warnings
       console.warn = originalWarn;

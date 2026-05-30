@@ -149,7 +149,7 @@ function camelCase(value: string): string {
 
 function getModuleSections(module: RoAModule): NonNullable<RoAModule['formSchema']>['sections'] {
   if (module.formSchema?.sections?.length) return module.formSchema.sections;
-  return [{ id: 'details', title: 'Details', fields: module.fields }];
+  return [{ id: 'details', title: 'Details', fields: module.fields as NonNullable<RoAModule['formSchema']>['sections'][number]['fields'] }];
 }
 
 export function moduleContractToRuntimeModule(contract: RoAModuleContract): RoAModule {
@@ -193,7 +193,7 @@ export function moduleContractToRuntimeModule(contract: RoAModuleContract): RoAM
         fields: section.fields.map((field) => fields.find((item) => item.key === field.key) || {
           ...field,
           type: field.type === 'file' ? 'text' : field.type,
-        }),
+        }) as NonNullable<RoAModule['formSchema']>['sections'][number]['fields'],
       })),
     },
     disclosures: contract.disclosures,
