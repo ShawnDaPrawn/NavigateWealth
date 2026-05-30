@@ -64,7 +64,7 @@ export function useArticleActions(options?: UseArticleActionsOptions): UseArticl
     setIsProcessing(true);
     
     try {
-      const article = await PublicationsAPI.Articles.updateArticle({ id, ...data });
+      const article = await PublicationsAPI.Articles.updateArticle({ ...data, id });
       
       if (onSuccess) {
         onSuccess(SUCCESS_MESSAGES.articleUpdated, article);
@@ -247,7 +247,7 @@ export function useArticleActions(options?: UseArticleActionsOptions): UseArticl
         is_featured: false
       };
       
-      const article = await PublicationsAPI.Articles.createArticle(copyData);
+      const article = await PublicationsAPI.Articles.createArticle(copyData as CreateArticleInput);
       
       if (onSuccess) {
         onSuccess(SUCCESS_MESSAGES.articleDuplicated, article);

@@ -17,7 +17,7 @@ export const FNAAPI = {
       return await api.get<FNASession[]>(`/fna/client/${clientId}`);
     } catch (error) {
       // Return empty array if endpoint doesn't exist or network error (matching legacy behavior)
-      logger.warn('Failed to fetch client FNAs', error);
+      logger.warn('Failed to fetch client FNAs', { error });
       return [];
     }
   },
@@ -55,7 +55,7 @@ export const FNAAPI = {
       }
       
       // For other errors, log warning but still return null to prevent UI crash
-      logger.warn('Could not fetch latest published FNA', error);
+      logger.warn('Could not fetch latest published FNA', { error });
       return null;
     }
   },

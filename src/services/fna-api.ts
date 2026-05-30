@@ -177,6 +177,7 @@ export interface TaxPlanningFNA extends FNABase {
     primaryRebate: number;
     secondaryRebate: number;
     tertiaryRebate: number;
+    medicalTaxCredits: number;
     netIncomeTax: number;
     dividendTax: number;
     cgtPayable: number;

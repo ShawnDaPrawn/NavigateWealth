@@ -63,7 +63,7 @@ function DraggableCategoryRow({
 }: DraggableCategoryRowProps) {
   const ref = useRef<HTMLTableRowElement>(null);
 
-  const [{ handlerId }, drop] = useDrop({
+  const [{ handlerId }, drop] = useDrop<{ index: number }, unknown, { handlerId: string | symbol | null }>({
     accept: DRAG_TYPE,
     collect(monitor) {
       return {

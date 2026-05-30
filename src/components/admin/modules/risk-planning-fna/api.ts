@@ -30,7 +30,7 @@ export const RiskPlanningFnaAPI = {
         return null;
       }
 
-      logger.warn('Failed to fetch client profile for Risk Planning FNA', error);
+      logger.warn('Failed to fetch client profile for Risk Planning FNA', { error });
       return null;
     }
   },
@@ -55,7 +55,7 @@ export const RiskPlanningFnaAPI = {
         return null;
       }
 
-      logger.warn('Could not fetch latest published Risk Planning FNA', error);
+      logger.warn('Could not fetch latest published Risk Planning FNA', { error });
       return null;
     }
   },

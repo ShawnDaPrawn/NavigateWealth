@@ -131,7 +131,7 @@ export function FieldPalette({
 
   // Group fields by signer
   const fieldsBySigner = fields.reduce((acc, field) => {
-    const signerId = field.signerId || 'unassigned';
+    const signerId = field.signer_id || 'unassigned';
     if (!acc[signerId]) acc[signerId] = [];
     acc[signerId].push(field);
     return acc;
@@ -316,7 +316,7 @@ export function FieldPalette({
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">
-                                {field.label || template?.label || field.type}
+                                {(field as { label?: string }).label || template?.label || field.type}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 Page {field.page} • {field.required ? 'Required' : 'Optional'}

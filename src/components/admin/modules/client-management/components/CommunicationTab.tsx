@@ -110,7 +110,7 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
           type: file.type,
           size: file.size,
           content: reader.result as string,
-        });
+        } as unknown as AttachmentFile);
       };
       reader.readAsDataURL(file);
     });
@@ -135,7 +135,7 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
         const clientIdNumber =
           client.idNumber ||
           client.profile?.personalInformation?.idNumber ||
-          client.personalInformation?.idNumber;
+          (client as { personalInformation?: { idNumber?: string } }).personalInformation?.idNumber;
 
         if (!clientIdNumber) {
           throw new Error('Client ID number is required for encryption. Please update client profile.');
@@ -306,7 +306,7 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
         clientIdNumber={
           client.idNumber ||
           client.profile?.personalInformation?.idNumber ||
-          client.personalInformation?.idNumber
+          (client as { personalInformation?: { idNumber?: string } }).personalInformation?.idNumber
         }
         onSend={handleSend}
         isSending={sendMutation.isPending}

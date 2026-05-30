@@ -332,9 +332,9 @@ export function useUpdateSuperAdmin() {
  * @returns React Query mutation result with `BackfillRolesResult`
  */
 export function useBackfillAuthRoles() {
-  return useMutation({
+  return useMutation<Awaited<ReturnType<typeof personnelApi.backfillAuthRoles>>, Error, boolean | void>({
     mutationFn: async (dryRun = true) => {
-      return personnelApi.backfillAuthRoles(dryRun);
+      return personnelApi.backfillAuthRoles(dryRun as boolean);
     },
     onSuccess: (data) => {
       if (data.dryRun) {

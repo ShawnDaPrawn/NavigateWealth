@@ -73,7 +73,7 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
     expired: envelopes.filter(e => e.status === 'expired').length,
     expiringSoon: envelopes.filter(e => {
       if (!['sent', 'viewed', 'partially_signed'].includes(e.status)) return false;
-      const expiresAt = e.expires_at || e.expiresAt;
+      const expiresAt = e.expires_at;
       if (!expiresAt) return false;
       const expDate = new Date(expiresAt);
       return expDate > now && expDate <= soonThreshold;
@@ -368,7 +368,10 @@ export function EsignDashboard({ onCreateNew, onViewEnvelope, onResumePrepare, r
               </div>
             }
           >
-            <MetricsPanel onOpenEnvelope={onViewEnvelope} />
+            <MetricsPanel onOpenEnvelope={(envelopeId) => {
+              const target = envelopes.find((e) => e.id === envelopeId);
+              if (target) onViewEnvelope(target);
+            }} />
           </Suspense>
         </TabsContent>
 
