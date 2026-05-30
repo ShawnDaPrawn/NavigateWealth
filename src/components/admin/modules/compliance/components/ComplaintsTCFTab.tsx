@@ -75,8 +75,8 @@ export function ComplaintsTCFTab() {
     <ComplianceTable
       title="Complaints & TCF Register"
       description="Customer complaints register with turnaround times, outcomes, redress amounts and TCF outcome mapping"
-      records={records as ComplianceRecord[]}
-      columns={columns}
+      records={records as unknown as ComplianceRecord[]}
+      columns={columns as React.ComponentProps<typeof ComplianceTable>['columns']}
       filters={filters}
       loading={isLoading}
       onAdd={() => console.log('Add complaint')}

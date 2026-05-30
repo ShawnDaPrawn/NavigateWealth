@@ -13,7 +13,7 @@ const columns: ComplianceColumn[] = [
     type: 'custom' as const,
     render: (_, record) => {
       // Cast to DocumentsInsuranceRecord to access specific fields safely
-      const docRecord = record as DocumentsInsuranceRecord;
+      const docRecord = record as DocumentsInsuranceRecord & { sumInsured?: number; insuranceProvider?: string };
       
       if (docRecord.sumInsured) {
         return (

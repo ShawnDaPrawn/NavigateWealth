@@ -61,7 +61,7 @@ export function POPIAPAIATab() {
   const { data: paiaRequests = [], isLoading: paiaLoading } = usePAIARequests();
 
   // Merge both data sources into a single list for the combined register view
-  const records = [...(consents as ComplianceRecord[]), ...(paiaRequests as ComplianceRecord[])];
+  const records = [...(consents as unknown as ComplianceRecord[]), ...(paiaRequests as unknown as ComplianceRecord[])];
   const isLoading = consentsLoading || paiaLoading;
 
   const handleAdd = () => {
@@ -81,7 +81,7 @@ export function POPIAPAIATab() {
       title="POPIA / PAIA Compliance Register"
       description="Data protection consents, DSARs, breach log, PAIA/POPIA manual versions and compliance documentation"
       records={records}
-      columns={columns}
+      columns={columns as React.ComponentProps<typeof ComplianceTable>['columns']}
       filters={filters}
       loading={isLoading}
       onAdd={handleAdd}

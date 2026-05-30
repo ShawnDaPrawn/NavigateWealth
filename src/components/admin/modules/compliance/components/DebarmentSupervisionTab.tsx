@@ -13,7 +13,7 @@ const columns = [
     type: 'custom' as const,
     render: (_: unknown, record: ComplianceRecord) => {
       if (record.checkpointsTotal) {
-        const percentage = (record.checkpointsCompleted / record.checkpointsTotal) * 100;
+        const percentage = ((record.checkpointsCompleted ?? 0) / record.checkpointsTotal) * 100;
         return (
           <div className="space-y-1">
             <div className="text-sm font-medium">
@@ -43,7 +43,7 @@ export function DebarmentSupervisionTab() {
   const { data: supervision = [], isLoading: supervisionLoading } = useSupervisionRecords();
 
   // Merge both data sources into a single list for the combined register view
-  const records = [...(debarments as ComplianceRecord[]), ...(supervision as ComplianceRecord[])];
+  const records = [...(debarments as unknown as ComplianceRecord[]), ...(supervision as unknown as ComplianceRecord[])];
   const isLoading = debarmentsLoading || supervisionLoading;
 
   return (

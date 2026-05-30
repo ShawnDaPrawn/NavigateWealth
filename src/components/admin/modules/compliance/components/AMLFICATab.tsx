@@ -83,7 +83,7 @@ export function AMLFICATab() {
       title="AML / FICA Compliance Register"
       description="Client KYC status, risk ratings, PEP/sanctions screening, goAML queue (CTR/STR/TPR), and training records"
       records={records as ComplianceRecord[]}
-      columns={columns}
+      columns={columns as React.ComponentProps<typeof ComplianceTable>['columns']}
       filters={filters}
       loading={isLoading}
       onAdd={handleAdd}

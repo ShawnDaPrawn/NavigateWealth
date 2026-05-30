@@ -12,6 +12,7 @@ import {
   Activity
 } from 'lucide-react';
 import { useComplianceOverview } from '../hooks/useComplianceOverview';
+import type { ComplianceActivity, ComplianceDeadline } from '../types';
 
 export function ComplianceOverview({ onViewTab }: { onViewTab: (tab: string) => void }) {
   const { activities, deadlines, stats, loading } = useComplianceOverview();
@@ -52,7 +53,7 @@ export function ComplianceOverview({ onViewTab }: { onViewTab: (tab: string) => 
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {activities.map((activity) => (
+              {(activities as Array<ComplianceActivity & { status: string; user: string; time: string }>).map((activity) => (
                 <div key={activity.id} className="flex items-start gap-4 pb-4 border-b last:border-0 last:pb-0">
                   <div className={`mt-1 p-2 rounded-full ${
                     activity.status === 'success' ? 'bg-green-100 text-green-600' :
@@ -98,7 +99,7 @@ export function ComplianceOverview({ onViewTab }: { onViewTab: (tab: string) => 
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {deadlines.map((deadline) => (
+              {(deadlines as Array<ComplianceDeadline & { date: string; daysLeft: number }>).map((deadline) => (
                 <div key={deadline.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="space-y-1">
                     <div className="font-medium text-sm">{deadline.title}</div>

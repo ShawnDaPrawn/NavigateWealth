@@ -156,10 +156,10 @@ export function HoneycombActionCard({
               <p className="mt-1 text-red-700 text-xs">{result.error}</p>
             )}
 
-            {result.success && result.data && (
+            {result.success && !!result.data && (
               <div className="mt-2">
                 {/* Show matterId if present */}
-                {(result.data as Record<string, unknown>)?.matterId && (
+                {!!(result.data as Record<string, unknown>)?.matterId && (
                   <div className="flex items-center gap-1 text-xs text-gray-600">
                     <span>Matter ID:</span>
                     <Badge variant="outline" className="font-mono text-xs">

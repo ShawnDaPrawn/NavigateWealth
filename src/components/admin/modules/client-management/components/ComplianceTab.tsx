@@ -177,7 +177,7 @@ export function ComplianceTab({
     selectedClient.profile?.personalInformation?.idNumber,
     (selectedClient.profile as Record<string, unknown>)?.profile_id_number,
     selectedClient.idNumber,
-    (selectedClient as Record<string, unknown>).profile_id_number,
+    (selectedClient as unknown as Record<string, unknown>).profile_id_number,
   ].find(isValidIdNumber) || null;
 
   const resolvedPassport = [
@@ -567,7 +567,7 @@ function OverviewContent({
       {/* Compliance Dashboard — readiness score, category progress, risk flags */}
       <ComplianceDashboardPanel
         clientId={selectedClient.id}
-        onNavigate={onNavigate}
+        onNavigate={onNavigate as (tab: string) => void}
       />
 
       {/* Quick action cards */}
@@ -1445,7 +1445,7 @@ function generateDossierHtml({
 // ─── Activity Detail Summary (inline in table) ──────────────────────────────
 
 function ActivityDetailSummary({ activity }: { activity: ComplianceActivity }) {
-  const d = activity.details;
+  const d = activity.details as Record<string, string | number | boolean | null | undefined>;
   if (!d) return <span className="text-xs text-muted-foreground">—</span>;
 
   switch (activity.type) {
@@ -1592,7 +1592,7 @@ function ActivityDetailSummary({ activity }: { activity: ComplianceActivity }) {
       return (
         <span className="text-xs text-muted-foreground">
           {d.registeredAt
-            ? `Registered at ${new Date(d.registeredAt).toLocaleString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}`
+            ? `Registered at ${new Date(d.registeredAt as string).toLocaleString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}`
             : 'Registered'}
         </span>
       );
