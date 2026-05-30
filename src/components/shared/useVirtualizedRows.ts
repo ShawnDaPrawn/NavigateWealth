@@ -46,7 +46,7 @@ export interface UseVirtualizedRowsOptions {
 
 export interface VirtualizedRowsResult {
   /** Ref to attach to the scrollable parent container */
-  parentRef: React.RefObject<HTMLDivElement | null>;
+  parentRef: React.Ref<HTMLDivElement>;
   /** Array of virtual items to render */
   virtualItems: Array<{
     key: string | number;
@@ -88,7 +88,7 @@ export function useVirtualizedRows({
     parentRef,
     virtualItems: shouldVirtualize
       ? virtualItems.map(item => ({
-          key: item.key,
+          key: item.key as string | number,
           index: item.index,
           start: item.start,
           size: item.size,

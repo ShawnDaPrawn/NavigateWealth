@@ -62,7 +62,7 @@ export const MedicalFnaAPI = {
         return null;
       }
 
-      logger.warn('Could not fetch latest published Medical FNA', error);
+      logger.warn('Could not fetch latest published Medical FNA', { error });
       return null;
     }
   },

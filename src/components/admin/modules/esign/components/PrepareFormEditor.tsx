@@ -315,7 +315,7 @@ export function PrepareFormEditor({
                 onFieldPlace={handleFieldPlace}
                 onFieldUpdate={handleFieldUpdate}
                 onFieldDelete={handleFieldDelete}
-                onFieldClick={handleFieldClick}
+                onFieldClick={(field) => { if (field) handleFieldClick(field); }}
                 selectedSignerId={selectedSignerId}
                 showFields={true}
                 isFullScreen={true}
@@ -566,7 +566,7 @@ export function PrepareFormEditor({
             onFieldPlace={handleFieldPlace}
             onFieldUpdate={handleFieldUpdate}
             onFieldDelete={handleFieldDelete}
-            onFieldClick={handleFieldClick}
+            onFieldClick={(field) => { if (field) handleFieldClick(field); }}
             selectedSignerId={selectedSignerId}
             showFields={true}
             isFullScreen={false}

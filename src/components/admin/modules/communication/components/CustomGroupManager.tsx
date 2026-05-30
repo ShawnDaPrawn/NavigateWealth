@@ -293,7 +293,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
           />
         </div>
         
-        <Select value={filterType} onValueChange={(v: string) => setFilterType(v)}>
+        <Select value={filterType} onValueChange={(v: string) => setFilterType(v as typeof filterType)}>
           <SelectTrigger className="w-[200px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue />
@@ -305,7 +305,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
           </SelectContent>
         </Select>
 
-        <Select value={sortBy} onValueChange={(v: string) => setSortBy(v)}>
+        <Select value={sortBy} onValueChange={(v: string) => setSortBy(v as typeof sortBy)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue />
           </SelectTrigger>

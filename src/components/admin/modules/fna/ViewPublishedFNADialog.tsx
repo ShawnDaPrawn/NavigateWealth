@@ -162,10 +162,10 @@ export function ViewPublishedFNADialog({
             </DialogTitle>
             {fnaData && (
               <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
-                {fnaData.version && (
+                {!!fnaData.version && (
                   <span>Version {fnaData.version as string}</span>
                 )}
-                {fnaData.version && <span>&bull;</span>}
+                {!!fnaData.version && <span>&bull;</span>}
                 <span>
                   {(currentStatus || fnaData.status) === 'published'
                     ? 'Published'

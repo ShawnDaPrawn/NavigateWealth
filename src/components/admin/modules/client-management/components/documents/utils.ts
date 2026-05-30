@@ -31,7 +31,7 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
   }
 
   // Check file type
-  if (!FILE_CONSTRAINTS.ALLOWED_MIME_TYPES.includes(file.type)) {
+  if (!(FILE_CONSTRAINTS.ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)) {
     return {
       valid: false,
       error: 'Invalid file type. Allowed types: PDF, Word, Excel, JPG, PNG, GIF',
@@ -231,7 +231,7 @@ export function getFileExtension(filename: string): string {
  */
 export function isValidFileExtension(filename: string): boolean {
   const ext = getFileExtension(filename).toLowerCase();
-  return FILE_CONSTRAINTS.ALLOWED_EXTENSIONS.includes(ext);
+  return (FILE_CONSTRAINTS.ALLOWED_EXTENSIONS as readonly string[]).includes(ext);
 }
 
 /**

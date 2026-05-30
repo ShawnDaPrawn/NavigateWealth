@@ -157,8 +157,8 @@ function ChatCard({
   isConfigured: boolean;
   willReady: boolean;
   clientName: string;
-  chatContainerRef: React.RefObject<HTMLDivElement | null>;
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  chatContainerRef: React.Ref<HTMLDivElement>;
+  textareaRef: React.Ref<HTMLTextAreaElement>;
   agentConnected: boolean;
 }) {
   return (

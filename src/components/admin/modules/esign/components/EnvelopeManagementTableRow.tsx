@@ -60,8 +60,8 @@ export function EnvelopeManagementTableRow({
   onRecall,
 }: EnvelopeManagementTableRowProps) {
   const progress = calculateSigningProgress(envelope);
-  const daysUntilExpiry = getDaysUntilExpiry(envelope.expires_at);
-  const expiringSoon = isExpiringSoon(envelope.expires_at);
+  const daysUntilExpiry = getDaysUntilExpiry(envelope.expires_at ?? null);
+  const expiringSoon = isExpiringSoon(envelope.expires_at ?? null);
   const isDraft = envelope.status === 'draft';
   const isPending = ['sent', 'viewed', 'partially_signed'].includes(envelope.status);
   const isCompleted = envelope.status === 'completed';

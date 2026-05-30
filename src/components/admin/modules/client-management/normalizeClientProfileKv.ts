@@ -21,9 +21,9 @@ export function normalizeClientProfileKv(raw: unknown): ClientProfile | undefine
       personalInformation: {
         ...(personalInformation as Record<string, unknown>),
         ...flatProfileFields,
-      } as ProfileData,
+      } as unknown as ProfileData,
     } as ClientProfile;
   }
 
-  return { personalInformation: obj as ProfileData };
+  return { personalInformation: obj as unknown as ProfileData };
 }

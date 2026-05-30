@@ -91,5 +91,23 @@ export interface MedicalFNAWizardState {
   isPublishing: boolean;
 }
 
+/**
+ * Persisted Medical FNA record (server-side session).
+ * Mirrors the *Session shape used by sibling FNA modules.
+ */
+export interface MedicalFNASession {
+  id: string;
+  clientId: string;
+  version: number;
+  status: 'draft' | 'published' | 'archived';
+  inputs: MedicalFNAInputs;
+  adjustments: MedicalFNAAdjustments;
+  results: MedicalFNAResults;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+  publishedBy?: string;
+}
+
 // Moved to constants.ts — re-exported for backward compatibility
 export { WIZARD_STEPS } from './constants';

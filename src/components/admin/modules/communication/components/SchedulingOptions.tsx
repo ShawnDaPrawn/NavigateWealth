@@ -128,7 +128,7 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
                       <Label>Frequency</Label>
                       <Select 
                         value={config.recurringFrequency || 'monthly'} 
-                        onValueChange={(val: string) => updateScheduled({ recurringFrequency: val })}
+                        onValueChange={(val: string) => updateScheduled({ recurringFrequency: val as typeof config.recurringFrequency })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -147,7 +147,7 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
                       <Label>End Condition</Label>
                       <Select 
                         value={config.endCondition || 'never'}
-                        onValueChange={(val: string) => updateScheduled({ endCondition: val })}
+                        onValueChange={(val: string) => updateScheduled({ endCondition: val as typeof config.endCondition })}
                       >
                         <SelectTrigger>
                           <SelectValue />

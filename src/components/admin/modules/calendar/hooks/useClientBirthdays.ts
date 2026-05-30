@@ -16,7 +16,7 @@ export function useClientBirthdays(currentDate: Date) {
       // to ensure smooth navigation when switching years
       const yearsToGenerate = [currentYear - 1, currentYear, currentYear + 1];
 
-      response.users.forEach(client => {
+      (response.users ?? []).forEach(client => {
         // Try to find date of birth in various locations based on the structure
         const dobString = 
           client.profile?.personalInformation?.dateOfBirth || 
@@ -25,7 +25,7 @@ export function useClientBirthdays(currentDate: Date) {
 
         if (!dobString) return;
 
-        const dob = parseISO(dobString);
+        const dob = parseISO(dobString as string);
         if (!isValid(dob)) return;
 
         const clientName = 

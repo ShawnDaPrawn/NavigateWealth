@@ -173,7 +173,7 @@ export function CalendarModule() {
       handleSearch(value);
     }, 300);
     
-    setSearchDebounce(timeout);
+    setSearchDebounce(timeout as unknown as number);
   };
 
   // Event handlers
@@ -405,7 +405,7 @@ export function CalendarModule() {
               setSelectedEvent(event);
               setShowEventModal(true);
             }}
-            onDelete={canDeleteEvent ? handleDeleteEvent : undefined}
+            onDelete={(canDeleteEvent ? handleDeleteEvent : undefined) as (id: string) => void}
             onUpdateStatus={handleUpdateEventStatus}
             onView={(event) => {
               if (event.id.startsWith('task-')) {

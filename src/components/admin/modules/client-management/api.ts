@@ -24,7 +24,7 @@ export const clientApi = {
    */
   getClients: async (params?: { page?: number; perPage?: number }): Promise<GetClientsResponse> => {
     try {
-      let endpoint = ENDPOINTS.ALL_USERS;
+      let endpoint: string = ENDPOINTS.ALL_USERS;
       if (params?.page || params?.perPage) {
         const qs = new URLSearchParams();
         if (params.page) qs.set('page', String(params.page));
@@ -149,7 +149,7 @@ export const clientApi = {
           keyId,
           name: keyId.split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
           value,
-          dataType,
+          dataType: dataType as 'currency' | 'number' | 'percentage' | 'text' | 'date' | 'boolean',
           category,
           isCalculated: keyId.includes('_total') || keyId.includes('_recommended'),
           lastUpdated: new Date().toISOString(),

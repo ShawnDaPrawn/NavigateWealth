@@ -118,7 +118,7 @@ export function Step2AnalysisView({ clientId, results, onBack, onComplete }: Ste
             <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Current Policy</p>
             <p className="text-lg font-medium text-gray-700">
               {current !== null && current !== undefined 
-                ? (typeof current === 'boolean' ? (current ? 'Yes' : 'No') : current) 
+                ? (typeof current === 'boolean' ? (current ? 'Yes' : 'No') : String(current))
                 : 'No Data'}
             </p>
           </div>
@@ -142,7 +142,7 @@ export function Step2AnalysisView({ clientId, results, onBack, onComplete }: Ste
           colorClass="blue"
           recommendation={results.recommendedInHospitalCover}
           current={currentHospitalCover}
-          gapDetected={hasHospitalGap}
+          gapDetected={!!hasHospitalGap}
           rationale={results.rationale.hospital}
         />
 
