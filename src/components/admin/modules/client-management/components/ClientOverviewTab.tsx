@@ -226,7 +226,7 @@ interface PillarData {
   metrics: Array<{ label: string; value: string; recommended?: string; highlight?: boolean }>;
   policyCount: number;
   monthlyPremium: number;
-  fnaStatus?: 'published' | 'draft' | 'not_started' | 'error' | 'loading';
+  fnaStatus?: 'published' | 'draft' | 'not_started' | 'error' | 'loading' | 'submitted' | 'client_draft';
 }
 
 // ── Constants ───────────────────────────────────────────────────────────
@@ -1631,7 +1631,7 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
       investmentPolicies,
       employeePolicies,
       estatePolicies,
-      sumField: (pols, keyId) => pols.reduce((s, pol) => s + numVal(pol, keyId), 0),
+      sumField: (pols, keyId) => pols.reduce((s, pol) => s + numVal(pol as unknown as Policy, keyId), 0),
       dependantCount: dependants.length,
     });
   }, [riskPolicies, medicalPolicies, retirementPolicies, investmentPolicies,
