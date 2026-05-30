@@ -266,4 +266,84 @@ describe('integrations.tsx route contracts', () => {
       expect(body.map((h) => h.id)).toEqual(['newer', 'older']);
     });
   });
+
+  describe('POST /config (write)', () => {
+    it('rejects an invalid body with 400 Validation failed', async () => {
+      const res = await integrationsApp.request('/config', {
+        method: 'POST',
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerId: 'p1' }), // missing categoryId/fieldMapping/settings
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Validation failed' });
+    });
+
+    it('persists a valid config and echoes it under { success, config }', async () => {
+      const res = await integrationsApp.request('/config', {
+        method: 'POST',
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId: 'p1',
+          categoryId: 'risk',
+          fieldMapping: {},
+          fieldBindings: [],
+          settings: {},
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { success: boolean; config: Record<string, unknown> };
+      expect(body.success).toBe(true);
+      expect(body.config).toMatchObject({
+        providerId: 'p1',
+        categoryId: 'risk',
+        updatedBy: 'user',
+      });
+      // persisted to the canonical KV key
+      expect(kvStore.get('config:mapping:p1:risk')).toBeTruthy();
+    });
+  });
+
+  describe('POST /policies (write)', () => {
+    it('rejects an invalid body with 400 Validation failed', async () => {
+      const res = await integrationsApp.request('/policies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: 'c1' }), // missing categoryId/providerId/data
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Validation failed' });
+    });
+
+    it('rejects a valid body referencing an unknown provider with 400', async () => {
+      const res = await integrationsApp.request('/policies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: 'c1', categoryId: 'risk', providerId: 'ghost', data: {} }),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Invalid provider ID' });
+    });
+
+    it('creates and persists a policy for a known provider', async () => {
+      kvStore.set('provider:p1', { id: 'p1', name: 'Provider One' });
+      const res = await integrationsApp.request('/policies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: 'c1',
+          categoryId: 'risk',
+          providerId: 'p1',
+          data: { sumAssured: 1000000 },
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { success: boolean; policy: Record<string, unknown> };
+      expect(body.success).toBe(true);
+      expect(body.policy).toMatchObject({ clientId: 'c1', categoryId: 'risk', providerId: 'p1' });
+      // provider name is resolved from the stored provider record
+      expect(body.policy.providerName).toBe('Provider One');
+      const stored = kvStore.get('policies:client:c1') as Array<{ id: string }>;
+      expect(stored).toHaveLength(1);
+    });
+  });
 });
