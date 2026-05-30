@@ -40,18 +40,6 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
   // Focused experience: hide footer for application-in-progress, pending review, and declined
   const isFocusedExperience = isApplicationInProgress || isPendingReview || isDeclined;
   
-  // Display suspension page if user is suspended (informational only)
-  // This check uses real auth state — suspension should always be enforced
-  if (isAuthenticated && !forcePublicLayout && user?.suspended) {
-    return (
-      <AccountSuspendedPage 
-        reason={user.suspendedReason}
-        suspendedAt={user.suspendedAt}
-        onLogout={logout}
-      />
-    );
-  }
-
   // Scroll detection with debouncing to prevent flickering
   useEffect(() => {
     let ticking = false;
@@ -76,7 +64,20 @@ export function MainLayout({ children, showNavAndFooter = true, forcePublicLayou
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  
+
+  // Display suspension page if user is suspended (informational only).
+  // This check uses real auth state — suspension should always be enforced.
+  // Placed after the hooks above so they always run in order (rules-of-hooks).
+  if (isAuthenticated && !forcePublicLayout && user?.suspended) {
+    return (
+      <AccountSuspendedPage
+        reason={user.suspendedReason}
+        suspendedAt={user.suspendedAt}
+        onLogout={logout}
+      />
+    );
+  }
+
   if (!showNavAndFooter) {
     return (
       <div className="min-h-screen bg-white">

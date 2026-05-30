@@ -52,14 +52,25 @@ const STEP_LABELS = ['Personal', 'Contact', 'Employment', 'Services', 'Terms'];
 
 // -- Component ----------------------------------------------------------------
 
-export function AdminCompleteDialog({
+export function AdminCompleteDialog({ application, ...rest }: AdminCompleteDialogProps) {
+  // Guard here, in a thin wrapper, so the inner component can call its hooks
+  // unconditionally (rules-of-hooks). With no application the dialog renders
+  // nothing — identical to the previous early return.
+  if (!application) return null;
+  return <AdminCompleteDialogInner application={application} {...rest} />;
+}
+
+type AdminCompleteDialogInnerProps = Omit<AdminCompleteDialogProps, 'application'> & {
+  application: Application;
+};
+
+function AdminCompleteDialogInner({
   application,
   open,
   onClose,
   onComplete,
   adminUserId,
-}: AdminCompleteDialogProps) {
-  if (!application) return null;
+}: AdminCompleteDialogInnerProps) {
 
   const {
     currentStep,

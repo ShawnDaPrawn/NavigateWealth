@@ -144,6 +144,23 @@ export function FieldPropertiesPanel({
   onUpdate,
   onDelete
 }: FieldPropertiesPanelProps) {
+  // Pull validation metadata from the field. We cast through `unknown` because
+  // `EsignField.metadata` is intentionally typed as a free-form record so the
+  // backend can carry forward future keys without breaking client builds.
+  // Derived null-safely (and the hook below declared) before the early return
+  // so the hook always runs in the same order every render (rules-of-hooks).
+  const validation = ((field?.metadata ?? {}) as Record<string, unknown>) as FieldValidationMetadata;
+  const format: TextFieldFormat = (validation.format as TextFieldFormat | undefined) ?? 'free_text';
+  const minLength = typeof validation.minLength === 'number' ? validation.minLength : undefined;
+  const maxLength = typeof validation.maxLength === 'number' ? validation.maxLength : undefined;
+  const pattern = typeof validation.pattern === 'string' ? validation.pattern : undefined;
+  const helpText = typeof validation.helpText === 'string' ? validation.helpText : undefined;
+
+  const customRegexValid = useMemo(
+    () => format !== 'custom_regex' || isValidRegex(pattern),
+    [format, pattern],
+  );
+
   if (!field) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center p-6 text-muted-foreground bg-gray-50/50">
@@ -158,16 +175,6 @@ export function FieldPropertiesPanel({
   const signerIndex = signers.findIndex(s => s.email === field.signer_id);
   const signerColor = signerIndex >= 0 ? SIGNER_COLORS[signerIndex % SIGNER_COLORS.length].hex : '#6d28d9';
 
-  // Pull validation metadata from the field. We cast through `unknown` because
-  // `EsignField.metadata` is intentionally typed as a free-form record so the
-  // backend can carry forward future keys without breaking client builds.
-  const validation = ((field.metadata ?? {}) as Record<string, unknown>) as FieldValidationMetadata;
-  const format: TextFieldFormat = (validation.format as TextFieldFormat | undefined) ?? 'free_text';
-  const minLength = typeof validation.minLength === 'number' ? validation.minLength : undefined;
-  const maxLength = typeof validation.maxLength === 'number' ? validation.maxLength : undefined;
-  const pattern = typeof validation.pattern === 'string' ? validation.pattern : undefined;
-  const helpText = typeof validation.helpText === 'string' ? validation.helpText : undefined;
-
   // Helper: merge a partial validation patch into `metadata` without losing any
   // unrelated keys the backend may have written.
   const patchValidation = (patch: Partial<FieldValidationMetadata>) => {
@@ -177,11 +184,6 @@ export function FieldPropertiesPanel({
     });
     onUpdate(field.id, { metadata: nextMeta });
   };
-
-  const customRegexValid = useMemo(
-    () => format !== 'custom_regex' || isValidRegex(pattern),
-    [format, pattern],
-  );
 
   return (
     <div className="h-full flex flex-col bg-white border-l border-gray-200">

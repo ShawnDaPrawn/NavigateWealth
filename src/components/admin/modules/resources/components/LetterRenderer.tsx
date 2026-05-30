@@ -54,22 +54,12 @@ export const LetterRenderer: React.FC<LetterRendererProps> = ({
   formName = 'Company Letter',
   letterMeta = {},
 }) => {
-  // Empty state
-  if (!blocks || blocks.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
-        <FileText className="h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900">Letter Preview</h3>
-        <p className="text-sm text-gray-500 max-w-sm mt-2">
-          Add blocks in the editor to compose your letter content.
-        </p>
-      </div>
-    );
-  }
-
-  // Split blocks into pages at page_break markers
+  // Split blocks into pages at page_break markers. Declared before the early
+  // return below so the hook always runs in the same order (rules-of-hooks);
+  // guarded internally for the empty case.
   const pages = React.useMemo(() => {
     const pagesList: React.ReactNode[] = [];
+    if (!blocks || blocks.length === 0) return pagesList;
     let currentBlocks: FormBlock[] = [];
 
     blocks.forEach((block) => {
@@ -87,6 +77,19 @@ export const LetterRenderer: React.FC<LetterRendererProps> = ({
 
     return pagesList;
   }, [blocks, data]);
+
+  // Empty state
+  if (!blocks || blocks.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+        <FileText className="h-12 w-12 text-gray-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900">Letter Preview</h3>
+        <p className="text-sm text-gray-500 max-w-sm mt-2">
+          Add blocks in the editor to compose your letter content.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <LetterheadPdfLayout

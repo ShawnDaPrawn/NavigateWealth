@@ -79,12 +79,12 @@ export function PolicyTable({
   colorTheme = 'purple',
   linkedGoals
 }: PolicyTableProps) {
-  
-  if (!policies || policies.length === 0) return null;
-
-  // Document viewer state
+  // Document viewer state — declared before the early return below so the hooks
+  // always run in the same order every render (rules-of-hooks).
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerPolicy, setViewerPolicy] = useState<{ policyId: string; providerName: string; documentMeta: ViewerDocumentMeta | null } | null>(null);
+
+  if (!policies || policies.length === 0) return null;
 
   const handleViewDocument = (policy: PolicyRecord) => {
     const doc = (policy as Record<string, unknown>).document as ViewerDocumentMeta | undefined;

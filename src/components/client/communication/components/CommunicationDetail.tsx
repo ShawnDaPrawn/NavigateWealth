@@ -23,21 +23,29 @@ interface CommunicationDetailProps {
 }
 
 export function CommunicationDetail({ communication, onClose }: CommunicationDetailProps) {
-  if (!communication) return null;
-
-  const cfg = CATEGORY_CONFIG[communication.category as CommunicationCategory] ?? CATEGORY_CONFIG.General;
-  const CategoryIcon = cfg.icon;
-
+  // Hooks must run unconditionally and in the same order every render, so they
+  // are declared before the `if (!communication)` early return below and guard
+  // against a null `communication` internally (rules-of-hooks).
   const contentIsHtml = useMemo(
-    () => isHtmlContent(communication.message),
-    [communication.message],
+    () => (communication ? isHtmlContent(communication.message) : false),
+    [communication],
   );
 
   /** Sanitised HTML — strips XSS vectors while preserving safe formatting */
   const sanitisedMessage = useMemo(
-    () => contentIsHtml ? sanitizeHtml(communication.message) : communication.message,
-    [communication.message, contentIsHtml],
+    () =>
+      communication
+        ? contentIsHtml
+          ? sanitizeHtml(communication.message)
+          : communication.message
+        : '',
+    [communication, contentIsHtml],
   );
+
+  if (!communication) return null;
+
+  const cfg = CATEGORY_CONFIG[communication.category as CommunicationCategory] ?? CATEGORY_CONFIG.General;
+  const CategoryIcon = cfg.icon;
 
   return (
     <Dialog open={communication !== null} onOpenChange={(open) => !open && onClose()}>
