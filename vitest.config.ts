@@ -7,8 +7,12 @@ import path from 'path';
  *
  * - Uses jsdom for React component testing.
  * - Coverage uses v8; thresholds start moderate (Phase 1) and tighten in
- *   Phase 4 once the suite is fleshed out. CI fails the build if coverage
- *   drops below the configured floor (see .github/workflows/ci.yml).
+ *   Phase 4 once the suite is fleshed out. Coverage runs in CI via the
+ *   "Run coverage (non-blocking baseline)" step in
+ *   .github/workflows/quality-check.yml. That step is intentionally
+ *   non-blocking until the suite clears these floors, at which point its exit
+ *   code should be added to the "Enforce quality gates" step (mirroring the
+ *   typecheck burn-down pattern).
  */
 export default defineConfig({
   plugins: [react()],
