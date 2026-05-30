@@ -3,7 +3,10 @@
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 // User roles in the system
-export type UserRole = 'client' | 'admin' | 'super_admin';
+// Note: the backend (and shared/types/client.ts) treat BOTH 'super_admin' and the
+// legacy hyphenated 'super-admin' as super-admin. Keep both so frontend role checks
+// (e.g. advice-engine) type-match the values that can actually arrive at runtime.
+export type UserRole = 'client' | 'admin' | 'super_admin' | 'super-admin';
 
 // Account status for application workflow
 export type AccountStatus = 
