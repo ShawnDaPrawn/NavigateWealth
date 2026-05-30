@@ -50,7 +50,7 @@ function buildInitialRetirementState(
 ): RetirementFNAWizardState {
   if (startAtStep === 2 && intakePrefill) {
     const { assumptions, ...inputFields } = intakePrefill;
-    const inputs = inputFields as RetirementFNAInputs;
+    const inputs = inputFields as unknown as RetirementFNAInputs;
     const initialAssumptions = (assumptions as RetirementFNAAdjustments) || {};
     const adjustments = { ...initialAssumptions };
     const calculations = calculateRetirementFNA(inputs, adjustments);
@@ -66,10 +66,10 @@ function buildInitialRetirementState(
   }
 
   return {
-    currentStep: startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1,
+    currentStep: (startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1) as 1 | 2 | 3 | 4,
     clientId,
     clientName,
-    inputs: (intakePrefill as RetirementFNAInputs) || {},
+    inputs: (intakePrefill as unknown as RetirementFNAInputs) || {},
     adjustments: {},
     calculations: null,
     isPublishing: false,

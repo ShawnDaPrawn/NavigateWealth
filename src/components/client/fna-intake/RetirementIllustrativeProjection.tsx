@@ -16,8 +16,9 @@ export function RetirementIllustrativeProjection({ inputs }: RetirementIllustrat
     const currentAge = Number(inputs.currentAge ?? 0);
     const retirementAge = Number(inputs.retirementAge ?? 65);
     const yearsToRetirement = Math.max(0, retirementAge - currentAge);
-    const monthlyContribution = Number(inputs.monthlyRetirementContribution ?? inputs.monthlyContribution ?? 0);
-    const currentFundValue = Number(inputs.currentRetirementFundValue ?? inputs.currentFundValue ?? 0);
+    const ip = inputs as Record<string, unknown>;
+    const monthlyContribution = Number(ip.monthlyRetirementContribution ?? ip.monthlyContribution ?? 0);
+    const currentFundValue = Number(ip.currentRetirementFundValue ?? ip.currentFundValue ?? 0);
     const annualReturn = 0.07;
     const monthlyReturn = annualReturn / 12;
     const months = yearsToRetirement * 12;

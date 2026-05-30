@@ -51,7 +51,7 @@ function buildInitialRiskState(
   intakePrefill: Record<string, unknown> | undefined,
 ): WizardState {
   if (startAtStep === 2 && intakePrefill) {
-    const inputData = intakePrefill as InformationGatheringInput;
+    const inputData = intakePrefill as unknown as InformationGatheringInput;
     const calculations = calculateRiskAnalysis(inputData, 'Current User');
     return {
       currentStep: 2,
@@ -65,10 +65,10 @@ function buildInitialRiskState(
   }
 
   return {
-    currentStep: startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1,
+    currentStep: (startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1) as 1 | 2 | 3 | 4,
     clientId,
     clientName,
-    inputData: intakePrefill ? (intakePrefill as InformationGatheringInput) : null,
+    inputData: intakePrefill ? (intakePrefill as unknown as InformationGatheringInput) : null,
     calculations: null,
     adjustments: {},
     isPublishing: false,
@@ -155,7 +155,7 @@ export function RiskPlanningFNAWizard({
         calculations: state.calculations,
         adjustments: state.adjustments,
         finalNeeds,
-      });
+      } as unknown as Parameters<typeof RiskPlanningFnaAPI.create>[1]);
       
       const fnaId = created.id;
       
