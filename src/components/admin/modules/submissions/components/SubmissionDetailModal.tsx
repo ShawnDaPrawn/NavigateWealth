@@ -465,7 +465,7 @@ export function SubmissionDetailModal({
                         <ClipboardList className="h-3.5 w-3.5" />
                         View in Applications
                       </Button>
-                      {submission.payload.userId && (
+                      {!!submission.payload.userId && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -480,7 +480,7 @@ export function SubmissionDetailModal({
                         </Button>
                       )}
                     </div>
-                    {submission.payload.applicationNumber && (
+                    {!!submission.payload.applicationNumber && (
                       <p className="text-xs text-gray-500">
                         Application #{String(submission.payload.applicationNumber)} &middot; {String(submission.payload.accountType || 'Personal Client')}
                       </p>
@@ -499,14 +499,14 @@ export function SubmissionDetailModal({
                 </h4>
 
                 {/* Service / product context — muted badges */}
-                {(serviceName || submission.payload.stage) && (
+                {(serviceName || !!submission.payload.stage) && (
                   <div className="flex items-center gap-2 flex-wrap mb-4">
                     {serviceName && (
                       <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700 border-gray-200">
                         {serviceName}
                       </Badge>
                     )}
-                    {submission.payload.stage && (
+                    {!!submission.payload.stage && (
                       <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-600 border-gray-200">
                         {submission.payload.stage === 'full' ? 'Full Quote' : 'Initial Enquiry'}
                       </Badge>

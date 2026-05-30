@@ -343,12 +343,12 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     // Check root email first, then profile email, then personal info email
     const clientEmail = selectedClient.email || 
                        selectedClient.profile?.email || 
-                       selectedClient.personalInformation?.email ||
-                       selectedClient.profile?.personalInformation?.email;
+                       (selectedClient.personalInformation as Record<string, unknown> | undefined)?.email ||
+                       (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)?.email;
     
     // Try to get ID number from various possible locations in the client object
     const clientIdNumber = selectedClient.idNumber || 
-                          selectedClient.profile?.personalInformation?.idNumber || 
+                          (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)?.idNumber ||
                           selectedClient.personalInformation?.idNumber;
 
     if (!clientIdNumber) {
@@ -603,11 +603,11 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     // Get client details - Robust extraction
     const clientEmail = selectedClient.email || 
                        selectedClient.profile?.email || 
-                       selectedClient.personalInformation?.email ||
-                       selectedClient.profile?.personalInformation?.email;
+                       (selectedClient.personalInformation as Record<string, unknown> | undefined)?.email ||
+                       (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)?.email;
 
     const clientIdNumber = selectedClient.idNumber || 
-                          selectedClient.profile?.personalInformation?.idNumber || 
+                          (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)?.idNumber ||
                           selectedClient.personalInformation?.idNumber;
 
     if (!clientIdNumber) {

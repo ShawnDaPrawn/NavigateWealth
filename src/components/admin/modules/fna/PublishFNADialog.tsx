@@ -49,13 +49,13 @@ export function PublishFNADialog({
 
       if (isPublished && unpublishFunction) {
         // Unpublish
-        await unpublishFunction(fnaData.id);
+        await unpublishFunction(fnaData.id!);
         toast.success('FNA unpublished', {
           description: `${fnaTypeName} has been unpublished and is no longer visible to the client.`,
         });
       } else {
         // Publish
-        await publishFunction(fnaData.id);
+        await publishFunction(fnaData.id!);
         toast.success('FNA published successfully!', {
           description: `${fnaTypeName} is now visible to the client in their portal.`,
         });
@@ -121,12 +121,12 @@ export function PublishFNADialog({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Version</span>
-              <span className="text-gray-900">{fnaData.version || 1}</span>
+              <span className="text-gray-900">{(fnaData.version as number) || 1}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Last Updated</span>
               <span className="text-gray-900">
-                {new Date(fnaData.updatedAt || fnaData.createdAt).toLocaleDateString()}
+                {new Date((fnaData.updatedAt || fnaData.createdAt) as string).toLocaleDateString()}
               </span>
             </div>
           </div>

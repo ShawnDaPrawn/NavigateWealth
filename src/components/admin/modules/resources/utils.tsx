@@ -261,11 +261,11 @@ export function countFormFields(blocks: FormBlock[]): number {
   
   blocks.forEach((block) => {
     if (block.type === 'field_grid' && block.data?.fields) {
-      count += block.data.fields.length;
+      count += (block.data.fields as unknown[]).length;
     } else if (block.type === 'table' && block.data?.rows) {
-      count += block.data.rows.length * (block.data.columnHeaders?.length || 0);
+      count += (block.data.rows as unknown[]).length * ((block.data.columnHeaders as unknown[] | undefined)?.length || 0);
     } else if (block.type === 'signature' && block.data?.signatories) {
-      count += block.data.signatories.length;
+      count += (block.data.signatories as unknown[]).length;
     }
   });
   

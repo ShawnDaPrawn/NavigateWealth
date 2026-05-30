@@ -50,7 +50,7 @@ function buildInitialMedicalState(
   intakePrefill: Record<string, unknown> | undefined,
 ): MedicalFNAWizardState {
   if (startAtStep === 2 && intakePrefill) {
-    const inputs = intakePrefill as MedicalFNAInputs;
+    const inputs = intakePrefill as unknown as MedicalFNAInputs;
     const calculations = calculateMedicalNeeds(inputs);
     return {
       currentStep: 2,
@@ -64,10 +64,10 @@ function buildInitialMedicalState(
   }
 
   return {
-    currentStep: startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1,
+    currentStep: (startAtStep && startAtStep >= 1 && startAtStep <= 4 ? startAtStep : 1) as 1 | 2 | 3 | 4,
     clientId,
     clientName,
-    inputs: (intakePrefill as MedicalFNAInputs) || {},
+    inputs: (intakePrefill as unknown as MedicalFNAInputs) || {},
     calculations: null,
     adjustments: { notes: '' },
     isPublishing: false,
@@ -145,8 +145,8 @@ export function MedicalFNAWizard({
 
       // 3. Save Results & Adjustments (from client-side calculation)
       await MedicalFNAApiService.updateMedicalFNAResults(
-        session.id, 
-        state.calculations, 
+        session.id,
+        state.calculations!,
         state.adjustments
       );
 
