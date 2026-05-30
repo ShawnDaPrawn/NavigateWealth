@@ -160,7 +160,6 @@ describe('quality issue model', () => {
     expect(updated.reopenedFromResolvedAt).toBe('2026-04-29T09:00:00.000Z');
     expect(updated.resolutionEvidence).toContain('dashboard smoke test');
     expect(hasQualityIssueRecurredAfterResolution(updated, {
-      fingerprint: 'runtime:dashboard:load',
       status: 'resolved',
       resolvedAt: '2026-04-29T09:00:00.000Z',
     })).toBe(true);
