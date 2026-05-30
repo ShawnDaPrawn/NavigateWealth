@@ -826,7 +826,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
                     Article Body <span className="text-red-500">*</span>
                   </label>
                   <RichTextEditor
-                    value={formData.body}
+                    value={formData.body ?? ''}
                     onChange={(value) => updateField('body', value)}
                     placeholder='Start writing, or type "/" for commands…'
                     articleTitle={formData.title}
@@ -988,7 +988,7 @@ export function ArticleEditor({ article, initialTemplate, aiGeneratedResult, onB
             created_at: article?.created_at || new Date().toISOString(),
             updated_at: article?.updated_at || new Date().toISOString(),
             view_count: article?.view_count || 0
-          } as Article}
+          } as unknown as React.ComponentProps<typeof ArticlePreview>['article']}
           categories={categories}
           types={types}
           onClose={() => setActiveTab('editor')}

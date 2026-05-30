@@ -81,6 +81,10 @@ export interface TextFieldProps {
   disabled?: boolean;
   className?: string;
   maxLength?: number;
+  /** Optional descriptive helper text (rendered like helpText where supported). */
+  description?: string;
+  /** Show a character counter (when maxLength is set). */
+  showCharCount?: boolean;
 }
 
 /**
@@ -225,6 +229,10 @@ export interface TextareaFieldProps {
   className?: string;
   rows?: number;
   maxLength?: number;
+  /** Optional descriptive helper text (rendered like helpText where supported). */
+  description?: string;
+  /** Show a character counter (when maxLength is set). */
+  showCharCount?: boolean;
 }
 
 /**
@@ -447,6 +455,8 @@ export function DateTimeField({
 export interface ErrorListProps {
   errors: string[];
   className?: string;
+  /** Optional heading shown above the error list. */
+  title?: string;
 }
 
 /**

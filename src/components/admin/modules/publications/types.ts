@@ -128,6 +128,9 @@ export interface Article {
  * Input type for creating new articles
  */
 export interface CreateArticleInput {
+  /** Optional press-page category */
+  press_category?: 'company_news' | 'product_launch' | 'awards' | 'team_news' | 'industry_insights' | null;
+
   /** Article title */
   title: string;
   
