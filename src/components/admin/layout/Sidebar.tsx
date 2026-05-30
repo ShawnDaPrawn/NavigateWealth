@@ -96,7 +96,7 @@ export function Sidebar({
             setCollapsed={setCollapsed}
             mobileOpen={mobileOpen}
             setMobileOpen={setMobileOpen}
-            user={user}
+            user={user as unknown as { [key: string]: unknown; id?: string; email?: string; user_metadata?: Record<string, unknown> } | null}
             onLogout={handleLogout}
             onSwitchToPersonal={handleSwitchToPersonal}
             onInstallApp={installApp}
@@ -126,7 +126,7 @@ export function Sidebar({
               setCollapsed={setCollapsed}
               mobileOpen={mobileOpen}
               setMobileOpen={setMobileOpen}
-              user={user}
+              user={user as unknown as { [key: string]: unknown; id?: string; email?: string; user_metadata?: Record<string, unknown> } | null}
               onLogout={handleLogout}
               onSwitchToPersonal={handleSwitchToPersonal}
               onInstallApp={installApp}
@@ -339,12 +339,12 @@ function SidebarContent({
             >
               <Avatar className="h-8 w-8 shrink-0 border border-sidebar-border">
                 <AvatarImage src="/api/placeholder/32/32" alt="" />
-                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">{user?.name?.[0] || 'A'}</AvatarFallback>
+                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">{(user?.name as string)?.[0] || 'A'}</AvatarFallback>
               </Avatar>
               {(!collapsed || isMobile) && (
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-medium">{user?.name || 'Admin User'}</p>
-                  <p className="text-xs text-sidebar-foreground/70">{user?.role || 'Administrator'}</p>
+                  <p className="text-sm font-medium">{(user?.name as string) || 'Admin User'}</p>
+                  <p className="text-xs text-sidebar-foreground/70">{(user?.role as string) || 'Administrator'}</p>
                 </div>
               )}
             </Button>

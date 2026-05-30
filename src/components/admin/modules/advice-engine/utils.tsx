@@ -237,7 +237,7 @@ export function validateRoAForm(
   const errors: Record<string, string> = {};
 
   fields.forEach(field => {
-    const value = data[field.key];
+    const value = data[field.key] as unknown;
 
     // Required field validation
     if (field.required && (value === undefined || value === null || value === '')) {
@@ -285,7 +285,7 @@ export function validateRoAForm(
     }
 
     if (field.type === 'select' && field.options) {
-      if (!field.options.includes(value)) {
+      if (!field.options.includes(value as string)) {
         errors[field.key] = `${field.label} must be one of the available options`;
       }
     }
@@ -318,7 +318,7 @@ export function calculateDraftCompletion(draft: RoADraft, totalFields: number): 
   if (totalFields === 0) return 0;
   
   const filledFields = Object.keys(draft.moduleData).filter(
-    key => draft.moduleData[key] !== undefined && draft.moduleData[key] !== null && draft.moduleData[key] !== ''
+    key => draft.moduleData[key] !== undefined && draft.moduleData[key] !== null && (draft.moduleData[key] as unknown) !== ''
   ).length;
   
   return Math.round((filledFields / totalFields) * 100);
@@ -349,7 +349,7 @@ export function canSubmitDraft(draft: RoADraft, requiredFields: string[]): boole
   return requiredFields.every(
     key => draft.moduleData[key] !== undefined && 
            draft.moduleData[key] !== null && 
-           draft.moduleData[key] !== ''
+           (draft.moduleData[key] as unknown) !== ''
   );
 }
 
