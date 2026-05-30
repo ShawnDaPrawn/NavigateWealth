@@ -55,6 +55,19 @@ jobs:
           echo "${PIPESTATUS[0]}" > quality-typecheck.exit
           exit 0
 
+      - name: Run ESLint (non-blocking baseline)
+        # Newly introduced lint gate. Intentionally non-blocking while the
+        # pre-existing findings are burned down (mirrors the SPA typecheck
+        # baseline above). Promote into "Enforce quality gates" once
+        # `npm run lint` is clean. Config: eslint.config.mjs (SPA `src/` only).
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          npm run lint 2>&1 | tee quality-lint.log
+          echo "${PIPESTATUS[0]}" > quality-lint.exit
+          exit 0
+
       - name: Run middleware typecheck (blocking)
         # middleware.ts is compiled ONLY by Vercel's Edge build — invisible to
         # the Vite build and the SPA typecheck. This dedicated check is GATED
@@ -109,6 +122,8 @@ jobs:
             quality-typecheck.exit
             quality-typecheck-middleware.log
             quality-typecheck-middleware.exit
+            quality-lint.log
+            quality-lint.exit
             quality-vitest-report.json
             quality-npm-audit-report.json
             quality-issues-payload.json

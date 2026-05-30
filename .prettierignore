@@ -1,0 +1,11 @@
+dist
+dist-ssr
+build
+node_modules
+coverage
+tmp
+package-lock.json
+public/sitemap.xml
+public/robots.txt
+*.min.js
+*.min.css

@@ -690,16 +690,36 @@ npm run test:watch
 npm run test:e2e
 npm run typecheck
 npm run typecheck:middleware
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
 npm run ui:inspect -- --path /admin --output tmp/ui-inspect/admin.png
 npm run provider:sync
 npm run provider:worker
 ```
 
+> **Lint toolchain bring-up (one-time, on a registry-connected machine).** The
+> ESLint/Prettier devDependencies were added to `package.json`, but the lockfile
+> could not be regenerated in the Claude-on-the-web sandbox because its network
+> policy blocks `npm.jsr.io` (`npm ci` returns 403 for
+> `@jsr/supabase__supabase-js`). To finish bring-up:
+>
+> ```powershell
+> npm install            # updates package-lock.json with the lint toolchain
+> npm run lint:fix       # optional: autofix the trivially fixable findings
+> npm run lint           # confirm: zero ERRORS (warnings are expected/incremental)
+> npm run format:check   # optional
+> ```
+>
+> Then commit the updated `package-lock.json`. The CI `lint` step is
+> **non-blocking** (`continue-on-error`) until the baseline is clean; promote it
+> into "Enforce quality gates" in `.github/workflows/quality-check.yml` once
+> `npm run lint` is green.
+
 These do **not** exist on `main` as of 2026-05-30:
 
 ```text
-npm run lint
-npm run format
 npm run test:coverage
 npm run deps:audit
 npm run deps:boundaries
@@ -903,4 +923,5 @@ Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`
 | 2026-04-18 | Initial Claude roadmap draft created, describing a broad production-readiness update and the original CORS incident. | Claude Opus 4.7 |
 | 2026-04-20 | Corrected the roadmap against the clean repository state after the CORS restore. Added deployed verification, stash quarantine status, tooling-hook incident, accurate command list, and landed-vs-proposed inventory. | Codex |
 | 2026-05-23 | Form Prefill refinement: expanded smoke, parity tests, CI hooks, E2E hardening, migration script. | Agent |
-| 2026-05-30 | Doc reconciliation: marked `typecheck`/`typecheck:middleware`/`test:e2e` (and Playwright/`e2e/`) as landed; removed stray `temp_pr41.diff`/`temp_pr42.diff` and added `*.diff` to `.gitignore`. Lint/format (ESLint/Prettier) toolchain still pending — could not be installed/verified in the web sandbox because its network policy blocks `npm.jsr.io` (`npm ci` returns 403 for `@jsr/supabase__supabase-js`). | Agent |
+| 2026-05-30 | Doc reconciliation: marked `typecheck`/`typecheck:middleware`/`test:e2e` (and Playwright/`e2e/`) as landed; removed stray `temp_pr41.diff`/`temp_pr42.diff` and added `*.diff` to `.gitignore`. | Agent |
+| 2026-05-30 | Added ESLint (flat `eslint.config.mjs`, SPA-scoped) + Prettier config and `lint`/`lint:fix`/`format`/`format:check` scripts, plus a **non-blocking** CI lint step in `quality-check.yml`. Lockfile NOT regenerated (sandbox blocks `npm.jsr.io`); requires a one-time local `npm install` + `npm run lint` to finish bring-up — see Section 8. | Agent |

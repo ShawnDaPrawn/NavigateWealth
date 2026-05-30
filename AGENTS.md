@@ -55,7 +55,7 @@ boundary.
 
 ## Dev Commands
 
-Commands that exist on clean `main` as of 2026-04-20:
+Commands that exist on `main` as of 2026-05-30:
 
 | Task | Command |
 |---|---|
@@ -64,16 +64,31 @@ Commands that exist on clean `main` as of 2026-04-20:
 | Build | `npm run build` |
 | Tests | `npm test` |
 | Test watch | `npm run test:watch` |
+| E2E tests | `npm run test:e2e` (Playwright) |
+| Typecheck (app) | `npm run typecheck` |
+| Typecheck (middleware) | `npm run typecheck:middleware` |
+| Lint | `npm run lint` (`npm run lint:fix` to autofix) |
+| Format | `npm run format` (`npm run format:check` to verify) |
 | Optional UI inspection | `npm run ui:inspect -- --path /your-route --output tmp/ui-inspect/check.png` |
 | Provider sync | `npm run provider:sync` |
 | Provider worker | `npm run provider:worker` |
 
-Commands that do **not** exist on clean `main` unless later tooling work lands:
+CI (`.github/workflows/quality-check.yml`) gates the production build, the Vitest
+suite, and the middleware typecheck. The SPA `typecheck` step and the `lint`
+step both run in CI as **non-blocking** baselines while their findings are
+burned down; each is intended to be promoted to a blocking gate once it reaches
+zero.
 
-- `npm run lint`
-- `npm run typecheck`
+> **Lint toolchain — verify locally before relying on CI.** The ESLint/Prettier
+> devDependencies were added to `package.json` but the lockfile could not be
+> regenerated in the web sandbox (its network policy blocks `npm.jsr.io`). On a
+> machine with full registry access, run `npm install` to update
+> `package-lock.json`, then `npm run lint` / `npm run format:check`, and commit
+> the lockfile. See docs/PRODUCTION-READINESS.md Section 8.
+
+Commands that do **not** exist on `main` unless later tooling work lands:
+
 - `npm run test:coverage`
-- `npm run format`
 - `npm run deps:audit`
 - `npm run deps:boundaries`
 - `npm run check-env`
@@ -111,7 +126,12 @@ Session handling in `src/components/auth/AuthContext.tsx` and
   `src/supabase/functions/server/index.tsx`.
 - `tsconfig.json` is at the project root.
 - Path alias `@` maps to `./src` in Vite and TypeScript config.
-- No ESLint config is present on clean `main` as of 2026-04-20.
+- ESLint (flat config, `eslint.config.mjs`) and Prettier (`.prettierrc.json`)
+  are present as of 2026-05-30. ESLint scopes the browser SPA under `src/` and
+  excludes the Deno Edge Function code, Node scripts, `e2e/`, and `middleware.ts`.
+  No Git pre-commit hook (Husky) is wired up; lint runs in CI only, and is
+  non-blocking until its baseline is burned down. The lockfile still needs a
+  local `npm install` to capture the new devDependencies (see Dev Commands note).
 - The test suite has a known pre-existing issue:
   `src/components/admin/modules/resources/components/__tests__/resolveNestedKey.test.tsx`
   uses custom assertion logging instead of Vitest `test()`/`it()` functions.
