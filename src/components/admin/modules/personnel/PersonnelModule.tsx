@@ -15,7 +15,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { cn } from '../../../ui/utils';
-import { Personnel, UserRole } from './types';
+import { Personnel, UserRole, type SuperAdminProfile } from './types';
 import type { InviteUserFormValues } from './schema';
 import type { AdminModule } from '../../layout/types';
 
@@ -310,9 +310,9 @@ export function PersonnelModule() {
       {/* ── Super Admin Profile (Collapsible) ─────────────────── */}
       {isSuperAdmin && showSuperAdmin && (
         <SuperAdminProfileCard
-          profile={superAdminProfile}
+          profile={superAdminProfile ?? null}
           loading={superAdminLoading}
-          onUpdate={updateSuperAdmin}
+          onUpdate={updateSuperAdmin as unknown as (updates: Partial<SuperAdminProfile>) => Promise<boolean>}
         />
       )}
 
@@ -441,7 +441,7 @@ export function PersonnelModule() {
         clientsLoading={clientsLoading}
         onTabChange={handleTabChange}
         onUpload={handleFileUpload}
-        onUpdate={handleUpdateProfile}
+        onUpdate={handleUpdateProfile as unknown as (id: string, data: Partial<Personnel>) => Promise<boolean>}
         onInviteCancelled={() => {
           setDrawerOpen(false);
           setSelectedPersonnel(null);

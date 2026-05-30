@@ -62,7 +62,7 @@ export function validateEnv(): EnvConfig {
 
   try {
     // Try to access import.meta.env
-    const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
+    const env = (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {}) as { DEV?: boolean; PROD?: boolean; MODE?: string; [key: string]: unknown };
     
     // Cache validated config (with optional Supabase vars)
     cachedEnv = {

@@ -105,7 +105,7 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
       retirementFunds.total += assetValue;
     } else if (asset.type === 'property') {
       grossEstateAssets.property += assetValue;
-      const propAsset = asset as Record<string, unknown>;
+      const propAsset = asset as unknown as Record<string, unknown>;
       if (propAsset.unrealisedGain) {
         totalUnrealisedGains += (propAsset.unrealisedGain as number) * (asset.ownershipPercentage / 100);
       }
@@ -283,7 +283,7 @@ function analyzeLiquidity(
     if (liquidity === 'liquid') {
       if (asset.subType === 'bank_account' || asset.subType === 'cash') {
         liquidAssets.cash += value;
-      } else if (asset.subType === 'money_market') {
+      } else if ((asset.subType as string) === 'money_market') {
         liquidAssets.moneyMarket += value;
       } else {
         liquidAssets.listedInvestments += value;
@@ -410,9 +410,10 @@ function checkBeneficiaryAlignment(inputs: EstatePlanningInputs): BeneficiaryAli
   const retirementBeneficiaries: string[] = [];
   assets
     .filter((a) => a.type === 'retirement')
-    .forEach((asset: { type: string; beneficiaryDetails?: string; [key: string]: unknown }) => {
-      if (asset.beneficiaryDetails) {
-        retirementBeneficiaries.push(asset.beneficiaryDetails);
+    .forEach((asset) => {
+      const beneficiaryDetails = (asset as { beneficiaryDetails?: string }).beneficiaryDetails;
+      if (beneficiaryDetails) {
+        retirementBeneficiaries.push(beneficiaryDetails);
       }
     });
 

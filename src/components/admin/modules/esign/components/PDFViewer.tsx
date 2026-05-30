@@ -140,7 +140,7 @@ export function PDFViewer({
   const [error, setError] = useState<string | null>(null);
 
   // Refs for canvas rendering
-  const pdfDocRef = useRef<Record<string, unknown> | null>(null);
+  const pdfDocRef = useRef<import('pdfjs-dist').PDFDocumentProxy | null>(null);
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
   const renderTasksRef = useRef<Map<number, { cancel: () => void }>>(new Map());
 
@@ -302,7 +302,7 @@ export function PDFViewer({
         if (!ctx) return;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        const renderTask = page.render({ canvasContext: ctx, viewport });
+        const renderTask = page.render({ canvas, canvasContext: ctx, viewport });
         renderTasksRef.current.set(info.pageNumber, renderTask);
         await renderTask.promise;
       } catch (err: unknown) {

@@ -298,7 +298,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
           isSystemClient: s.isSystemClient,
         })));
       } catch (draftErr) {
-        logger.warn('Failed to persist draft signers (non-critical):', draftErr);
+        logger.warn('Failed to persist draft signers (non-critical):', { error: draftErr });
       }
 
       toast.success('Document uploaded! Now prepare the form fields.');
@@ -316,7 +316,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       setActiveEnvelope({ ...activeEnvelope, fields });
       toast.success('Fields saved successfully');
     } catch (err) {
-      logger.error(err);
+      logger.error('Failed to save esign fields', err);
       toast.error('Failed to save fields');
     }
   };
@@ -381,7 +381,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       const draftSigners = fullEnvelope.draft_signers || [];
 
       if (realSigners.length > 0) {
-        signers = realSigners.map((s: Record<string, unknown>) => ({
+        signers = (realSigners as unknown as Record<string, unknown>[]).map((s) => ({
           name: s.name as string,
           email: s.email as string,
           role: (s.role as string) || 'Signer',

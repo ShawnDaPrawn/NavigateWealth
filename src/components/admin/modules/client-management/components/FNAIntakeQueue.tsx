@@ -81,12 +81,13 @@ export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) 
         const response = await clientApi.getClients({ perPage: 500 });
         const map: Record<string, string> = {};
         for (const entry of response.clients ?? []) {
+          const e = entry as { id: string; email?: string; fullName?: string; firstName?: string; lastName?: string };
           const name =
-            entry.fullName ||
-            [entry.firstName, entry.lastName].filter(Boolean).join(' ').trim() ||
-            entry.email ||
-            entry.id;
-          map[entry.id] = name;
+            e.fullName ||
+            [e.firstName, e.lastName].filter(Boolean).join(' ').trim() ||
+            e.email ||
+            e.id;
+          map[e.id] = name;
         }
         setClientNames(map);
       } catch {

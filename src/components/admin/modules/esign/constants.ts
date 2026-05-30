@@ -188,6 +188,7 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   text: 'Text',
   date: 'Date',
   checkbox: 'Checkbox',
+  attachment: 'Attachment',
 };
 
 /**
@@ -199,6 +200,7 @@ export const FIELD_TYPE_ICONS: Record<FieldType, string> = {
   text: 'FileText',
   date: 'Calendar',
   checkbox: 'CheckSquare',
+  attachment: 'Paperclip',
 };
 
 /**
@@ -210,6 +212,7 @@ export const FIELD_TYPE_COLORS: Record<FieldType, string> = {
   text: 'bg-green-100 text-green-800 border-green-200',
   date: 'bg-orange-100 text-orange-800 border-orange-200',
   checkbox: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+  attachment: 'bg-gray-100 text-gray-800 border-gray-200',
 };
 
 // ============================================================================
