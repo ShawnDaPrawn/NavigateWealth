@@ -130,12 +130,12 @@ export const productManagementApi = {
       description: p.description,
       
       // Transformed mappings — belt-and-suspenders for legacy camelCase data
-      logo: p.logo_url || (p as Record<string, unknown>).logoUrl as string || '',
+      logo: p.logo_url || (p as unknown as Record<string, unknown>).logoUrl as string || '',
       website: p.website,
-      contactEmail: p.contact_email || (p as Record<string, unknown>).contactEmail as string || '',
-      contactPhone: p.contact_phone || (p as Record<string, unknown>).contactPhone as string || '',
-      active: p.is_active !== undefined ? p.is_active : ((p as Record<string, unknown>).isActive !== undefined ? (p as Record<string, unknown>).isActive as boolean : true),
-      categoryIds: p.category_ids || (p as Record<string, unknown>).categoryIds as string[] || [],
+      contactEmail: p.contact_email || (p as unknown as Record<string, unknown>).contactEmail as string || '',
+      contactPhone: p.contact_phone || (p as unknown as Record<string, unknown>).contactPhone as string || '',
+      active: p.is_active !== undefined ? p.is_active : ((p as unknown as Record<string, unknown>).isActive !== undefined ? (p as unknown as Record<string, unknown>).isActive as boolean : true),
+      categoryIds: p.category_ids || (p as unknown as Record<string, unknown>).categoryIds as string[] || [],
       
       // Enriched / UI-specific
       brokerConsultants: [],
@@ -239,7 +239,7 @@ export const productManagementApi = {
       return null;
     } catch (error) {
       // Return null to indicate not found/error, allowing fallback to default
-      logger.warn('Error fetching schema, falling back to default', error, { categoryId });
+      logger.warn('Error fetching schema, falling back to default', { error, categoryId });
       return null;
     }
   },
@@ -256,7 +256,7 @@ export const productManagementApi = {
     const rawProviders = response.providers || [];
 
     return Promise.all(rawProviders.map(async (p) => {
-      const categoryIds = p.category_ids || (p as Record<string, unknown>).categoryIds as string[] || [];
+      const categoryIds = p.category_ids || (p as unknown as Record<string, unknown>).categoryIds as string[] || [];
       const categoryHistoryResults = await Promise.allSettled(
         categoryIds.map((categoryId) =>
           api.get<IntegrationHistoryItem[]>(
@@ -274,7 +274,7 @@ export const productManagementApi = {
         name: p.name,
         description: p.description,
         categoryIds,
-        logoUrl: p.logo_url || (p as Record<string, unknown>).logoUrl as string || '',
+        logoUrl: p.logo_url || (p as unknown as Record<string, unknown>).logoUrl as string || '',
         lastAttempted: stats.lastAttempted,
         lastUpdateStatus: stats.lastUpdateStatus || 'never',
         lastSuccessful: stats.lastSuccessful,
