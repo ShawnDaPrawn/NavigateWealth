@@ -55,7 +55,7 @@ export const RetirementFnaAPI = {
         return null;
       }
 
-      logger.warn('Could not fetch latest published Retirement FNA', error);
+      logger.warn('Could not fetch latest published Retirement FNA', { error });
       return null;
     }
   },

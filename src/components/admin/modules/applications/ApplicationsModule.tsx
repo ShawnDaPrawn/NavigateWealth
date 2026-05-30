@@ -205,7 +205,7 @@ export function ApplicationsModule() {
       }
     } catch (error: unknown) {
       console.error('Resend invite error:', error);
-      toast.error(error?.message || 'Failed to resend invitation. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to resend invitation. Please try again.');
     } finally {
       setResendingInviteId(null);
     }

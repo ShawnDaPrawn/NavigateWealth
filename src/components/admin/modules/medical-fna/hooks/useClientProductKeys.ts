@@ -20,7 +20,7 @@ export function useClientProductKeys(clientId: string | undefined): MedicalAidPr
 
   // Fetch policies directly to bypass KV store sync issues for text fields
   const { data: policiesData, isLoading: isPoliciesLoading } = useQuery({
-    queryKey: medicalFnaKeys.policies(clientId),
+    queryKey: medicalFnaKeys.policies(clientId ?? ''),
     queryFn: async () => {
       if (!clientId) return null;
       try {

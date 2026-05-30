@@ -139,7 +139,7 @@ export function useUpdateEvent() {
   return useMutation({
     mutationFn: async (input: UpdateEventInput): Promise<CalendarEvent> => {
       const { id, ...updates } = input;
-      return calendarApi.updateEvent(id, updates);
+      return calendarApi.updateEvent(id as string, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });

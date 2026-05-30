@@ -437,7 +437,7 @@ export function EmploymentSection({
             </div>
           )}
 
-          {profileData.additionalIncomeSources && (profileData.additionalIncomeSources as unknown[]).length > 0 && (
+          {!!profileData.additionalIncomeSources && (profileData.additionalIncomeSources as unknown[]).length > 0 && (
             <div className="contents">
               <Separator />
               <div>

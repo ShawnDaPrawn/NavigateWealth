@@ -505,7 +505,7 @@ export function UploadTab({
                               mapped ? 'text-gray-700' : 'text-gray-400 bg-gray-50/50',
                             )}
                           >
-                            {typeof cell === 'object' ? JSON.stringify(cell) : cell}
+                            {typeof cell === 'object' ? JSON.stringify(cell) : String(cell)}
                           </TableCell>
                         );
                       })}

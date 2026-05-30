@@ -48,7 +48,7 @@ export function TaxPlanningResultsView({ plan }: TaxPlanningResultsViewProps) {
           <p className="text-slate-500">Generated on {new Date(generatedAt).toLocaleDateString()} at {new Date(generatedAt).toLocaleTimeString()}</p>
         </div>
         <Badge variant="outline" className="text-slate-600 border-slate-300">
-          {(inputs as Record<string, unknown>).taxYear as string || `${new Date(generatedAt).getFullYear()}/${new Date(generatedAt).getFullYear() + 1}`} Tax Year
+          {(inputs as unknown as Record<string, unknown>).taxYear as string || `${new Date(generatedAt).getFullYear()}/${new Date(generatedAt).getFullYear() + 1}`} Tax Year
         </Badge>
       </div>
 

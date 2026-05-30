@@ -68,7 +68,7 @@ export function RecoveryBinDialog({ open, onOpenChange, onChanged }: RecoveryBin
     setLoading(true);
     try {
       const response = await esignApi.listRecoveryBin();
-      setItems((response.envelopes as BinEnvelope[]) || []);
+      setItems((response.envelopes as unknown as BinEnvelope[]) || []);
       setRetentionDays(response.retention_days ?? 90);
     } catch (err) {
       logger.error('Failed to load recovery bin:', err);

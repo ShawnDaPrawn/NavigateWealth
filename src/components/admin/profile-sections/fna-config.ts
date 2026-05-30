@@ -129,10 +129,10 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Medical FNA',
     Wizard: LazyMedicalFNAWizard,
     ResultsView: LazyMedicalFNAResultsView,
-    getLatestPublished: (clientId) => MedicalFNAApiService.getLatestPublished(clientId),
+    getLatestPublished: (clientId) => MedicalFNAApiService.getLatestPublished(clientId) as unknown as Promise<Record<string, unknown> | null>,
     deleteFNA: (fnaId) => MedicalFNAApiService.deleteMedicalFNA(fnaId),
-    publishFNA: (fnaId) => MedicalFNAApiService.publishMedicalFNA(fnaId),
-    unpublishFNA: (fnaId) => MedicalFNAApiService.unpublishMedicalFNA(fnaId),
+    publishFNA: (fnaId) => MedicalFNAApiService.publishMedicalFNA(fnaId) as unknown as Promise<Record<string, unknown>>,
+    unpublishFNA: (fnaId) => MedicalFNAApiService.unpublishMedicalFNA(fnaId) as unknown as Promise<Record<string, unknown>>,
     wizardProps: {
       onCompleteKey: 'onFNAComplete',
     },

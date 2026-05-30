@@ -58,7 +58,7 @@ export function ArchivePolicyDialog({
             <AlertDialogTitle className="text-amber-700">Archive Policy</AlertDialogTitle>
           </div>
           <AlertDialogDescription>
-            You are about to archive <strong>{policy?.providerName}</strong>. 
+            You are about to archive <strong>{String(policy?.providerName ?? '')}</strong>.
             This will remove it from active calculations but keep a historical record.
           </AlertDialogDescription>
         </AlertDialogHeader>

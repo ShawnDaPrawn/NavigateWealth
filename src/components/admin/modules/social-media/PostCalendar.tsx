@@ -385,7 +385,7 @@ export function PostCalendar({
         </div>
         
         <div className="flex items-center gap-2">
-          <Select value={viewMode} onValueChange={(value: string) => onViewModeChange(value)}>
+          <Select value={viewMode} onValueChange={(value: string) => onViewModeChange(value as typeof viewMode)}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>

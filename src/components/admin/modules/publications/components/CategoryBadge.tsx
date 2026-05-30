@@ -24,7 +24,7 @@ export function CategoryBadge({
   className
 }: CategoryBadgeProps) {
   // Get icon component from lucide-react
-  const IconComponent = iconKey ? (Icons as Record<string, React.ComponentType<{ className?: string }>>)[iconKey] : null;
+  const IconComponent = iconKey ? (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconKey] : null;
 
   const sizeClasses = {
     sm: 'text-xs px-2 py-1',

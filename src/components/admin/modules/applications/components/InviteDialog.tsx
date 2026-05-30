@@ -104,7 +104,7 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
       }
     } catch (error: unknown) {
       console.error('Invite error:', error);
-      toast.error(error?.message || 'Failed to send invitation. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to send invitation. Please try again.');
     } finally {
       setSending(false);
     }

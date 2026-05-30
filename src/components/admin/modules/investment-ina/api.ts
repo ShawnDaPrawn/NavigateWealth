@@ -104,7 +104,7 @@ export const InvestmentINAFnaAPI = {
         return null;
       }
 
-      logger.warn('Could not fetch latest published Investment INA', error);
+      logger.warn('Could not fetch latest published Investment INA', { error });
       return null;
     }
   },

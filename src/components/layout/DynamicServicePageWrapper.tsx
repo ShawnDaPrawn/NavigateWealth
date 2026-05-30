@@ -121,7 +121,7 @@ export function DynamicServicePageWrapper({
         // Fallback to defaults
         if (fields.length === 0) {
           const def = DEFAULT_SCHEMAS.find((s) => s.categoryId === catId);
-          fields = def ? (def.fields as SchemaField[]) : [];
+          fields = def ? (def.fields as unknown as SchemaField[]) : [];
         }
         return { catId, fields };
       });

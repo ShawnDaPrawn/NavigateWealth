@@ -55,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
       title: error.name || 'React render error',
       message: error.message || 'React render error',
       stack: error.stack,
-      componentStack: errorInfo.componentStack,
+      componentStack: errorInfo.componentStack ?? undefined,
       filePath: window.location.pathname,
     });
     

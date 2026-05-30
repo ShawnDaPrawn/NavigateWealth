@@ -93,7 +93,7 @@ export function useSocialPosts(
 
   // ── Query: Posts list ─────────────────────────────────────────────────
   const postsQuery = useQuery({
-    queryKey: socialMediaKeys.posts.list(filters),
+    queryKey: socialMediaKeys.posts.list(filters as unknown as Record<string, unknown>),
     queryFn: async () => {
       const response = await postsApi.getAll(filters);
       if (response.success && response.data) {

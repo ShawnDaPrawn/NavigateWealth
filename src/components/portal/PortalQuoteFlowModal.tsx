@@ -301,7 +301,7 @@ export function PortalQuoteFlowModal({
                   <div className="min-w-0">
                     {contactValid ? (
                       <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-5">
-                        {renderServiceWizard(serviceId, {
+                        {renderServiceWizard(serviceId as QuoteServiceId, {
                           firstName,
                           lastName,
                           email,

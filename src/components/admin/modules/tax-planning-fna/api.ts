@@ -95,7 +95,7 @@ export const TaxPlanningFnaAPI = {
         return null;
       }
 
-      logger.warn('Could not fetch latest published Tax Planning FNA', error);
+      logger.warn('Could not fetch latest published Tax Planning FNA', { error });
       return null;
     }
   },

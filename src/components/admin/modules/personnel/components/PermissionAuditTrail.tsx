@@ -126,7 +126,7 @@ export function PermissionAuditTrail({
           {/* Timeline line */}
           <div className="absolute left-[11px] top-0 bottom-0 w-px bg-gray-200" />
 
-          {(entries as AuditEntry[]).map((entry, idx) => {
+          {(entries as unknown as AuditEntry[]).map((entry, idx) => {
             const timeAgo = formatDistanceToNow(new Date(entry.timestamp), {
               addSuffix: true,
             });

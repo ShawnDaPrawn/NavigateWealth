@@ -213,7 +213,7 @@ export function RiskProfileSection({
                 title={q.title}
                 subtitle={q.subtitle}
                 options={[...q.options]}
-                value={(riskAssessment as Record<string, number>)[`question${q.questionNumber}`] || 0}
+                value={(riskAssessment as unknown as Record<string, number>)[`question${q.questionNumber}`] || 0}
                 onSelect={updateRiskQuestion}
               />
             ))}

@@ -90,7 +90,7 @@ export const EstatePlanningAPI = {
         return null;
       }
 
-      logger.warn('Could not fetch latest published Estate Planning FNA', error);
+      logger.warn('Could not fetch latest published Estate Planning FNA', { error });
       return null;
     }
   },

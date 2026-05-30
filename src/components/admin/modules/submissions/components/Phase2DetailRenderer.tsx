@@ -209,7 +209,7 @@ function RiskRenderer({ pd }: { pd: Phase2Data }) {
               <TagList items={health.selected_conditions as string[]} />
             </div>
           )}
-          {health.free_text && <DetailRow label="Additional notes" value={String(health.free_text)} />}
+          {!!health.free_text && <DetailRow label="Additional notes" value={String(health.free_text)} />}
         </SectionCard>
       )}
     </div>

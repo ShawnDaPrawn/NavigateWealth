@@ -18,7 +18,7 @@ import {
   Shield,
 } from 'lucide-react';
 import type { EstatePlanningSession } from '../types';
-import { EstatePlanningCalculationService } from '../utils';
+import { EstatePlanningCalculationService, formatCurrency as formatCurrencyValue } from '../utils';
 
 interface EstatePlanningResultsViewProps {
   fna: EstatePlanningSession;
@@ -48,7 +48,7 @@ export function EstatePlanningResultsView({ fna: session }: EstatePlanningResult
   } = results;
 
   const formatCurrency = (amount: number) =>
-    `R${EstatePlanningCalculationService.formatCurrency(amount)}`;
+    `R${formatCurrencyValue(amount)}`;
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {

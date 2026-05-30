@@ -120,7 +120,7 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
     if (categoryKeys.length > 0) {
       acc[category.id] = {
         category,
-        keys: categoryKeys
+        keys: categoryKeys as ClientKeyValue[]
       };
     }
     return acc;

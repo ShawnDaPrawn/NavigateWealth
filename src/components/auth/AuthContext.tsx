@@ -321,7 +321,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     await updateUser({
-      accountStatus: data?.accountStatus || 'approved',
+      accountStatus: (data?.accountStatus || 'approved') as AppUser['accountStatus'],
       adviserAssigned: !data?.accountStatus || data.accountStatus === 'approved',
     });
   };

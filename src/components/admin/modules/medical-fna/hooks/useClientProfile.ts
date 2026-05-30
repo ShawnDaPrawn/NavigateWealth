@@ -9,7 +9,7 @@ import { medicalFnaKeys } from './queryKeys';
 
 export function useClientProfile(clientId: string | undefined) {
   return useQuery({
-    queryKey: medicalFnaKeys.clientProfile(clientId),
+    queryKey: medicalFnaKeys.clientProfile(clientId ?? ''),
     queryFn: async () => {
       if (!clientId) return null;
       try {

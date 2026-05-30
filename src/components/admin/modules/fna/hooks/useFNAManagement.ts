@@ -86,7 +86,7 @@ export function useFNAManagement({ config, clientId, enabled = true }: UseFNAMan
     const toastId = toast.loading(`Deleting ${config.name}...`);
 
     try {
-      await config.deleteFNA(fna.id);
+      await config.deleteFNA(fna.id as string);
       toast.success(`${config.name} deleted successfully`, { id: toastId });
       setDeleteDialogOpen(false);
       setFna(null);

@@ -160,7 +160,7 @@ export function isKeyUsed(keyId: string): boolean {
  */
 export function getKeysByModule(moduleName: string): ProductKey[] {
   const keyIds = Object.entries(KEY_USAGE_MAP)
-    .filter(([, modules]) => modules.includes(moduleName))
+    .filter(([, modules]) => (modules as readonly string[]).includes(moduleName))
     .map(([keyId]) => keyId);
   
   return getKeysByIds(keyIds);

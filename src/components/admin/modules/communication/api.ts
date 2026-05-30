@@ -140,7 +140,7 @@ const mapTemplateToBackend = (template: EmailTemplate): Omit<BackendTemplate, 'i
   buttonLabel: template.buttonLabel,
   buttonUrl: template.buttonUrl,
   footerNote: template.footerNote,
-  category: template.category
+  category: template.category ?? ''
 });
 
 export const communicationApi = {

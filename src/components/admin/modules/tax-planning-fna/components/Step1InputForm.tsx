@@ -53,7 +53,7 @@ export function Step1InputForm({
   const { PrefillUI, startPrefill } = useFormPrefill({
     clientId,
     formId: 'tax-fna-step1',
-    currentValues: formData as Record<string, unknown>,
+    currentValues: formData as unknown as Record<string, unknown>,
     autoOpenReview: !intakeMode,
     onApplyValues: (values) => {
       setFormData((prev) => ({ ...prev, ...(values as Partial<TaxPlanningInputs>) }));
