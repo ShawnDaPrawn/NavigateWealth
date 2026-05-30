@@ -95,7 +95,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
 
     try {
       if (request.files && request.files.length > 0) {
-        logger.debug('📤 Uploading documents:', request.files.map(f => f.name).join(', '));
+        logger.debug('📤 Uploading documents:', { files: request.files.map(f => f.name).join(', ') });
       } else {
         logger.error('📤 Upload aborted: No files provided in request');
         setUploadError('No files provided. Please select at least one document.');
@@ -130,7 +130,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     setSendError(null);
 
     try {
-      logger.debug('📧 Sending invites for envelope:', envelopeId);
+      logger.debug('📧 Sending invites for envelope:', { envelopeId });
       await esignApi.sendInvites(envelopeId, request);
       logger.debug('✅ Invites sent successfully');
       return true;
@@ -154,7 +154,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     setSignError(null);
 
     try {
-      logger.debug('✍️ Submitting signature for envelope:', envelopeId);
+      logger.debug('✍️ Submitting signature for envelope:', { envelopeId });
       await esignApi.submitSignature(envelopeId, request);
       logger.debug('✅ Signature submitted successfully');
       return true;
@@ -178,7 +178,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     setRejectError(null);
 
     try {
-      logger.debug('❌ Rejecting signing for envelope:', envelopeId);
+      logger.debug('❌ Rejecting signing for envelope:', { envelopeId });
       await esignApi.rejectSigning(envelopeId, request);
       logger.debug('✅ Rejection recorded successfully');
       return true;
@@ -202,7 +202,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     setTemplateError(null);
 
     try {
-      logger.debug('💾 Saving envelope as template:', envelopeId);
+      logger.debug('💾 Saving envelope as template:', { envelopeId });
       await esignApi.saveAsTemplate(envelopeId, request);
       logger.debug('✅ Template saved successfully');
       return true;
@@ -229,7 +229,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     setSaveFieldsError(null);
 
     try {
-      logger.debug('💾 Saving fields for envelope:', envelopeId);
+      logger.debug('💾 Saving fields for envelope:', { envelopeId });
       await esignApi.saveFields(envelopeId, fields);
       logger.debug('✅ Fields saved successfully');
       return true;
@@ -250,7 +250,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     setDeleteError(null);
 
     try {
-      logger.debug('🗑️ Deleting envelope:', envelopeId);
+      logger.debug('🗑️ Deleting envelope:', { envelopeId });
       await esignApi.deleteEnvelope(envelopeId);
       logger.debug('✅ Envelope deleted successfully');
       return true;
@@ -274,7 +274,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     setVoidError(null);
 
     try {
-      logger.debug('🚫 Voiding envelope:', envelopeId);
+      logger.debug('🚫 Voiding envelope:', { envelopeId });
       await esignApi.voidEnvelope(envelopeId, reason);
       logger.debug('✅ Envelope voided successfully');
       return true;
