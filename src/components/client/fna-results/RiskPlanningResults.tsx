@@ -79,6 +79,9 @@ const formatDate = (dateString: string): string => {
 
 export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
   const { finalNeeds, inputData, calculations, complianceDisclaimers, publishedAt } = fna;
+  // inputData / calculations.metadata are loosely typed; read the fields this view uses.
+  const input = inputData as { currentAge?: number; retirementAge?: number; dependants?: unknown[]; netMonthlyIncome?: number };
+  const calcMeta = calculations.metadata as { calculatedAt?: string; systemVersion?: string };
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
@@ -135,28 +138,28 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
           <div className="bg-gray-50 rounded-lg p-6">
             <h3 className="font-semibold text-gray-900 mb-4">Your Financial Profile</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {inputData?.currentAge && (
+              {input.currentAge && (
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Current Age</p>
-                  <p className="text-lg font-semibold text-gray-900">{inputData.currentAge} years</p>
+                  <p className="text-lg font-semibold text-gray-900">{input.currentAge} years</p>
                 </div>
               )}
-              {inputData?.retirementAge && (
+              {input.retirementAge && (
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Retirement Age</p>
-                  <p className="text-lg font-semibold text-gray-900">{inputData.retirementAge} years</p>
+                  <p className="text-lg font-semibold text-gray-900">{input.retirementAge} years</p>
                 </div>
               )}
-              {inputData?.dependants && (
+              {Array.isArray(input.dependants) && input.dependants.length > 0 && (
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Dependants</p>
-                  <p className="text-lg font-semibold text-gray-900">{inputData.dependants.length}</p>
+                  <p className="text-lg font-semibold text-gray-900">{input.dependants.length}</p>
                 </div>
               )}
-              {inputData?.netMonthlyIncome && (
+              {input.netMonthlyIncome && (
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Monthly Income</p>
-                  <p className="text-lg font-semibold text-gray-900">{formatCurrency(inputData.netMonthlyIncome)}</p>
+                  <p className="text-lg font-semibold text-gray-900">{formatCurrency(input.netMonthlyIncome)}</p>
                 </div>
               )}
             </div>
@@ -318,7 +321,7 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
       </Card>
 
       {/* Analysis Methodology */}
-      {calculations?.metadata && (
+      {!!calculations.metadata && (
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">Analysis Details</CardTitle>
@@ -328,12 +331,12 @@ export function RiskPlanningResults({ fna }: RiskPlanningResultsProps) {
               <div>
                 <p className="text-gray-600 mb-1">Calculated On</p>
                 <p className="font-medium text-gray-900">
-                  {formatDate(calculations.metadata.calculatedAt)}
+                  {formatDate(calcMeta.calculatedAt ?? '')}
                 </p>
               </div>
               <div>
                 <p className="text-gray-600 mb-1">Analysis Version</p>
-                <p className="font-medium text-gray-900">{calculations.metadata.systemVersion}</p>
+                <p className="font-medium text-gray-900">{calcMeta.systemVersion}</p>
               </div>
               <div>
                 <p className="text-gray-600 mb-1">Report Version</p>
