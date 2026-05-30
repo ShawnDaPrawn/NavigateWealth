@@ -29,6 +29,15 @@
  *     language alone communicates state.
  */
 
+/* eslint-disable react-hooks/rules-of-hooks --
+ * TODO(Phase 4/5): this 1823-line god-file calls 24 hooks after an early
+ * return. The correct fix (likely a wrapper-split around the loading/early
+ * guard so the inner component calls its hooks unconditionally) changes hook
+ * ordering in the live e-signature SIGNER flow and must be done behind
+ * characterization tests first — this file is already on the Phase 5/6
+ * decomposition list. Quarantined here so react-hooks/rules-of-hooks can be
+ * promoted to "error" repo-wide; remove this directive when the file is fixed.
+ */
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '../ui/card';

@@ -55,12 +55,14 @@ export default tseslint.config(
       'react-refresh': reactRefresh,
     },
     rules: {
-      // TRIAGE: rules-of-hooks flagged ~40 sites. Some may be genuine
-      // conditional-hook bugs; downgraded to "warn" only to land a green
-      // baseline. Promote back to "error" once triaged (see Phase 3 notes).
+      // Correctness rule — ENFORCED. The original 40 violations were triaged:
+      // 10 genuine "hook after early return" bugs were fixed, and the two files
+      // that need bigger work (SigningWorkflow.tsx — god-file, Phase 4/5;
+      // ContainerBlock.tsx — block-definition `editor` pattern) carry a
+      // file-level eslint-disable with a TODO. New violations now fail lint.
       // (Scoped here, not in the global block, because the react-hooks plugin
       // is only registered for the SPA.)
-      'react-hooks/rules-of-hooks': 'warn',
+      'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
