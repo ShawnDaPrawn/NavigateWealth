@@ -25,6 +25,8 @@ interface GoalFormDialogProps {
   initialData?: Goal;
   policies: PolicyRecord[];
   clientId: string;
+  schemas?: Record<string, SchemaField[]>;
+  mainSchema?: SchemaField[];
 }
 
 export function GoalFormDialog({
@@ -64,7 +66,7 @@ export function GoalFormDialog({
       
       // Determine which schema to use. 
       // Prioritize the specific sub-category schema if available
-      let schema = schemas[policy.categoryId];
+      let schema = schemas[policy.categoryId ?? ''];
       
       // If not found, check if it's in the main schema (often the case for single-category views)
       if (!schema || schema.length === 0) {
@@ -81,14 +83,14 @@ export function GoalFormDialog({
   };
 
   // Helper to safely extract policy number
-  const getPolicyNumber = (policy: PolicyRecord) => {
+  const getPolicyNumber = (policy: PolicyRecord): string => {
     if (!policy) return 'Unnamed Policy';
-    
+
     // Try schema lookup first
     const schemaValue = getValueByName(policy, ['Policy Number', 'Policy Ref', 'Reference Number']);
-    if (schemaValue) return schemaValue;
+    if (schemaValue) return String(schemaValue);
 
-    return policy.policyNumber || 
+    return String(policy.policyNumber ||
            policy.policy_number || 
            policy.data?.policy_number || 
            policy.data?.invest_policy_number || 
@@ -97,22 +99,22 @@ export function GoalFormDialog({
            policy.data?.inv_1 || 
            policy.data?.inv_vol_1 || 
            policy.data?.inv_gua_1 || 
-           policy.name || 
-           'Unnamed Policy';
+           policy.name ||
+           'Unnamed Policy');
   };
 
   // Helper to safely extract label
-  const getPolicyLabel = (policy: PolicyRecord) => {
+  const getPolicyLabel = (policy: PolicyRecord): string => {
     // Try schema lookup first
     const schemaValue = getValueByName(policy, ['Product Type', 'Plan', 'Benefit Type', 'Type']);
-    
+
     const type = schemaValue ||
-                 policy.data?.invest_product_type || 
-                 policy.data?.inv_2 || 
-                 policy.data?.inv_vol_2 || 
+                 policy.data?.invest_product_type ||
+                 policy.data?.inv_2 ||
+                 policy.data?.inv_vol_2 ||
                  'Voluntary Investment';
     // Override generic "Investment" label
-    return type === 'Investment' ? 'Voluntary Investment' : type;
+    return String(type === 'Investment' ? 'Voluntary Investment' : type);
   };
 
   // Helper to clean number values
@@ -151,7 +153,7 @@ export function GoalFormDialog({
 
   // Linked Values Calculation
   const linkedSummary = React.useMemo(() => {
-    const linked = policies.filter(p => selectedPolicyIds.includes(p.id));
+    const linked = policies.filter(p => selectedPolicyIds.includes(p.id ?? ''));
 
     return {
         lumpSum: linked.reduce((sum, p) => sum + getPolicyValue(p), 0),
@@ -399,7 +401,7 @@ export function GoalFormDialog({
                         return (
                             <div key={id} className="grid grid-cols-3 gap-0 text-sm border-b border-gray-100 bg-white hover:bg-gray-50 transition-colors">
                                 <div className="py-3 px-4 flex flex-col justify-center">
-                                    <span className="font-medium text-gray-900">{policy.providerName}</span>
+                                    <span className="font-medium text-gray-900">{String(policy.providerName ?? '')}</span>
                                     <span className="text-xs text-gray-500">{getPolicyNumber(policy)}</span>
                                 </div>
                                 <div className="py-3 px-4 border-l border-gray-100 flex items-center justify-center text-gray-600 font-medium">
@@ -537,13 +539,13 @@ export function GoalFormDialog({
                             <div key={policy.id} className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition-all">
                              <Checkbox 
                                 id={policy.id} 
-                                checked={selectedPolicyIds.includes(policy.id)}
-                                onCheckedChange={() => togglePolicy(policy.id)}
+                                checked={selectedPolicyIds.includes(policy.id ?? '')}
+                                onCheckedChange={() => togglePolicy(policy.id ?? '')}
                              />
                              <label htmlFor={policy.id} className="text-sm cursor-pointer flex-1">
                                 <div className="flex justify-between font-medium text-gray-900">
                                     <span className="flex items-center gap-2">
-                                        {policy.providerName}
+                                        {String(policy.providerName ?? '')}
                                         <span className="text-gray-400 font-normal">|</span>
                                         <span className="text-gray-700">
                                             {getPolicyNumber(policy)}
