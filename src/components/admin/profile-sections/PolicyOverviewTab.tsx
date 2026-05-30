@@ -210,7 +210,7 @@ function OverviewSection({ index, section, clientId, onRunFNA, onAddPolicy, vari
           }
         }
         // Final fallback to client-side defaults
-        return DEFAULT_SCHEMAS[catId]?.fields || [];
+        return (DEFAULT_SCHEMAS[catId]?.fields || []) as unknown as SchemaField[];
       };
 
       // 1. Fetch Main Schema
@@ -287,12 +287,12 @@ function OverviewSection({ index, section, clientId, onRunFNA, onAddPolicy, vari
                   if (section.id === 'medical-aid') {
                      results = fnaData.results || fnaData; // Medical puts results at top or inside
                   } else if (section.id === 'investments') {
-                     results = fnaData.results || fnaData.session?.results;
+                     results = fnaData.results || (fnaData as { session?: { results?: unknown } }).session?.results;
                   } else {
                      results = fnaData.results;
                   }
                }
-               setFnaResults(results);
+               setFnaResults(results as Record<string, unknown> | null);
             } catch (err) {
                console.warn(`Could not load FNA for ${section.label}`, err);
             }
@@ -307,7 +307,7 @@ function OverviewSection({ index, section, clientId, onRunFNA, onAddPolicy, vari
     }
   };
 
-  const formatFieldValue = (field: SchemaField, value: unknown) => {
+  const formatFieldValue = (field: SchemaField, value: unknown): React.ReactNode => {
     if (!value && value !== 0) return '-';
 
     switch (field.type) {
@@ -321,7 +321,7 @@ function OverviewSection({ index, section, clientId, onRunFNA, onAddPolicy, vari
       case 'boolean':
         return value === true || value === 'true' ? 'Yes' : 'No';
       default:
-        return value;
+        return value as React.ReactNode;
     }
   };
 
@@ -407,7 +407,7 @@ function OverviewSection({ index, section, clientId, onRunFNA, onAddPolicy, vari
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium text-gray-900">{policy.providerName}</span>
+                          <span className="font-medium text-gray-900">{String(policy.providerName ?? '')}</span>
                         </div>
                         
                         {/* Linked Goal Indicator */}
@@ -467,11 +467,11 @@ function OverviewSection({ index, section, clientId, onRunFNA, onAddPolicy, vari
                             field.id === 'invest_premium' || 
                             field.name === 'Premium'
                         ) {
-                            const isShortfall = linkedGoal.requiredMonthly > 0;
+                            const isShortfall = (linkedGoal.requiredMonthly ?? 0) > 0;
                             goalContent = isShortfall ? (
                                 <div className="mt-1 text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100 text-right">
                                     <div className="text-[10px] text-red-400 uppercase tracking-wider font-semibold">Shortfall</div>
-                                    +{Math.round(linkedGoal.requiredMonthly).toLocaleString()} /pm
+                                    +{Math.round(linkedGoal.requiredMonthly ?? 0).toLocaleString()} /pm
                                 </div>
                             ) : (
                                 <div className="mt-1 text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded border border-green-100 flex items-center gap-1">
@@ -520,7 +520,7 @@ function OverviewSection({ index, section, clientId, onRunFNA, onAddPolicy, vari
                     <Info className="h-3 w-3 text-purple-400" />
                   </TableCell>
                   {structure.map((field) => {
-                    const needed = getFNAValueForColumn(field.name);
+                    const needed = getFNAValueForColumn(field.name ?? '');
                     const isCurrency = field.type === 'currency';
                     
                     return (
