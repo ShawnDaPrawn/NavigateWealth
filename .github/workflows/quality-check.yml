@@ -53,6 +53,21 @@ jobs:
           echo "${PIPESTATUS[0]}" > quality-typecheck.exit
           exit 0
 
+      - name: Run ESLint (blocking)
+        # ESLint runs at 0 errors (warnings are not yet gated — there's a large
+        # warning backlog being burned down). This check is GATED in "Enforce
+        # quality gates" below, so any new lint ERROR fails CI. Formatting is
+        # enforced per-commit via the Husky + lint-staged pre-commit hook
+        # (Prettier on staged files), not as a repo-wide CI check, because
+        # several guardrail/golden tests assert on exact source text and a
+        # repo-wide reformat would trip them.
+        shell: bash
+        run: |
+          set +e
+          npm run lint 2>&1 | tee quality-lint.log
+          echo "${PIPESTATUS[0]}" > quality-lint.exit
+          exit 0
+
       - name: Run middleware typecheck (blocking)
         # middleware.ts is compiled ONLY by Vercel's Edge build — invisible to
         # the Vite build and the SPA typecheck. This dedicated check is GATED
@@ -105,6 +120,8 @@ jobs:
             quality-test.exit
             quality-typecheck.log
             quality-typecheck.exit
+            quality-lint.log
+            quality-lint.exit
             quality-typecheck-middleware.log
             quality-typecheck-middleware.exit
             quality-vitest-report.json
@@ -124,15 +141,18 @@ jobs:
           build_exit="$(cat quality-build.exit 2>/dev/null || echo 1)"
           test_exit="$(cat quality-test.exit 2>/dev/null || echo 1)"
           typecheck_exit="$(cat quality-typecheck.exit 2>/dev/null || echo 1)"
+          lint_exit="$(cat quality-lint.exit 2>/dev/null || echo 1)"
           mw_exit="$(cat quality-typecheck-middleware.exit 2>/dev/null || echo 1)"
           echo "build exit code:           $build_exit"
           echo "test exit code:            $test_exit"
           echo "typecheck exit code:       $typecheck_exit"
+          echo "lint exit code:            $lint_exit"
           echo "middleware typecheck code: $mw_exit"
           failed=0
           if [ "$build_exit" != "0" ]; then echo "::error::Production build failed (see quality-build.log)"; failed=1; fi
           if [ "$test_exit" != "0" ]; then echo "::error::Vitest suite failed (see quality-test.log)"; failed=1; fi
           if [ "$typecheck_exit" != "0" ]; then echo "::error::SPA typecheck failed — a new type error was introduced (baseline is 0). See quality-typecheck.log"; failed=1; fi
+          if [ "$lint_exit" != "0" ]; then echo "::error::ESLint failed — a new lint error was introduced (baseline is 0 errors). See quality-lint.log"; failed=1; fi
           if [ "$mw_exit" != "0" ]; then echo "::error::Middleware typecheck failed — middleware.ts must not import 'next/server' (see quality-typecheck-middleware.log)"; failed=1; fi
           if [ "$failed" != "0" ]; then
             echo "Quality gates FAILED."

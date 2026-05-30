@@ -108,7 +108,9 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "husky": "^9.1.7",
     "jsdom": "^29.0.2",
+    "lint-staged": "^15.5.2",
     "prettier": "^3.8.3",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.2.2",
@@ -121,6 +123,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "prepare": "husky",
     "build": "node ./scripts/generate-seo-files.mjs && vite build && node ./scripts/apply-static-seo.mjs && node ./scripts/verify-seo-build.mjs",
     "seo:verify": "node ./scripts/generate-seo-files.mjs && node ./scripts/verify-seo-build.mjs",
     "optimize:images": "node ./scripts/optimize-images.mjs",
