@@ -470,7 +470,7 @@ export async function getRiskPlanningFNA(clientId: string): Promise<RiskPlanning
       return null;
     }
 
-    logger.warn('Could not fetch Risk Planning FNA', error);
+    logger.warn('Could not fetch Risk Planning FNA', { error });
     return null;
   }
 }
@@ -500,7 +500,7 @@ export async function getMedicalFNA(clientId: string): Promise<MedicalFNA | null
       return null;
     }
 
-    logger.warn('Could not fetch latest published Medical FNA', error);
+    logger.warn('Could not fetch latest published Medical FNA', { error });
     return null;
   }
 }
@@ -527,7 +527,7 @@ export async function getRetirementFNA(clientId: string): Promise<RetirementFNA 
       return null;
     }
 
-    logger.warn('Could not fetch Retirement FNA', error);
+    logger.warn('Could not fetch Retirement FNA', { error });
     return null;
   }
 }
@@ -554,7 +554,7 @@ export async function getInvestmentINA(clientId: string): Promise<InvestmentINA 
       return null;
     }
 
-    logger.warn('Could not fetch Investment INA', error);
+    logger.warn('Could not fetch Investment INA', { error });
     return null;
   }
 }
@@ -581,7 +581,7 @@ export async function getTaxPlanningFNA(clientId: string): Promise<TaxPlanningFN
       return null;
     }
 
-    logger.warn('Could not fetch Tax Planning FNA', error);
+    logger.warn('Could not fetch Tax Planning FNA', { error });
     return null;
   }
 }
@@ -608,7 +608,7 @@ export async function getEstatePlanningFNA(clientId: string): Promise<EstatePlan
       return null;
     }
 
-    logger.warn('Could not fetch Estate Planning FNA', error);
+    logger.warn('Could not fetch Estate Planning FNA', { error });
     return null;
   }
 }
