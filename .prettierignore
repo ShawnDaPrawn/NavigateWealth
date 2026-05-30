@@ -1,0 +1,18 @@
+# Build output & dependencies
+dist
+build
+node_modules
+tmp
+coverage
+.vercel
+playwright-report
+test-results
+
+# Lockfiles & generated artifacts
+package-lock.json
+public/sitemap.xml
+seo-route-manifest.json
+
+# Minified / vendored
+**/*.min.js
+**/*.min.css

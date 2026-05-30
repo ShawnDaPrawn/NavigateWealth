@@ -29,7 +29,7 @@ export interface EventCreate extends Omit<import('./shared-calendar-types.ts').C
   end_at: string;
 }
 
-export interface EventUpdate extends import('./shared-calendar-types.ts').UpdateEventInput {}
-export interface ReminderCreate extends import('./shared-calendar-types.ts').CreateReminderInput {}
-export interface ReminderUpdate extends import('./shared-calendar-types.ts').UpdateReminderInput {}
+export type EventUpdate = import('./shared-calendar-types.ts').UpdateEventInput;
+export type ReminderCreate = import('./shared-calendar-types.ts').CreateReminderInput;
+export type ReminderUpdate = import('./shared-calendar-types.ts').UpdateReminderInput;
 

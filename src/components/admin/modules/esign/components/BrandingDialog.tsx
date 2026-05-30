@@ -153,7 +153,6 @@ export function BrandingDialog({ open, onOpenChange }: Props) {
               <div className="h-1.5" style={{ background: deriveStripGradient(previewAccent) }} />
               <div className="p-4 flex items-center gap-3 bg-white">
                 {logoUrl.trim() && HTTPS_URL_RE.test(logoUrl.trim()) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={logoUrl.trim()}
                     alt={`${previewName} logo`}
