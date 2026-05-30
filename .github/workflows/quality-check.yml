@@ -32,11 +32,17 @@ jobs:
           echo "${PIPESTATUS[0]}" > quality-build.exit
           exit 0
 
-      - name: Run Vitest
+      - name: Run Vitest (with coverage gate)
+        # Runs the suite WITH coverage so the regression floor in
+        # vitest.config.ts is enforced: if coverage drops below the configured
+        # thresholds, Vitest exits non-zero and this step's exit code (gated in
+        # "Enforce quality gates") fails the job. Local `npm test` stays
+        # coverage-free for speed. Floors are intentionally set just below the
+        # current (low) coverage and ratchet up as characterization tests grow.
         shell: bash
         run: |
           set +e
-          npm test -- --reporter=json --outputFile=quality-vitest-report.json 2>&1 | tee quality-test.log
+          npm test -- --coverage --reporter=json --outputFile=quality-vitest-report.json 2>&1 | tee quality-test.log
           echo "${PIPESTATUS[0]}" > quality-test.exit
           exit 0
 
