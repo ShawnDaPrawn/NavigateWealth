@@ -678,8 +678,8 @@ function ActivityTimeline({ events, loading, error, onRetry }: ActivityTimelineP
 
   // Sort events newest first
   const sorted = [...events].sort((a, b) => {
-    const timeA = a.at || (a as Record<string, unknown>).created_at as string || '';
-    const timeB = b.at || (b as Record<string, unknown>).created_at as string || '';
+    const timeA = a.at || '';
+    const timeB = b.at || '';
     return timeB.localeCompare(timeA);
   });
 
@@ -691,8 +691,8 @@ function ActivityTimeline({ events, loading, error, onRetry }: ActivityTimelineP
       <div className="space-y-0">
         {sorted.map((event, index) => {
           // Use correct field names: action (not event_type), at (not created_at)
-          const action = event.action || (event as Record<string, unknown>).event_type as string || 'unknown';
-          const timestamp = event.at || (event as Record<string, unknown>).created_at as string || '';
+          const action = event.action || 'unknown';
+          const timestamp = event.at || '';
           const style = getEventStyle(action);
           const EventIcon = style.icon;
           const isFirst = index === 0;
@@ -732,10 +732,10 @@ function ActivityTimeline({ events, loading, error, onRetry }: ActivityTimelineP
                       {event.email}
                     </span>
                   )}
-                  {event.metadata?.signer_name && (
+                  {!!event.metadata?.signer_name && (
                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <Users className="h-3 w-3" />
-                      {event.metadata.signer_name}
+                      {String(event.metadata.signer_name)}
                     </span>
                   )}
                   {event.ip && (
@@ -744,9 +744,9 @@ function ActivityTimeline({ events, loading, error, onRetry }: ActivityTimelineP
                       {event.ip}
                     </span>
                   )}
-                  {event.metadata?.reason && (
+                  {!!event.metadata?.reason && (
                     <span className="text-xs text-muted-foreground italic">
-                      &ldquo;{event.metadata.reason}&rdquo;
+                      &ldquo;{String(event.metadata.reason)}&rdquo;
                     </span>
                   )}
                 </div>
