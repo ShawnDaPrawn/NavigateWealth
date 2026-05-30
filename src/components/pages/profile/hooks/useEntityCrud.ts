@@ -73,6 +73,8 @@ export interface EntityCrudHandlers<T extends { id: string }> {
   edit: (id: string) => void;
   cancelEdit: (id: string) => void;
   confirmDelete: (id: string) => void;
+  /** Perform the actual removal of an item by id. */
+  remove: (id: string) => void;
   /** Clear all in-edit markers (e.g. after discarding page-level changes). */
   resetEditMode: () => void;
 }
@@ -119,7 +121,7 @@ export function useEntityCrud<T extends { id: string }>(
     const newItem = configRef.current.createItem();
     setProfileData(prev => ({
       ...prev,
-      [configRef.current.arrayKey]: [...(prev[configRef.current.arrayKey] as T[]), newItem],
+      [configRef.current.arrayKey]: [...(prev[configRef.current.arrayKey] as unknown as T[]), newItem],
     }));
     addToEditMode(newItem.id);
   }, [setProfileData, addToEditMode]);
@@ -127,7 +129,7 @@ export function useEntityCrud<T extends { id: string }>(
   const update = useCallback((id: string, updates: Partial<T>) => {
     setProfileData(prev => ({
       ...prev,
-      [configRef.current.arrayKey]: (prev[configRef.current.arrayKey] as T[]).map(
+      [configRef.current.arrayKey]: (prev[configRef.current.arrayKey] as unknown as T[]).map(
         item => (item.id === id ? { ...item, ...updates } : item),
       ),
     }));
@@ -161,7 +163,7 @@ export function useEntityCrud<T extends { id: string }>(
       if (item && configRef.current.isItemEmpty(item)) {
         setProfileData(prev => ({
           ...prev,
-          [configRef.current.arrayKey]: (prev[configRef.current.arrayKey] as T[]).filter(
+          [configRef.current.arrayKey]: (prev[configRef.current.arrayKey] as unknown as T[]).filter(
             x => x.id !== id,
           ),
         }));
@@ -178,7 +180,7 @@ export function useEntityCrud<T extends { id: string }>(
   const remove = useCallback((id: string) => {
     setProfileData(prev => ({
       ...prev,
-      [configRef.current.arrayKey]: (prev[configRef.current.arrayKey] as T[]).filter(
+      [configRef.current.arrayKey]: (prev[configRef.current.arrayKey] as unknown as T[]).filter(
         x => x.id !== id,
       ),
     }));
