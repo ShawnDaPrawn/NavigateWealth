@@ -220,7 +220,7 @@ export function ClientManagementModule() {
       render: (idNumber) => (
         <span className="font-mono text-sm">
           {idNumber && idNumber !== 'Not provided'
-            ? `${idNumber.slice(0, 6)}***${idNumber.slice(-2)}`
+            ? `${(idNumber as string).slice(0, 6)}***${(idNumber as string).slice(-2)}`
             : <span className="text-muted-foreground">Not provided</span>
           }
         </span>
@@ -230,7 +230,7 @@ export function ClientManagementModule() {
     {
       key: 'createdAt',
       title: 'Date Joined',
-      render: (date) => new Date(date).toLocaleDateString('en-ZA', {
+      render: (date) => new Date(date as string).toLocaleDateString('en-ZA', {
         day: '2-digit',
         month: 'short',
         year: 'numeric'
@@ -462,15 +462,15 @@ export function ClientManagementModule() {
         </div>
         
         <TabsContent value="personal" className="space-y-4">
-          <DataTable 
-            columns={personalColumns} 
-            data={filteredSortedClients} 
-            onRowClick={handleRowClick}
+          <DataTable
+            columns={personalColumns as unknown as Column<Record<string, unknown>>[]}
+            data={filteredSortedClients as unknown as Record<string, unknown>[]}
+            onRowClick={handleRowClick as unknown as (row: Record<string, unknown>) => void}
             loading={loading}
             searchable={false}
             exportable={false}
             paginate={false}
-            getRowKey={(row) => row.id}
+            getRowKey={(row) => row.id as React.Key}
           />
         </TabsContent>
         
