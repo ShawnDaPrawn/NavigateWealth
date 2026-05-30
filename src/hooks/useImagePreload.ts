@@ -30,7 +30,7 @@ export function useImagePreload(imageUrls: string[], priority: boolean = true) {
       
       const img = new Image();
       // Preload images with high priority for better performance
-      img.fetchpriority = 'high';
+      img.fetchPriority = 'high';
       img.src = url;
       preloadImages.push(img);
     });
@@ -64,7 +64,7 @@ export function useImagePreloadWithLinks(imageUrls: string[], priority: boolean 
       link.rel = 'preload';
       link.as = 'image';
       link.href = url;
-      link.fetchpriority = 'high';
+      link.fetchPriority = 'high';
       document.head.appendChild(link);
       links.push(link);
     });

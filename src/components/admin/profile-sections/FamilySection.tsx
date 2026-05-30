@@ -78,7 +78,7 @@ export function FamilySection({
           </div>
         </CardHeader>
         <CardContent>
-          {profileData.familyMembers.length === 0 ? (
+          {(profileData.familyMembers as FamilyMember[]).length === 0 ? (
             <EmptyState
               icon={emptyStateConfigs.family.icon}
               title={emptyStateConfigs.family.title}
@@ -92,7 +92,7 @@ export function FamilySection({
             />
           ) : (
             <div className="space-y-4">
-              {profileData.familyMembers.map((member: FamilyMember, index: number) => {
+              {(profileData.familyMembers as FamilyMember[]).map((member: FamilyMember, index: number) => {
                 const isInEditMode = familyMembersInEditMode.has(member.id);
                 const isValid = member.fullName && member.relationship;
                 

@@ -11,7 +11,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { resourcesApi } from '../api';
-import { FormDefinition, FormFilters, ResourceResponse } from '../types';
+import { FormDefinition, FormFilters, ResourceResponse, type CreateResourceRequest, type UpdateResourceRequest } from '../types';
 import { resourceKeys } from './queryKeys';
 
 /** Transform API response into application-level FormDefinition */
@@ -131,13 +131,13 @@ export function useResources() {
 
   const createMut = useMutation({
     mutationFn: (data: { title: string; category: string; description?: string; blocks?: unknown[]; clientTypes?: string[] }) =>
-      resourcesApi.create(data),
+      resourcesApi.create(data as CreateResourceRequest),
     onSuccess: () => { invalidate(); },
   });
 
   const updateMut = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: { title?: string; category?: string; description?: string; blocks?: unknown[]; clientTypes?: string[]; status?: string } }) =>
-      resourcesApi.update(id, updates),
+      resourcesApi.update(id, updates as Partial<UpdateResourceRequest>),
     onSuccess: () => { invalidate(); },
   });
 

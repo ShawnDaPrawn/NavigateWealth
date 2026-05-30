@@ -184,7 +184,7 @@ export function MyAdviserPage() {
 
   // Generate time slots for next week
   const generateTimeSlots = () => {
-    const slots = [];
+    const slots: string[] = [];
     const nextWeek = new Date();
     nextWeek.setDate(nextWeek.getDate() + 7);
     

@@ -275,16 +275,16 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   {p.hasDocument && (
-                                    <FileText className="h-3 w-3 text-green-500" title="Document attached" />
+                                    <FileText className="h-3 w-3 text-green-500" aria-label="Document attached" />
                                   )}
                                   {p.hasExtraction && (
                                     <Sparkles
                                       className="h-3 w-3 text-purple-500"
-                                      title={`AI extracted (${Math.round((p.extractionConfidence || 0) * 100)}%)`}
+                                      aria-label={`AI extracted (${Math.round((p.extractionConfidence || 0) * 100)}%)`}
                                     />
                                   )}
                                   {p.lockedFieldCount > 0 && (
-                                    <Lock className="h-3 w-3 text-amber-500" title={`${p.lockedFieldCount} locked fields`} />
+                                    <Lock className="h-3 w-3 text-amber-500" aria-label={`${p.lockedFieldCount} locked fields`} />
                                   )}
                                   {!p.hasDocument && !p.hasExtraction && p.lockedFieldCount === 0 && (
                                     <span className="text-[10px] text-gray-300">—</span>

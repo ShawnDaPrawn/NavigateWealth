@@ -74,8 +74,8 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
 
   // Check if error is because table doesn't exist
   if (error) {
-    const errorObj = error as Record<string, unknown>;
-    const errorMessage = errorObj.message || error.message || 'An unexpected error occurred';
+    const errorObj = error as unknown as Record<string, unknown>;
+    const errorMessage = String(errorObj.message || (error as Error).message || 'An unexpected error occurred');
     
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
@@ -215,7 +215,7 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
           <div className="w-full md:w-auto relative">
             <select
               value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value as string })}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value as typeof filters.status })}
               className="w-full md:w-[180px] pl-3 pr-8 py-2 text-sm bg-gray-50 hover:bg-gray-100 border-none rounded-lg focus:outline-none focus:ring-0 cursor-pointer font-medium text-gray-700 appearance-none"
             >
               <option value="all">All Statuses</option>

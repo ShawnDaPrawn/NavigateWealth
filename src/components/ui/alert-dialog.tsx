@@ -89,14 +89,14 @@ const AlertDialogContent = React.forwardRef<
   const hasTitle = React.Children.toArray(children).some((child) => 
     React.isValidElement(child) && 
     (child.type === AlertDialogTitle || 
-     (typeof child.type === 'object' && child.type?.displayName === 'AlertDialogTitle') ||
+     (typeof child.type === 'object' && (child.type as { displayName?: string })?.displayName === 'AlertDialogTitle') ||
      child.props?.['data-slot'] === 'alert-dialog-title')
   );
   
   const hasDescription = React.Children.toArray(children).some((child) => 
     React.isValidElement(child) && 
     (child.type === AlertDialogDescription || 
-     (typeof child.type === 'object' && child.type?.displayName === 'AlertDialogDescription') ||
+     (typeof child.type === 'object' && (child.type as { displayName?: string })?.displayName === 'AlertDialogDescription') ||
      child.props?.['data-slot'] === 'alert-dialog-description')
   );
 

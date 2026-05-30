@@ -17,7 +17,7 @@ const LEGAL_HTML_SANITIZE_CONFIG = {
     'valign',
   ],
   FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'meta', 'link'],
-} as const;
+};
 
 export const LEGAL_DOCUMENT_CONTENT_CLASS = [
   'legal-document-content',
@@ -273,7 +273,7 @@ export function normalizeLegalListStructure(html: string, fallbackHtml = '<p></p
     return html || fallbackHtml;
   }
 
-  normalizeBulletLikeBlocksInContainer(root);
+  normalizeBulletLikeBlocksInContainer(root as HTMLElement);
   return root.innerHTML.trim() || fallbackHtml;
 }
 

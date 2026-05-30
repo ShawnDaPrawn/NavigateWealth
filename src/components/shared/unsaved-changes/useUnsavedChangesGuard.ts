@@ -35,7 +35,7 @@ export function useUnsavedChangesGuard({
 
   const blocker = useBlocker(
     useCallback(
-      ({ currentLocation, nextLocation }) => {
+      ({ currentLocation, nextLocation }: { currentLocation: { pathname: string; search: string; hash: string }; nextLocation: { pathname: string; search: string; hash: string } }) => {
         if (!enabled || !isDirtyRef.current) return false;
         return (
           currentLocation.pathname !== nextLocation.pathname ||

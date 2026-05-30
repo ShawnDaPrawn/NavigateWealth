@@ -683,7 +683,7 @@ export function EventFormModal({
                         <Label className="text-xs font-medium text-gray-500">Frequency</Label>
                         <Select
                           value={recurrenceFrequency}
-                          onValueChange={(v: string) => setRecurrenceFrequency(v)}
+                          onValueChange={(v: string) => setRecurrenceFrequency(v as typeof recurrenceFrequency)}
                         >
                           <SelectTrigger className="h-9 bg-white">
                             <SelectValue />
@@ -771,7 +771,7 @@ export function EventFormModal({
                     </PopoverTrigger>
                     <PopoverContent className="w-[400px] p-0" align="start">
                       <Command>
-                        <CommandInput {...clientSearchInputGuard} placeholder="Search clients..." />
+                        <CommandInput {...(clientSearchInputGuard as React.ComponentProps<typeof CommandInput>)} placeholder="Search clients..." />
                         <CommandList>
                           <CommandEmpty>
                             {isLoadingClients ? 'Loading clients...' : 'No client found.'}

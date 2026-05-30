@@ -53,19 +53,19 @@ export function TaxPlanningFNAWizard({
 
   // Data Store
   const [baselineInputs, setBaselineInputs] = useState<TaxPlanningInputs | null>(() => {
-    if (startAtStep === 2 && intakePrefill) return intakePrefill as TaxPlanningInputs;
+    if (startAtStep === 2 && intakePrefill) return intakePrefill as unknown as TaxPlanningInputs;
     return null;
   });
   const [baselineResults, setBaselineResults] = useState<TaxCalculationResults | null>(() => {
     if (startAtStep === 2 && intakePrefill) {
-      return TaxPlanningCalculationService.calculate(intakePrefill as TaxPlanningInputs);
+      return TaxPlanningCalculationService.calculate(intakePrefill as unknown as TaxPlanningInputs);
     }
     return null;
   });
   
   // Scenario Store
   const [adjustedInputs, setAdjustedInputs] = useState<TaxPlanningInputs | null>(() => {
-    if (startAtStep === 2 && intakePrefill) return intakePrefill as TaxPlanningInputs;
+    if (startAtStep === 2 && intakePrefill) return intakePrefill as unknown as TaxPlanningInputs;
     return null;
   });
   const [adjustments, setAdjustments] = useState<AdjustmentLog[]>([]);

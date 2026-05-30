@@ -390,7 +390,7 @@ export function ReviewDialog({
       setOriginalSnapshot({});
     } catch (error: unknown) {
       console.error('Failed to save amendments:', error);
-      toast.error(error?.message || 'Failed to save amendments');
+      toast.error(error instanceof Error ? error.message : 'Failed to save amendments');
     } finally {
       setIsSaving(false);
     }
@@ -398,8 +398,8 @@ export function ReviewDialog({
 
   // Current field value helper
   const fv = useCallback((field: string): string => {
-    if (isEditing) return editData[field] ?? '';
-    return (data as Record<string, unknown>)?.[field] ?? '';
+    if (isEditing) return String(editData[field] ?? '');
+    return String((data as Record<string, unknown>)?.[field] ?? '');
   }, [isEditing, editData, data]);
 
   // ── Early return AFTER all hooks ──

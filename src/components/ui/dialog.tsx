@@ -93,14 +93,14 @@ const DialogContent = React.forwardRef<
   const hasTitle = React.Children.toArray(children).some((child) => 
     React.isValidElement(child) && 
     (child.type === DialogTitle || 
-     (typeof child.type === 'object' && child.type?.displayName === 'DialogTitle') ||
+     (typeof child.type === 'object' && (child.type as { displayName?: string })?.displayName === 'DialogTitle') ||
      child.props?.['data-slot'] === 'dialog-title')
   );
   
   const hasDescription = React.Children.toArray(children).some((child) => 
     React.isValidElement(child) && 
     (child.type === DialogDescription || 
-     (typeof child.type === 'object' && child.type?.displayName === 'DialogDescription') ||
+     (typeof child.type === 'object' && (child.type as { displayName?: string })?.displayName === 'DialogDescription') ||
      child.props?.['data-slot'] === 'dialog-description')
   );
 
