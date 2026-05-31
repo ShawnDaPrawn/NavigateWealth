@@ -28,6 +28,11 @@ describe('provider portal golden flows', () => {
   const portalGuardsSource = readRepoFile(
     'src/supabase/functions/server/integrations-portal-guards.ts',
   );
+  // Portal flow-config normalisers were extracted out of integrations.tsx
+  // (Phase 5); the document-type anchor lives here now.
+  const portalFlowConfigSource = readRepoFile(
+    'src/supabase/functions/server/integrations-portal-flow-config.ts',
+  );
   const portalDefaultFlowsSource = readRepoFile(
     'src/supabase/functions/server/portal-default-flows.ts',
   );
@@ -306,7 +311,7 @@ describe('provider portal golden flows', () => {
   it('lets portal artifacts attach to estate documents as well as matched policies', () => {
     expect(productTypesSource).toContain("attachTo?: 'matched_policy' | 'estate_documents'");
     expect(portalTypesSource).toContain("attachTo?: 'matched_policy' | 'estate_documents'");
-    expect(integrationsSource).toContain('const PORTAL_ESTATE_DOCUMENT_TYPES =');
+    expect(portalFlowConfigSource).toContain('const PORTAL_ESTATE_DOCUMENT_TYPES =');
     expect(integrationsSource).toContain(
       'app.post("/portal-worker/jobs/:jobId/items/:itemId/estate-document"',
     );
