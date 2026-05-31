@@ -33,6 +33,11 @@ describe('provider portal golden flows', () => {
   const portalFlowConfigSource = readRepoFile(
     'src/supabase/functions/server/integrations-portal-flow-config.ts',
   );
+  // Portal flow resolution (default/load/sanitise + scope errors) was extracted
+  // out of integrations.tsx (Phase 5); those anchors live here now.
+  const portalFlowSource = readRepoFile(
+    'src/supabase/functions/server/integrations-portal-flow.ts',
+  );
   const portalDefaultFlowsSource = readRepoFile(
     'src/supabase/functions/server/portal-default-flows.ts',
   );
@@ -77,10 +82,10 @@ describe('provider portal golden flows', () => {
     expect(portalDefaultFlowsSource).toContain("mode: 'manual_sms'");
     expect(portalDefaultFlowsSource).toContain("mode: 'policy_number'");
     expect(portalDefaultFlowsSource).toContain('enabled: true');
-    expect(integrationsSource).toContain(
+    expect(portalFlowSource).toContain(
       "import { getDefaultPortalFlow as buildDefaultPortalFlow } from './portal-default-flows.ts'",
     );
-    expect(integrationsSource).toContain('return buildDefaultPortalFlow(provider, providerId');
+    expect(portalFlowSource).toContain('return buildDefaultPortalFlow(provider, providerId');
   });
 
   it('preserves the Allan Gray RA extraction field anchors', () => {
@@ -300,7 +305,7 @@ describe('provider portal golden flows', () => {
   });
 
   it('does not let blank saved login URLs mask provider defaults', () => {
-    expect(integrationsSource).toContain(
+    expect(portalFlowSource).toContain(
       "loginUrl: String(configured.loginUrl || '').trim() || defaultFlow.loginUrl",
     );
     expect(integrationsSource).toContain(
@@ -338,22 +343,22 @@ describe('provider portal golden flows', () => {
   });
 
   it('keeps portal flow configuration isolated by provider and category', () => {
-    expect(integrationsSource).toContain(
+    expect(portalFlowSource).toContain(
       'function portalFlowKey(providerId: string, categoryId?: string): string',
     );
-    expect(integrationsSource).toContain('`portal-flow:${providerId}:${cleanCategoryId}`');
-    expect(integrationsSource).toContain('const scopedFlow = categoryId');
-    expect(integrationsSource).toContain(
+    expect(portalFlowSource).toContain('`portal-flow:${providerId}:${cleanCategoryId}`');
+    expect(portalFlowSource).toContain('const scopedFlow = categoryId');
+    expect(portalFlowSource).toContain(
       'const legacyProviderFlow = !categoryId || isRetirementPortalCategory(categoryId)',
     );
-    expect(integrationsSource).toContain(
+    expect(portalFlowSource).toContain(
       'await kv.set(portalFlowKey(providerId, categoryId), configured)',
     );
     expect(integrationsSource).toContain('app.delete("/portal-flows/:providerId"');
-    expect(integrationsSource).toContain(
+    expect(portalFlowSource).toContain(
       'function getPortalJobScopeError(job: PortalSyncJob, providerId?: string, categoryId?: string): string | null',
     );
-    expect(integrationsSource).toContain(
+    expect(portalFlowSource).toContain(
       'function getSyncRunScopeError(run: IntegrationSyncRun, providerId?: string, categoryId?: string): string | null',
     );
     expect(portalGuardsSource).toContain(

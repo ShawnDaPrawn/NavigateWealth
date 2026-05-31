@@ -32,11 +32,9 @@ import {
   getProviderTerminology,
   saveProviderTerminology,
   getAllProviderTerminologies,
-  generateExtractionDiff,
   buildHistoryEntry,
 } from './policy-extraction-service.ts';
 import type {
-  ExtractionResult,
   ProviderTerminologyMap,
   FieldDiff,
 } from './policy-extraction-types.ts';
@@ -66,7 +64,6 @@ import {
   serialiseTemplateCellValue,
   writeSpreadsheetWorkbook,
 } from './integrations-spreadsheet.ts';
-import { getDefaultPortalFlow as buildDefaultPortalFlow } from './portal-default-flows.ts';
 import type {
   PortalJobStatus,
   PortalAutomationHost,
@@ -131,7 +128,6 @@ import {
   requirePortalWorker,
   categoryMatches,
   getPortalAutomationCategoryError,
-  isRetirementPortalCategory,
   inferPortalRowCategoryId,
   portalArtifactsMatchCategory,
 } from './integrations-portal-guards.ts';
@@ -150,6 +146,14 @@ import {
   normalisePortalCredentialProfiles,
   PORTAL_ESTATE_DOCUMENT_TYPES,
 } from './integrations-portal-flow-config.ts';
+import {
+  getDefaultPortalFlow,
+  portalFlowKey,
+  getPortalJobScopeError,
+  getSyncRunScopeError,
+  getPortalFlow,
+  sanitisePortalFlow,
+} from './integrations-portal-flow.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations');
@@ -344,104 +348,6 @@ async function persistPortalJobItems(job: PortalSyncJob, items: PortalJobPolicyI
   return updatedJob;
 }
 
-
-function getDefaultPortalFlow(provider: KvProvider, providerId: string, categoryId?: string): PortalProviderFlow {
-  return buildDefaultPortalFlow(provider, providerId, {
-    defaultPortalBrainGoal,
-    categoryId,
-  }) as PortalProviderFlow;
-}
-
-function portalFlowKey(providerId: string, categoryId?: string): string {
-  const cleanCategoryId = String(categoryId || '').trim();
-  return cleanCategoryId ? `portal-flow:${providerId}:${cleanCategoryId}` : `portal-flow:${providerId}`;
-}
-
-function getPortalJobScopeError(job: PortalSyncJob, providerId?: string, categoryId?: string): string | null {
-  const cleanProviderId = String(providerId || '').trim();
-  const cleanCategoryId = String(categoryId || '').trim();
-  if (cleanProviderId && cleanProviderId !== job.providerId) {
-    return `Portal job belongs to provider ${job.providerId}, not ${cleanProviderId}`;
-  }
-  if (cleanCategoryId && cleanCategoryId !== job.categoryId) {
-    return `Portal job belongs to category ${job.categoryId}, not ${cleanCategoryId}`;
-  }
-  return null;
-}
-
-function getSyncRunScopeError(run: IntegrationSyncRun, providerId?: string, categoryId?: string): string | null {
-  const cleanProviderId = String(providerId || '').trim();
-  const cleanCategoryId = String(categoryId || '').trim();
-  if (cleanProviderId && cleanProviderId !== run.providerId) {
-    return `Sync run belongs to provider ${run.providerId}, not ${cleanProviderId}`;
-  }
-  if (cleanCategoryId && cleanCategoryId !== run.categoryId) {
-    return `Sync run belongs to category ${run.categoryId}, not ${cleanCategoryId}`;
-  }
-  return null;
-}
-
-async function getPortalFlow(provider: KvProvider, providerId: string, categoryId?: string): Promise<PortalProviderFlow> {
-  const scopedFlow = categoryId
-    ? (await kv.get(portalFlowKey(providerId, categoryId))) as PortalProviderFlow | null
-    : null;
-  const legacyProviderFlow = !categoryId || isRetirementPortalCategory(categoryId)
-    ? (await kv.get(portalFlowKey(providerId))) as PortalProviderFlow | null
-    : null;
-  let configured = scopedFlow || legacyProviderFlow;
-  const defaultFlow = getDefaultPortalFlow(provider, providerId, categoryId);
-  if (!configured) return defaultFlow;
-  if (!scopedFlow && legacyProviderFlow && categoryId && isRetirementPortalCategory(categoryId)) {
-    configured = {
-      ...legacyProviderFlow,
-      id: `${providerId}:${categoryId}:default`,
-      providerId,
-      updatedAt: legacyProviderFlow.updatedAt || new Date().toISOString(),
-    };
-    await kv.set(portalFlowKey(providerId, categoryId), configured);
-  }
-
-  const defaultExtractionFields = normaliseExtractionFields(defaultFlow.extraction?.fields, []);
-  const configuredExtractionFields = normaliseExtractionFields(configured.extraction?.fields, []);
-
-  return {
-    ...defaultFlow,
-    ...configured,
-    loginUrl: String(configured.loginUrl || '').trim() || defaultFlow.loginUrl,
-    credentialProfiles: normalisePortalCredentialProfiles(configured.credentialProfiles, defaultFlow.credentialProfiles),
-    navigation: {
-      ...(defaultFlow.navigation || {}),
-      ...(configured.navigation || {}),
-      policyListSteps: Array.isArray(configured.navigation?.policyListSteps) && configured.navigation.policyListSteps.length > 0
-        ? configured.navigation.policyListSteps
-        : defaultFlow.navigation?.policyListSteps || [],
-    },
-    search: normaliseSearchConfig(configured.search, defaultFlow.search),
-    extraction: {
-      ...(defaultFlow.extraction || {}),
-      ...(configured.extraction || {}),
-      fields: normaliseExtractionFields(
-        buildPortalFieldsFromBindings(configuredExtractionFields, defaultExtractionFields),
-        defaultExtractionFields,
-      ),
-    },
-    policySchedule: normalisePolicyScheduleConfig(configured.policySchedule, defaultFlow.policySchedule),
-    documentArtifacts: normaliseDocumentArtifactConfigs(configured.documentArtifacts, defaultFlow.documentArtifacts || []),
-  };
-}
-
-function sanitisePortalFlow(flow: PortalProviderFlow): PortalProviderFlow {
-  return {
-    ...flow,
-    credentialProfiles: flow.credentialProfiles.map((profile) => ({
-      ...profile,
-      usernameSecretName: profile.usernameSecretName,
-      passwordSecretName: profile.passwordSecretName,
-      usernameEnvVar: profile.usernameEnvVar,
-      passwordEnvVar: profile.passwordEnvVar,
-    })),
-  };
-}
 
 async function listPoliciesForProviderCategory(providerId: string, categoryId: string): Promise<KvPolicy[]> {
   const allClientPolicies = await kv.getByPrefix('policies:client:');
