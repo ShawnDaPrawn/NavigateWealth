@@ -26,10 +26,12 @@ import {
   derivePillars,
   deriveHealthScore,
   deriveKpiValues,
+  deriveActionItems,
   type GapAnalysisInputs,
   type PillarsInputs,
   type HealthScoreInputs,
   type KpiValuesInputs,
+  type ActionItemsInputs,
   type Policy,
 } from '../clientOverviewUtils';
 import type { ProfileData } from '../../types';
@@ -155,6 +157,69 @@ describe('deriveKpiValues', () => {
     expect(kpis.find((k) => k.id === 'insurance_coverage')!.status).toBe('no-data');
     // savings rate 18% (>= 15) with income present -> good
     expect(kpis.find((k) => k.id === 'savings_rate')!.status).toBe('good');
+  });
+});
+
+describe('deriveActionItems', () => {
+  const Icon = () => null;
+  const icons = {
+    ClipboardCheck: Icon,
+    PlayCircle: Icon,
+    Clock: Icon,
+    FileText: Icon,
+    Shield: Icon,
+    AlertTriangle: Icon,
+    Calendar: Icon,
+    DollarSign: Icon,
+    Phone: Icon,
+    Users: Icon,
+    Scale: Icon,
+  };
+  const base: ActionItemsInputs = {
+    fnaStatuses: [],
+    gapAnalysis: [],
+    allPolicies: [],
+    grossMonthly: 50000,
+    profile: {
+      emergencyContactName: 'Jane',
+      taxNumber: '123',
+      familyMembers: [{}],
+      assets: [{}],
+      liabilities: [],
+    },
+    dependants: [{}],
+    isClient: false,
+    icons,
+  };
+
+  it('returns no items when the profile + coverage are all in order', () => {
+    expect(deriveActionItems(base)).toEqual([]);
+  });
+
+  it('flags a not-started FNA as a recommended item', () => {
+    const items = deriveActionItems({
+      ...base,
+      fnaStatuses: [{ key: 'risk', name: 'Risk Plan', status: 'not_started', loading: false }],
+    });
+    const item = items.find((i) => i.id === 'fna-missing-risk');
+    expect(item?.priority).toBe('recommended');
+    expect(item?.category).toBe('fna');
+  });
+
+  it('sorts an urgent critical-cover gap ahead of a recommended item', () => {
+    const items = deriveActionItems({
+      ...base,
+      gapAnalysis: [{ label: 'Life Cover', status: 'gap', current: 'R 0', recommended: 'R 1m' }],
+      fnaStatuses: [{ key: 'risk', name: 'Risk Plan', status: 'not_started', loading: false }],
+    });
+    expect(items[0].priority).toBe('urgent');
+    expect(items[0].id).toBe('gap-life-cover');
+  });
+
+  it('flags missing income with client-facing copy in client mode', () => {
+    const items = deriveActionItems({ ...base, grossMonthly: 0, isClient: true });
+    const income = items.find((i) => i.id === 'profile-income-missing');
+    expect(income?.title).toBe('We need your income details');
   });
 });
 
