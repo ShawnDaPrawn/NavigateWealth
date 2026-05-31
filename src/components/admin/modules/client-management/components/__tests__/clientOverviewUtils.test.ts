@@ -19,6 +19,9 @@ import {
   sumInvestmentPremiums,
   sumMultiField,
   worstGapStatus,
+  normalizePolicyData,
+  extractRiskFinalNeeds,
+  extractRetirementResults,
   type Policy,
 } from '../clientOverviewUtils';
 import type { ProfileData } from '../../types';
@@ -182,5 +185,88 @@ describe('worstGapStatus', () => {
     expect(worstGapStatus(['good', 'none'])).toBe('healthy');
     expect(worstGapStatus(['caution', 'good'])).toBe('attention');
     expect(worstGapStatus(['gap', 'caution', 'good'])).toBe('critical');
+  });
+});
+
+describe('normalizePolicyData', () => {
+  it('mirrors field-id entries under their keyId, preserving originals', () => {
+    const out = normalizePolicyData({ rp_6: 5000, rp_2: 'Discovery' }, [
+      { id: 'rp_6', keyId: 'risk_monthly_premium' },
+      { id: 'rp_2', keyId: 'risk_provider' },
+    ]);
+    expect(out.rp_6).toBe(5000); // original kept
+    expect(out.risk_monthly_premium).toBe(5000); // mirrored under keyId
+    expect(out.risk_provider).toBe('Discovery');
+  });
+
+  it('skips fields without a keyId or without a matching data entry', () => {
+    const out = normalizePolicyData({ a: 1 }, [
+      { id: 'a' }, // no keyId
+      { id: 'missing', keyId: 'mapped' }, // no data entry
+    ]);
+    expect(out).toEqual({ a: 1 });
+  });
+});
+
+describe('extractRiskFinalNeeds', () => {
+  it('returns [] for nullish input or a missing finalNeeds array', () => {
+    expect(extractRiskFinalNeeds(null)).toEqual([]);
+    expect(extractRiskFinalNeeds(undefined)).toEqual([]);
+    expect(extractRiskFinalNeeds({ finalNeeds: 'nope' })).toEqual([]);
+  });
+
+  it('maps needs and coerces numbers, defaulting missing fields', () => {
+    const out = extractRiskFinalNeeds({
+      finalNeeds: [
+        {
+          riskType: 'life',
+          label: 'Life',
+          grossNeed: '1000000',
+          existingCoverTotal: 400000,
+          netShortfall: '600000',
+        },
+        {},
+      ],
+    });
+    expect(out[0]).toEqual({
+      riskType: 'life',
+      label: 'Life',
+      grossNeed: 1000000,
+      existingCoverTotal: 400000,
+      netShortfall: 600000,
+      finalRecommendedCover: 0,
+    });
+    expect(out[1]).toEqual({
+      riskType: '',
+      label: '',
+      grossNeed: 0,
+      existingCoverTotal: 0,
+      netShortfall: 0,
+      finalRecommendedCover: 0,
+    });
+  });
+});
+
+describe('extractRetirementResults', () => {
+  it('returns null when there is no payload or no results/calculations', () => {
+    expect(extractRetirementResults(null)).toBeNull();
+    expect(extractRetirementResults({})).toBeNull();
+  });
+
+  it('reads from results, falling back to calculations, and coerces', () => {
+    const fromResults = extractRetirementResults({
+      results: { hasShortfall: true, capitalShortfall: '50000', requiredCapital: 200000 },
+    });
+    expect(fromResults).toMatchObject({
+      hasShortfall: true,
+      capitalShortfall: 50000,
+      requiredCapital: 200000,
+      projectedCapital: 0,
+    });
+
+    const fromCalculations = extractRetirementResults({
+      calculations: { hasShortfall: false, projectedCapital: 750000 },
+    });
+    expect(fromCalculations).toMatchObject({ hasShortfall: false, projectedCapital: 750000 });
   });
 });

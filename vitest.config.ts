@@ -79,14 +79,14 @@ export default defineConfig({
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
       // Ratcheted as characterization tests land. Latest (after extracting +
-      // testing ClientOverviewTab's pure helpers into clientOverviewUtils.ts):
-      // measured lines 6.37 / functions 4.46 / branches 5.59 / statements 6.32.
-      // Floor kept just below measured (small CI safety margin).
+      // testing ClientOverviewTab's FNA parsers + normalizePolicyData into
+      // clientOverviewUtils.ts): measured lines 6.4 / functions 4.48 /
+      // branches 5.67 / statements 6.34. Floor kept just below (CI safety margin).
       thresholds: {
-        lines: 6.25,
-        functions: 4.35,
-        branches: 5.4,
-        statements: 6.2,
+        lines: 6.3,
+        functions: 4.4,
+        branches: 5.5,
+        statements: 6.25,
       },
     },
   },

@@ -118,9 +118,13 @@ import {
   sumFirstNonZero,
   sumMultiField,
   worstGapStatus,
+  normalizePolicyData,
+  extractRiskFinalNeeds,
+  extractRetirementResults,
   type Policy,
   type GapStatus,
   type PillarHealth,
+  type SchemaField,
 } from './clientOverviewUtils';
 import { PolicyOverviewTab } from '../../../../admin/profile-sections/PolicyOverviewTab';
 // Phase 1 KPI / Sub-Score imports
@@ -396,13 +400,6 @@ const ACTIVITY_NOISE_TYPES = new Set(['session_refresh', 'session_expired']);
  * category and re-keys the policy data so downstream code can look up
  * values by keyId directly.
  */
-interface SchemaField {
-  id: string;
-  keyId?: string;
-  name?: string;
-  type?: string;
-}
-
 /** Module-level schema cache — schemas are config and rarely change,
  *  so we cache them for the lifetime of the session to avoid repeated calls. */
 let _schemaCache: Record<string, SchemaField[]> | null = null;
@@ -461,19 +458,6 @@ const CATEGORY_GROUP_MAP: Record<string, string> = {
  * data object where every entry that has a keyId is ALSO keyed by that
  * keyId. Original field-ID entries are preserved for backward compat.
  */
-function normalizePolicyData(
-  data: Record<string, unknown>,
-  schemaFields: SchemaField[],
-): Record<string, unknown> {
-  const out = { ...data };
-  for (const field of schemaFields) {
-    if (field.keyId && data[field.id] !== undefined) {
-      out[field.keyId] = data[field.id];
-    }
-  }
-  return out;
-}
-
 /** Dashboard display mode — controls language, visibility, and CTAs */
 export type DashboardMode = 'adviser' | 'client';
 
@@ -915,56 +899,6 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
   // Gap items are ONLY generated when a published FNA exists for the domain.
   // Without a published FNA there is no authoritative recommendation to
   // compare against, so showing a gap would be misleading.
-
-  /** Helper: extract finalNeeds from a published Risk Planning FNA */
-  const extractRiskFinalNeeds = (
-    raw: Record<string, unknown> | null | undefined,
-  ): Array<{
-    riskType: string;
-    label: string;
-    grossNeed: number;
-    existingCoverTotal: number;
-    netShortfall: number;
-    finalRecommendedCover: number;
-  }> => {
-    if (!raw) return [];
-    const needs = raw.finalNeeds as Array<Record<string, unknown>> | undefined;
-    if (!Array.isArray(needs)) return [];
-    return needs.map((n) => ({
-      riskType: (n.riskType as string) || '',
-      label: (n.label as string) || '',
-      grossNeed: Number(n.grossNeed) || 0,
-      existingCoverTotal: Number(n.existingCoverTotal) || 0,
-      netShortfall: Number(n.netShortfall) || 0,
-      finalRecommendedCover: Number(n.finalRecommendedCover) || 0,
-    }));
-  };
-
-  /** Helper: extract RetirementCalculationResults from a published Retirement FNA */
-  const extractRetirementResults = (
-    raw: Record<string, unknown> | null | undefined,
-  ): {
-    hasShortfall: boolean;
-    capitalShortfall: number;
-    requiredCapital: number;
-    projectedCapital: number;
-    totalRecommendedContribution: number;
-    requiredAdditionalContribution: number;
-    percentageOfIncome: number;
-  } | null => {
-    if (!raw) return null;
-    const results = (raw.results || raw.calculations) as Record<string, unknown> | undefined;
-    if (!results) return null;
-    return {
-      hasShortfall: !!results.hasShortfall,
-      capitalShortfall: Number(results.capitalShortfall) || 0,
-      requiredCapital: Number(results.requiredCapital) || 0,
-      projectedCapital: Number(results.projectedCapital) || 0,
-      totalRecommendedContribution: Number(results.totalRecommendedContribution) || 0,
-      requiredAdditionalContribution: Number(results.requiredAdditionalContribution) || 0,
-      percentageOfIncome: Number(results.percentageOfIncome) || 0,
-    };
-  };
 
   const riskFnaPublished = fnaStatuses.find((f) => f.key === 'risk')?.status === 'published';
   const retirementFnaPublished =

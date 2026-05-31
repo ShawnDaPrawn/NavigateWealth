@@ -208,3 +208,86 @@ export function worstGapStatus(statuses: GapStatus[]): PillarHealth {
   if (filtered.some((s) => s === 'caution')) return 'attention';
   return 'healthy';
 }
+
+// ── Schema-driven policy normalisation ───────────────────────────────────
+
+export interface SchemaField {
+  id: string;
+  keyId?: string;
+  name?: string;
+  type?: string;
+}
+
+/**
+ * Given a policy's data and the schema fields for its category, return a new
+ * data object where every entry that has a keyId is ALSO keyed by that keyId.
+ * Original field-ID entries are preserved for backward compat.
+ */
+export function normalizePolicyData(
+  data: Record<string, unknown>,
+  schemaFields: SchemaField[],
+): Record<string, unknown> {
+  const out = { ...data };
+  for (const field of schemaFields) {
+    if (field.keyId && data[field.id] !== undefined) {
+      out[field.keyId] = data[field.id];
+    }
+  }
+  return out;
+}
+
+// ── FNA result parsers (read published-FNA payloads into typed shapes) ────
+
+export interface RiskFinalNeed {
+  riskType: string;
+  label: string;
+  grossNeed: number;
+  existingCoverTotal: number;
+  netShortfall: number;
+  finalRecommendedCover: number;
+}
+
+/** Extract finalNeeds from a published Risk Planning FNA payload. */
+export function extractRiskFinalNeeds(
+  raw: Record<string, unknown> | null | undefined,
+): RiskFinalNeed[] {
+  if (!raw) return [];
+  const needs = raw.finalNeeds as Array<Record<string, unknown>> | undefined;
+  if (!Array.isArray(needs)) return [];
+  return needs.map((n) => ({
+    riskType: (n.riskType as string) || '',
+    label: (n.label as string) || '',
+    grossNeed: Number(n.grossNeed) || 0,
+    existingCoverTotal: Number(n.existingCoverTotal) || 0,
+    netShortfall: Number(n.netShortfall) || 0,
+    finalRecommendedCover: Number(n.finalRecommendedCover) || 0,
+  }));
+}
+
+export interface RetirementFnaResults {
+  hasShortfall: boolean;
+  capitalShortfall: number;
+  requiredCapital: number;
+  projectedCapital: number;
+  totalRecommendedContribution: number;
+  requiredAdditionalContribution: number;
+  percentageOfIncome: number;
+}
+
+/** Extract retirement calculation results from a published Retirement FNA payload. */
+export function extractRetirementResults(
+  raw: Record<string, unknown> | null | undefined,
+): RetirementFnaResults | null {
+  if (!raw) return null;
+  const results = (raw.results || raw.calculations) as Record<string, unknown> | undefined;
+  if (!results) return null;
+  return {
+    hasShortfall: !!results.hasShortfall,
+    capitalShortfall: Number(results.capitalShortfall) || 0,
+    requiredCapital: Number(results.requiredCapital) || 0,
+    projectedCapital: Number(results.projectedCapital) || 0,
+    totalRecommendedContribution: Number(results.totalRecommendedContribution) || 0,
+    requiredAdditionalContribution: Number(results.requiredAdditionalContribution) || 0,
+    percentageOfIncome: Number(results.percentageOfIncome) || 0,
+  };
+}
