@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../utils/api/client';
-import { ApplicationStats } from '../../../supabase/functions/server/types';
+import type { ApplicationStats } from '../../../supabase/functions/server/types';
 import { useAuth } from '../../auth/AuthContext';
 import { logError } from '../../../utils/errorUtils';
 import { adminStatsKeys } from '../../../utils/queryKeys';
@@ -17,7 +17,10 @@ export function useDashboardStats() {
         return data.stats;
       } catch (error) {
         // If unauthorized, return empty stats instead of throwing
-        if (error instanceof Error && (error.message.includes('Unauthorized') || error.message.includes('Forbidden'))) {
+        if (
+          error instanceof Error &&
+          (error.message.includes('Unauthorized') || error.message.includes('Forbidden'))
+        ) {
           // Only log in development
           if (process.env.NODE_ENV === 'development') {
             logError(error, 'Admin stats unauthorized - user may need to log in as admin');

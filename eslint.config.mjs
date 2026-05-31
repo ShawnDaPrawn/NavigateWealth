@@ -65,6 +65,24 @@ export default tseslint.config(
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      // Phase 7 boundary guardrail — ENFORCED. Frontend SPA code must not import
+      // the Supabase Edge Function (Deno) source at runtime; it calls those
+      // routes over HTTP. Type-only imports (shared response types) are allowed,
+      // which keeps Deno-only globals / npm:/jsr: specifiers out of the SPA
+      // bundle and preserves the client/server boundary the split relies on.
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/supabase/functions/**'],
+              message:
+                'Frontend must not import Supabase Edge Function (Deno) source at runtime — call it over HTTP. Type-only imports are allowed (use `import type`).',
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
     },
   },
 
@@ -101,6 +119,10 @@ export default tseslint.config(
   //    as each warning bucket is burned down (mirrors the typecheck burn-down).
   {
     rules: {
+      // Phase 7 file-size guard — WARN. Flags god-files at PR time (the problem
+      // Phases 5/6 are decomposing). Advisory for now (the existing god-files
+      // already exceed this); promote to "error" once they're split.
+      'max-lines': ['warn', { max: 600, skipBlankLines: true, skipComments: true }],
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': [
         'warn',
