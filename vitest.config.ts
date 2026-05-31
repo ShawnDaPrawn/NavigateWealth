@@ -78,15 +78,15 @@ export default defineConfig({
       // only go UP. Ratchet these toward the 70/65/70/70 target as
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
-      // Ratcheted as characterization tests land. Latest (after unit tests for
-      // medical-fna calculations + risk-planning-fna formatting + utils/legalHtml):
-      // measured lines 6.28 / functions 4.35 / branches 5.48 / statements 6.18.
+      // Ratcheted as characterization tests land. Latest (after extracting +
+      // testing ClientOverviewTab's pure helpers into clientOverviewUtils.ts):
+      // measured lines 6.37 / functions 4.46 / branches 5.59 / statements 6.32.
       // Floor kept just below measured (small CI safety margin).
       thresholds: {
-        lines: 6.15,
-        functions: 4.25,
-        branches: 5.3,
-        statements: 6.05,
+        lines: 6.25,
+        functions: 4.35,
+        branches: 5.4,
+        statements: 6.2,
       },
     },
   },
