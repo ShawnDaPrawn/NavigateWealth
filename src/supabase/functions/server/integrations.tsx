@@ -112,6 +112,17 @@ import type {
   IntegrationSyncRow,
   IntegrationSyncRun,
 } from './integrations-core-types.ts';
+import {
+  getDefaultIntegrationSettings,
+  normaliseSettings,
+  normaliseColumnName,
+  buildFieldBinding,
+  normaliseFieldBindings,
+  fieldBindingsToMapping,
+  getPortalFieldColumnName,
+  getPortalFieldDisplayName,
+  normaliseIntegrationConfig,
+} from './integrations-config-utils.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations');
@@ -133,109 +144,6 @@ const getByPrefix = async (prefix: string) => {
   if (error) throw new Error(error.message);
   return data?.map(d => d.value) || [];
 };
-
-function getDefaultIntegrationSettings(): IntegrationConfig['settings'] {
-  return {
-    autoMap: true,
-    ignoreUnmatched: false,
-    strictMode: false,
-    autoPublish: false,
-  };
-}
-
-function normaliseSettings(settings?: Partial<IntegrationConfig['settings']>): IntegrationConfig['settings'] {
-  return {
-    ...getDefaultIntegrationSettings(),
-    ...(settings || {}),
-  };
-}
-
-function normaliseColumnName(value: unknown): string {
-  return normaliseIntegrationColumnName(value);
-}
-
-function buildFieldBinding(
-  field: SchemaField | undefined,
-  targetFieldId: string,
-  columnName: string,
-  existing?: Partial<IntegrationFieldBinding>,
-): IntegrationFieldBinding {
-  return {
-    targetFieldId,
-    targetFieldName: String(existing?.targetFieldName || field?.name || targetFieldId).trim(),
-    columnName: normaliseColumnName(columnName),
-    required: field?.required === true,
-    fieldType: String(existing?.fieldType || field?.type || 'text').trim() || 'text',
-    portalLabels: normaliseIntegrationLabelList(existing?.portalLabels),
-    portalSelector: String(existing?.portalSelector || '').trim().slice(0, 500) || undefined,
-    blankBehavior: normaliseIntegrationBlankBehavior(existing?.blankBehavior),
-    transform: String(existing?.transform || 'trim').trim().slice(0, 40) || 'trim',
-  };
-}
-
-function normaliseFieldBindings(
-  bindings: unknown,
-  legacyFieldMapping: Record<string, string> = {},
-  fields: SchemaField[] = [],
-): IntegrationFieldBinding[] {
-  const hydratedBindings = buildIntegrationBindingsForFields(
-    fields.map((field) => ({
-      id: field.id,
-      name: field.name,
-      required: field.required === true,
-      type: field.type,
-    })),
-    Array.isArray(bindings) ? bindings as IntegrationFieldBinding[] : [],
-    legacyFieldMapping,
-  );
-
-  return hydratedBindings.map((binding) =>
-    buildFieldBinding(
-      fields.find((field) => field.id === binding.targetFieldId),
-      binding.targetFieldId,
-      binding.columnName,
-      binding,
-    ),
-  );
-}
-
-function fieldBindingsToMapping(
-  bindings: IntegrationFieldBinding[] = [],
-  fallbackFieldMapping: Record<string, string> = {},
-): Record<string, string> {
-  const fieldMapping = buildLegacyFieldMappingFromBindings(bindings);
-  if (Object.keys(fieldMapping).length > 0) return fieldMapping;
-
-  return Object.fromEntries(
-    Object.entries(fallbackFieldMapping || {})
-      .map(([columnName, targetFieldId]) => [normaliseColumnName(columnName), String(targetFieldId || '').trim()])
-      .filter(([columnName, targetFieldId]) => columnName && targetFieldId),
-  );
-}
-
-function getPortalFieldColumnName(field: Partial<PortalFlowField>): string {
-  return normaliseColumnName(field.columnName || field.sourceHeader);
-}
-
-function getPortalFieldDisplayName(field: Partial<PortalFlowField>): string {
-  return String(field.targetFieldName || field.columnName || field.sourceHeader || field.targetFieldId || 'Field').trim();
-}
-
-function normaliseIntegrationConfig(
-  config: Partial<IntegrationConfig> | null | undefined,
-  fields: SchemaField[] = [],
-): IntegrationConfig {
-  const fieldBindings = normaliseFieldBindings(config?.fieldBindings, config?.fieldMapping || {}, fields);
-  return {
-    providerId: String(config?.providerId || ''),
-    categoryId: String(config?.categoryId || ''),
-    updatedAt: String(config?.updatedAt || new Date().toISOString()),
-    updatedBy: String(config?.updatedBy || 'system'),
-    fieldBindings,
-    fieldMapping: fieldBindingsToMapping(fieldBindings, config?.fieldMapping || {}),
-    settings: normaliseSettings(config?.settings),
-  };
-}
 
 function getCategoryLabel(categoryId: string): string {
   return POLICY_CATEGORY_LABELS[categoryId] || categoryId;
