@@ -2,10 +2,10 @@
  * ****************************************************************************
  * ERROR HANDLING MIDDLEWARE
  * ****************************************************************************
- * 
+ *
  * Centralized error handling for all routes.
  * Uses shared validation utilities.
- * 
+ *
  * ****************************************************************************
  */
 
@@ -13,6 +13,7 @@ import type { Context } from 'npm:hono';
 import { ZodError } from 'npm:zod';
 import { logger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import { recordRuntimeServerIssue } from './quality-issues-runtime-server.ts';
 
 // ============================================================================
 // ERROR CLASSES
@@ -22,7 +23,7 @@ export class APIError extends Error {
   constructor(
     message: string,
     public statusCode: number = 500,
-    public code: string = 'API_ERROR'
+    public code: string = 'API_ERROR',
   ) {
     super(message);
     this.name = 'APIError';
@@ -30,7 +31,10 @@ export class APIError extends Error {
 }
 
 export class ValidationError extends APIError {
-  constructor(message: string, public field?: string) {
+  constructor(
+    message: string,
+    public field?: string,
+  ) {
     super(message, 400, 'VALIDATION_ERROR');
     this.name = 'ValidationError';
   }
@@ -49,58 +53,82 @@ export class NotFoundError extends APIError {
 
 export async function errorHandler(error: Error, c: Context) {
   logger.error('API Error occurred', error, { path: c.req.url });
-  
+
   if (error instanceof ZodError) {
     // Shared utility for consistent validation error formatting
     const formatted = formatZodError(error);
-    return c.json({
-      error: formatted.message,
-      code: 'VALIDATION_ERROR',
-      errors: formatted.errors,
-      timestamp: new Date().toISOString(),
-    }, 400);
+    return c.json(
+      {
+        error: formatted.message,
+        code: 'VALIDATION_ERROR',
+        errors: formatted.errors,
+        timestamp: new Date().toISOString(),
+      },
+      400,
+    );
   }
-  
+
   if (error instanceof ValidationError) {
-    return c.json({
-      error: error.message,
-      code: error.code,
-      field: error.field,
-      timestamp: new Date().toISOString(),
-    }, error.statusCode);
+    return c.json(
+      {
+        error: error.message,
+        code: error.code,
+        field: error.field,
+        timestamp: new Date().toISOString(),
+      },
+      error.statusCode,
+    );
   }
-  
+
   if (error instanceof APIError) {
-    return c.json({
-      error: error.message,
-      code: error.code,
-      timestamp: new Date().toISOString(),
-    }, error.statusCode);
+    return c.json(
+      {
+        error: error.message,
+        code: error.code,
+        timestamp: new Date().toISOString(),
+      },
+      error.statusCode,
+    );
   }
-  
+
   // For unexpected errors, include more details in development/logging
   const isDevelopment = Deno.env.get('DENO_ENV') !== 'production';
-  
+
   // Always log the full error stack to stderr for debugging
-  logger.error('Unhandled error details', { 
+  logger.error('Unhandled error details', {
     message: error.message,
     name: error.name,
-    stack: error.stack
+    stack: error.stack,
   });
-  
-  return c.json({
-    message: 'An unexpected error occurred',
-    statusCode: 500,
-    code: 'INTERNAL_ERROR',
-    endpoint: new URL(c.req.url).pathname,
+
+  // Record unexpected 500s into the in-house quality-issues pipeline so backend
+  // exceptions surface on the same dashboard as client runtime errors (source:
+  // 'runtime-server'). Awaited so the KV write completes before the isolate may
+  // suspend; recordRuntimeServerIssue never throws.
+  await recordRuntimeServerIssue({
+    error,
+    path: new URL(c.req.url).pathname,
     method: c.req.method,
-    ...(isDevelopment && { 
-      details: error.message,
-      errorName: error.name,
-      stack: error.stack?.split('\n').slice(0, 5).join('\n') // First 5 lines only
-    }),
-    timestamp: new Date().toISOString(),
-  }, 500);
+    statusCode: 500,
+    requestId: c.get('requestId') as string | undefined,
+  });
+
+  return c.json(
+    {
+      message: 'An unexpected error occurred',
+      statusCode: 500,
+      code: 'INTERNAL_ERROR',
+      endpoint: new URL(c.req.url).pathname,
+      method: c.req.method,
+      ...(isDevelopment && {
+        details: error.message,
+        errorName: error.name,
+        stack: error.stack?.split('\n').slice(0, 5).join('\n'), // First 5 lines only
+      }),
+      timestamp: new Date().toISOString(),
+    },
+    500,
+  );
 }
 
 // ============================================================================
