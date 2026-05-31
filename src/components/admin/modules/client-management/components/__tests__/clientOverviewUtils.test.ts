@@ -22,6 +22,8 @@ import {
   normalizePolicyData,
   extractRiskFinalNeeds,
   extractRetirementResults,
+  deriveGapAnalysis,
+  type GapAnalysisInputs,
   type Policy,
 } from '../clientOverviewUtils';
 import type { ProfileData } from '../../types';
@@ -268,5 +270,178 @@ describe('extractRetirementResults', () => {
       calculations: { hasShortfall: false, projectedCapital: 750000 },
     });
     expect(fromCalculations).toMatchObject({ hasShortfall: false, projectedCapital: 750000 });
+  });
+});
+
+describe('deriveGapAnalysis', () => {
+  const base: GapAnalysisInputs = {
+    fnaResultsMap: {},
+    riskFnaPublished: false,
+    retirementFnaPublished: false,
+    medicalFnaPublished: false,
+    estateFnaPublished: false,
+    medicalPolicies: [],
+    estatePolicies: [],
+  };
+  const find = (gaps: ReturnType<typeof deriveGapAnalysis>, label: string) =>
+    gaps.find((g) => g.label === label);
+
+  it('returns [] when no FNAs are published', () => {
+    expect(deriveGapAnalysis(base)).toEqual([]);
+  });
+
+  it('flags a life-cover gap when there is a shortfall and low coverage ratio', () => {
+    const gap = find(
+      deriveGapAnalysis({
+        ...base,
+        riskFnaPublished: true,
+        fnaResultsMap: {
+          risk: {
+            finalNeeds: [
+              {
+                riskType: 'life',
+                grossNeed: 1_000_000,
+                existingCoverTotal: 400_000,
+                netShortfall: 600_000,
+              },
+            ],
+          },
+        },
+      }),
+      'Life Cover',
+    );
+    expect(gap?.status).toBe('gap'); // ratio 0.4 < 0.8
+    expect(gap?.detail).toContain('Shortfall');
+    expect(gap?.recommended).toContain('FNA recommended');
+  });
+
+  it('marks life cover "caution" when covered >=80% but still short, and "good" when no shortfall', () => {
+    const caution = find(
+      deriveGapAnalysis({
+        ...base,
+        riskFnaPublished: true,
+        fnaResultsMap: {
+          risk: {
+            finalNeeds: [
+              {
+                riskType: 'life',
+                grossNeed: 1_000_000,
+                existingCoverTotal: 850_000,
+                netShortfall: 150_000,
+              },
+            ],
+          },
+        },
+      }),
+      'Life Cover',
+    );
+    expect(caution?.status).toBe('caution');
+
+    const good = find(
+      deriveGapAnalysis({
+        ...base,
+        riskFnaPublished: true,
+        fnaResultsMap: {
+          risk: {
+            finalNeeds: [
+              {
+                riskType: 'life',
+                grossNeed: 1_000_000,
+                existingCoverTotal: 1_200_000,
+                netShortfall: 0,
+              },
+            ],
+          },
+        },
+      }),
+      'Life Cover',
+    );
+    expect(good?.status).toBe('good');
+    expect(good?.detail).toBe('Adequately covered');
+  });
+
+  it('combines temporary + permanent income protection into one gap', () => {
+    const gap = find(
+      deriveGapAnalysis({
+        ...base,
+        riskFnaPublished: true,
+        fnaResultsMap: {
+          risk: {
+            finalNeeds: [
+              {
+                riskType: 'incomeProtectionTemporary',
+                grossNeed: 30_000,
+                existingCoverTotal: 10_000,
+                netShortfall: 20_000,
+              },
+              {
+                riskType: 'incomeProtectionPermanent',
+                grossNeed: 20_000,
+                existingCoverTotal: 5_000,
+                netShortfall: 15_000,
+              },
+            ],
+          },
+        },
+      }),
+      'Income Protection',
+    );
+    expect(gap?.status).toBe('gap');
+    expect(gap?.detail).toContain('Shortfall'); // combined 35k shortfall
+  });
+
+  it('reports medical aid by active-plan count', () => {
+    const withPlan = find(
+      deriveGapAnalysis({ ...base, medicalFnaPublished: true, medicalPolicies: [policy({})] }),
+      'Medical Aid',
+    );
+    expect(withPlan?.status).toBe('good');
+    expect(withPlan?.current).toContain('1 active plan');
+
+    const noPlan = find(
+      deriveGapAnalysis({ ...base, medicalFnaPublished: true, medicalPolicies: [] }),
+      'Medical Aid',
+    );
+    expect(noPlan?.status).toBe('gap');
+    expect(noPlan?.current).toBe('None');
+  });
+
+  it('grades the retirement gap by shortfall size', () => {
+    const ret = (capitalShortfall: number, requiredCapital: number, hasShortfall = true) =>
+      find(
+        deriveGapAnalysis({
+          ...base,
+          retirementFnaPublished: true,
+          fnaResultsMap: {
+            retirement: {
+              results: {
+                hasShortfall,
+                capitalShortfall,
+                requiredCapital,
+                projectedCapital: 100_000,
+              },
+            },
+          },
+        }),
+        'Retirement Savings',
+      );
+    expect(ret(800_000, 1_000_000)?.status).toBe('gap'); // 80% short
+    expect(ret(100_000, 1_000_000)?.status).toBe('caution'); // <30% short
+    expect(ret(0, 1_000_000, false)?.status).toBe('good');
+  });
+
+  it('reports estate planning by policy presence', () => {
+    expect(
+      find(
+        deriveGapAnalysis({ ...base, estateFnaPublished: true, estatePolicies: [policy({})] }),
+        'Estate Planning',
+      )?.status,
+    ).toBe('good');
+    expect(
+      find(
+        deriveGapAnalysis({ ...base, estateFnaPublished: true, estatePolicies: [] }),
+        'Estate Planning',
+      )?.status,
+    ).toBe('caution');
   });
 });
