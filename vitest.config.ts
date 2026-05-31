@@ -37,6 +37,12 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     css: false,
+    // v8 coverage instrumentation makes the suite run ~2-3x slower, which pushes
+    // a few dialog/interaction tests past the 5s Vitest default and flakes the
+    // CI gate (which runs `--coverage`). 15s gives realistic headroom under
+    // instrumentation without masking a genuine hang (passing tests are
+    // unaffected; only a real hang waits longer before failing).
+    testTimeout: 15000,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     // Note: we deliberately do NOT exclude `src/supabase/functions/**`
     // here. Edge-function source files use Deno-only imports
@@ -72,13 +78,14 @@ export default defineConfig({
       // only go UP. Ratchet these toward the 70/65/70/70 target as
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
-      // Ratcheted after adding the CorporateIdentityTab characterization test:
-      // measured lines 4.65 / functions 3.18 / branches 3.78 / statements 4.51.
+      // Ratcheted as characterization tests land. Latest (after the
+      // LegalDocumentsManager test): measured lines 4.73 / functions 3.3 /
+      // branches 3.88 / statements 4.58. Floor kept just below measured.
       thresholds: {
-        lines: 4.5,
-        functions: 3,
-        branches: 3.5,
-        statements: 4.4,
+        lines: 4.6,
+        functions: 3.2,
+        branches: 3.8,
+        statements: 4.5,
       },
     },
   },
