@@ -71,11 +71,14 @@ export default defineConfig({
       // gated in CI (the Vitest step runs with `--coverage`), so coverage can
       // only go UP. Ratchet these toward the 70/65/70/70 target as
       // characterization tests are added for the Phase 5/6 decomposition files.
+      //
+      // Ratcheted after adding the CorporateIdentityTab characterization test:
+      // measured lines 4.65 / functions 3.18 / branches 3.78 / statements 4.51.
       thresholds: {
-        lines: 3.5,
-        functions: 2.5,
-        branches: 3,
-        statements: 3.5,
+        lines: 4.5,
+        functions: 3,
+        branches: 3.5,
+        statements: 4.4,
       },
     },
   },
