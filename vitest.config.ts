@@ -79,14 +79,14 @@ export default defineConfig({
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
       // Ratcheted as characterization tests land. Latest (after unit tests for
-      // esign/utils/esignHelpers + tax-planning-fna taxPlanningCalculationService):
-      // measured lines 6.07 / functions 4.25 / branches 5.28 / statements 5.98.
+      // medical-fna calculations + risk-planning-fna formatting + utils/legalHtml):
+      // measured lines 6.28 / functions 4.35 / branches 5.48 / statements 6.18.
       // Floor kept just below measured (small CI safety margin).
       thresholds: {
-        lines: 5.95,
-        functions: 4.15,
-        branches: 5.1,
-        statements: 5.85,
+        lines: 6.15,
+        functions: 4.25,
+        branches: 5.3,
+        statements: 6.05,
       },
     },
   },
