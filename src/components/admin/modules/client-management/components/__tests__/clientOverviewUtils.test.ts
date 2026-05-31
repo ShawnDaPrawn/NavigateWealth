@@ -24,8 +24,10 @@ import {
   extractRetirementResults,
   deriveGapAnalysis,
   derivePillars,
+  deriveHealthScore,
   type GapAnalysisInputs,
   type PillarsInputs,
+  type HealthScoreInputs,
   type Policy,
 } from '../clientOverviewUtils';
 import type { ProfileData } from '../../types';
@@ -36,6 +38,75 @@ const policy = (data: Record<string, unknown>): Policy => ({
   categoryId: 'c',
   data,
   updatedAt: '2024-01-01',
+});
+
+describe('deriveHealthScore', () => {
+  const baseInputs: HealthScoreInputs = {
+    gapAnalysis: [],
+    fnaStatuses: [],
+    grossMonthly: 0,
+    profile: null,
+    retirementFnaPublished: false,
+    retirementFnaResult: null,
+    netWorth: -100,
+  };
+
+  it('returns 0 when nothing is in place (only profile + net-worth buckets active, all empty)', () => {
+    expect(deriveHealthScore({ ...baseInputs })).toBe(0);
+  });
+
+  it('returns 100 when every scoring bucket is fully satisfied', () => {
+    expect(
+      deriveHealthScore({
+        gapAnalysis: [
+          { label: 'Life', status: 'good', current: '', recommended: '' },
+          { label: 'Disability', status: 'good', current: '', recommended: '' },
+        ],
+        fnaStatuses: [
+          { status: 'published', loading: false },
+          { status: 'published', loading: false },
+        ],
+        grossMonthly: 50000,
+        profile: {
+          taxNumber: '123',
+          emergencyContactName: 'Jane',
+          familyMembers: [{}],
+          assets: [{}],
+          liabilities: [],
+        },
+        retirementFnaPublished: true,
+        retirementFnaResult: { results: { hasShortfall: false } },
+        netWorth: 1_000_000,
+      }),
+    ).toBe(100);
+  });
+
+  it('awards the minor-shortfall retirement tier (10 of 15)', () => {
+    // Active buckets: profile (20 -> 0), savings (15 -> 10), net worth (10 -> 0).
+    // round(10 / 45 * 100) = 22.
+    expect(
+      deriveHealthScore({
+        ...baseInputs,
+        retirementFnaPublished: true,
+        retirementFnaResult: {
+          results: { hasShortfall: true, capitalShortfall: 10, requiredCapital: 100 },
+        },
+        netWorth: -1,
+      }),
+    ).toBe(22);
+  });
+
+  it('gives half credit for caution gaps and a break-even net worth', () => {
+    // coverage 30 -> 15 (caution); profile 20 -> 0; net worth 10 -> 5 (break-even).
+    // round((15 + 5) / 60 * 100) = 33.
+    expect(
+      deriveHealthScore({
+        ...baseInputs,
+        gapAnalysis: [{ label: 'Life', status: 'caution', current: '', recommended: '' }],
+        netWorth: 0,
+      }),
+    ).toBe(33);
+  });
 });
 
 describe('currency + percentage formatting', () => {
