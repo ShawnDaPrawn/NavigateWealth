@@ -65,6 +65,12 @@ export default tseslint.config(
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      // Frontend code should log through `src/utils/logger.ts` (PII-sanitized,
+      // env-aware), not raw console. WARN surfaces the existing ~880 calls for
+      // gradual burn-down without blocking; `console.warn`/`console.error` are
+      // allowed so legitimate error paths don't get flagged. The logger sink
+      // itself is exempted below. Promote to "error" once the backlog clears.
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
       // Phase 7 boundary guardrail — ENFORCED. Frontend SPA code must not import
       // the Supabase Edge Function (Deno) source at runtime; it calls those
       // routes over HTTP. Type-only imports (shared response types) are allowed,
@@ -143,6 +149,15 @@ export default tseslint.config(
       // never-linted code. Keep as warnings for the initial landing.
       'no-useless-assignment': 'warn',
       'preserve-caught-error': 'warn',
+    },
+  },
+
+  // 7b. The logger is the sanctioned console sink — it is the implementation
+  //     that everything else routes through, so raw console is intentional here.
+  {
+    files: ['src/utils/logger.ts'],
+    rules: {
+      'no-console': 'off',
     },
   },
 
