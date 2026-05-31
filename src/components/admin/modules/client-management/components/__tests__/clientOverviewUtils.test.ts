@@ -23,7 +23,9 @@ import {
   extractRiskFinalNeeds,
   extractRetirementResults,
   deriveGapAnalysis,
+  derivePillars,
   type GapAnalysisInputs,
+  type PillarsInputs,
   type Policy,
 } from '../clientOverviewUtils';
 import type { ProfileData } from '../../types';
@@ -443,5 +445,107 @@ describe('deriveGapAnalysis', () => {
         'Estate Planning',
       )?.status,
     ).toBe('caution');
+  });
+});
+
+describe('derivePillars', () => {
+  const Icon = () => null;
+  const pbase: PillarsInputs = {
+    gapAnalysis: [],
+    fnaStatuses: [],
+    fnaResultsMap: {},
+    riskFnaPublished: false,
+    medicalFnaPublished: false,
+    retirementFnaPublished: false,
+    riskPolicies: [],
+    medicalPolicies: [],
+    retirementPolicies: [],
+    investmentPolicies: [],
+    estatePolicies: [],
+    totalLifeCover: 0,
+    totalDisability: 0,
+    totalSevereIllness: 0,
+    totalIncomeProtection: 0,
+    totalRiskPremium: 0,
+    totalMedicalPremium: 0,
+    retirementCurrentValue: 0,
+    totalRetirementPremium: 0,
+    investmentCurrentValue: 0,
+    totalInvestmentPremium: 0,
+    grossMonthly: 0,
+    retirementSavingsRate: 0,
+    dependants: [],
+    taxNumber: undefined,
+    icons: { risk: Icon, medical: Icon, retirement: Icon, investment: Icon, estate: Icon },
+  };
+
+  it('always returns the five pillars in order, "no-data" when empty, with icons threaded', () => {
+    const pillars = derivePillars(pbase);
+    expect(pillars.map((p) => p.id)).toEqual([
+      'risk-planning',
+      'medical-aid',
+      'retirement',
+      'investment',
+      'estate',
+    ]);
+    expect(pillars.every((p) => p.health === 'no-data')).toBe(true);
+    expect(pillars[0].icon).toBe(Icon);
+  });
+
+  it('derives risk health from the gap analysis (worst status wins)', () => {
+    const pillars = derivePillars({
+      ...pbase,
+      gapAnalysis: [
+        { label: 'Life Cover', status: 'caution', current: '', recommended: '' },
+        { label: 'Disability Cover', status: 'gap', current: '', recommended: '' },
+      ],
+    });
+    expect(pillars[0].health).toBe('critical'); // worst of caution + gap
+  });
+
+  it('formats the risk pillar primary value, premium label and cover metrics', () => {
+    const pillars = derivePillars({
+      ...pbase,
+      riskPolicies: [policy({})],
+      totalRiskPremium: 5000,
+      totalLifeCover: 1_000_000,
+    });
+    const risk = pillars[0];
+    expect(risk.primaryValue).toBe('1 Policy');
+    expect(risk.primaryLabel).toContain('/m total premium');
+    expect(risk.metrics.find((m) => m.label === 'Life Cover')?.value).toBe('R 1.0m');
+  });
+
+  it('uses the medical plan name and grades health from the medical gap', () => {
+    const pillars = derivePillars({
+      ...pbase,
+      medicalFnaPublished: true,
+      medicalPolicies: [policy({ medical_aid_plan_type: 'Comprehensive' })],
+      gapAnalysis: [{ label: 'Medical Aid', status: 'good', current: '', recommended: '' }],
+    });
+    const medical = pillars[1];
+    expect(medical.primaryValue).toBe('Comprehensive');
+    expect(medical.health).toBe('healthy');
+  });
+
+  it('maps FNA status (and loading) onto the pillar', () => {
+    expect(
+      derivePillars({
+        ...pbase,
+        fnaStatuses: [{ key: 'risk', status: 'published', loading: false }],
+      })[0].fnaStatus,
+    ).toBe('published');
+    expect(
+      derivePillars({ ...pbase, fnaStatuses: [{ key: 'risk', status: 'draft', loading: true }] })[0]
+        .fnaStatus,
+    ).toBe('loading');
+  });
+
+  it('reflects the tax-number status on the estate pillar', () => {
+    const taxMetric = (taxNumber?: string) =>
+      derivePillars({ ...pbase, taxNumber })[4].metrics.find((m) => m.label === 'Tax Number')
+        ?.value;
+    expect(taxMetric('1234567890')).toBe('On File');
+    expect(taxMetric(undefined)).toBe('Missing');
   });
 });
