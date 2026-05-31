@@ -38,6 +38,12 @@ describe('provider portal golden flows', () => {
   const portalFlowSource = readRepoFile(
     'src/supabase/functions/server/integrations-portal-flow.ts',
   );
+  // Sync-run engine + portal job-items (queue build / sync run / publish) was
+  // extracted out of integrations.tsx (Phase 5); the portal job category-match
+  // anchor lives here now.
+  const syncEngineSource = readRepoFile(
+    'src/supabase/functions/server/integrations-sync-engine.ts',
+  );
   const portalDefaultFlowsSource = readRepoFile(
     'src/supabase/functions/server/portal-default-flows.ts',
   );
@@ -410,6 +416,6 @@ describe('provider portal golden flows', () => {
     expect(integrationsSource).toContain(
       'const automationCategoryError = getPortalAutomationCategoryError(categoryId);',
     );
-    expect(integrationsSource).toContain('policy.categoryId !== job.categoryId');
+    expect(syncEngineSource).toContain('policy.categoryId !== job.categoryId');
   });
 });
