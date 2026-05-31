@@ -23,6 +23,11 @@ describe('provider portal golden flows', () => {
   const portalCredentialsSource = readRepoFile(
     'src/supabase/functions/server/integrations-portal-credentials.ts',
   );
+  // Worker-auth guard + category eligibility/classification was extracted out of
+  // integrations.tsx (Phase 5); those anchors live here now.
+  const portalGuardsSource = readRepoFile(
+    'src/supabase/functions/server/integrations-portal-guards.ts',
+  );
   const portalDefaultFlowsSource = readRepoFile(
     'src/supabase/functions/server/portal-default-flows.ts',
   );
@@ -346,13 +351,13 @@ describe('provider portal golden flows', () => {
     expect(integrationsSource).toContain(
       'function getSyncRunScopeError(run: IntegrationSyncRun, providerId?: string, categoryId?: string): string | null',
     );
-    expect(integrationsSource).toContain(
+    expect(portalGuardsSource).toContain(
       'function recordHasRetirementAnnuityMarker(record?: Record<string, unknown>): boolean',
     );
-    expect(integrationsSource).toContain(
+    expect(portalGuardsSource).toContain(
       'function inferPortalRowCategoryId(row: Record<string, unknown>, fallbackCategoryId: string): string',
     );
-    expect(integrationsSource).toContain(
+    expect(portalGuardsSource).toContain(
       'function portalArtifactsMatchCategory(categoryId: string, options: {',
     );
     expect(integrationsSource).toContain(
@@ -387,11 +392,11 @@ describe('provider portal golden flows', () => {
       'Portal automation is only available for specific product categories',
     );
     expect(portalAutomationTabSource).toContain('disabled={!automationCategorySelected');
-    expect(integrationsSource).toContain(
+    expect(portalGuardsSource).toContain(
       'function getPortalAutomationCategoryError(categoryId: string): string | null',
     );
-    expect(integrationsSource).toContain('Retirement Planning is a parent category');
-    expect(integrationsSource).toContain('Investments is a parent category');
+    expect(portalGuardsSource).toContain('Retirement Planning is a parent category');
+    expect(portalGuardsSource).toContain('Investments is a parent category');
     expect(integrationsSource).toContain(
       'const automationCategoryError = getPortalAutomationCategoryError(categoryId);',
     );

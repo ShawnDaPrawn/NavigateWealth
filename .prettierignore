@@ -23,3 +23,4 @@ seo-route-manifest.json
 # auto-formatting so the format-on-touch hook can't silently break the guard.
 # (Add other golden-watched files here as Phase 5/6 decomposition touches them.)
 src/supabase/functions/server/integrations.tsx
+src/supabase/functions/server/integrations-portal-guards.ts
