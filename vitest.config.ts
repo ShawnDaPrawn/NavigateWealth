@@ -79,14 +79,14 @@ export default defineConfig({
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
       // Ratcheted as characterization tests land. Latest (after unit tests for
-      // investmentINACalculationService + derivedPolicyAssets + esign-signer
-      // ruleEngine): measured lines 5.37 / functions 3.82 / branches 4.57 /
-      // statements 5.24. Floor kept just below measured (small CI safety margin).
+      // currencyFormatter + auth/passwordValidation + errorUtils + retirement-fna
+      // calculation-engine): measured lines 5.71 / functions 3.95 / branches 5.01
+      // / statements 5.6. Floor kept just below measured (small CI safety margin).
       thresholds: {
-        lines: 5.25,
-        functions: 3.7,
-        branches: 4.3,
-        statements: 5.1,
+        lines: 5.6,
+        functions: 3.85,
+        branches: 4.8,
+        statements: 5.45,
       },
     },
   },
