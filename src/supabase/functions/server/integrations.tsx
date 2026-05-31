@@ -100,6 +100,18 @@ import type {
   PortalBrainMemorySummary,
   PortalDiscoveryReport,
 } from './integrations-portal-types.ts';
+import type {
+  IntegrationConfig,
+  IntegrationFieldBinding,
+  UploadHistory,
+  IntegrationProvider,
+  SyncMatchStatus,
+  SyncPublishStatus,
+  SyncRunStatus,
+  SyncDiff,
+  IntegrationSyncRow,
+  IntegrationSyncRun,
+} from './integrations-core-types.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations');
@@ -121,119 +133,6 @@ const getByPrefix = async (prefix: string) => {
   if (error) throw new Error(error.message);
   return data?.map(d => d.value) || [];
 };
-
-// --- Types ---
-
-interface IntegrationConfig {
-  providerId: string;
-  categoryId: string;
-  updatedAt: string;
-  updatedBy: string;
-  fieldMapping: Record<string, string>;
-  fieldBindings?: IntegrationFieldBinding[];
-  settings: {
-    autoMap: boolean;
-    ignoreUnmatched: boolean;
-    strictMode: boolean;
-    autoPublish?: boolean;
-  };
-}
-
-interface IntegrationFieldBinding {
-  targetFieldId: string;
-  targetFieldName?: string;
-  columnName: string;
-  required?: boolean;
-  fieldType?: string;
-  portalLabels?: string[];
-  portalSelector?: string;
-  blankBehavior?: IntegrationBlankBehavior;
-  transform?: 'trim' | 'number' | 'date' | string;
-}
-
-interface UploadHistory {
-  id: string;
-  providerId: string;
-  categoryId: string;
-  fileName: string;
-  status: 'success' | 'failed';
-  rowCount: number;
-  errorCount: number;
-  uploadedAt: string;
-  errors?: string[];
-  runId?: string;
-  publishedRows?: number;
-}
-
-interface IntegrationProvider {
-  id: string;
-  name: string;
-  description?: string;
-  categoryIds: string[];
-  logoUrl?: string;
-  lastAttempted?: string;
-  lastUpdateStatus?: 'success' | 'failed' | 'never';
-  lastSuccessful?: string;
-}
-
-type SyncMatchStatus = 'matched' | 'unmatched' | 'duplicate' | 'invalid';
-type SyncPublishStatus = 'pending' | 'auto_eligible' | 'held' | 'published' | 'skipped' | 'failed';
-type SyncRunStatus = 'staged' | 'published' | 'partially_published' | 'failed';
-
-interface SyncDiff {
-  fieldId: string;
-  fieldName: string;
-  oldValue: unknown;
-  newValue: unknown;
-}
-
-interface IntegrationSyncRow {
-  id: string;
-  rowNumber: number;
-  rawData: Record<string, unknown>;
-  mappedData: Record<string, unknown>;
-  policyNumber: string;
-  normalizedPolicyNumber: string;
-  matchMethod: 'template_metadata' | 'policy_number' | 'none';
-  matchStatus: SyncMatchStatus;
-  publishStatus: SyncPublishStatus;
-  autoPublishEligible: boolean;
-  validationErrors: string[];
-  validationErrorFieldIds?: string[];
-  warnings: string[];
-  warningFieldIds?: string[];
-  diffs: SyncDiff[];
-  clientId?: string;
-  policyId?: string;
-  providerName?: string;
-}
-
-interface IntegrationSyncRun {
-  id: string;
-  providerId: string;
-  providerName: string;
-  categoryId: string;
-  fileName: string;
-  source: 'spreadsheet' | 'portal';
-  status: SyncRunStatus;
-  createdAt: string;
-  updatedAt: string;
-  mappingVersion: string;
-  autoPublish: boolean;
-  summary: {
-    totalRows: number;
-    matchedRows: number;
-    unmatchedRows: number;
-    duplicateRows: number;
-    invalidRows: number;
-    changedRows: number;
-    noChangeRows: number;
-    autoEligibleRows: number;
-    publishedRows: number;
-    heldRows: number;
-  };
-  rows: IntegrationSyncRow[];
-}
 
 function getDefaultIntegrationSettings(): IntegrationConfig['settings'] {
   return {
