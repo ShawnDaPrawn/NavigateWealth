@@ -25,9 +25,11 @@ import {
   deriveGapAnalysis,
   derivePillars,
   deriveHealthScore,
+  deriveKpiValues,
   type GapAnalysisInputs,
   type PillarsInputs,
   type HealthScoreInputs,
+  type KpiValuesInputs,
   type Policy,
 } from '../clientOverviewUtils';
 import type { ProfileData } from '../../types';
@@ -106,6 +108,53 @@ describe('deriveHealthScore', () => {
         netWorth: 0,
       }),
     ).toBe(33);
+  });
+});
+
+describe('deriveKpiValues', () => {
+  const inputs: KpiValuesInputs = {
+    profile: { assets: [{ type: 'cash', value: 600000 }], liabilities: [] },
+    grossMonthly: 50000,
+    netMonthly: 35000,
+    totalMonthlyDebt: 10000,
+    totalRetirementPremium: 5000,
+    totalInvestmentPremium: 2000,
+    riskFnaPublished: false,
+    riskFnaResult: null,
+    retResults: null,
+    retirementSavingsRate: 18,
+    netWorth: 1_000_000,
+  };
+
+  it('returns the six KPI cards in a fixed order', () => {
+    expect(deriveKpiValues(inputs).map((k) => k.id)).toEqual([
+      'net_worth',
+      'dti',
+      'savings_rate',
+      'emergency_fund',
+      'insurance_coverage',
+      'retirement_progress',
+    ]);
+  });
+
+  it('computes DTI and net-worth status from the financials', () => {
+    const kpis = deriveKpiValues(inputs);
+    const dti = kpis.find((k) => k.id === 'dti')!;
+    expect(dti.rawValue).toBe(20); // 10000 / 50000 * 100
+    expect(dti.displayValue).toBe('20.0%');
+    expect(dti.status).toBe('good'); // < 36
+
+    const nw = kpis.find((k) => k.id === 'net_worth')!;
+    expect(nw.rawValue).toBe(1_000_000);
+    expect(nw.status).toBe('good'); // positive + has a balance sheet
+  });
+
+  it('reports no-data for retirement/insurance when their FNAs are absent', () => {
+    const kpis = deriveKpiValues(inputs);
+    expect(kpis.find((k) => k.id === 'retirement_progress')!.status).toBe('no-data');
+    expect(kpis.find((k) => k.id === 'insurance_coverage')!.status).toBe('no-data');
+    // savings rate 18% (>= 15) with income present -> good
+    expect(kpis.find((k) => k.id === 'savings_rate')!.status).toBe('good');
   });
 });
 
