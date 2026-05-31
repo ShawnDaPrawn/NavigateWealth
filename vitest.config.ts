@@ -79,13 +79,13 @@ export default defineConfig({
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
       // Ratcheted as characterization tests land. Latest (after the
-      // LegalDocumentsManager test): measured lines 4.73 / functions 3.3 /
-      // branches 3.88 / statements 4.58. Floor kept just below measured.
+      // RoAModuleContractManager test): measured lines 4.86 / functions 3.48 /
+      // branches 4.0 / statements 4.72. Floor kept just below measured.
       thresholds: {
-        lines: 4.6,
-        functions: 3.2,
-        branches: 3.8,
-        statements: 4.5,
+        lines: 4.8,
+        functions: 3.4,
+        branches: 3.9,
+        statements: 4.6,
       },
     },
   },
