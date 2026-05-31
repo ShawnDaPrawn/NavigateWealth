@@ -47,27 +47,44 @@ import {
   ChevronRight,
   Files,
   ArrowRight,
-  Mail
+  Mail,
 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
+import { api } from '../../../../../utils/api';
 import { toast } from 'sonner';
 import { useAuth } from '../../../../auth/AuthContext';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../../../ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../../../ui/alert-dialog';
 import { Checkbox } from '../../../../ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 const SUBCATEGORIES = [
-  "Compliance",
-  "New Business Welcome Pack",
-  "FICA Documents",
-  "Application Forms",
-  "Policy Schedule",
-  "Other"
+  'Compliance',
+  'New Business Welcome Pack',
+  'FICA Documents',
+  'Application Forms',
+  'Policy Schedule',
+  'Other',
 ];
 
 interface DocumentsTabProps {
-  selectedClient: { id: string; firstName: string; lastName: string; email: string; idNumber?: string; profile?: Record<string, unknown>; personalInformation?: Record<string, unknown> };
+  selectedClient: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    idNumber?: string;
+    profile?: Record<string, unknown>;
+    personalInformation?: Record<string, unknown>;
+  };
 }
 
 interface DocumentItem {
@@ -114,12 +131,15 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   const [uploadSuccessDialogOpen, setUploadSuccessDialogOpen] = useState(false);
   const [emailComposeDialogOpen, setEmailComposeDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<DocumentItem | null>(null);
-  const [packToDelete, setPackToDelete] = useState<{ id: string, count: number } | null>(null);
-  const [packToResend, setPackToResend] = useState<{ id: string, documents: DocumentItem[] } | null>(null);
+  const [packToDelete, setPackToDelete] = useState<{ id: string; count: number } | null>(null);
+  const [packToResend, setPackToResend] = useState<{
+    id: string;
+    documents: DocumentItem[];
+  } | null>(null);
   const [resendMessage, setResendMessage] = useState('');
   const [uploadEmailMessage, setUploadEmailMessage] = useState('');
   const [expandedPacks, setExpandedPacks] = useState<Set<string>>(new Set());
-  
+
   // Form states
   const [uploadType, setUploadType] = useState<'document' | 'link'>('document');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -133,7 +153,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [uploadedDocIds, setUploadedDocIds] = useState<string[]>([]);
   const [ccAdmin, setCcAdmin] = useState(false);
-  
+
   // New subcategory state
   interface SubcategoryGroup {
     id: string;
@@ -144,7 +164,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
   const [uploadMode, setUploadMode] = useState<'general' | 'subcategory'>('general');
   const [subcategoryGroups, setSubcategoryGroups] = useState<SubcategoryGroup[]>([
-    { id: '1', name: '', customName: '', files: [] }
+    { id: '1', name: '', customName: '', files: [] },
   ]);
 
   // Filter states
@@ -168,22 +188,14 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
       try {
         setLoading(true);
 
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${selectedClient.id}`,
-          {
-            headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-          }
+        const data = await api.get<{ documents: DocumentItem[] }>(
+          `/documents/${selectedClient.id}`,
         );
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch documents');
-        }
-
-        const data = await response.json();
-
         // Sort by upload date, newest first
-        const sortedDocs = data.documents.sort((a: DocumentItem, b: DocumentItem) =>
-          new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
+        const sortedDocs = data.documents.sort(
+          (a: DocumentItem, b: DocumentItem) =>
+            new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime(),
         );
 
         setDocuments(sortedDocs);
@@ -191,7 +203,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
       } catch (error) {
         if (attempt < maxRetries) {
           // Retry after delay (handles cold-start / transient network failures)
-          await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+          await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
           continue;
         }
         console.error('Error fetching documents after retries:', error);
@@ -230,7 +242,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
           toast.error(`Please add files to the "${name}" group`);
           return;
         }
-        group.files.forEach(f => filesToUpload.push({ file: f, subcategory: name }));
+        group.files.forEach((f) => filesToUpload.push({ file: f, subcategory: name }));
       }
 
       // Master Title Required for Subcategory Mode
@@ -248,7 +260,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         toast.error('Please provide a title');
         return;
       }
-      selectedFiles.forEach(f => filesToUpload.push({ file: f }));
+      selectedFiles.forEach((f) => filesToUpload.push({ file: f }));
     }
 
     try {
@@ -261,12 +273,12 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
       // If General Mode: Pack if > 1 file
       const isPack = isSubcategoryMode || selectedFiles.length > 1;
       const packId = isPack ? `pack_${Date.now()}` : undefined;
-      
+
       // Pack Title
       let packTitle = documentTitle;
       if (!packTitle && !isSubcategoryMode && selectedFiles.length > 0) {
-         // Fallback to filename if single/multi general upload without title (though single requires title)
-         packTitle = selectedFiles[0].name.replace(/\.[^/.]+$/, '');
+        // Fallback to filename if single/multi general upload without title (though single requires title)
+        packTitle = selectedFiles[0].name.replace(/\.[^/.]+$/, '');
       }
       if (!packTitle) packTitle = 'Document Pack';
 
@@ -276,7 +288,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
         const formData = new FormData();
         formData.append('file', file);
-        
+
         // Determine title logic
         let titleToUse = file.name.replace(/\.[^/.]+$/, '');
         if (documentTitle && !isSubcategoryMode) {
@@ -286,7 +298,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
             titleToUse = documentTitle;
           }
         }
-        
+
         formData.append('title', titleToUse);
         formData.append('productCategory', productCategory);
         formData.append('policyNumber', policyNumber);
@@ -299,35 +311,23 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
           formData.append('subcategory', subcategory);
         }
 
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${selectedClient.id}/upload`,
-          {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${publicAnonKey}` },
-            body: formData
-          }
+        const data = await api.post<{ document: DocumentItem }>(
+          `/documents/${selectedClient.id}/upload`,
+          formData,
         );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || `Failed to upload ${file.name}`);
-        }
-
-        const data = await response.json();
         console.log('✅ Document uploaded:', data.document);
         newDocIds.push(data.document.id);
         newDocs.push(data.document);
       }
 
       toast.success(`${newDocs.length} document(s) uploaded successfully`);
-      setDocuments(prev => [...newDocs, ...prev]);
-      
+      setDocuments((prev) => [...newDocs, ...prev]);
+
       // Prepare for email dialog
       setUploadedDocIds(newDocIds);
       resetForm();
       setUploadDialogOpen(false);
       setUploadSuccessDialogOpen(true);
-
     } catch (error) {
       console.error('❌ Error uploading document:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to upload document');
@@ -341,15 +341,18 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
     // Get client details for email - Robust extraction
     // Check root email first, then profile email, then personal info email
-    const clientEmail = selectedClient.email || 
-                       selectedClient.profile?.email || 
-                       (selectedClient.personalInformation as Record<string, unknown> | undefined)?.email ||
-                       (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)?.email;
-    
+    const clientEmail =
+      selectedClient.email ||
+      selectedClient.profile?.email ||
+      (selectedClient.personalInformation as Record<string, unknown> | undefined)?.email ||
+      (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)?.email;
+
     // Try to get ID number from various possible locations in the client object
-    const clientIdNumber = selectedClient.idNumber || 
-                          (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)?.idNumber ||
-                          selectedClient.personalInformation?.idNumber;
+    const clientIdNumber =
+      selectedClient.idNumber ||
+      (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)
+        ?.idNumber ||
+      selectedClient.personalInformation?.idNumber;
 
     if (!clientIdNumber) {
       toast.error('Client ID number is missing (required for encryption)');
@@ -358,29 +361,14 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
     try {
       setSendingEmail(true);
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${selectedClient.id}/email`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ 
-            documentIds: uploadedDocIds,
-            email: clientEmail,
-            idNumber: clientIdNumber,
-            customMessage: uploadEmailMessage,
-            isHtml: true, // Using WYSIWYG
-            ccAdmin // Pass CC preference
-          })
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to send email');
-      }
+      await api.post(`/documents/${selectedClient.id}/email`, {
+        documentIds: uploadedDocIds,
+        email: clientEmail,
+        idNumber: clientIdNumber,
+        customMessage: uploadEmailMessage,
+        isHtml: true, // Using WYSIWYG
+        ccAdmin, // Pass CC preference
+      });
 
       toast.success('Documents emailed to client successfully');
       setEmailComposeDialogOpen(false);
@@ -404,35 +392,21 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
       setUploading(true);
       console.log(`🔗 Creating link: ${linkTitle}`);
 
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${selectedClient.id}/link`,
+      const data = await api.post<{ document: DocumentItem }>(
+        `/documents/${selectedClient.id}/link`,
         {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            title: linkTitle,
-            url: linkUrl,
-            description: linkDescription,
-            productCategory,
-            policyNumber,
-            uploadedBy: user?.id || 'admin'
-          })
-        }
+          title: linkTitle,
+          url: linkUrl,
+          description: linkDescription,
+          productCategory,
+          policyNumber,
+          uploadedBy: user?.id || 'admin',
+        },
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create link');
-      }
-
-      const data = await response.json();
       console.log('✅ Link created:', data.document);
 
       toast.success('Link added successfully');
-      setDocuments(prev => [data.document, ...prev]);
+      setDocuments((prev) => [data.document, ...prev]);
       resetForm();
       setUploadDialogOpen(false);
     } catch (error) {
@@ -452,22 +426,11 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     try {
       console.log(`⬇️ Downloading: ${doc.fileName}`);
 
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${doc.userId}/${doc.id}/download`,
-        {
-          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-        }
-      );
+      const data = await api.get<{ url: string }>(`/documents/${doc.userId}/${doc.id}/download`);
 
-      if (!response.ok) {
-        throw new Error('Failed to get download URL');
-      }
-
-      const data = await response.json();
-      
       // Open signed URL in new tab
       window.open(data.url, '_blank');
-      
+
       // Mark as viewed
       handleMarkAsViewed(doc);
     } catch (error) {
@@ -480,29 +443,12 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     if (doc.status === 'viewed') return;
 
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${doc.userId}/${doc.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ status: 'viewed' })
-        }
-      );
+      const data = await api.patch<{ success?: boolean }>(`/documents/${doc.userId}/${doc.id}`, {
+        status: 'viewed',
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('❌ Failed to mark as viewed:', response.status, errorData);
-        return;
-      }
-
-      const data = await response.json();
       if (data.success) {
-        setDocuments(prev => prev.map(d => 
-          d.id === doc.id ? { ...d, status: 'viewed' } : d
-        ));
+        setDocuments((prev) => prev.map((d) => (d.id === doc.id ? { ...d, status: 'viewed' } : d)));
       }
     } catch (error) {
       console.error('❌ Error marking as viewed:', error);
@@ -516,21 +462,10 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     try {
       console.log(`🗑️ Deleting: ${documentToDelete.title}`);
 
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${documentToDelete.userId}/${documentToDelete.id}`,
-        {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to delete document');
-      }
+      await api.delete(`/documents/${documentToDelete.userId}/${documentToDelete.id}`);
 
       toast.success('Document deleted successfully');
-      setDocuments(prev => prev.filter(d => d.id !== documentToDelete.id));
+      setDocuments((prev) => prev.filter((d) => d.id !== documentToDelete.id));
       setDeleteDialogOpen(false);
       setDocumentToDelete(null);
     } catch (error) {
@@ -543,8 +478,8 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     if (!packToDelete) return;
 
     // Find all documents in this pack
-    const docsToDelete = documents.filter(d => d.packId === packToDelete.id);
-    
+    const docsToDelete = documents.filter((d) => d.packId === packToDelete.id);
+
     if (docsToDelete.length === 0) {
       setPackDeleteDialogOpen(false);
       setPackToDelete(null);
@@ -557,37 +492,28 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
       console.log(`🗑️ Deleting pack: ${packToDelete.id} (${docsToDelete.length} documents)`);
 
       // Delete all documents in parallel
-      await Promise.all(docsToDelete.map(async (doc) => {
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${doc.userId}/${doc.id}`,
-          {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to delete ${doc.id}`);
-        }
-      }));
+      await Promise.all(
+        docsToDelete.map(async (doc) => {
+          await api.delete(`/documents/${doc.userId}/${doc.id}`);
+        }),
+      );
 
       toast.dismiss(toastId);
       toast.success('Document pack deleted successfully');
-      
+
       // Remove all deleted documents from state
-      const deletedIds = new Set(docsToDelete.map(d => d.id));
-      setDocuments(prev => prev.filter(d => !deletedIds.has(d.id)));
-      
+      const deletedIds = new Set(docsToDelete.map((d) => d.id));
+      setDocuments((prev) => prev.filter((d) => !deletedIds.has(d.id)));
+
       setPackDeleteDialogOpen(false);
       setPackToDelete(null);
-      
+
       // Also remove from expanded packs if present
       if (expandedPacks.has(packToDelete.id)) {
         const newExpanded = new Set(expandedPacks);
         newExpanded.delete(packToDelete.id);
         setExpandedPacks(newExpanded);
       }
-      
     } catch (error) {
       toast.dismiss(toastId);
       console.error('❌ Error deleting pack:', error);
@@ -599,16 +525,19 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
   const handleConfirmResend = async () => {
     if (!selectedClient?.id || !packToResend) return;
-    
-    // Get client details - Robust extraction
-    const clientEmail = selectedClient.email || 
-                       selectedClient.profile?.email || 
-                       (selectedClient.personalInformation as Record<string, unknown> | undefined)?.email ||
-                       (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)?.email;
 
-    const clientIdNumber = selectedClient.idNumber || 
-                          (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)?.idNumber ||
-                          selectedClient.personalInformation?.idNumber;
+    // Get client details - Robust extraction
+    const clientEmail =
+      selectedClient.email ||
+      selectedClient.profile?.email ||
+      (selectedClient.personalInformation as Record<string, unknown> | undefined)?.email ||
+      (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)?.email;
+
+    const clientIdNumber =
+      selectedClient.idNumber ||
+      (selectedClient.profile?.personalInformation as Record<string, unknown> | undefined)
+        ?.idNumber ||
+      selectedClient.personalInformation?.idNumber;
 
     if (!clientIdNumber) {
       toast.error('Client ID number is missing (required for encryption)');
@@ -617,32 +546,17 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
     try {
       setSendingEmail(true);
-      const docIds = packToResend.documents.map(d => d.id);
-      
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/documents/${selectedClient.id}/email`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ 
-            documentIds: docIds,
-            email: clientEmail,
-            idNumber: clientIdNumber,
-            emailType: 'resend',
-            customMessage: resendMessage,
-            isHtml: true, // Use WYSIWYG for resend too
-            ccAdmin
-          })
-        }
-      );
+      const docIds = packToResend.documents.map((d) => d.id);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to resend documents');
-      }
+      await api.post(`/documents/${selectedClient.id}/email`, {
+        documentIds: docIds,
+        email: clientEmail,
+        idNumber: clientIdNumber,
+        emailType: 'resend',
+        customMessage: resendMessage,
+        isHtml: true, // Use WYSIWYG for resend too
+        ccAdmin,
+      });
 
       toast.success('Document pack resent successfully');
       setResendDialogOpen(false);
@@ -658,21 +572,19 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   };
 
   const addSubcategoryGroup = () => {
-    setSubcategoryGroups(prev => [
+    setSubcategoryGroups((prev) => [
       ...prev,
-      { id: Date.now().toString(), name: '', customName: '', files: [] }
+      { id: Date.now().toString(), name: '', customName: '', files: [] },
     ]);
   };
 
   const removeSubcategoryGroup = (id: string) => {
     if (subcategoryGroups.length <= 1) return;
-    setSubcategoryGroups(prev => prev.filter(g => g.id !== id));
+    setSubcategoryGroups((prev) => prev.filter((g) => g.id !== id));
   };
 
   const updateSubcategoryGroup = (id: string, updates: Partial<SubcategoryGroup>) => {
-    setSubcategoryGroups(prev => prev.map(g => 
-      g.id === id ? { ...g, ...updates } : g
-    ));
+    setSubcategoryGroups((prev) => prev.map((g) => (g.id === id ? { ...g, ...updates } : g)));
   };
 
   const resetForm = () => {
@@ -731,7 +643,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     return date.toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
 
@@ -748,10 +660,10 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     setExpandedPacks(newSet);
   };
 
-  const filteredDocuments = documents.filter(doc => {
+  const filteredDocuments = documents.filter((doc) => {
     // Search query
     const searchLower = searchQuery.toLowerCase();
-    const matchesSearch = 
+    const matchesSearch =
       doc.title.toLowerCase().includes(searchLower) ||
       (doc.fileName && doc.fileName.toLowerCase().includes(searchLower)) ||
       (doc.policyNumber && doc.policyNumber.toLowerCase().includes(searchLower)) ||
@@ -776,17 +688,31 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   });
 
   // Group documents by packId
-  const groupedItems: (DocumentItem | { type: 'pack', id: string, title: string, documents: DocumentItem[], category: string, date: string, status: string, policyNumber?: string })[] = [];
+  const groupedItems: (
+    | DocumentItem
+    | {
+        type: 'pack';
+        id: string;
+        title: string;
+        documents: DocumentItem[];
+        category: string;
+        date: string;
+        status: string;
+        policyNumber?: string;
+      }
+  )[] = [];
   const processedPackIds = new Set<string>();
 
-  filteredDocuments.forEach(doc => {
+  filteredDocuments.forEach((doc) => {
     // Group if packId exists (Subcategory upload or multi-file upload)
     if (doc.packId) {
       if (!processedPackIds.has(doc.packId)) {
         processedPackIds.add(doc.packId);
-        const packDocs = filteredDocuments.filter(d => d.packId === doc.packId);
+        const packDocs = filteredDocuments.filter((d) => d.packId === doc.packId);
         // Sort inside pack
-        const sortedPackDocs = [...packDocs].sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true }));
+        const sortedPackDocs = [...packDocs].sort((a, b) =>
+          a.title.localeCompare(b.title, undefined, { numeric: true }),
+        );
 
         groupedItems.push({
           type: 'pack',
@@ -795,8 +721,8 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
           documents: sortedPackDocs,
           category: doc.productCategory,
           date: doc.uploadDate,
-          status: packDocs.some(d => d.status === 'new') ? 'new' : 'viewed',
-          policyNumber: doc.policyNumber // Assuming shared policy number for pack
+          status: packDocs.some((d) => d.status === 'new') ? 'new' : 'viewed',
+          policyNumber: doc.policyNumber, // Assuming shared policy number for pack
         });
       }
     } else {
@@ -824,12 +750,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchDocuments}
-            disabled={loading}
-          >
+          <Button variant="outline" size="sm" onClick={fetchDocuments} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -859,7 +780,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
               <div>
                 <p className="text-sm text-muted-foreground">Documents</p>
                 <p className="text-2xl font-semibold">
-                  {filteredDocuments.filter(d => d.type === 'document').length}
+                  {filteredDocuments.filter((d) => d.type === 'document').length}
                 </p>
               </div>
               <FileText className="h-8 w-8 text-muted-foreground" />
@@ -872,7 +793,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
               <div>
                 <p className="text-sm text-muted-foreground">Links</p>
                 <p className="text-2xl font-semibold">
-                  {filteredDocuments.filter(d => d.type === 'link').length}
+                  {filteredDocuments.filter((d) => d.type === 'link').length}
                 </p>
               </div>
               <LinkIcon className="h-8 w-8 text-muted-foreground" />
@@ -885,7 +806,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
               <div>
                 <p className="text-sm text-muted-foreground">New</p>
                 <p className="text-2xl font-semibold">
-                  {filteredDocuments.filter(d => d.status === 'new').length}
+                  {filteredDocuments.filter((d) => d.status === 'new').length}
                 </p>
               </div>
               <Badge className="bg-blue-100 text-blue-800">New</Badge>
@@ -917,7 +838,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
               </Button>
             )}
           </div>
-          
+
           <div className="w-full md:w-[200px]">
             <Select value={filterCategory} onValueChange={setFilterCategory}>
               <SelectTrigger>
@@ -958,21 +879,21 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
               />
             </div>
           </div>
-          
+
           {(filterCategory !== 'All' || filterDateStart || filterDateEnd) && (
-             <Button 
-               variant="ghost" 
-               size="sm"
-               onClick={() => {
-                 setFilterCategory('All');
-                 setFilterDateStart('');
-                 setFilterDateEnd('');
-               }}
-               className="px-2"
-               title="Clear Filters"
-             >
-               <X className="h-4 w-4" />
-             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFilterCategory('All');
+                setFilterDateStart('');
+                setFilterDateEnd('');
+              }}
+              className="px-2"
+              title="Clear Filters"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           )}
         </div>
       </Card>
@@ -1003,13 +924,12 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                 {documents.length === 0 ? 'No documents yet' : 'No matching documents found'}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                {documents.length === 0 ? 'Upload documents or add links to get started' : 'Try adjusting your filters or search terms'}
+                {documents.length === 0
+                  ? 'Upload documents or add links to get started'
+                  : 'Try adjusting your filters or search terms'}
               </p>
               {documents.length === 0 && (
-                <Button
-                  className="mt-4"
-                  onClick={() => setUploadDialogOpen(true)}
-                >
+                <Button className="mt-4" onClick={() => setUploadDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add First Item
                 </Button>
@@ -1022,9 +942,12 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                   // Render Pack
                   const isExpanded = expandedPacks.has(item.id);
                   return (
-                    <div key={item.id} className="border rounded-lg overflow-hidden transition-all hover:border-gray-300">
+                    <div
+                      key={item.id}
+                      className="border rounded-lg overflow-hidden transition-all hover:border-gray-300"
+                    >
                       {/* Pack Header */}
-                      <div 
+                      <div
                         className="flex items-center gap-4 p-4 cursor-pointer bg-slate-50/50 hover:bg-slate-50"
                         onClick={() => togglePack(item.id)}
                       >
@@ -1039,7 +962,9 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                             <Badge variant="secondary" className="text-xs">
                               {item.documents.length} files
                             </Badge>
-                            {item.status === 'new' && <Badge className="bg-blue-100 text-blue-800">New</Badge>}
+                            {item.status === 'new' && (
+                              <Badge className="bg-blue-100 text-blue-800">New</Badge>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">
                             Document Pack • Uploaded {formatDate(item.date)}
@@ -1066,7 +991,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                             onClick={(e) => {
                               e.stopPropagation();
                               setPackToResend({ id: item.id, documents: item.documents });
-                              setResendMessage("Please find attached the documents you requested.");
+                              setResendMessage('Please find attached the documents you requested.');
                               setResendDialogOpen(true);
                             }}
                             title="Resend Pack"
@@ -1087,11 +1012,15 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                           <div className="text-muted-foreground">
-                            {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                            {isExpanded ? (
+                              <ChevronDown className="h-5 w-5" />
+                            ) : (
+                              <ChevronRight className="h-5 w-5" />
+                            )}
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Pack Content (Expanded) */}
                       {isExpanded && (
                         <div className="bg-slate-50 border-t p-3 pl-8 space-y-4">
@@ -1099,8 +1028,8 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                             // Group docs by subcategory
                             const docsBySubcat: Record<string, DocumentItem[]> = {};
                             const looseDocs: DocumentItem[] = [];
-                            
-                            item.documents.forEach(d => {
+
+                            item.documents.forEach((d) => {
                               if (d.subcategory) {
                                 if (!docsBySubcat[d.subcategory]) docsBySubcat[d.subcategory] = [];
                                 docsBySubcat[d.subcategory].push(d);
@@ -1108,16 +1037,21 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                                 looseDocs.push(d);
                               }
                             });
-                            
+
                             const hasSubcats = Object.keys(docsBySubcat).length > 0;
-                            
+
                             const renderDoc = (doc: DocumentItem) => (
-                              <div key={doc.id} className="flex items-center justify-between p-3 bg-white rounded border hover:border-blue-200 transition-colors">
+                              <div
+                                key={doc.id}
+                                className="flex items-center justify-between p-3 bg-white rounded border hover:border-blue-200 transition-colors"
+                              >
                                 <div className="flex items-center gap-3 overflow-hidden">
                                   <FileText className="h-4 w-4 text-slate-400 flex-shrink-0" />
                                   <div className="min-w-0">
                                     <p className="text-sm font-medium truncate">{doc.title}</p>
-                                    <p className="text-xs text-muted-foreground truncate">{doc.fileName} • {formatFileSize(doc.fileSize)}</p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {doc.fileName} • {formatFileSize(doc.fileSize)}
+                                    </p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -1125,7 +1059,10 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                                     variant="ghost"
                                     size="sm"
                                     className="h-8 w-8 p-0"
-                                    onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDownload(doc);
+                                    }}
                                     title="Download"
                                   >
                                     <Download className="h-4 w-4" />
@@ -1134,7 +1071,11 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                                     variant="ghost"
                                     size="sm"
                                     className="h-8 w-8 p-0"
-                                    onClick={(e) => { e.stopPropagation(); setDocumentToDelete(doc); setDeleteDialogOpen(true); }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDocumentToDelete(doc);
+                                      setDeleteDialogOpen(true);
+                                    }}
                                     title="Delete"
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -1142,7 +1083,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                                 </div>
                               </div>
                             );
-                            
+
                             return (
                               <div className="contents">
                                 {/* Render Subcategories */}
@@ -1152,7 +1093,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                                       <Folder className="h-4 w-4 text-violet-500" />
                                       {subcatName}
                                     </div>
-                                    {docs.map(doc => renderDoc(doc))}
+                                    {docs.map((doc) => renderDoc(doc))}
                                   </div>
                                 ))}
 
@@ -1165,7 +1106,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                                         Other Documents
                                       </div>
                                     )}
-                                    {looseDocs.map(doc => renderDoc(doc))}
+                                    {looseDocs.map((doc) => renderDoc(doc))}
                                   </div>
                                 )}
                               </div>
@@ -1215,13 +1156,16 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                             </div>
                             {doc.type === 'document' ? (
                               <p className="text-sm text-muted-foreground">
-                                {doc.fileName} • {formatFileSize(doc.fileSize)} • Uploaded {formatDate(doc.uploadDate)}
+                                {doc.fileName} • {formatFileSize(doc.fileSize)} • Uploaded{' '}
+                                {formatDate(doc.uploadDate)}
                               </p>
                             ) : (
                               <div>
                                 <p className="text-sm text-blue-600 truncate">{doc.url}</p>
                                 {doc.description && (
-                                  <p className="text-sm text-muted-foreground mt-1">{doc.description}</p>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {doc.description}
+                                  </p>
                                 )}
                                 <p className="text-sm text-muted-foreground mt-1">
                                   Added {formatDate(doc.uploadDate)}
@@ -1294,24 +1238,30 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         <DialogContent className="max-w-4xl bg-white p-0 overflow-hidden flex flex-col max-h-[90vh]">
           <div className="p-6 pb-2 flex-none">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-slate-900">Add Document or Link</DialogTitle>
+              <DialogTitle className="text-xl font-semibold text-slate-900">
+                Add Document or Link
+              </DialogTitle>
               <DialogDescription className="text-slate-500 mt-1">
                 Upload a document file or add a link to an external resource
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <Tabs value={uploadType} onValueChange={(v) => setUploadType(v as 'document' | 'link')} className="w-full flex-1 flex flex-col min-h-0">
+          <Tabs
+            value={uploadType}
+            onValueChange={(v) => setUploadType(v as 'document' | 'link')}
+            className="w-full flex-1 flex flex-col min-h-0"
+          >
             <div className="px-6 flex-none">
               <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-xl">
-                <TabsTrigger 
-                  value="document" 
+                <TabsTrigger
+                  value="document"
                   className="rounded-lg data-[state=active]:bg-[#7c3aed] data-[state=active]:text-white data-[state=inactive]:text-slate-600 font-medium transition-all"
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   Upload Document
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="link"
                   className="rounded-lg data-[state=active]:bg-[#7c3aed] data-[state=active]:text-white data-[state=inactive]:text-slate-600 font-medium transition-all"
                 >
@@ -1326,7 +1276,11 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                 {/* Upload Mode Selection */}
                 <div className="space-y-3">
                   <Label className="font-medium text-slate-900">Upload Type</Label>
-                  <RadioGroup value={uploadMode} onValueChange={(v) => setUploadMode(v as 'general' | 'subcategory')} className="grid grid-cols-2 gap-4">
+                  <RadioGroup
+                    value={uploadMode}
+                    onValueChange={(v) => setUploadMode(v as 'general' | 'subcategory')}
+                    className="grid grid-cols-2 gap-4"
+                  >
                     <div>
                       <RadioGroupItem value="general" id="mode-general" className="peer sr-only" />
                       <Label
@@ -1338,7 +1292,11 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                       </Label>
                     </div>
                     <div>
-                      <RadioGroupItem value="subcategory" id="mode-subcategory" className="peer sr-only" />
+                      <RadioGroupItem
+                        value="subcategory"
+                        id="mode-subcategory"
+                        className="peer sr-only"
+                      />
                       <Label
                         htmlFor="mode-subcategory"
                         className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-violet-600 peer-data-[state=checked]:bg-violet-50 [&:has([data-state=checked])]:border-violet-600 cursor-pointer transition-all"
@@ -1353,7 +1311,9 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                 {uploadMode === 'general' ? (
                   <div className="space-y-5 animate-in fade-in slide-in-from-top-2">
                     <div className="space-y-2">
-                      <Label htmlFor="file-upload" className="font-medium text-slate-900">Choose File(s) *</Label>
+                      <Label htmlFor="file-upload" className="font-medium text-slate-900">
+                        Choose File(s) *
+                      </Label>
                       <div className="relative">
                         <Input
                           id="file-upload"
@@ -1374,24 +1334,32 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                         </p>
                         {selectedFiles.length > 0 && (
                           <span className="text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
-                            {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+                            {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''}{' '}
+                            selected
                           </span>
                         )}
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="doc-title" className="font-medium text-slate-900">Title {selectedFiles.length <= 1 && '*'}</Label>
+                      <Label htmlFor="doc-title" className="font-medium text-slate-900">
+                        Title {selectedFiles.length <= 1 && '*'}
+                      </Label>
                       <Input
                         id="doc-title"
-                        placeholder={selectedFiles.length > 1 ? "Enter title for all files (optional)" : "Enter document title"}
+                        placeholder={
+                          selectedFiles.length > 1
+                            ? 'Enter title for all files (optional)'
+                            : 'Enter document title'
+                        }
                         value={documentTitle}
                         onChange={(e) => setDocumentTitle(e.target.value)}
                         className="h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500"
                       />
                       {selectedFiles.length > 1 && (
                         <p className="text-xs text-slate-500">
-                          Leave blank to use filenames, or enter a title to apply to all files (numbered)
+                          Leave blank to use filenames, or enter a title to apply to all files
+                          (numbered)
                         </p>
                       )}
                     </div>
@@ -1400,7 +1368,9 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                   <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
                     {/* Master Pack Title */}
                     <div className="space-y-2">
-                      <Label htmlFor="master-title" className="font-medium text-slate-900">Pack Name (Required)</Label>
+                      <Label htmlFor="master-title" className="font-medium text-slate-900">
+                        Pack Name (Required)
+                      </Label>
                       <Input
                         id="master-title"
                         placeholder="e.g. Onboarding Documents 2024"
@@ -1416,9 +1386,12 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                     {/* Subcategory Groups */}
                     <div className="space-y-4">
                       <Label className="font-medium text-slate-900">Subcategory Groups</Label>
-                      
+
                       {subcategoryGroups.map((group) => (
-                        <div key={group.id} className="p-4 border rounded-lg bg-slate-50 space-y-4 relative">
+                        <div
+                          key={group.id}
+                          className="p-4 border rounded-lg bg-slate-50 space-y-4 relative"
+                        >
                           <div className="absolute top-2 right-2">
                             <Button
                               variant="ghost"
@@ -1435,26 +1408,34 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-8">
                             {/* Name Selection */}
                             <div className="space-y-2">
-                              <Label className="text-xs font-medium text-slate-500">Subcategory Name</Label>
-                              <Select 
-                                value={group.name} 
-                                onValueChange={(val) => updateSubcategoryGroup(group.id, { name: val })}
+                              <Label className="text-xs font-medium text-slate-500">
+                                Subcategory Name
+                              </Label>
+                              <Select
+                                value={group.name}
+                                onValueChange={(val) =>
+                                  updateSubcategoryGroup(group.id, { name: val })
+                                }
                               >
                                 <SelectTrigger className="h-9 bg-white border-slate-200">
                                   <SelectValue placeholder="Select name" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {SUBCATEGORIES.map(cat => (
-                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                  {SUBCATEGORIES.map((cat) => (
+                                    <SelectItem key={cat} value={cat}>
+                                      {cat}
+                                    </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
-                              
+
                               {group.name === 'Other' && (
                                 <Input
                                   placeholder="Custom Name"
                                   value={group.customName}
-                                  onChange={(e) => updateSubcategoryGroup(group.id, { customName: e.target.value })}
+                                  onChange={(e) =>
+                                    updateSubcategoryGroup(group.id, { customName: e.target.value })
+                                  }
                                   className="h-9 mt-2 bg-white border-slate-200"
                                 />
                               )}
@@ -1471,14 +1452,17 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                                   className="cursor-pointer file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 h-9 text-sm"
                                   onChange={(e) => {
                                     if (e.target.files) {
-                                      updateSubcategoryGroup(group.id, { files: Array.from(e.target.files) });
+                                      updateSubcategoryGroup(group.id, {
+                                        files: Array.from(e.target.files),
+                                      });
                                     }
                                   }}
                                 />
                               </div>
                               <div className="flex justify-between items-center">
                                 <span className="text-xs text-slate-500">
-                                  {group.files.length} file{group.files.length !== 1 ? 's' : ''} selected
+                                  {group.files.length} file{group.files.length !== 1 ? 's' : ''}{' '}
+                                  selected
                                 </span>
                               </div>
                             </div>
@@ -1500,7 +1484,8 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                     <div className="bg-blue-50 text-blue-700 p-3 rounded-md text-sm flex gap-2 border border-blue-100">
                       <Folder className="h-4 w-4 mt-0.5 flex-shrink-0" />
                       <p>
-                        Each group created above will be sent as a separate, encrypted ZIP file in the email to the client.
+                        Each group created above will be sent as a separate, encrypted ZIP file in
+                        the email to the client.
                       </p>
                     </div>
                   </div>
@@ -1508,9 +1493,14 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="doc-category" className="font-medium text-slate-900">Category *</Label>
+                    <Label htmlFor="doc-category" className="font-medium text-slate-900">
+                      Category *
+                    </Label>
                     <Select value={productCategory} onValueChange={setProductCategory}>
-                      <SelectTrigger id="doc-category" className={`h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500 ${!productCategory ? "text-slate-400" : ""}`}>
+                      <SelectTrigger
+                        id="doc-category"
+                        className={`h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500 ${!productCategory ? 'text-slate-400' : ''}`}
+                      >
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1526,7 +1516,9 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="doc-policy" className="font-medium text-slate-900">Policy Number</Label>
+                    <Label htmlFor="doc-policy" className="font-medium text-slate-900">
+                      Policy Number
+                    </Label>
                     <Input
                       id="doc-policy"
                       placeholder="e.g., LIF-2024-00123"
@@ -1540,7 +1532,9 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
               <TabsContent value="link" className="space-y-5 mt-0 focus-visible:ring-0">
                 <div className="space-y-2">
-                  <Label htmlFor="link-title" className="font-medium text-slate-900">Title *</Label>
+                  <Label htmlFor="link-title" className="font-medium text-slate-900">
+                    Title *
+                  </Label>
                   <Input
                     id="link-title"
                     placeholder="e.g., Old Mutual Online Portal"
@@ -1551,7 +1545,9 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="link-url" className="font-medium text-slate-900">URL *</Label>
+                  <Label htmlFor="link-url" className="font-medium text-slate-900">
+                    URL *
+                  </Label>
                   <div className="relative">
                     <LinkIcon className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                     <Input
@@ -1566,7 +1562,9 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="link-description" className="font-medium text-slate-900">Description</Label>
+                  <Label htmlFor="link-description" className="font-medium text-slate-900">
+                    Description
+                  </Label>
                   <Textarea
                     id="link-description"
                     placeholder="Brief description of this resource"
@@ -1579,9 +1577,14 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="link-category" className="font-medium text-slate-900">Category *</Label>
+                    <Label htmlFor="link-category" className="font-medium text-slate-900">
+                      Category *
+                    </Label>
                     <Select value={productCategory} onValueChange={setProductCategory}>
-                      <SelectTrigger id="link-category" className={`h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500 ${!productCategory ? "text-slate-400" : ""}`}>
+                      <SelectTrigger
+                        id="link-category"
+                        className={`h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500 ${!productCategory ? 'text-slate-400' : ''}`}
+                      >
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1597,7 +1600,9 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="link-policy" className="font-medium text-slate-900">Policy Number</Label>
+                    <Label htmlFor="link-policy" className="font-medium text-slate-900">
+                      Policy Number
+                    </Label>
                     <Input
                       id="link-policy"
                       placeholder="e.g., LIF-2024-00123"
@@ -1625,12 +1630,15 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
             <Button
               onClick={uploadType === 'document' ? handleFileUpload : handleAddLink}
               disabled={
-                uploading || 
-                (uploadType === 'document' && (
-                  uploadMode === 'general' 
-                    ? (selectedFiles.length === 0 || !productCategory || (selectedFiles.length === 1 && !documentTitle))
-                    : (!documentTitle || !productCategory || !subcategoryGroups.some(g => g.files.length > 0))
-                )) || 
+                uploading ||
+                (uploadType === 'document' &&
+                  (uploadMode === 'general'
+                    ? selectedFiles.length === 0 ||
+                      !productCategory ||
+                      (selectedFiles.length === 1 && !documentTitle)
+                    : !documentTitle ||
+                      !productCategory ||
+                      !subcategoryGroups.some((g) => g.files.length > 0))) ||
                 (uploadType === 'link' && (!linkTitle || !linkUrl || !productCategory))
               }
               className="h-10 px-6 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white shadow-sm"
@@ -1670,16 +1678,10 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-            >
+            <Button variant="destructive" onClick={handleDelete}>
               Delete
             </Button>
           </DialogFooter>
@@ -1692,22 +1694,18 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
           <DialogHeader>
             <DialogTitle>Delete Document Pack</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this pack? This will delete all <strong>{packToDelete?.count || 0}</strong> documents in it.
-              <br /><br />
+              Are you sure you want to delete this pack? This will delete all{' '}
+              <strong>{packToDelete?.count || 0}</strong> documents in it.
+              <br />
+              <br />
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setPackDeleteDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setPackDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeletePack}
-            >
+            <Button variant="destructive" onClick={handleDeletePack}>
               Delete Pack
             </Button>
           </DialogFooter>
@@ -1727,7 +1725,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
             <div className="space-y-2">
               <Label>Message to Client</Label>
               <div className="h-64 mb-12">
-                <ReactQuill 
+                <ReactQuill
                   value={resendMessage}
                   onChange={setResendMessage}
                   theme="snow"
@@ -1736,17 +1734,21 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                 />
               </div>
               <p className="text-xs text-muted-foreground pt-4">
-                This message will be included in the email body. The documents will be attached as an encrypted ZIP file.
+                This message will be included in the email body. The documents will be attached as
+                an encrypted ZIP file.
               </p>
             </div>
-            
+
             <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="cc-admin-resend" 
+              <Checkbox
+                id="cc-admin-resend"
                 checked={ccAdmin}
                 onCheckedChange={(checked) => setCcAdmin(checked as boolean)}
               />
-              <Label htmlFor="cc-admin-resend" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              <Label
+                htmlFor="cc-admin-resend"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
                 CC info@navigatewealth.co
               </Label>
             </div>
@@ -1782,7 +1784,8 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
             </DialogTitle>
             <DialogDescription>
               {uploadedDocIds.length} document(s) have been added to the client's profile.
-              <br /><br />
+              <br />
+              <br />
               Would you like to email the client to notify them?
             </DialogDescription>
           </DialogHeader>
@@ -1819,18 +1822,20 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
               Notify the client that new documents have been added to their profile.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-2">
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800">
               <p className="font-medium mb-1">Secure Attachment</p>
-              <p>The documents will be attached as an <strong>encrypted ZIP file</strong>.</p>
+              <p>
+                The documents will be attached as an <strong>encrypted ZIP file</strong>.
+              </p>
               <p className="mt-1 text-xs opacity-90">Password: Client's National ID Number</p>
             </div>
 
             <div className="space-y-2">
               <Label>Custom Message</Label>
               <div className="h-64 mb-12">
-                <ReactQuill 
+                <ReactQuill
                   value={uploadEmailMessage}
                   onChange={setUploadEmailMessage}
                   theme="snow"
@@ -1839,14 +1844,17 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                 />
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2 pt-4">
-              <Checkbox 
-                id="cc-admin" 
+              <Checkbox
+                id="cc-admin"
                 checked={ccAdmin}
                 onCheckedChange={(checked) => setCcAdmin(checked as boolean)}
               />
-              <Label htmlFor="cc-admin" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              <Label
+                htmlFor="cc-admin"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
                 CC info@navigatewealth.co
               </Label>
             </div>

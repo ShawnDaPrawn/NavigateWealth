@@ -8,8 +8,10 @@
  * Notes:
  *   • react-quill-new is stubbed — it only renders inside closed dialogs here,
  *     but the real Quill touches DOM APIs jsdom doesn't fully implement.
- *   • useAuth is mocked (no AuthProvider needed); the component uses a raw
- *     fetch (no react-query), so global.fetch is stubbed to an empty list.
+ *   • useAuth is mocked (no AuthProvider needed).
+ *   • The centralized `api` client is mocked (Phase 6a routed the component's
+ *     raw, anon-key fetches through it); we assert it fetches the client's
+ *     documents on mount.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -22,7 +24,18 @@ vi.mock('@/components/auth/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'admin-1', email: 'admin@test.co' } }),
 }));
 
+vi.mock('@/utils/api', () => ({
+  api: {
+    get: vi.fn().mockResolvedValue({ documents: [] }),
+    post: vi.fn().mockResolvedValue({}),
+    patch: vi.fn().mockResolvedValue({}),
+    delete: vi.fn().mockResolvedValue({}),
+  },
+  APIError: class APIError extends Error {},
+}));
+
 import { DocumentsTab } from '@/components/admin/modules/client-management/components/DocumentsTab';
+import { api } from '@/utils/api';
 
 const selectedClient = {
   id: 'client-1',
@@ -33,10 +46,6 @@ const selectedClient = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  global.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => ({ documents: [] }),
-  }) as unknown as typeof fetch;
 });
 
 describe('DocumentsTab', () => {
@@ -46,10 +55,7 @@ describe('DocumentsTab', () => {
     expect(screen.getByText('Document Management')).toBeTruthy();
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/documents/client-1'),
-        expect.objectContaining({ headers: expect.any(Object) }),
-      );
+      expect(api.get).toHaveBeenCalledWith(expect.stringContaining('/documents/client-1'));
     });
   });
 
