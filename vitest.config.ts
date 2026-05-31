@@ -78,14 +78,15 @@ export default defineConfig({
       // only go UP. Ratchet these toward the 70/65/70/70 target as
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
-      // Ratcheted as characterization tests land. Latest (after the
-      // RoAModuleContractManager test): measured lines 4.86 / functions 3.48 /
-      // branches 4.0 / statements 4.72. Floor kept just below measured.
+      // Ratcheted as characterization tests land. Latest (after unit tests for
+      // investmentINACalculationService + derivedPolicyAssets + esign-signer
+      // ruleEngine): measured lines 5.37 / functions 3.82 / branches 4.57 /
+      // statements 5.24. Floor kept just below measured (small CI safety margin).
       thresholds: {
-        lines: 4.8,
-        functions: 3.4,
-        branches: 3.9,
-        statements: 4.6,
+        lines: 5.25,
+        functions: 3.7,
+        branches: 4.3,
+        statements: 5.1,
       },
     },
   },
