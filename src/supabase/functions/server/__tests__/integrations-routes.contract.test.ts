@@ -346,4 +346,62 @@ describe('integrations.tsx route contracts', () => {
       expect(stored).toHaveLength(1);
     });
   });
+
+  // ── Portal automation routes ──────────────────────────────────────────────
+  // Locks the portal route group's contracts BEFORE it is carved into a
+  // sub-router (Phase 5): the requireAuth wiring, the distinct requirePortalWorker
+  // worker-secret boundary, and representative GET shapes. A regression from the
+  // extraction (wrong mount path, dropped middleware) fails here.
+  describe('portal-flows / portal-jobs (requireAuth)', () => {
+    it('GET /portal-flows/:providerId returns 401 without an Authorization header', async () => {
+      const res = await integrationsApp.request('/portal-flows/p1');
+      expect(res.status).toBe(401);
+    });
+
+    it('GET /portal-flows/:providerId returns 400 for an unknown provider', async () => {
+      const res = await integrationsApp.request('/portal-flows/ghost', { headers: AUTH });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: 'Invalid provider ID' });
+    });
+
+    it('GET /portal-flows/:providerId returns a sanitised flow envelope for a known provider', async () => {
+      kvStore.set('provider:p1', { id: 'p1', name: 'Provider One', categoryIds: ['risk'] });
+      const res = await integrationsApp.request('/portal-flows/p1', { headers: AUTH });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { success: boolean; flow: Record<string, unknown> };
+      expect(body.success).toBe(true);
+      expect(body.flow).toMatchObject({ providerId: 'p1' });
+    });
+
+    it('GET /portal-jobs/latest returns 400 when providerId or categoryId is missing', async () => {
+      const res = await integrationsApp.request('/portal-jobs/latest?providerId=p1', {
+        headers: AUTH,
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: expect.stringContaining('Missing') });
+    });
+
+    it('GET /portal-jobs/latest returns { job: null } when none is recorded', async () => {
+      const res = await integrationsApp.request(
+        '/portal-jobs/latest?providerId=p1&categoryId=risk',
+        {
+          headers: AUTH,
+        },
+      );
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ success: true, job: null });
+    });
+  });
+
+  describe('portal-worker (requirePortalWorker secret, not requireAuth)', () => {
+    it('POST /portal-worker/jobs/claim rejects a request without the worker secret', async () => {
+      const res = await integrationsApp.request('/portal-worker/jobs/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workerId: 'w1' }),
+      });
+      expect(res.status).toBe(401);
+      expect(await res.json()).toMatchObject({ error: 'Unauthorized portal worker' });
+    });
+  });
 });
