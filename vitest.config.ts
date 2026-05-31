@@ -21,7 +21,9 @@ export default defineConfig({
       'npm:docx': 'docx',
       'npm:zod': 'zod',
       'npm:hono': 'hono',
+      'npm:hono/cors': 'hono/cors',
       'npm:@e965/xlsx@0.20.3': 'xlsx',
+      'jsr:@std/encoding/base64': '@jsr/std__encoding/base64',
       'node-forge@1.3.1': 'node-forge',
       '@jsr/supabase__supabase-js@2.49.8': '@jsr/supabase__supabase-js',
       // Edge functions import via the Deno `jsr:` specifier; rewrite to the
