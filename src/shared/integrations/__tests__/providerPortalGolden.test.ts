@@ -18,6 +18,11 @@ describe('provider portal golden flows', () => {
   const portalTypesSource = readRepoFile(
     'src/supabase/functions/server/integrations-portal-types.ts',
   );
+  // Portal credential storage/canonicalisation was extracted out of
+  // integrations.tsx (Phase 5); the Capital Legacy id anchors live here now.
+  const portalCredentialsSource = readRepoFile(
+    'src/supabase/functions/server/integrations-portal-credentials.ts',
+  );
   const portalDefaultFlowsSource = readRepoFile(
     'src/supabase/functions/server/portal-default-flows.ts',
   );
@@ -305,10 +310,10 @@ describe('provider portal golden flows', () => {
   });
 
   it('keeps Capital Legacy credential ids backward compatible and category-scoped', () => {
-    expect(integrationsSource).toContain(
+    expect(portalCredentialsSource).toContain(
       "const CAPITAL_LEGACY_CANONICAL_CREDENTIAL_PROFILE_ID = 'capital_legacy-env'",
     );
-    expect(integrationsSource).toContain(
+    expect(portalCredentialsSource).toContain(
       "const CAPITAL_LEGACY_LEGACY_CREDENTIAL_PROFILE_ID = 'capital-legacy-env'",
     );
     expect(integrationsSource).toContain('normalisePortalCredentialProfileId');

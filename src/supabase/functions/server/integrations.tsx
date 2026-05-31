@@ -95,16 +95,12 @@ import type {
   PortalSyncJob,
   PortalJobQueueSummary,
   PortalJobPolicyItem,
-  PortalBrainMemoryEntry,
-  PortalBrainMemory,
-  PortalBrainMemorySummary,
   PortalDiscoveryReport,
 } from './integrations-portal-types.ts';
 import type {
   IntegrationConfig,
   IntegrationFieldBinding,
   UploadHistory,
-  IntegrationProvider,
   SyncMatchStatus,
   SyncPublishStatus,
   SyncRunStatus,
@@ -144,6 +140,12 @@ import {
   resolveRawPortalValue,
   isValidDate,
 } from './integrations-field-utils.ts';
+import {
+  normalisePortalCredentialProfileId,
+  loadPortalCredentialRecord,
+  savePortalCredentialRecord,
+  portalCredentialStatus,
+} from './integrations-portal-credentials.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations');
@@ -223,62 +225,6 @@ function buildPortalExtractionFieldsForBindings(
     required: field.required === true,
     transform: typeof field.transform === 'string' ? field.transform : 'trim',
   }));
-}
-
-function portalCredentialKey(providerId: string, profileId: string): string {
-  return `portal-credential:${providerId}:${profileId}`;
-}
-
-const CAPITAL_LEGACY_CANONICAL_CREDENTIAL_PROFILE_ID = 'capital_legacy-env';
-const CAPITAL_LEGACY_LEGACY_CREDENTIAL_PROFILE_ID = 'capital-legacy-env';
-
-function normalisePortalCredentialProfileId(profileId: string): string {
-  return profileId === CAPITAL_LEGACY_LEGACY_CREDENTIAL_PROFILE_ID
-    ? CAPITAL_LEGACY_CANONICAL_CREDENTIAL_PROFILE_ID
-    : profileId;
-}
-
-function portalCredentialProfileAliases(profileId: string): string[] {
-  const canonical = normalisePortalCredentialProfileId(String(profileId || '').trim());
-  if (!canonical) return [];
-  if (canonical === CAPITAL_LEGACY_CANONICAL_CREDENTIAL_PROFILE_ID) {
-    return [CAPITAL_LEGACY_CANONICAL_CREDENTIAL_PROFILE_ID, CAPITAL_LEGACY_LEGACY_CREDENTIAL_PROFILE_ID];
-  }
-  return [canonical];
-}
-
-async function loadPortalCredentialRecord(providerId: string, profileId: string): Promise<PortalCredentialRecord | null> {
-  for (const alias of portalCredentialProfileAliases(profileId)) {
-    const record = (await kv.get(portalCredentialKey(providerId, alias))) as PortalCredentialRecord | null;
-    if (record?.username || record?.password) {
-      return {
-        ...record,
-        profileId: normalisePortalCredentialProfileId(String(record.profileId || alias)),
-      };
-    }
-  }
-  return null;
-}
-
-async function savePortalCredentialRecord(record: PortalCredentialRecord): Promise<void> {
-  const canonicalRecord = {
-    ...record,
-    profileId: normalisePortalCredentialProfileId(String(record.profileId || '')),
-  };
-  for (const alias of portalCredentialProfileAliases(canonicalRecord.profileId)) {
-    await kv.set(portalCredentialKey(canonicalRecord.providerId, alias), canonicalRecord);
-  }
-}
-
-function portalCredentialStatus(record: PortalCredentialRecord | null, providerId: string, profileId: string): PortalCredentialStatus {
-  return {
-    providerId,
-    profileId: normalisePortalCredentialProfileId(profileId),
-    hasUsername: !!record?.username,
-    hasPassword: !!record?.password,
-    updatedAt: record?.updatedAt,
-    updatedBy: record?.updatedBy,
-  };
 }
 
 function getWorkerSecret(): string {
