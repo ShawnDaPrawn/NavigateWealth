@@ -16,3 +16,10 @@ seo-route-manifest.json
 # Minified / vendored
 **/*.min.js
 **/*.min.css
+
+# Golden-test-pinned source — source-introspection guardrails (e.g.
+# providerPortalGolden) assert on the EXACT text of these files, and Prettier
+# reflow (quote style, line wrapping) breaks those anchors. Keep them out of
+# auto-formatting so the format-on-touch hook can't silently break the guard.
+# (Add other golden-watched files here as Phase 5/6 decomposition touches them.)
+src/supabase/functions/server/integrations.tsx
