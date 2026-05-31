@@ -134,6 +134,7 @@
     "provider:worker": "node ./scripts/provider-portal-worker.mjs --poll",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "typecheck:middleware": "tsc --noEmit -p tsconfig.middleware.json",
+    "typecheck:deno": "deno check --config src/supabase/functions/server/deno.json src/supabase/functions/server/index.tsx",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

@@ -24,6 +24,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Setup Deno
+        # Needed for the Supabase Edge Function (Deno) typecheck below. The Vite
+        # build / Vitest / SPA tsc steps do NOT need Deno.
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: Run production build
         shell: bash
         run: |
@@ -87,6 +94,29 @@ jobs:
           echo "${PIPESTATUS[0]}" > quality-typecheck-middleware.exit
           exit 0
 
+      - name: Run Deno typecheck (NON-BLOCKING baseline)
+        # Type-checks the Supabase Edge Function (Deno) source, which the SPA
+        # typecheck (tsc) deliberately excludes because tsc can't resolve Deno's
+        # npm:/jsr: specifiers. `deno check` follows the static import graph from
+        # the function entry (index.tsx); because every route module is lazily
+        # imported via a STRING-LITERAL dynamic import() in mount-*.ts, the whole
+        # reachable backend (esign, integrations, all routes) is type-checked —
+        # not just the boot graph.
+        #
+        # INTENTIONALLY NON-BLOCKING: this is the first measurement of the edge
+        # code's type-error baseline. It is NOT added to "Enforce quality gates",
+        # so it surfaces the count without failing the job. Burn the count down to
+        # 0 (the SPA went 1308 -> 0 the same way), THEN add `deno_exit` to the gate
+        # to make it blocking. Edit `tsconfig.typecheck.json`'s exclude comment +
+        # this step's note together when flipping.
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck:deno 2>&1 | tee quality-typecheck-deno.log
+          echo "${PIPESTATUS[0]}" > quality-typecheck-deno.exit
+          echo "Approx Deno type-error count: $(grep -cE 'TS[0-9]{3,}' quality-typecheck-deno.log || echo 0)"
+          exit 0
+
       - name: Run FNA intake test suite
         shell: bash
         run: |
@@ -130,6 +160,8 @@ jobs:
             quality-lint.exit
             quality-typecheck-middleware.log
             quality-typecheck-middleware.exit
+            quality-typecheck-deno.log
+            quality-typecheck-deno.exit
             quality-vitest-report.json
             quality-npm-audit-report.json
             quality-issues-payload.json
@@ -149,11 +181,13 @@ jobs:
           typecheck_exit="$(cat quality-typecheck.exit 2>/dev/null || echo 1)"
           lint_exit="$(cat quality-lint.exit 2>/dev/null || echo 1)"
           mw_exit="$(cat quality-typecheck-middleware.exit 2>/dev/null || echo 1)"
+          deno_exit="$(cat quality-typecheck-deno.exit 2>/dev/null || echo 1)"
           echo "build exit code:           $build_exit"
           echo "test exit code:            $test_exit"
           echo "typecheck exit code:       $typecheck_exit"
           echo "lint exit code:            $lint_exit"
           echo "middleware typecheck code: $mw_exit"
+          echo "deno typecheck code:       $deno_exit (NON-BLOCKING baseline — not gated yet)"
           failed=0
           if [ "$build_exit" != "0" ]; then echo "::error::Production build failed (see quality-build.log)"; failed=1; fi
           if [ "$test_exit" != "0" ]; then echo "::error::Vitest suite failed (see quality-test.log)"; failed=1; fi
