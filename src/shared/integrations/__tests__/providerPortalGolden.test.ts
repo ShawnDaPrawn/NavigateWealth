@@ -44,6 +44,12 @@ describe('provider portal golden flows', () => {
   const syncEngineSource = readRepoFile(
     'src/supabase/functions/server/integrations-sync-engine.ts',
   );
+  // Document storage helpers (bucket provisioning + estate/policy doc upload)
+  // were extracted out of integrations.tsx (Phase 5); the legal-docs bucket
+  // anchor lives here now.
+  const docStorageSource = readRepoFile(
+    'src/supabase/functions/server/integrations-document-storage.ts',
+  );
   const portalDefaultFlowsSource = readRepoFile(
     'src/supabase/functions/server/portal-default-flows.ts',
   );
@@ -327,7 +333,7 @@ describe('provider portal golden flows', () => {
       'app.post("/portal-worker/jobs/:jobId/items/:itemId/estate-document"',
     );
     expect(integrationsSource).toContain('uploadEstateDocumentForClient');
-    expect(integrationsSource).toContain('LEGAL_DOCS_BUCKET');
+    expect(docStorageSource).toContain('LEGAL_DOCS_BUCKET');
   });
 
   it('keeps Capital Legacy credential ids backward compatible and category-scoped', () => {
