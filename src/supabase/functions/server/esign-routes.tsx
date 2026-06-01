@@ -114,16 +114,10 @@ import apiKeysRoutes from './esign-api-keys-routes.ts';
 import templatesRoutes from './esign-templates-routes.ts';
 import consentRoutes from './esign-consent-routes.ts';
 import v1Routes from './esign-v1-routes.ts';
+import firmAdminRoutes from './esign-firm-admin-routes.ts';
 import { getActiveConsent, getConsentByVersion } from './esign-consent-registry.ts';
 import { runKbaCheck, getKbaStatus } from './kba-service.ts';
 import { buildEvidencePack } from './esign-evidence-export.ts';
-import {
-  listRecoveryBin,
-  restoreEnvelope,
-  hardDeleteEnvelope,
-  purgeExpiredDeletedEnvelopes,
-  RECOVERY_RETENTION_DAYS,
-} from './esign-recovery-bin.ts';
 import { belongsToFirm } from './esign-firm-scope.ts';
 import {
   getRequestMetadata,
@@ -132,24 +126,12 @@ import {
   resolveFirmId,
 } from './esign-route-helpers.ts';
 import type { SignerRecord, FieldRecord } from './esign-route-helpers.ts';
-import { getEsignMetrics } from './esign-metrics-service.ts';
 import { runStuckAlertSweep } from './esign-stuck-alert-service.ts';
 import { searchAuditEvents } from './esign-audit-search-service.ts';
 import { runSyntheticProbe, getLatestProbe, getProbeHistory } from './esign-synthetic-probe.ts';
 import { enqueueCompletion } from './esign-completion-queue.ts';
-import {
-  getRetentionPolicy,
-  setRetentionPolicy,
-  deleteRetentionPolicy,
-  runRetentionSweep,
-} from './esign-retention-service.ts';
 // P8.6 — Per-firm signer-page branding (logo, accent colour).
-import {
-  getFirmBranding,
-  setFirmBranding,
-  deleteFirmBranding,
-  toPublicBranding,
-} from './esign-branding-service.ts';
+import { getFirmBranding, toPublicBranding } from './esign-branding-service.ts';
 import {
   EnvelopeContextSchema,
   DraftSignersSchema,
@@ -197,6 +179,9 @@ esignRoutes.route('/', consentRoutes);
 
 // --- /v1/* public REST API (API-key auth) (esign-v1-routes.ts) ---
 esignRoutes.route('/', v1Routes);
+
+// --- retention / branding / metrics / recovery-bin (esign-firm-admin-routes.ts) ---
+esignRoutes.route('/', firmAdminRoutes);
 
 // Start the background expiry sweep scheduler on first module load.
 // Safe to call multiple times — internally deduped.
@@ -4451,302 +4436,6 @@ esignRoutes.post('/cron/synthetic-probe', async (c) => {
   }
   const result = await runSyntheticProbe();
   return c.json(result);
-});
-
-// ==================== RETENTION POLICY (P7.7) ====================
-
-/** GET /retention — firm-scoped retention policy (empty → no purging). */
-esignRoutes.get('/retention', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const firmId = resolveFirmId(ctx.user);
-    const policy = await getRetentionPolicy(firmId);
-    return c.json({ policy });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Retention read failed' },
-      status,
-    );
-  }
-});
-
-/** PUT /retention — set or update the policy. */
-esignRoutes.put('/retention', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const firmId = resolveFirmId(ctx.user);
-    const body = await c.req.json<{
-      completed_retention_days?: number | null;
-      terminated_retention_days?: number | null;
-      draft_retention_days?: number | null;
-      delete_artifacts?: boolean;
-    }>();
-    const saved = await setRetentionPolicy(firmId, body);
-    return c.json({ policy: saved });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Retention write failed' },
-      status,
-    );
-  }
-});
-
-/** DELETE /retention — revert to default (no purging). */
-esignRoutes.delete('/retention', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const firmId = resolveFirmId(ctx.user);
-    await deleteRetentionPolicy(firmId);
-    return c.json({ ok: true });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Retention delete failed' },
-      status,
-    );
-  }
-});
-
-/** POST /maintenance/retention-sweep — force a sweep. */
-esignRoutes.post('/maintenance/retention-sweep', async (c) => {
-  try {
-    await getAuthContext(c);
-    const result = await runRetentionSweep();
-    return c.json(result);
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Retention sweep failed' },
-      status,
-    );
-  }
-});
-
-// ==================== FIRM BRANDING (P8.6) ====================
-
-/**
- * GET /branding — read the caller firm's signer-page branding bundle.
- * Returns `{ branding: null }` when nothing has been configured so the
- * signer UI keeps its built-in defaults. Firm-scoped via `resolveFirmId`.
- */
-esignRoutes.get('/branding', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const firmId = resolveFirmId(ctx.user);
-    const record = await getFirmBranding(firmId);
-    return c.json({ branding: record });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Branding read failed' },
-      status,
-    );
-  }
-});
-
-/**
- * PUT /branding — set or update the firm branding bundle. Inputs are
- * validated server-side: hex colours must match `#RRGGBB`, logo URLs
- * must be HTTPS, support email must be a valid address. Anything that
- * fails validation surfaces as a 400 with the exact reason.
- */
-esignRoutes.put('/branding', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const firmId = resolveFirmId(ctx.user);
-    const body = await c.req.json<{
-      display_name?: string | null;
-      logo_url?: string | null;
-      accent_hex?: string | null;
-      support_email?: string | null;
-    }>();
-    const saved = await setFirmBranding(firmId, body);
-    return c.json({ branding: saved });
-  } catch (error: unknown) {
-    if (error instanceof AuthError) {
-      return c.json({ error: error.message }, error.statusCode);
-    }
-    const message = error instanceof Error ? error.message : 'Branding write failed';
-    // Validation errors surface as 400; everything else is treated as 500.
-    const status = /must be|required/i.test(message) ? 400 : 500;
-    return c.json({ error: message }, status);
-  }
-});
-
-/** DELETE /branding — clear the firm branding so signer pages revert to defaults. */
-esignRoutes.delete('/branding', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const firmId = resolveFirmId(ctx.user);
-    await deleteFirmBranding(firmId);
-    return c.json({ ok: true });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Branding delete failed' },
-      status,
-    );
-  }
-});
-
-// ==================== METRICS DASHBOARD (P7.1) ====================
-
-/**
- * GET /metrics — aggregate metrics for the caller's firm.
- *
- * Returns envelope status counts, signing funnel, time-to-sign, the
- * top stuck envelopes, and a 30-day throughput series. Firm-scoped via
- * `resolveFirmId`. The aggregation is intentionally computed on the
- * fly — small-to-medium firms (thousands of envelopes) complete in
- * well under 300ms and avoid a stale cache surface.
- */
-esignRoutes.get('/metrics', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const firmId = resolveFirmId(ctx.user);
-    const metrics = await getEsignMetrics(firmId);
-    return c.json(metrics);
-  } catch (error: unknown) {
-    log.error('Metrics aggregation error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to compute metrics' },
-      status,
-    );
-  }
-});
-
-// ==================== RECOVERY BIN ROUTES (P6.8) ====================
-
-/** GET /recovery-bin — list soft-deleted envelopes (firm-scoped). */
-esignRoutes.get('/recovery-bin', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const firmId = resolveFirmId(ctx.user);
-    const bin = await listRecoveryBin(firmId);
-    return c.json({
-      envelopes: bin,
-      retention_days: RECOVERY_RETENTION_DAYS,
-    });
-  } catch (error: unknown) {
-    log.error('Recovery bin list error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to list recovery bin' },
-      status,
-    );
-  }
-});
-
-/** POST /recovery-bin/:envelopeId/restore — clear the soft-delete stamp. */
-esignRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
-    const envelope = await getEnvelopeDetails(envelopeId);
-    if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
-
-    const callerFirm = resolveFirmId(ctx.user);
-    const envelopeFirm = (envelope.firm_id as string | undefined) || 'standalone';
-    if (envelopeFirm !== 'standalone' && envelopeFirm !== callerFirm) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-
-    const restored = await restoreEnvelope(envelopeId, ctx.user.id);
-    if (!restored) return c.json({ error: 'Envelope is not in the recovery bin' }, 400);
-
-    const { ip, userAgent } = getRequestMetadata(c);
-    await logAuditEvent({
-      envelopeId,
-      actorType: 'admin',
-      actorId: ctx.user.id,
-      action: 'restored',
-      email: ctx.user.email || 'admin@system',
-      ip,
-      userAgent,
-      metadata: { restoredAt: new Date().toISOString() },
-    });
-
-    AdminAuditService.record({
-      actorId: ctx.user.id,
-      actorRole: 'admin',
-      category: 'security',
-      action: 'esign_envelope_restored',
-      summary: `Envelope restored: ${restored.title}`,
-      severity: 'info',
-      entityType: 'envelope',
-      entityId: envelopeId,
-    }).catch(() => {});
-
-    return c.json({ success: true, envelope: restored });
-  } catch (error: unknown) {
-    log.error('Restore envelope error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to restore envelope' },
-      status,
-    );
-  }
-});
-
-/** DELETE /recovery-bin/:envelopeId — permanently purge a single envelope. */
-esignRoutes.delete('/recovery-bin/:envelopeId', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId');
-    const envelope = await getEnvelopeDetails(envelopeId);
-    if (!envelope) return c.json({ success: true, purged: true, already: true });
-
-    if (!envelope.deleted_at) {
-      return c.json({ error: 'Envelope is not in the recovery bin' }, 400);
-    }
-
-    const callerFirm = resolveFirmId(ctx.user);
-    const envelopeFirm = (envelope.firm_id as string | undefined) || 'standalone';
-    if (envelopeFirm !== 'standalone' && envelopeFirm !== callerFirm) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-
-    await hardDeleteEnvelope(envelopeId);
-
-    AdminAuditService.record({
-      actorId: ctx.user.id,
-      actorRole: 'admin',
-      category: 'security',
-      action: 'esign_envelope_purged',
-      summary: `Envelope permanently deleted: ${envelope.title}`,
-      severity: 'critical',
-      entityType: 'envelope',
-      entityId: envelopeId,
-    }).catch(() => {});
-
-    return c.json({ success: true, purged: true });
-  } catch (error: unknown) {
-    log.error('Purge envelope error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to purge envelope' },
-      status,
-    );
-  }
-});
-
-/** POST /maintenance/recovery-sweep — run the retention sweeper on demand. */
-esignRoutes.post('/maintenance/recovery-sweep', async (c) => {
-  try {
-    await getAuthContext(c);
-    const result = await purgeExpiredDeletedEnvelopes();
-    return c.json({ success: true, ...result });
-  } catch (error: unknown) {
-    log.error('Recovery sweep error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to run recovery sweep' },
-      status,
-    );
-  }
 });
 
 // ==================== REMINDER CONFIG ROUTES ====================
