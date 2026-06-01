@@ -26,8 +26,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId } from '../../../../../../utils/supabase/info';
-import { getAuthToken } from './compliance-auth';
+import { api } from '../../../../../../utils/api';
 import { Input } from '../../../../../ui/input';
 
 interface IdentityVerificationPanelProps {
@@ -56,8 +55,6 @@ interface CheckHistoryEntry {
   summary: string;
   matterId: string | null;
 }
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/honeycomb`;
 
 export function IdentityVerificationPanel({
   clientId,
@@ -92,13 +89,10 @@ export function IdentityVerificationPanel({
   const loadHistory = async () => {
     setIsLoadingHistory(true);
     try {
-      const res = await fetch(`${API_BASE}/checks/history/${clientId}/idv_no_photo`, {
-        headers: { Authorization: `Bearer ${await getAuthToken()}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setHistory(data.history || []);
-      }
+      const data = await api.get<{ history?: CheckHistoryEntry[] }>(
+        `/integrations/honeycomb/checks/history/${clientId}/idv_no_photo`,
+      );
+      setHistory(data.history || []);
     } catch (err) {
       console.error('[IDV Panel] Failed to load history:', err);
     } finally {
@@ -112,30 +106,18 @@ export function IdentityVerificationPanel({
     const toastId = toast.loading('Running Identity Verification...');
 
     try {
-      const res = await fetch(`${API_BASE}/idv/no-photo`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${await getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientId,
-          firstName,
-          lastName,
-          idNumber,
-          passport,
-          secondary: includeSecondary,
-        }),
+      const data = await api.post<{
+        data?: Record<string, unknown>;
+        matterId?: string;
+        checkType?: string;
+      }>(`/integrations/honeycomb/idv/no-photo`, {
+        clientId,
+        firstName,
+        lastName,
+        idNumber,
+        passport,
+        secondary: includeSecondary,
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errMsg = typeof data?.error === 'string' ? data.error : JSON.stringify(data?.error);
-        setResult({ success: false, error: errMsg });
-        toast.error(errMsg, { id: toastId });
-        return;
-      }
 
       setResult({
         success: true,
@@ -192,30 +174,18 @@ export function IdentityVerificationPanel({
     const toastId = toast.loading('Running IDV with Photo verification...');
 
     try {
-      const res = await fetch(`${API_BASE}/idv/with-photo`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${await getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientId,
-          firstName,
-          lastName,
-          idNumber,
-          passport,
-          photo: photoBase64,
-        }),
+      const data = await api.post<{
+        data?: Record<string, unknown>;
+        matterId?: string;
+        checkType?: string;
+      }>(`/integrations/honeycomb/idv/with-photo`, {
+        clientId,
+        firstName,
+        lastName,
+        idNumber,
+        passport,
+        photo: photoBase64,
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errMsg = typeof data?.error === 'string' ? data.error : JSON.stringify(data?.error);
-        setPhotoResult({ success: false, error: errMsg });
-        toast.error(errMsg, { id: toastId });
-        return;
-      }
 
       setPhotoResult({
         success: true,

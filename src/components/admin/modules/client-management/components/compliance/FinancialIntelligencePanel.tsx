@@ -31,8 +31,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId } from '../../../../../../utils/supabase/info';
-import { getAuthToken } from './compliance-auth';
+import { api } from '../../../../../../utils/api';
 import { clientApi } from '../../api';
 import { HoneycombActionCard } from './HoneycombActionCard';
 
@@ -59,8 +58,6 @@ interface CheckResult {
   error?: string;
   matterId?: string;
 }
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/honeycomb`;
 
 export function FinancialIntelligencePanel({
   clientId,
@@ -136,13 +133,9 @@ export function FinancialIntelligencePanel({
     const toastId = toast.loading('Verifying bank account...');
 
     try {
-      const res = await fetch(`${API_BASE}/financial/bank-verify`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${await getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const data = await api.post<{ data?: Record<string, unknown>; matterId?: string }>(
+        `/integrations/honeycomb/financial/bank-verify`,
+        {
           clientId,
           firstName,
           lastName,
@@ -152,17 +145,8 @@ export function FinancialIntelligencePanel({
           accountNumber: bank.accountNumber,
           branchCode: bank.branchCode,
           accountType: bank.accountType,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errMsg = typeof data?.error === 'string' ? data.error : JSON.stringify(data?.error);
-        setBankResult({ success: false, error: errMsg });
-        toast.error(errMsg, { id: toastId });
-        return;
-      }
+        },
+      );
 
       setBankResult({ success: true, data: data.data, matterId: data.matterId });
       toast.success('Bank account verification completed', { id: toastId });
@@ -190,30 +174,17 @@ export function FinancialIntelligencePanel({
     const toastId = toast.loading('Running consumer credit check...');
 
     try {
-      const res = await fetch(`${API_BASE}/financial/credit-check`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${await getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const data = await api.post<{ data?: Record<string, unknown>; matterId?: string }>(
+        `/integrations/honeycomb/financial/credit-check`,
+        {
           clientId,
           firstName,
           lastName,
           idNumber,
           passport,
           consentGiven: true,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errMsg = typeof data?.error === 'string' ? data.error : JSON.stringify(data?.error);
-        setCreditResult({ success: false, error: errMsg });
-        toast.error(errMsg, { id: toastId });
-        return;
-      }
+        },
+      );
 
       setCreditResult({ success: true, data: data.data, matterId: data.matterId });
       toast.success('Consumer credit check completed', { id: toastId });

@@ -38,8 +38,7 @@ import {
   Scale,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId } from '../../../../../../utils/supabase/info';
-import { getAuthToken } from './compliance-auth';
+import { api } from '../../../../../../utils/api';
 import { HoneycombActionCard } from './HoneycombActionCard';
 
 interface SanctionsScreeningPanelProps {
@@ -78,8 +77,6 @@ interface SearchHistoryEntry {
   status: string;
   summary: string;
 }
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/honeycomb`;
 
 const SANCTIONS_SOURCES = [
   { value: '', label: 'All Lists' },
@@ -127,13 +124,10 @@ export function SanctionsScreeningPanel({
   const loadHistory = async () => {
     setIsLoadingHistory(true);
     try {
-      const res = await fetch(`${API_BASE}/checks/history/${clientId}/sanctions_search`, {
-        headers: { Authorization: `Bearer ${await getAuthToken()}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setHistory(data.history || []);
-      }
+      const data = await api.get<{ history?: SearchHistoryEntry[] }>(
+        `/integrations/honeycomb/checks/history/${clientId}/sanctions_search`,
+      );
+      setHistory(data.history || []);
     } catch (err) {
       console.error('[Sanctions Panel] History load error:', err);
     } finally {
@@ -152,32 +146,20 @@ export function SanctionsScreeningPanel({
     const toastId = toast.loading('Searching sanctions lists...');
 
     try {
-      const res = await fetch(`${API_BASE}/sanctions/search`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${await getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientId,
-          name: searchName,
-          surname: searchSurname,
-          identityNumber: searchIdNumber || undefined,
-          uniqueId: clientId,
-          source: selectedSource || undefined,
-        }),
+      const data = await api.post<{
+        data?: SanctionsResult['data'];
+        results?: SanctionsMatch[];
+        totalMatches?: number;
+      }>(`/integrations/honeycomb/sanctions/search`, {
+        clientId,
+        name: searchName,
+        surname: searchSurname,
+        identityNumber: searchIdNumber || undefined,
+        uniqueId: clientId,
+        source: selectedSource || undefined,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errMsg = typeof data?.error === 'string' ? data.error : JSON.stringify(data?.error);
-        setResult({ success: false, error: errMsg });
-        toast.error(errMsg, { id: toastId });
-        return;
-      }
-
-      const sanctionsData = data.data || data;
+      const sanctionsData = (data.data || data) as SanctionsResult['data'];
       const totalMatches = sanctionsData?.totalMatches ?? sanctionsData?.results?.length ?? 0;
 
       setResult({ success: true, data: sanctionsData });
