@@ -2,7 +2,10 @@ name: Quality Check
 
 on:
   push:
-    branches: [main]
+    # main = the production gate. chore/hardening is the long-running hardening
+    # branch — run the same gates on every push so formatting / lint / type
+    # regressions are caught on the branch, not only at the eventual main PR.
+    branches: [main, chore/hardening]
   pull_request:
     branches: [main]
   workflow_dispatch:
