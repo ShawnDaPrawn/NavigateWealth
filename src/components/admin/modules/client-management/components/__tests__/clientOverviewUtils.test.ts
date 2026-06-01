@@ -27,6 +27,10 @@ import {
   deriveHealthScore,
   deriveKpiValues,
   deriveActionItems,
+  deriveAssetAllocation,
+  deriveInsuranceCoverageItems,
+  deriveCashflowData,
+  deriveActionDistribution,
   type GapAnalysisInputs,
   type PillarsInputs,
   type HealthScoreInputs,
@@ -220,6 +224,63 @@ describe('deriveActionItems', () => {
     const items = deriveActionItems({ ...base, grossMonthly: 0, isClient: true });
     const income = items.find((i) => i.id === 'profile-income-missing');
     expect(income?.title).toBe('We need your income details');
+  });
+});
+
+describe('chart-data derivations', () => {
+  it('deriveAssetAllocation maps balance-sheet assets and carries FNA values', () => {
+    const out = deriveAssetAllocation({
+      profile: {
+        assets: [
+          { type: 'cash', value: 5000, description: 'Savings' },
+          { type: 'property', value: 'oops' as unknown as number },
+        ],
+      },
+      retirementCurrentValue: 100000,
+      investmentCurrentValue: 50000,
+    });
+    expect(out.assets).toEqual([
+      { type: 'cash', value: 5000, description: 'Savings' },
+      { type: 'property', value: 0, description: undefined },
+    ]);
+    expect(out.retirementValue).toBe(100000);
+    expect(out.investmentValue).toBe(50000);
+  });
+
+  it('deriveInsuranceCoverageItems returns [] when the Risk FNA is not published', () => {
+    expect(
+      deriveInsuranceCoverageItems({ riskFnaPublished: false, riskFnaResult: { results: {} } }),
+    ).toEqual([]);
+  });
+
+  it('deriveCashflowData maps premiums and falls back to 72% net income', () => {
+    const base = {
+      grossMonthly: 50000,
+      totalRiskPremium: 1000,
+      totalMedicalPremium: 2000,
+      totalRetirementPremium: 3000,
+      totalInvestmentPremium: 1500,
+      totalEmployeePremium: 500,
+      totalMonthlyDebt: 8000,
+    };
+    expect(deriveCashflowData({ ...base, netMonthly: 40000 }).netIncome).toBe(40000);
+    expect(deriveCashflowData({ ...base, netMonthly: 0 }).netIncome).toBeCloseTo(36000);
+    const cf = deriveCashflowData({ ...base, netMonthly: 40000 });
+    expect(cf.riskPremiums).toBe(1000);
+    expect(cf.debtPayments).toBe(8000);
+  });
+
+  it('deriveActionDistribution tallies items by priority', () => {
+    const mk = (priority: string) => ({
+      id: priority,
+      priority,
+      category: 'fna',
+      title: 't',
+      icon: () => null,
+    });
+    const items = [mk('urgent'), mk('urgent'), mk('attention'), mk('recommended')];
+    const dist = deriveActionDistribution(items as Parameters<typeof deriveActionDistribution>[0]);
+    expect(dist).toEqual({ urgent: 2, attention: 1, recommended: 1, monitoring: 0 });
   });
 });
 

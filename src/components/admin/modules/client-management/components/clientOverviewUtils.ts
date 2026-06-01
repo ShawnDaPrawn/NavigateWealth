@@ -23,6 +23,12 @@ import {
   deriveNetWorthStatus,
 } from '../utils';
 import type { KPIValue } from './overview/KPISummaryTable';
+import type {
+  AssetAllocationData,
+  InsuranceCoverageItem,
+  CashflowWaterfallData,
+  ActionDistribution,
+} from './overview/OverviewCharts';
 
 // ── Shared types (relocated from ClientOverviewTab) ──────────────────────
 
@@ -1445,4 +1451,97 @@ export function deriveActionItems(inputs: ActionItemsInputs): ActionItem[] {
   items.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
 
   return items;
+}
+
+// ── Chart-data derivations ───────────────────────────────────────────────
+
+export interface AssetAllocationInputs {
+  profile:
+    | { assets?: Array<{ type?: string; value?: number; description?: string }> }
+    | null
+    | undefined;
+  retirementCurrentValue: number;
+  investmentCurrentValue: number;
+}
+
+/** Build the asset-allocation chart payload from the profile balance sheet. */
+export function deriveAssetAllocation(inputs: AssetAllocationInputs): AssetAllocationData {
+  const { profile: p, retirementCurrentValue, investmentCurrentValue } = inputs;
+  return {
+    assets: (p?.assets || []).map((a) => ({
+      type: a.type,
+      value: Number(a.value) || 0,
+      description: a.description,
+    })),
+    retirementValue: retirementCurrentValue,
+    investmentValue: investmentCurrentValue,
+  };
+}
+
+export interface InsuranceCoverageInputs {
+  riskFnaPublished: boolean;
+  riskFnaResult: Record<string, unknown> | null;
+}
+
+/** Map published Risk-FNA needs into existing-vs-recommended coverage bars. */
+export function deriveInsuranceCoverageItems(
+  inputs: InsuranceCoverageInputs,
+): InsuranceCoverageItem[] {
+  const { riskFnaPublished, riskFnaResult } = inputs;
+  if (!riskFnaPublished) return [];
+  const riskNeeds = extractRiskFinalNeeds(riskFnaResult);
+  return riskNeeds
+    .filter((n) => n.grossNeed > 0 || n.existingCoverTotal > 0)
+    .map((n) => ({
+      riskType: n.riskType,
+      label: n.label,
+      existing: n.existingCoverTotal,
+      recommended: n.grossNeed,
+    }));
+}
+
+export interface CashflowInputs {
+  grossMonthly: number;
+  netMonthly: number;
+  totalRiskPremium: number;
+  totalMedicalPremium: number;
+  totalRetirementPremium: number;
+  totalInvestmentPremium: number;
+  totalEmployeePremium: number;
+  totalMonthlyDebt: number;
+}
+
+/** Build the monthly cash-flow waterfall payload (income -> premiums / debt). */
+export function deriveCashflowData(inputs: CashflowInputs): CashflowWaterfallData {
+  const {
+    grossMonthly,
+    netMonthly,
+    totalRiskPremium,
+    totalMedicalPremium,
+    totalRetirementPremium,
+    totalInvestmentPremium,
+    totalEmployeePremium,
+    totalMonthlyDebt,
+  } = inputs;
+  return {
+    grossIncome: grossMonthly,
+    netIncome: netMonthly > 0 ? netMonthly : grossMonthly * 0.72,
+    riskPremiums: totalRiskPremium,
+    medicalPremiums: totalMedicalPremium,
+    retirementPremiums: totalRetirementPremium,
+    investmentPremiums: totalInvestmentPremium,
+    employeePremiums: totalEmployeePremium,
+    debtPayments: totalMonthlyDebt,
+  };
+}
+
+/** Count action items by priority bucket for the priority-distribution bar. */
+export function deriveActionDistribution(actionItems: ActionItem[]): ActionDistribution {
+  const dist: ActionDistribution = { urgent: 0, attention: 0, recommended: 0, monitoring: 0 };
+  actionItems.forEach((item) => {
+    if (item.priority in dist) {
+      dist[item.priority as keyof ActionDistribution]++;
+    }
+  });
+  return dist;
 }

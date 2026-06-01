@@ -119,13 +119,16 @@ import {
   sumMultiField,
   worstGapStatus,
   normalizePolicyData,
-  extractRiskFinalNeeds,
   extractRetirementResults,
   deriveGapAnalysis,
   derivePillars,
   deriveHealthScore,
   deriveKpiValues,
   deriveActionItems,
+  deriveAssetAllocation,
+  deriveInsuranceCoverageItems,
+  deriveCashflowData,
+  deriveActionDistribution,
   type Policy,
   type ActionItem,
   type ActionPriority,
@@ -1012,44 +1015,27 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
   // ── Phase 2: Chart Data ───────────────────────────────────────────────
 
   const assetAllocationData = useMemo<AssetAllocationData>(
-    () => ({
-      assets: (p?.assets || []).map(
-        (a: { type?: string; value?: number; description?: string }) => ({
-          type: a.type,
-          value: Number(a.value) || 0,
-          description: a.description,
-        }),
-      ),
-      retirementValue: retirementCurrentValue,
-      investmentValue: investmentCurrentValue,
-    }),
+    () => deriveAssetAllocation({ profile: p, retirementCurrentValue, investmentCurrentValue }),
     [p?.assets, retirementCurrentValue, investmentCurrentValue],
   );
 
-  const insuranceCoverageItems = useMemo<InsuranceCoverageItem[]>(() => {
-    if (!riskFnaPublished) return [];
-    const riskNeeds = extractRiskFinalNeeds(fnaResultsMap.risk);
-    return riskNeeds
-      .filter((n) => n.grossNeed > 0 || n.existingCoverTotal > 0)
-      .map((n) => ({
-        riskType: n.riskType,
-        label: n.label,
-        existing: n.existingCoverTotal,
-        recommended: n.grossNeed,
-      }));
-  }, [riskFnaPublished, fnaResultsMap]);
+  const insuranceCoverageItems = useMemo<InsuranceCoverageItem[]>(
+    () => deriveInsuranceCoverageItems({ riskFnaPublished, riskFnaResult: fnaResultsMap.risk }),
+    [riskFnaPublished, fnaResultsMap],
+  );
 
   const cashflowData = useMemo<CashflowWaterfallData>(
-    () => ({
-      grossIncome: grossMonthly,
-      netIncome: netMonthly > 0 ? netMonthly : grossMonthly * 0.72,
-      riskPremiums: totalRiskPremium,
-      medicalPremiums: totalMedicalPremium,
-      retirementPremiums: totalRetirementPremium,
-      investmentPremiums: totalInvestmentPremium,
-      employeePremiums: totalEmployeePremium,
-      debtPayments: totalMonthlyDebt,
-    }),
+    () =>
+      deriveCashflowData({
+        grossMonthly,
+        netMonthly,
+        totalRiskPremium,
+        totalMedicalPremium,
+        totalRetirementPremium,
+        totalInvestmentPremium,
+        totalEmployeePremium,
+        totalMonthlyDebt,
+      }),
     [
       grossMonthly,
       netMonthly,
@@ -1062,15 +1048,10 @@ export function ClientOverviewTab({ client, mode = 'adviser' }: ClientOverviewTa
     ],
   );
 
-  const actionDistribution = useMemo<ActionDistribution>(() => {
-    const dist: ActionDistribution = { urgent: 0, attention: 0, recommended: 0, monitoring: 0 };
-    actionItems.forEach((item) => {
-      if (item.priority in dist) {
-        dist[item.priority as keyof ActionDistribution]++;
-      }
-    });
-    return dist;
-  }, [actionItems]);
+  const actionDistribution = useMemo<ActionDistribution>(
+    () => deriveActionDistribution(actionItems),
+    [actionItems],
+  );
 
   // ── Phase 3: Documents Checklist ──────────────────────────────────────
 
