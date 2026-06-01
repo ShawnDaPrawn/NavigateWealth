@@ -29,7 +29,11 @@ jobs:
         # build / Vitest / SPA tsc steps do NOT need Deno.
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          # Pinned (not the floating v2.x) so `deno check`'s error count is
+          # deterministic — the ratchet gate compares it against a committed
+          # baseline (.deno-check-baseline), which is only meaningful against a
+          # fixed compiler version. Bump deliberately (and re-measure the floor).
+          deno-version: v2.8.1
 
       - name: Run production build
         shell: bash
@@ -94,7 +98,7 @@ jobs:
           echo "${PIPESTATUS[0]}" > quality-typecheck-middleware.exit
           exit 0
 
-      - name: Run Deno typecheck (NON-BLOCKING baseline)
+      - name: Run Deno typecheck (ratcheted)
         # Type-checks the Supabase Edge Function (Deno) source, which the SPA
         # typecheck (tsc) deliberately excludes because tsc can't resolve Deno's
         # npm:/jsr: specifiers. `deno check` follows the static import graph from
@@ -103,18 +107,31 @@ jobs:
         # reachable backend (esign, integrations, all routes) is type-checked —
         # not just the boot graph.
         #
-        # INTENTIONALLY NON-BLOCKING: this is the first measurement of the edge
-        # code's type-error baseline. It is NOT added to "Enforce quality gates",
-        # so it surfaces the count without failing the job. Burn the count down to
-        # 0 (the SPA went 1308 -> 0 the same way), THEN add `deno_exit` to the gate
-        # to make it blocking. Edit `tsconfig.typecheck.json`'s exclude comment +
-        # this step's note together when flipping.
+        # RATCHETED (not yet zero): the edge code carries a large pre-existing
+        # type-error backlog (it was never tsc-checked). Rather than block on
+        # zero, the "Enforce quality gates" step fails the job only if the error
+        # count EXCEEDS the committed floor in .deno-check-baseline — so no NEW
+        # edge type error (notably a used-but-unimported reference, the class
+        # behind the OTP and `log` ReferenceErrors) can be introduced, while the
+        # backlog is burned down over time. LOWER .deno-check-baseline as errors
+        # are fixed; when it reaches 0, gate on `deno_exit` directly (and drop
+        # the edge exclude note in tsconfig.typecheck.json) for a hard zero.
         shell: bash
         run: |
           set +e
-          npm run typecheck:deno 2>&1 | tee quality-typecheck-deno.log
+          # NO_COLOR so Deno's "Found N errors" summary line parses cleanly.
+          NO_COLOR=1 npm run typecheck:deno 2>&1 | tee quality-typecheck-deno.log
           echo "${PIPESTATUS[0]}" > quality-typecheck-deno.exit
-          echo "Approx Deno type-error count: $(grep -cE 'TS[0-9]{3,}' quality-typecheck-deno.log || echo 0)"
+          # Authoritative count = Deno's own summary ("Found N errors").
+          # A clean exit (0) means no errors -> count 0.
+          if [ "$(cat quality-typecheck-deno.exit)" = "0" ]; then
+            deno_count=0
+          else
+            deno_count="$(grep -oE 'Found [0-9]+ error' quality-typecheck-deno.log | grep -oE '[0-9]+' | tail -n1)"
+            deno_count="${deno_count:-999999}"
+          fi
+          echo "$deno_count" > quality-typecheck-deno.count
+          echo "Deno type-error count: $deno_count (ratchet floor: $(cat .deno-check-baseline 2>/dev/null || echo '?'))"
           exit 0
 
       - name: Run FNA intake test suite
@@ -182,18 +199,26 @@ jobs:
           lint_exit="$(cat quality-lint.exit 2>/dev/null || echo 1)"
           mw_exit="$(cat quality-typecheck-middleware.exit 2>/dev/null || echo 1)"
           deno_exit="$(cat quality-typecheck-deno.exit 2>/dev/null || echo 1)"
+          deno_count="$(cat quality-typecheck-deno.count 2>/dev/null | tr -dc '0-9')"; deno_count="${deno_count:-999999}"
+          deno_baseline="$(cat .deno-check-baseline 2>/dev/null | tr -dc '0-9')"; deno_baseline="${deno_baseline:-0}"
           echo "build exit code:           $build_exit"
           echo "test exit code:            $test_exit"
           echo "typecheck exit code:       $typecheck_exit"
           echo "lint exit code:            $lint_exit"
           echo "middleware typecheck code: $mw_exit"
-          echo "deno typecheck code:       $deno_exit (NON-BLOCKING baseline — not gated yet)"
+          echo "deno type-error count:     $deno_count (ratchet floor $deno_baseline; raw exit $deno_exit)"
           failed=0
           if [ "$build_exit" != "0" ]; then echo "::error::Production build failed (see quality-build.log)"; failed=1; fi
           if [ "$test_exit" != "0" ]; then echo "::error::Vitest suite failed (see quality-test.log)"; failed=1; fi
           if [ "$typecheck_exit" != "0" ]; then echo "::error::SPA typecheck failed — a new type error was introduced (baseline is 0). See quality-typecheck.log"; failed=1; fi
           if [ "$lint_exit" != "0" ]; then echo "::error::ESLint failed — a new lint error was introduced (baseline is 0 errors). See quality-lint.log"; failed=1; fi
           if [ "$mw_exit" != "0" ]; then echo "::error::Middleware typecheck failed — middleware.ts must not import 'next/server' (see quality-typecheck-middleware.log)"; failed=1; fi
+          if [ "$deno_count" -gt "$deno_baseline" ]; then
+            echo "::error::Deno edge-code type errors rose to $deno_count (ratchet floor $deno_baseline) — a NEW edge-code type error was introduced (e.g. a used-but-unimported reference, the class behind the OTP/log ReferenceErrors). Fix it; or, if you deliberately changed the floor, update .deno-check-baseline. See quality-typecheck-deno.log"
+            failed=1
+          elif [ "$deno_count" -lt "$deno_baseline" ]; then
+            echo "::notice::Deno edge-code type errors dropped to $deno_count (below floor $deno_baseline) — tighten the ratchet by setting .deno-check-baseline to $deno_count."
+          fi
           if [ "$failed" != "0" ]; then
             echo "Quality gates FAILED."
             exit 1
