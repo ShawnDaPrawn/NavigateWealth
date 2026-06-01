@@ -335,4 +335,40 @@ describe('esign-routes.tsx route contracts', () => {
     const body = (await res.json()) as { success: boolean };
     expect(body.success).toBe(true);
   });
+
+  // ---- Signer token-flow group (public, token-authenticated; OTP + submit) ----
+  // These routes authenticate by signer access token in the body/path, not a
+  // session Bearer header — so the stable contracts are 404 for a bad token
+  // and 400 for a missing/invalid body, which lock the validation + the mount.
+  it('GET /sign-by-token/:token returns 404 for an invalid signing token', async () => {
+    const res = await esignRoutes.request('/sign-by-token/not-a-real-token');
+    expect(res.status).toBe(404);
+  });
+
+  it('GET /signer/download/:token returns 404 for an invalid token', async () => {
+    const res = await esignRoutes.request('/signer/download/not-a-real-token');
+    expect(res.status).toBe(404);
+  });
+
+  const SIGNER_BODY_VALIDATED: ReadonlyArray<readonly [string, string]> = [
+    ['POST', '/signer/validate'],
+    ['POST', '/signer/verify-otp'],
+    ['POST', '/signer/resend-otp'],
+    ['POST', '/signer/submit'],
+    ['POST', '/signer/reject'],
+    ['POST', '/signer/saved-signature'],
+    ['POST', '/signer/attachment'],
+    ['POST', '/signer/pause'],
+  ];
+  for (const [method, path] of SIGNER_BODY_VALIDATED) {
+    it(`${method} ${path} returns 400 for an empty/invalid body`, async () => {
+      const res = await esignRoutes.request(path, { method, body: '{}' });
+      expect(res.status).toBe(400);
+    });
+  }
+
+  it('GET /envelopes/:id/attachments returns 401 without an Authorization header', async () => {
+    const res = await esignRoutes.request('/envelopes/env_x/attachments');
+    expect(res.status).toBe(401);
+  });
 });
