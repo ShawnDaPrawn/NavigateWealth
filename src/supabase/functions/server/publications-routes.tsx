@@ -44,6 +44,31 @@ import {
   summarizeArticleEmailEngagement,
   summarizeTrackedRecipientDeliveries,
 } from './publications-email-engagement-service.ts';
+import {
+  generateId,
+  generateSlug,
+  calculateReadingTime,
+  articleTrackingDetails,
+  deletedArticleTrackingDetails,
+  isAuthorizedPublicationsCronRequest,
+  PUBLICATIONS_CRON_SHARED_HEADER,
+  type ArticleCategory,
+  type ArticleType,
+  type Article,
+  type DeletedArticleRecord,
+  type ArticleTag,
+  type ArticleTagLink,
+} from './publications-route-helpers.ts';
+
+// Re-export the public domain types so the publications-routes.ts proxy (and any
+// external importer) keeps the same surface after the Phase 5c extraction.
+export type {
+  ArticleCategory,
+  ArticleType,
+  Article,
+  ArticleTag,
+  ArticleTagLink,
+} from './publications-route-helpers.ts';
 
 const publications = new Hono();
 const log = createModuleLogger('publications');
@@ -53,167 +78,8 @@ publications.get('/', (c) => c.json({ service: 'publications', status: 'active' 
 publications.get('', (c) => c.json({ service: 'publications', status: 'active' }));
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
-export interface ArticleCategory {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  icon_key?: string;
-  sort_order: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ArticleType {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  sort_order: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Article {
-  id: string;
-  title: string;
-  subtitle?: string;
-  slug: string;
-  excerpt: string;
-  body: string;
-  category_id: string;
-  type_id: string;
-  author_id?: string;
-  author_name?: string;
-  hero_image_url?: string;
-  thumbnail_image_url?: string;
-  reading_time_minutes: number;
-  status: 'draft' | 'in_review' | 'scheduled' | 'published' | 'archived';
-  is_featured: boolean;
-  published_at?: string;
-  scheduled_for?: string;
-  seo_title?: string;
-  seo_description?: string;
-  seo_canonical_url?: string;
-  created_at: string;
-  updated_at: string;
-  last_edited_by: string;
-  view_count?: number;
-  notify_on_publish?: boolean; // New field to control email notifications on publish
-  /** Optional press category — when set, the article appears on the public Press page */
-  press_category?: 'company_news' | 'product_launch' | 'awards' | 'team_news' | 'industry_insights' | null;
-}
-
-const PUBLICATIONS_CRON_AUTH_KEY = 'system:publications:cron_auth_token';
-const PUBLICATIONS_CRON_SHARED_HEADER = 'x-publications-cron-auth';
-
-interface DeletedArticleRecord {
-  id: string;
-  title: string;
-  slug: string;
-  published_at?: string | null;
-  deleted_at: string;
-  deleted_by: string;
-  previous_status: Article['status'];
-}
-
-export interface ArticleTag {
-  id: string;
-  name: string;
-  slug: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ArticleTagLink {
-  article_id: string;
-  tag_id: string;
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-function generateId(): string {
-  return crypto.randomUUID();
-}
-
-function generateSlug(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-function calculateReadingTime(text: string): number {
-  const wordsPerMinute = 200;
-  const wordCount = text.trim().split(/\s+/).length;
-  return Math.ceil(wordCount / wordsPerMinute);
-}
-
-function articleTrackingDetails(article: Article | null) {
-  if (!article) return null;
-
-  return {
-    id: article.id,
-    slug: article.slug,
-    title: article.title,
-    published_at: article.published_at,
-  };
-}
-
-function deletedArticleTrackingDetails(article: DeletedArticleRecord | null) {
-  if (!article) return null;
-
-  return {
-    id: article.id,
-    slug: article.slug,
-    title: article.title,
-    published_at: article.published_at || undefined,
-  };
-}
-
-async function isAuthorizedPublicationsCronRequest(
-  authToken: string,
-  sharedToken?: string | null,
-): Promise<boolean> {
-  const normalizedAuthToken = authToken.trim();
-  const normalizedSharedToken = (sharedToken || '').trim();
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-  const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
-  if (
-    (serviceRoleKey && normalizedAuthToken === serviceRoleKey)
-    || (superAdminPw && normalizedAuthToken === superAdminPw)
-  ) {
-    return true;
-  }
-
-  try {
-    const sharedCronToken = await kv.get(PUBLICATIONS_CRON_AUTH_KEY);
-    return typeof sharedCronToken === 'string'
-      && sharedCronToken.trim().length > 0
-      && normalizedSharedToken.length > 0
-      && normalizedSharedToken === sharedCronToken;
-  } catch (error) {
-    log.warn('Unable to load publications cron auth token from KV', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return false;
-  }
-}
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 /** When a blast finishes with no retry queue, the API still returns a job-shaped payload for the admin client. */
 function completedBlastNotificationJobPlaceholder(
@@ -265,7 +131,8 @@ function buildCampaignFirstEmailEngagementSummary(
   records: Awaited<ReturnType<typeof listArticleEmailTrackingRecords>>,
   campaign: Awaited<ReturnType<typeof getArticleNotificationCampaign>> | null,
 ) {
-  const articleDetails = articleTrackingDetails(article) || deletedArticleTrackingDetails(deletedArticle);
+  const articleDetails =
+    articleTrackingDetails(article) || deletedArticleTrackingDetails(deletedArticle);
   const baseSummary = summarizeArticleEmailEngagement(articleDetails, records);
   const publishTotals = summarizeTrackedRecipientDeliveries(records, 'publish');
   const reshareTotals = summarizeTrackedRecipientDeliveries(records, 'reshare');
@@ -277,23 +144,24 @@ function buildCampaignFirstEmailEngagementSummary(
       deletedAt: deletedArticle?.deleted_at ?? null,
       campaignId: null,
       campaignStatus: null,
-      intendedRecipientCount: publishTotals.sent + publishTotals.undelivered + publishTotals.failedTerminal,
+      intendedRecipientCount:
+        publishTotals.sent + publishTotals.undelivered + publishTotals.failedTerminal,
       sendingCount: 0,
       failedRetryableCount: publishTotals.failedRetryable,
       failedTerminalCount: publishTotals.failedTerminal,
-      lastActivityAt: baseSummary.latestReadAt || baseSummary.latestOpenedAt || baseSummary.latestSentAt || baseSummary.publishedAt,
+      lastActivityAt:
+        baseSummary.latestReadAt ||
+        baseSummary.latestOpenedAt ||
+        baseSummary.latestSentAt ||
+        baseSummary.publishedAt,
       lastError: null,
     };
   }
 
-  const campaignPublishMisleading = (
-    campaign.status === 'queue_failed'
-    && campaign.sentCount === 0
-    && publishTotals.sent > 0
-  ) || (
-    campaign.intendedRecipientCount === 0
-    && publishTotals.sent + publishTotals.undelivered + publishTotals.failedTerminal > 0
-  );
+  const campaignPublishMisleading =
+    (campaign.status === 'queue_failed' && campaign.sentCount === 0 && publishTotals.sent > 0) ||
+    (campaign.intendedRecipientCount === 0 &&
+      publishTotals.sent + publishTotals.undelivered + publishTotals.failedTerminal > 0);
 
   const publishPending = campaignPublishMisleading
     ? publishTotals.undelivered
@@ -307,25 +175,33 @@ function buildCampaignFirstEmailEngagementSummary(
   const intendedRecipientCount = campaignPublishMisleading
     ? publishTotals.sent + publishTotals.undelivered + publishTotals.failedTerminal
     : Math.max(
-      campaign.intendedRecipientCount,
-      publishTotals.sent + publishTotals.undelivered + publishTotals.failedTerminal,
-    );
+        campaign.intendedRecipientCount,
+        publishTotals.sent + publishTotals.undelivered + publishTotals.failedTerminal,
+      );
 
   return {
     ...baseSummary,
     isDeleted: Boolean(deletedArticle),
     deletedAt: deletedArticle?.deleted_at ?? null,
     campaignId: campaign.id,
-    campaignStatus: campaignPublishMisleading && publishSent > 0 && publishPending === 0
-      ? (publishFailed > 0 ? 'completed_with_failures' : 'completed')
-      : campaign.status,
+    campaignStatus:
+      campaignPublishMisleading && publishSent > 0 && publishPending === 0
+        ? publishFailed > 0
+          ? 'completed_with_failures'
+          : 'completed'
+        : campaign.status,
     intendedRecipientCount,
     sendingCount: campaignPublishMisleading ? publishTotals.sending : campaign.sendingCount,
     failedRetryableCount: campaignPublishMisleading
       ? publishTotals.failedRetryable
       : campaign.failedRetryableCount,
     failedTerminalCount: publishFailed,
-    lastActivityAt: campaign.lastActivityAt || baseSummary.latestReadAt || baseSummary.latestOpenedAt || baseSummary.latestSentAt || baseSummary.publishedAt,
+    lastActivityAt:
+      campaign.lastActivityAt ||
+      baseSummary.latestReadAt ||
+      baseSummary.latestOpenedAt ||
+      baseSummary.latestSentAt ||
+      baseSummary.publishedAt,
     lastError: campaign.lastError,
     pending: publishPending + reshareTotals.pending,
     sent: publishSent + reshareTotals.sent,
@@ -337,9 +213,7 @@ function buildCampaignFirstEmailEngagementSummary(
   };
 }
 
-async function kickArticleNotificationJob(
-  jobId: string | null | undefined,
-) {
+async function kickArticleNotificationJob(jobId: string | null | undefined) {
   if (!jobId) return null;
 
   try {
@@ -349,7 +223,7 @@ async function kickArticleNotificationJob(
       maxBatchesPerJob: 1,
     });
 
-    return result.jobs[0] ?? await getArticleNotificationJob(jobId);
+    return result.jobs[0] ?? (await getArticleNotificationJob(jobId));
   } catch (error) {
     log.warn('Failed to kick article notification job immediately', {
       jobId,
@@ -367,25 +241,25 @@ publications.get('/categories', async (c) => {
   try {
     const categories = await kv.getByPrefix('article_category:');
     const articles = await kv.getByPrefix('article:');
-    
+
     // Filter only published articles for counts
     const publishedArticles = articles.filter((a: Article) => a.status === 'published');
-    
+
     // Add article counts to each category
     const categoriesWithCounts = categories.map((category: ArticleCategory) => {
       const article_count = publishedArticles.filter(
-        (a: Article) => a.category_id === category.id
+        (a: Article) => a.category_id === category.id,
       ).length;
-      
+
       return {
         ...category,
-        article_count
+        article_count,
       };
     });
-    
+
     // Sort by sort_order
     categoriesWithCounts.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-    
+
     return c.json({ success: true, data: categoriesWithCounts });
   } catch (error) {
     log.error('Error fetching categories', error);
@@ -397,11 +271,11 @@ publications.get('/categories/:id', async (c) => {
   try {
     const id = c.req.param('id');
     const category = await kv.get(`article_category:${id}`);
-    
+
     if (!category) {
       return c.json({ success: false, error: 'Category not found' }, 404);
     }
-    
+
     return c.json({ success: true, data: category });
   } catch (error) {
     log.error('Error fetching category', error);
@@ -413,15 +287,15 @@ publications.post('/categories', async (c) => {
   try {
     const body = await c.req.json();
     const { name, description, icon_key, sort_order, is_active = true } = body;
-    
+
     if (!name) {
       return c.json({ success: false, error: 'Name is required' }, 400);
     }
-    
+
     const id = generateId();
     const slug = generateSlug(name);
     const now = new Date().toISOString();
-    
+
     const category: ArticleCategory = {
       id,
       name,
@@ -433,9 +307,9 @@ publications.post('/categories', async (c) => {
       created_at: now,
       updated_at: now,
     };
-    
+
     await kv.set(`article_category:${id}`, category);
-    
+
     return c.json({ success: true, data: category }, 201);
   } catch (error) {
     log.error('Error creating category', error);
@@ -448,28 +322,28 @@ publications.put('/categories/:id', async (c) => {
     const id = c.req.param('id');
     const body = await c.req.json();
     const existing = await kv.get(`article_category:${id}`);
-    
+
     if (!existing) {
       return c.json({ success: false, error: 'Category not found' }, 404);
     }
-    
+
     log.info(`Updating category ${id}`, body);
-    
+
     const updated: ArticleCategory = {
       ...existing,
       ...body,
       id,
       updated_at: new Date().toISOString(),
     };
-    
+
     if (body.name && body.name !== existing.name) {
       updated.slug = generateSlug(body.name);
     }
-    
+
     await kv.set(`article_category:${id}`, updated);
-    
+
     log.success(`Category ${id} updated. New sort_order: ${updated.sort_order}`);
-    
+
     return c.json({ success: true, data: updated });
   } catch (error) {
     log.error('Error updating category', error);
@@ -506,11 +380,11 @@ publications.get('/types/:id', async (c) => {
   try {
     const id = c.req.param('id');
     const type = await kv.get(`article_type:${id}`);
-    
+
     if (!type) {
       return c.json({ success: false, error: 'Type not found' }, 404);
     }
-    
+
     return c.json({ success: true, data: type });
   } catch (error) {
     log.error('Error fetching type', error);
@@ -522,15 +396,15 @@ publications.post('/types', async (c) => {
   try {
     const body = await c.req.json();
     const { name, description, sort_order, is_active = true } = body;
-    
+
     if (!name) {
       return c.json({ success: false, error: 'Name is required' }, 400);
     }
-    
+
     const id = generateId();
     const slug = generateSlug(name);
     const now = new Date().toISOString();
-    
+
     const type: ArticleType = {
       id,
       name,
@@ -541,9 +415,9 @@ publications.post('/types', async (c) => {
       created_at: now,
       updated_at: now,
     };
-    
+
     await kv.set(`article_type:${id}`, type);
-    
+
     return c.json({ success: true, data: type }, 201);
   } catch (error) {
     log.error('Error creating type', error);
@@ -556,24 +430,24 @@ publications.put('/types/:id', async (c) => {
     const id = c.req.param('id');
     const body = await c.req.json();
     const existing = await kv.get(`article_type:${id}`);
-    
+
     if (!existing) {
       return c.json({ success: false, error: 'Type not found' }, 404);
     }
-    
+
     const updated: ArticleType = {
       ...existing,
       ...body,
       id,
       updated_at: new Date().toISOString(),
     };
-    
+
     if (body.name && body.name !== existing.name) {
       updated.slug = generateSlug(body.name);
     }
-    
+
     await kv.set(`article_type:${id}`, updated);
-    
+
     return c.json({ success: true, data: updated });
   } catch (error) {
     log.error('Error updating type', error);
@@ -605,53 +479,54 @@ publications.get('/articles', async (c) => {
     const is_featured = c.req.query('is_featured');
     const page = parseInt(c.req.query('page') || '1');
     const limit = parseInt(c.req.query('limit') || '1000');
-    
+
     let articles = await kv.getByPrefix('article:');
-    
+
     // Apply filters
     if (status) {
       articles = articles.filter((a: Article) => a.status === status);
     }
-    
+
     if (type_id) {
       articles = articles.filter((a: Article) => a.type_id === type_id);
     }
-    
+
     if (category_id) {
       articles = articles.filter((a: Article) => a.category_id === category_id);
     }
-    
+
     if (is_featured === 'true') {
       articles = articles.filter((a: Article) => a.is_featured === true);
     }
-    
+
     if (search) {
       const searchLower = search.toLowerCase();
-      articles = articles.filter((a: Article) => 
-        a.title.toLowerCase().includes(searchLower) ||
-        a.excerpt?.toLowerCase().includes(searchLower) ||
-        a.subtitle?.toLowerCase().includes(searchLower)
+      articles = articles.filter(
+        (a: Article) =>
+          a.title.toLowerCase().includes(searchLower) ||
+          a.excerpt?.toLowerCase().includes(searchLower) ||
+          a.subtitle?.toLowerCase().includes(searchLower),
       );
     }
-    
+
     // Sort by published_at or created_at (newest first)
     articles.sort((a: Article, b: Article) => {
       const dateA = new Date(a.published_at || a.created_at).getTime();
       const dateB = new Date(b.published_at || b.created_at).getTime();
       return dateB - dateA;
     });
-    
+
     // Enrich articles with category and type names
     const categories = await kv.getByPrefix('article_category:');
     const types = await kv.getByPrefix('article_type:');
-    
+
     const categoryMap = new Map(categories.map((cat: ArticleCategory) => [cat.id, cat]));
     const typeMap = new Map(types.map((type: ArticleType) => [type.id, type]));
-    
+
     const enrichedArticles = articles.map((article: Article) => {
       const category = article.category_id ? categoryMap.get(article.category_id) : null;
       const type = article.type_id ? typeMap.get(article.type_id) : null;
-      
+
       return {
         ...article,
         category_name: category?.name || 'Uncategorized',
@@ -660,22 +535,22 @@ publications.get('/articles', async (c) => {
         type_slug: type?.slug || 'article',
       };
     });
-    
+
     // Pagination
     const total = enrichedArticles.length;
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
     const paginatedArticles = enrichedArticles.slice(startIndex, endIndex);
-    
-    return c.json({ 
-      success: true, 
+
+    return c.json({
+      success: true,
       data: paginatedArticles,
       pagination: {
         page,
         limit,
         total,
-        total_pages: Math.ceil(total / limit)
-      }
+        total_pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     log.error('Error fetching articles', error);
@@ -687,11 +562,11 @@ publications.get('/articles/:id', async (c) => {
   try {
     const id = c.req.param('id');
     const article = await kv.get(`article:${id}`);
-    
+
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     return c.json({ success: true, data: article });
   } catch (error) {
     log.error('Error fetching article', error);
@@ -704,7 +579,7 @@ publications.get('/articles/by-slug/:slug', async (c) => {
     const slug = c.req.param('slug');
     const articles = await kv.getByPrefix('article:');
     const article = articles.find((a: Article) => a.slug === slug);
-    
+
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
@@ -714,17 +589,15 @@ publications.get('/articles/by-slug/:slug', async (c) => {
     if (article.status !== 'published') {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     // Enrich with category and type names
     const categories = await kv.getByPrefix('article_category:');
     const types = await kv.getByPrefix('article_type:');
-    const category = article.category_id 
-      ? categories.find((cat: ArticleCategory) => cat.id === article.category_id) 
+    const category = article.category_id
+      ? categories.find((cat: ArticleCategory) => cat.id === article.category_id)
       : null;
-    const type = article.type_id 
-      ? types.find((t: ArticleType) => t.id === article.type_id) 
-      : null;
-    
+    const type = article.type_id ? types.find((t: ArticleType) => t.id === article.type_id) : null;
+
     const enrichedArticle = {
       ...article,
       category_name: category?.name || 'Uncategorized',
@@ -732,7 +605,7 @@ publications.get('/articles/by-slug/:slug', async (c) => {
       type_name: type?.name || 'Article',
       type_slug: type?.slug || 'article',
     };
-    
+
     return c.json({ success: true, data: enrichedArticle });
   } catch (error) {
     log.error('Error fetching article by slug', error);
@@ -745,7 +618,7 @@ publications.get('/articles/slug/:slug', async (c) => {
     const slug = c.req.param('slug');
     const articles = await kv.getByPrefix('article:');
     const article = articles.find((a: Article) => a.slug === slug);
-    
+
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
@@ -755,17 +628,15 @@ publications.get('/articles/slug/:slug', async (c) => {
     if (article.status !== 'published') {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     // Enrich with category and type names
     const categories = await kv.getByPrefix('article_category:');
     const types = await kv.getByPrefix('article_type:');
-    const category = article.category_id 
-      ? categories.find((cat: ArticleCategory) => cat.id === article.category_id) 
+    const category = article.category_id
+      ? categories.find((cat: ArticleCategory) => cat.id === article.category_id)
       : null;
-    const type = article.type_id 
-      ? types.find((t: ArticleType) => t.id === article.type_id) 
-      : null;
-    
+    const type = article.type_id ? types.find((t: ArticleType) => t.id === article.type_id) : null;
+
     const enrichedArticle = {
       ...article,
       category_name: category?.name || 'Uncategorized',
@@ -773,7 +644,7 @@ publications.get('/articles/slug/:slug', async (c) => {
       type_name: type?.name || 'Article',
       type_slug: type?.slug || 'article',
     };
-    
+
     return c.json({ success: true, data: enrichedArticle });
   } catch (error) {
     log.error('Error fetching article by slug', error);
@@ -804,30 +675,36 @@ publications.post('/articles', async (c) => {
       seo_canonical_url,
       last_edited_by,
     } = body;
-    
+
     if (!title || !excerpt || !articleBody || !category_id || !type_id) {
-      return c.json({ 
-        success: false, 
-        error: 'Title, excerpt, body, category_id, and type_id are required' 
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'Title, excerpt, body, category_id, and type_id are required',
+        },
+        400,
+      );
     }
-    
+
     const id = generateId();
     const slug = customSlug || generateSlug(title);
     const now = new Date().toISOString();
     const reading_time_minutes = calculateReadingTime(articleBody);
-    
+
     // Check if slug already exists
     const existingArticles = await kv.getByPrefix('article:');
     const slugExists = existingArticles.some((a: Article) => a.slug === slug);
-    
+
     if (slugExists) {
-      return c.json({ 
-        success: false, 
-        error: 'An article with this slug already exists' 
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'An article with this slug already exists',
+        },
+        400,
+      );
     }
-    
+
     const article: Article = {
       id,
       title,
@@ -854,14 +731,14 @@ publications.post('/articles', async (c) => {
       view_count: 0,
       press_category: body.press_category || null,
     };
-    
+
     // If publishing now, set published_at
     if (status === 'published') {
       article.published_at = now;
     }
-    
+
     await kv.set(`article:${id}`, article);
-    
+
     // Create initial version snapshot (Phase 4)
     try {
       await VersionService.createVersion(id, article, last_edited_by || 'system');
@@ -880,7 +757,7 @@ publications.post('/articles', async (c) => {
       entityType: 'article',
       entityId: id,
     }).catch(() => {});
-    
+
     return c.json({ success: true, data: article }, 201);
   } catch (error) {
     log.error('Error creating article', error);
@@ -893,13 +770,13 @@ publications.put('/articles/:id', async (c) => {
     const id = c.req.param('id');
     const body = await c.req.json();
     const existing = await kv.get(`article:${id}`);
-    
+
     if (!existing) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     const now = new Date().toISOString();
-    
+
     // Determine reading_time_minutes:
     // 1. If the client explicitly sent a value, honour it (manual override)
     // 2. Otherwise, recalculate if the body content changed
@@ -912,7 +789,7 @@ publications.put('/articles/:id', async (c) => {
       // Body changed but no explicit reading time — auto-calculate
       reading_time_minutes = calculateReadingTime(body.body);
     }
-    
+
     const updated: Article = {
       ...existing,
       ...body,
@@ -920,35 +797,38 @@ publications.put('/articles/:id', async (c) => {
       reading_time_minutes,
       updated_at: now,
     };
-    
+
     // If title changed and no custom slug provided, regenerate slug
     if (body.title && body.title !== existing.title && !body.slug) {
       const newSlug = generateSlug(body.title);
-      
+
       // Check if new slug already exists
       const existingArticles = await kv.getByPrefix('article:');
       const slugExists = existingArticles.some((a: Article) => a.slug === newSlug && a.id !== id);
-      
+
       if (!slugExists) {
         updated.slug = newSlug;
       }
     }
-    
+
     // Handle status changes
     if (body.status === 'published' && existing.status !== 'published') {
       updated.published_at = now;
       updated.scheduled_for = undefined;
     }
-    
+
     if (body.status === 'scheduled' && !body.scheduled_for) {
-      return c.json({ 
-        success: false, 
-        error: 'scheduled_for is required when status is scheduled' 
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'scheduled_for is required when status is scheduled',
+        },
+        400,
+      );
     }
-    
+
     await kv.set(`article:${id}`, updated);
-    
+
     // Auto-create version snapshot on article update (Phase 4)
     try {
       const editedBy = body.last_edited_by || 'system';
@@ -957,9 +837,13 @@ publications.put('/articles/:id', async (c) => {
       // Version creation failure is non-critical — log but don't fail the update
       log.error('Failed to create version snapshot on article update', vErr);
     }
-    
-    let publishNotificationJob: Awaited<ReturnType<typeof sendArticlePublishedNotificationsBlastThenRetryQueue>>['retryJob'] | null = null;
-    let publishNotificationCampaign: Awaited<ReturnType<typeof getArticleNotificationCampaign>> | null = null;
+
+    let publishNotificationJob:
+      | Awaited<ReturnType<typeof sendArticlePublishedNotificationsBlastThenRetryQueue>>['retryJob']
+      | null = null;
+    let publishNotificationCampaign: Awaited<
+      ReturnType<typeof getArticleNotificationCampaign>
+    > | null = null;
     let publishNotificationError: string | null = null;
     let publishNotificationRecipientCount = 0;
 
@@ -975,21 +859,31 @@ publications.put('/articles/:id', async (c) => {
         publishNotificationRecipientCount = publishResult.blast.recipientCount;
         publishNotificationJob = publishResult.retryJob;
         if (publishNotificationJob && publishNotificationJob.recipientCount > 0) {
-          publishNotificationJob = await kickArticleNotificationJob(publishNotificationJob.id) ?? publishNotificationJob;
+          publishNotificationJob =
+            (await kickArticleNotificationJob(publishNotificationJob.id)) ?? publishNotificationJob;
         }
-        publishNotificationCampaign = publishResult.publishCampaign
-          ?? (publishNotificationJob ? await getArticleNotificationCampaign(publishNotificationJob.id) : null);
+        publishNotificationCampaign =
+          publishResult.publishCampaign ??
+          (publishNotificationJob
+            ? await getArticleNotificationCampaign(publishNotificationJob.id)
+            : null);
       } catch (notificationError) {
-        publishNotificationError = notificationError instanceof Error ? notificationError.message : 'Notification delivery failed';
+        publishNotificationError =
+          notificationError instanceof Error
+            ? notificationError.message
+            : 'Notification delivery failed';
         log.error('Article publish notifications via update failed', notificationError);
-        publishNotificationCampaign = await createArticleNotificationQueueFailedCampaign({
-          id: updated.id,
-          title: updated.title,
-          slug: updated.slug,
-          excerpt: updated.excerpt,
-        }, {
-          lastError: publishNotificationError,
-        });
+        publishNotificationCampaign = await createArticleNotificationQueueFailedCampaign(
+          {
+            id: updated.id,
+            title: updated.title,
+            slug: updated.slug,
+            excerpt: updated.excerpt,
+          },
+          {
+            lastError: publishNotificationError,
+          },
+        );
       }
     }
 
@@ -1007,7 +901,8 @@ publications.put('/articles/:id', async (c) => {
         previousStatus: existing.status,
         newStatus: updated.status,
         titleChanged: body.title !== undefined && body.title !== existing.title,
-        notificationRecipientCount: publishNotificationRecipientCount || publishNotificationJob?.recipientCount || 0,
+        notificationRecipientCount:
+          publishNotificationRecipientCount || publishNotificationJob?.recipientCount || 0,
         notificationJobId: publishNotificationJob?.id ?? null,
         notificationCampaignId: publishNotificationCampaign?.id ?? null,
         notificationCampaignStatus: publishNotificationCampaign?.status ?? null,
@@ -1015,23 +910,34 @@ publications.put('/articles/:id', async (c) => {
         notificationError: publishNotificationError,
       },
     }).catch(() => {});
-    
+
     return c.json({
       success: true,
       data: updated,
       notificationJob: publishNotificationJob,
       notificationCampaign: publishNotificationCampaign,
-      notification: publishNotificationJob ? {
-        jobId: publishNotificationJob.id,
-        campaignId: publishNotificationCampaign?.id ?? null,
-        recipientCount: publishNotificationRecipientCount || publishNotificationCampaign?.intendedRecipientCount || publishNotificationJob.recipientCount,
-        status: publishNotificationJob.status,
-      } : publishNotificationCampaign ? {
-        campaignId: publishNotificationCampaign.id,
-        status: publishNotificationCampaign.status,
-        recipientCount: publishNotificationRecipientCount || publishNotificationCampaign.intendedRecipientCount,
-        error: publishNotificationError,
-      } : publishNotificationError ? { error: publishNotificationError } : null,
+      notification: publishNotificationJob
+        ? {
+            jobId: publishNotificationJob.id,
+            campaignId: publishNotificationCampaign?.id ?? null,
+            recipientCount:
+              publishNotificationRecipientCount ||
+              publishNotificationCampaign?.intendedRecipientCount ||
+              publishNotificationJob.recipientCount,
+            status: publishNotificationJob.status,
+          }
+        : publishNotificationCampaign
+          ? {
+              campaignId: publishNotificationCampaign.id,
+              status: publishNotificationCampaign.status,
+              recipientCount:
+                publishNotificationRecipientCount ||
+                publishNotificationCampaign.intendedRecipientCount,
+              error: publishNotificationError,
+            }
+          : publishNotificationError
+            ? { error: publishNotificationError }
+            : null,
     });
   } catch (error) {
     log.error('Error updating article', error);
@@ -1044,15 +950,15 @@ publications.post('/articles/:id/publish', async (c) => {
     const id = c.req.param('id');
     const body = await c.req.json().catch(() => ({}));
     const notifySubscribers = body.notify_subscribers !== false; // default true
-    
+
     const article = await kv.get(`article:${id}`);
-    
+
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     const now = new Date().toISOString();
-    
+
     const updated: Article = {
       ...article,
       status: 'published',
@@ -1060,11 +966,14 @@ publications.post('/articles/:id/publish', async (c) => {
       scheduled_for: undefined,
       updated_at: now,
     };
-    
+
     await kv.set(`article:${id}`, updated);
-    
-    let notificationJob: Awaited<ReturnType<typeof sendArticlePublishedNotificationsBlastThenRetryQueue>>['retryJob'] | null = null;
-    let notificationCampaign: Awaited<ReturnType<typeof getArticleNotificationCampaign>> | null = null;
+
+    let notificationJob:
+      | Awaited<ReturnType<typeof sendArticlePublishedNotificationsBlastThenRetryQueue>>['retryJob']
+      | null = null;
+    let notificationCampaign: Awaited<ReturnType<typeof getArticleNotificationCampaign>> | null =
+      null;
     let notificationError: string | null = null;
     let notificationRecipientCount = 0;
 
@@ -1080,21 +989,27 @@ publications.post('/articles/:id/publish', async (c) => {
         notificationRecipientCount = publishResult.blast.recipientCount;
         notificationJob = publishResult.retryJob;
         if (notificationJob && notificationJob.recipientCount > 0) {
-          notificationJob = await kickArticleNotificationJob(notificationJob.id) ?? notificationJob;
+          notificationJob =
+            (await kickArticleNotificationJob(notificationJob.id)) ?? notificationJob;
         }
-        notificationCampaign = publishResult.publishCampaign
-          ?? (notificationJob ? await getArticleNotificationCampaign(notificationJob.id) : null);
+        notificationCampaign =
+          publishResult.publishCampaign ??
+          (notificationJob ? await getArticleNotificationCampaign(notificationJob.id) : null);
       } catch (deliveryError) {
-        notificationError = deliveryError instanceof Error ? deliveryError.message : 'Notification delivery failed';
+        notificationError =
+          deliveryError instanceof Error ? deliveryError.message : 'Notification delivery failed';
         log.error('Failed to deliver article published notifications', deliveryError);
-        notificationCampaign = await createArticleNotificationQueueFailedCampaign({
-          id: updated.id,
-          title: updated.title,
-          slug: updated.slug,
-          excerpt: updated.excerpt,
-        }, {
-          lastError: notificationError,
-        });
+        notificationCampaign = await createArticleNotificationQueueFailedCampaign(
+          {
+            id: updated.id,
+            title: updated.title,
+            slug: updated.slug,
+            excerpt: updated.excerpt,
+          },
+          {
+            lastError: notificationError,
+          },
+        );
       }
     }
 
@@ -1110,7 +1025,8 @@ publications.post('/articles/:id/publish', async (c) => {
       entityId: id,
       metadata: {
         notifySubscribers,
-        notificationRecipientCount: notificationRecipientCount || notificationJob?.recipientCount || 0,
+        notificationRecipientCount:
+          notificationRecipientCount || notificationJob?.recipientCount || 0,
         notificationJobId: notificationJob?.id ?? null,
         notificationCampaignId: notificationCampaign?.id ?? null,
         notificationCampaignStatus: notificationCampaign?.status ?? null,
@@ -1118,7 +1034,7 @@ publications.post('/articles/:id/publish', async (c) => {
         notificationError,
       },
     }).catch(() => {});
-    
+
     return c.json({
       success: true,
       data: {
@@ -1127,17 +1043,27 @@ publications.post('/articles/:id/publish', async (c) => {
         notificationCampaign,
         notificationError,
       },
-      notification: notificationJob ? {
-        jobId: notificationJob.id,
-        campaignId: notificationCampaign?.id ?? null,
-        recipientCount: notificationRecipientCount || notificationCampaign?.intendedRecipientCount || notificationJob.recipientCount,
-        status: notificationJob.status,
-      } : notificationCampaign ? {
-        campaignId: notificationCampaign.id,
-        status: notificationCampaign.status,
-        recipientCount: notificationRecipientCount || notificationCampaign.intendedRecipientCount,
-        error: notificationError,
-      } : notificationError ? { error: notificationError } : null,
+      notification: notificationJob
+        ? {
+            jobId: notificationJob.id,
+            campaignId: notificationCampaign?.id ?? null,
+            recipientCount:
+              notificationRecipientCount ||
+              notificationCampaign?.intendedRecipientCount ||
+              notificationJob.recipientCount,
+            status: notificationJob.status,
+          }
+        : notificationCampaign
+          ? {
+              campaignId: notificationCampaign.id,
+              status: notificationCampaign.status,
+              recipientCount:
+                notificationRecipientCount || notificationCampaign.intendedRecipientCount,
+              error: notificationError,
+            }
+          : notificationError
+            ? { error: notificationError }
+            : null,
     });
   } catch (error) {
     log.error('Error publishing article', error);
@@ -1145,324 +1071,404 @@ publications.post('/articles/:id/publish', async (c) => {
   }
 });
 
-publications.post('/articles/:id/reshare', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const id = c.req.param('id');
-  const parsed = ArticleReshareSchema.safeParse(await c.req.json().catch(() => ({})));
-  if (!parsed.success) {
-    return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
-
-  const article = await kv.get(`article:${id}`) as Article | null;
-  if (!article) {
-    return c.json({ success: false, error: 'Article not found' }, 404);
-  }
-
-  if (article.status !== 'published' || !article.published_at) {
-    return c.json({ success: false, error: 'Only published articles can be reshared' }, 400);
-  }
-
-  const recipientEmails = parsed.data.targetMode === 'selected'
-    ? parsed.data.recipientEmails.map((email) => email.trim().toLowerCase()).filter(Boolean)
-    : undefined;
-
-  if (parsed.data.targetMode === 'selected' && (!recipientEmails || recipientEmails.length === 0)) {
-    return c.json({ success: false, error: 'Select at least one newsletter subscriber' }, 400);
-  }
-
-  const result = await runArticleNotificationDelivery({
-    id: article.id,
-    title: article.title,
-    slug: article.slug,
-    excerpt: article.excerpt,
-  }, {
-    dryRun: parsed.data.dryRun,
-    recipientEmails,
-    source: 'reshare',
-  });
-
-  const action = parsed.data.dryRun ? 'article_reshare_preview' : 'article_reshared';
-  const adminUserId = c.get('userId') || 'system';
-  AdminAuditService.record({
-    actorId: adminUserId,
-    actorRole: c.get('userRole') || 'admin',
-    category: 'communication',
-    action,
-    summary: `${parsed.data.dryRun ? 'Previewed' : 'Reshared'} article notifications: ${article.title}`,
-    severity: 'info',
-    entityType: 'article',
-    entityId: id,
-    metadata: {
-      targetMode: parsed.data.targetMode,
-      dryRun: parsed.data.dryRun,
-      recipientCount: result.recipientCount,
-      sent: result.sent,
-      failed: result.failed,
-    },
-  }).catch(() => {});
-
-  return c.json({
-    success: true,
-    dryRun: result.dryRun,
-    message: parsed.data.dryRun
-      ? `Preview ready - ${result.recipientCount} recipient(s)`
-      : `Article reshared to ${result.sent} recipient(s)`,
-    recipientCount: result.recipientCount,
-    sent: result.sent,
-    failed: result.failed,
-    recipients: result.recipients,
-    errors: result.errors,
-  });
-}));
-
-publications.get('/email-engagement/summary', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const includeDeleted = c.req.query('include_deleted') === 'true';
-  const articles = await kv.getByPrefix('article:') as Article[];
-  const deletedArticles = await kv.getByPrefix('article_deleted:') as DeletedArticleRecord[];
-  const campaigns = await listArticleNotificationCampaigns({ source: 'publish' });
-  const articleMap = new Map(articles.map((article) => [article.id, article]));
-  const deletedArticleMap = new Map(deletedArticles.map((article) => [article.id, article]));
-
-  const trackingArticleIds = await listArticleIdsFromEmailTrackingKeyScan();
-  const latestCampaignByArticle = new Map<string, (typeof campaigns)[number]>();
-  for (const campaign of campaigns) {
-    if (!latestCampaignByArticle.has(campaign.articleId)) {
-      latestCampaignByArticle.set(campaign.articleId, campaign);
+publications.post(
+  '/articles/:id/reshare',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const id = c.req.param('id');
+    const parsed = ArticleReshareSchema.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) {
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
     }
-  }
 
-  const articleIds = new Set<string>([
-    ...articles.map((a) => a.id),
-    ...trackingArticleIds,
-    ...latestCampaignByArticle.keys(),
-    ...deletedArticleMap.keys(),
-  ]);
+    const article = (await kv.get(`article:${id}`)) as Article | null;
+    if (!article) {
+      return c.json({ success: false, error: 'Article not found' }, 404);
+    }
 
-  const grouped = new Map<string, Awaited<ReturnType<typeof listArticleEmailTrackingRecords>>>();
-  const articleIdList = [...articleIds];
-  const chunkSize = 10;
-  for (let index = 0; index < articleIdList.length; index += chunkSize) {
-    const chunk = articleIdList.slice(index, index + chunkSize);
-    const rows = await Promise.all(chunk.map((articleId) => listArticleEmailTrackingRecords(articleId)));
-    chunk.forEach((articleId, offset) => {
-      const articleRecords = rows[offset];
-      if (articleRecords.length > 0) {
-        grouped.set(articleId, articleRecords);
-      }
-    });
-  }
+    if (article.status !== 'published' || !article.published_at) {
+      return c.json({ success: false, error: 'Only published articles can be reshared' }, 400);
+    }
 
-  const summaries = [...articleIds]
-    .map((articleId) => {
-      const article = articleMap.get(articleId) || null;
-      const deletedArticle = deletedArticleMap.get(articleId) || null;
-      const articleRecords = grouped.get(articleId) || [];
-      const campaign = latestCampaignByArticle.get(articleId) || null;
-      return buildCampaignFirstEmailEngagementSummary(article, deletedArticle, articleRecords, campaign);
-    })
-    .filter((summary) => includeDeleted || !summary.isDeleted)
-    .sort((a, b) => {
-      const aTime = new Date(a.lastActivityAt || a.latestSentAt || a.publishedAt || 0).getTime();
-      const bTime = new Date(b.lastActivityAt || b.latestSentAt || b.publishedAt || 0).getTime();
-      return bTime - aTime;
-    });
+    const recipientEmails =
+      parsed.data.targetMode === 'selected'
+        ? parsed.data.recipientEmails.map((email) => email.trim().toLowerCase()).filter(Boolean)
+        : undefined;
 
-  return c.json({ success: true, data: summaries });
-}));
+    if (
+      parsed.data.targetMode === 'selected' &&
+      (!recipientEmails || recipientEmails.length === 0)
+    ) {
+      return c.json({ success: false, error: 'Select at least one newsletter subscriber' }, 400);
+    }
 
-publications.get('/articles/:id/email-engagement', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const id = c.req.param('id');
-  const article = await kv.get(`article:${id}`) as Article | null;
-  const deletedArticle = await kv.get(`article_deleted:${id}`) as DeletedArticleRecord | null;
-  const records = await listArticleEmailTrackingRecords(id);
-  let campaign = await getLatestArticleNotificationCampaign(id, 'publish');
-
-  if (!article && !deletedArticle && records.length === 0 && !campaign) {
-    return c.json({ success: false, error: 'Article not found' }, 404);
-  }
-
-  const publishTotals = summarizeTrackedRecipientDeliveries(records, 'publish');
-  const shouldRepairCampaign = Boolean(
-    article
-    && publishTotals.sent > 0
-    && (
-      !campaign
-      || (campaign.status === 'queue_failed' && campaign.sentCount === 0)
-    ),
-  );
-
-  if (shouldRepairCampaign && article) {
-    try {
-      campaign = await repairPublishNotificationCampaignFromTracking({
+    const result = await runArticleNotificationDelivery(
+      {
         id: article.id,
         title: article.title,
         slug: article.slug,
         excerpt: article.excerpt,
-      }, {
-        lastError: campaign?.lastError ?? null,
-      }) ?? campaign;
-    } catch (repairError) {
-      log.warn('Failed to self-heal publish notification campaign from tracking', {
-        articleId: id,
-        error: repairError instanceof Error ? repairError.message : String(repairError),
+      },
+      {
+        dryRun: parsed.data.dryRun,
+        recipientEmails,
+        source: 'reshare',
+      },
+    );
+
+    const action = parsed.data.dryRun ? 'article_reshare_preview' : 'article_reshared';
+    const adminUserId = c.get('userId') || 'system';
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: c.get('userRole') || 'admin',
+      category: 'communication',
+      action,
+      summary: `${parsed.data.dryRun ? 'Previewed' : 'Reshared'} article notifications: ${article.title}`,
+      severity: 'info',
+      entityType: 'article',
+      entityId: id,
+      metadata: {
+        targetMode: parsed.data.targetMode,
+        dryRun: parsed.data.dryRun,
+        recipientCount: result.recipientCount,
+        sent: result.sent,
+        failed: result.failed,
+      },
+    }).catch(() => {});
+
+    return c.json({
+      success: true,
+      dryRun: result.dryRun,
+      message: parsed.data.dryRun
+        ? `Preview ready - ${result.recipientCount} recipient(s)`
+        : `Article reshared to ${result.sent} recipient(s)`,
+      recipientCount: result.recipientCount,
+      sent: result.sent,
+      failed: result.failed,
+      recipients: result.recipients,
+      errors: result.errors,
+    });
+  }),
+);
+
+publications.get(
+  '/email-engagement/summary',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const includeDeleted = c.req.query('include_deleted') === 'true';
+    const articles = (await kv.getByPrefix('article:')) as Article[];
+    const deletedArticles = (await kv.getByPrefix('article_deleted:')) as DeletedArticleRecord[];
+    const campaigns = await listArticleNotificationCampaigns({ source: 'publish' });
+    const articleMap = new Map(articles.map((article) => [article.id, article]));
+    const deletedArticleMap = new Map(deletedArticles.map((article) => [article.id, article]));
+
+    const trackingArticleIds = await listArticleIdsFromEmailTrackingKeyScan();
+    const latestCampaignByArticle = new Map<string, (typeof campaigns)[number]>();
+    for (const campaign of campaigns) {
+      if (!latestCampaignByArticle.has(campaign.articleId)) {
+        latestCampaignByArticle.set(campaign.articleId, campaign);
+      }
+    }
+
+    const articleIds = new Set<string>([
+      ...articles.map((a) => a.id),
+      ...trackingArticleIds,
+      ...latestCampaignByArticle.keys(),
+      ...deletedArticleMap.keys(),
+    ]);
+
+    const grouped = new Map<string, Awaited<ReturnType<typeof listArticleEmailTrackingRecords>>>();
+    const articleIdList = [...articleIds];
+    const chunkSize = 10;
+    for (let index = 0; index < articleIdList.length; index += chunkSize) {
+      const chunk = articleIdList.slice(index, index + chunkSize);
+      const rows = await Promise.all(
+        chunk.map((articleId) => listArticleEmailTrackingRecords(articleId)),
+      );
+      chunk.forEach((articleId, offset) => {
+        const articleRecords = rows[offset];
+        if (articleRecords.length > 0) {
+          grouped.set(articleId, articleRecords);
+        }
       });
     }
-  }
 
-  const summary = buildCampaignFirstEmailEngagementSummary(article, deletedArticle, records, campaign);
+    const summaries = [...articleIds]
+      .map((articleId) => {
+        const article = articleMap.get(articleId) || null;
+        const deletedArticle = deletedArticleMap.get(articleId) || null;
+        const articleRecords = grouped.get(articleId) || [];
+        const campaign = latestCampaignByArticle.get(articleId) || null;
+        return buildCampaignFirstEmailEngagementSummary(
+          article,
+          deletedArticle,
+          articleRecords,
+          campaign,
+        );
+      })
+      .filter((summary) => includeDeleted || !summary.isDeleted)
+      .sort((a, b) => {
+        const aTime = new Date(a.lastActivityAt || a.latestSentAt || a.publishedAt || 0).getTime();
+        const bTime = new Date(b.lastActivityAt || b.latestSentAt || b.publishedAt || 0).getTime();
+        return bTime - aTime;
+      });
 
-  return c.json({
-    success: true,
-    data: {
-      summary,
-      campaign,
-      recipients: records,
-    },
-  });
-}));
+    return c.json({ success: true, data: summaries });
+  }),
+);
 
-publications.post('/articles/:id/retry-undelivered', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const id = c.req.param('id');
-  const parsed = ArticleDeliveryRetrySchema.safeParse(await c.req.json().catch(() => ({})));
-  if (!parsed.success) {
-    return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
+publications.get(
+  '/articles/:id/email-engagement',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const id = c.req.param('id');
+    const article = (await kv.get(`article:${id}`)) as Article | null;
+    const deletedArticle = (await kv.get(`article_deleted:${id}`)) as DeletedArticleRecord | null;
+    const records = await listArticleEmailTrackingRecords(id);
+    let campaign = await getLatestArticleNotificationCampaign(id, 'publish');
 
-  const article = await kv.get(`article:${id}`) as Article | null;
-  if (!article) {
-    return c.json({ success: false, error: 'Article not found' }, 404);
-  }
-
-  if (article.status !== 'published' || !article.published_at) {
-    return c.json({ success: false, error: 'Only published articles can retry delivery' }, 400);
-  }
-
-  const blastAll = parsed.data.source === 'publish' && parsed.data.blastAll === true;
-
-  let liveNotificationJob: Awaited<ReturnType<typeof resumeArticleNotificationDelivery>>;
-  let blastRecipientCount: number | null = null;
-
-  if (blastAll) {
-    await finalizeActiveArticleNotificationJobsForPublish(article.id);
-    const publishResult = await sendArticlePublishedNotificationsBlastThenRetryQueue({
-      id: article.id,
-      title: article.title,
-      slug: article.slug,
-      excerpt: article.excerpt,
-    });
-    blastRecipientCount = publishResult.blast.recipientCount;
-    let retryJob = publishResult.retryJob;
-    if (retryJob && retryJob.recipientCount > 0) {
-      retryJob = await kickArticleNotificationJob(retryJob.id) ?? retryJob;
+    if (!article && !deletedArticle && records.length === 0 && !campaign) {
+      return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    liveNotificationJob = retryJob
-      ?? publishResult.retryJob
-      ?? completedBlastNotificationJobPlaceholder(article, publishResult.blast);
-  } else {
-    const notificationJob = await resumeArticleNotificationDelivery({
-      id: article.id,
-      title: article.title,
-      slug: article.slug,
-      excerpt: article.excerpt,
-    }, {
-      source: parsed.data.source,
+
+    const publishTotals = summarizeTrackedRecipientDeliveries(records, 'publish');
+    const shouldRepairCampaign = Boolean(
+      article &&
+      publishTotals.sent > 0 &&
+      (!campaign || (campaign.status === 'queue_failed' && campaign.sentCount === 0)),
+    );
+
+    if (shouldRepairCampaign && article) {
+      try {
+        campaign =
+          (await repairPublishNotificationCampaignFromTracking(
+            {
+              id: article.id,
+              title: article.title,
+              slug: article.slug,
+              excerpt: article.excerpt,
+            },
+            {
+              lastError: campaign?.lastError ?? null,
+            },
+          )) ?? campaign;
+      } catch (repairError) {
+        log.warn('Failed to self-heal publish notification campaign from tracking', {
+          articleId: id,
+          error: repairError instanceof Error ? repairError.message : String(repairError),
+        });
+      }
+    }
+
+    const summary = buildCampaignFirstEmailEngagementSummary(
+      article,
+      deletedArticle,
+      records,
+      campaign,
+    );
+
+    return c.json({
+      success: true,
+      data: {
+        summary,
+        campaign,
+        recipients: records,
+      },
     });
-    liveNotificationJob = notificationJob.recipientCount > 0
-      ? await kickArticleNotificationJob(notificationJob.id) ?? notificationJob
-      : notificationJob;
-  }
+  }),
+);
 
-  const adminUserId = c.get('userId') || 'system';
-  AdminAuditService.record({
-    actorId: adminUserId,
-    actorRole: c.get('userRole') || 'admin',
-    category: 'communication',
-    action: blastAll ? 'article_delivery_blast_all' : 'article_delivery_retried',
-    summary: blastAll
-      ? `Blast publish to all subscribers: ${article.title}`
-      : `Queued undelivered article notification retry: ${article.title}`,
-    severity: 'info',
-    entityType: 'article',
-    entityId: id,
-    metadata: {
-      source: parsed.data.source,
-      blastAll,
-      blastRecipientCount,
-      recipientCount: liveNotificationJob.recipientCount,
-      notificationJobId: liveNotificationJob.id,
-      notificationStatus: liveNotificationJob.status,
-    },
-  }).catch(() => {});
+publications.post(
+  '/articles/:id/retry-undelivered',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const id = c.req.param('id');
+    const parsed = ArticleDeliveryRetrySchema.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) {
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
+    }
 
-  const message = blastAll
-    ? (blastRecipientCount !== null && blastRecipientCount > 0
-      ? `Blast sent to ${blastRecipientCount} recipient(s)` + (liveNotificationJob.recipientCount > 0
-        ? `; ${liveNotificationJob.recipientCount} queued for retry`
-        : '')
-      : 'Blast complete')
-    : liveNotificationJob.recipientCount > 0
-      ? `Queued retry for ${liveNotificationJob.recipientCount} undelivered recipient(s)`
-      : 'No undelivered recipients remain for this source';
+    const article = (await kv.get(`article:${id}`)) as Article | null;
+    if (!article) {
+      return c.json({ success: false, error: 'Article not found' }, 404);
+    }
 
-  return c.json({
-    success: true,
-    data: {
-      ...liveNotificationJob,
-      blastRecipientCount: blastRecipientCount ?? undefined,
-      mode: blastAll ? 'blast_all' as const : 'resume_undelivered' as const,
-    },
-    message,
-  });
-}));
+    if (article.status !== 'published' || !article.published_at) {
+      return c.json({ success: false, error: 'Only published articles can retry delivery' }, 400);
+    }
 
-publications.get('/notification-jobs/:jobId', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const jobId = c.req.param('jobId');
-  const job = await getArticleNotificationJob(jobId);
+    const blastAll = parsed.data.source === 'publish' && parsed.data.blastAll === true;
 
-  if (!job) {
-    return c.json({ success: false, error: 'Notification job not found' }, 404);
-  }
+    let liveNotificationJob: Awaited<ReturnType<typeof resumeArticleNotificationDelivery>>;
+    let blastRecipientCount: number | null = null;
 
-  return c.json({ success: true, data: job });
-}));
+    if (blastAll) {
+      await finalizeActiveArticleNotificationJobsForPublish(article.id);
+      const publishResult = await sendArticlePublishedNotificationsBlastThenRetryQueue({
+        id: article.id,
+        title: article.title,
+        slug: article.slug,
+        excerpt: article.excerpt,
+      });
+      blastRecipientCount = publishResult.blast.recipientCount;
+      let retryJob = publishResult.retryJob;
+      if (retryJob && retryJob.recipientCount > 0) {
+        retryJob = (await kickArticleNotificationJob(retryJob.id)) ?? retryJob;
+      }
+      liveNotificationJob =
+        retryJob ??
+        publishResult.retryJob ??
+        completedBlastNotificationJobPlaceholder(article, publishResult.blast);
+    } else {
+      const notificationJob = await resumeArticleNotificationDelivery(
+        {
+          id: article.id,
+          title: article.title,
+          slug: article.slug,
+          excerpt: article.excerpt,
+        },
+        {
+          source: parsed.data.source,
+        },
+      );
+      liveNotificationJob =
+        notificationJob.recipientCount > 0
+          ? ((await kickArticleNotificationJob(notificationJob.id)) ?? notificationJob)
+          : notificationJob;
+    }
 
-publications.get('/notification-campaigns/:campaignId', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const campaignId = c.req.param('campaignId');
-  const campaign = await getArticleNotificationCampaign(campaignId);
+    const adminUserId = c.get('userId') || 'system';
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: c.get('userRole') || 'admin',
+      category: 'communication',
+      action: blastAll ? 'article_delivery_blast_all' : 'article_delivery_retried',
+      summary: blastAll
+        ? `Blast publish to all subscribers: ${article.title}`
+        : `Queued undelivered article notification retry: ${article.title}`,
+      severity: 'info',
+      entityType: 'article',
+      entityId: id,
+      metadata: {
+        source: parsed.data.source,
+        blastAll,
+        blastRecipientCount,
+        recipientCount: liveNotificationJob.recipientCount,
+        notificationJobId: liveNotificationJob.id,
+        notificationStatus: liveNotificationJob.status,
+      },
+    }).catch(() => {});
 
-  if (!campaign) {
-    return c.json({ success: false, error: 'Notification campaign not found' }, 404);
-  }
+    const message = blastAll
+      ? blastRecipientCount !== null && blastRecipientCount > 0
+        ? `Blast sent to ${blastRecipientCount} recipient(s)` +
+          (liveNotificationJob.recipientCount > 0
+            ? `; ${liveNotificationJob.recipientCount} queued for retry`
+            : '')
+        : 'Blast complete'
+      : liveNotificationJob.recipientCount > 0
+        ? `Queued retry for ${liveNotificationJob.recipientCount} undelivered recipient(s)`
+        : 'No undelivered recipients remain for this source';
 
-  return c.json({ success: true, data: campaign });
-}));
+    return c.json({
+      success: true,
+      data: {
+        ...liveNotificationJob,
+        blastRecipientCount: blastRecipientCount ?? undefined,
+        mode: blastAll ? ('blast_all' as const) : ('resume_undelivered' as const),
+      },
+      message,
+    });
+  }),
+);
 
-publications.post('/notification-jobs/process', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const jobId = typeof body.jobId === 'string' && body.jobId.trim() ? body.jobId.trim() : undefined;
-  const maxJobs = typeof body.maxJobs === 'number' ? body.maxJobs : undefined;
-  const maxBatchesPerJob = typeof body.maxBatchesPerJob === 'number' ? body.maxBatchesPerJob : undefined;
+publications.get(
+  '/notification-jobs/:jobId',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const jobId = c.req.param('jobId');
+    const job = await getArticleNotificationJob(jobId);
 
-  const result = await processArticleNotificationJobs({ jobId, maxJobs, maxBatchesPerJob, mode: 'manual' });
-  return c.json({ success: true, data: result });
-}));
+    if (!job) {
+      return c.json({ success: false, error: 'Notification job not found' }, 404);
+    }
 
-publications.get('/notification-jobs/processor-status', requireAuth, requireAdmin, asyncHandler(async (c) => {
-  const state = await getArticleNotificationProcessorState();
-  return c.json({ success: true, data: state });
-}));
+    return c.json({ success: true, data: job });
+  }),
+);
+
+publications.get(
+  '/notification-campaigns/:campaignId',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const campaignId = c.req.param('campaignId');
+    const campaign = await getArticleNotificationCampaign(campaignId);
+
+    if (!campaign) {
+      return c.json({ success: false, error: 'Notification campaign not found' }, 404);
+    }
+
+    return c.json({ success: true, data: campaign });
+  }),
+);
+
+publications.post(
+  '/notification-jobs/process',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const jobId =
+      typeof body.jobId === 'string' && body.jobId.trim() ? body.jobId.trim() : undefined;
+    const maxJobs = typeof body.maxJobs === 'number' ? body.maxJobs : undefined;
+    const maxBatchesPerJob =
+      typeof body.maxBatchesPerJob === 'number' ? body.maxBatchesPerJob : undefined;
+
+    const result = await processArticleNotificationJobs({
+      jobId,
+      maxJobs,
+      maxBatchesPerJob,
+      mode: 'manual',
+    });
+    return c.json({ success: true, data: result });
+  }),
+);
+
+publications.get(
+  '/notification-jobs/processor-status',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const state = await getArticleNotificationProcessorState();
+    return c.json({ success: true, data: state });
+  }),
+);
 
 publications.post('/cron/process-notification-jobs', async (c) => {
   try {
     const authHeader = c.req.header('Authorization') || '';
     const token = authHeader.replace(/^Bearer\s+/i, '');
     const sharedCronToken = c.req.header(PUBLICATIONS_CRON_SHARED_HEADER) || '';
-    if (!await isAuthorizedPublicationsCronRequest(token, sharedCronToken)) {
+    if (!(await isAuthorizedPublicationsCronRequest(token, sharedCronToken))) {
       return c.json({ error: 'Unauthorized - cron auth required' }, 401);
     }
 
     const body = await c.req.json().catch(() => ({}));
     const maxJobs = typeof body.maxJobs === 'number' ? body.maxJobs : undefined;
-    const maxBatchesPerJob = typeof body.maxBatchesPerJob === 'number' ? body.maxBatchesPerJob : undefined;
+    const maxBatchesPerJob =
+      typeof body.maxBatchesPerJob === 'number' ? body.maxBatchesPerJob : undefined;
     const result = await processArticleNotificationJobs({
       maxJobs,
       maxBatchesPerJob,
@@ -1490,19 +1496,19 @@ publications.post('/articles/:id/archive', async (c) => {
   try {
     const id = c.req.param('id');
     const article = await kv.get(`article:${id}`);
-    
+
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     const now = new Date().toISOString();
-    
+
     const updated: Article = {
       ...article,
       status: 'archived',
       updated_at: now,
     };
-    
+
     await kv.set(`article:${id}`, updated);
 
     // Audit trail (non-blocking — §12.2)
@@ -1517,7 +1523,7 @@ publications.post('/articles/:id/archive', async (c) => {
       entityId: id,
       metadata: { previousStatus: article.status },
     }).catch(() => {});
-    
+
     return c.json({ success: true, data: updated });
   } catch (error) {
     log.error('Error archiving article', error);
@@ -1529,19 +1535,19 @@ publications.post('/articles/:id/unarchive', async (c) => {
   try {
     const id = c.req.param('id');
     const article = await kv.get(`article:${id}`);
-    
+
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     const now = new Date().toISOString();
-    
+
     const updated: Article = {
       ...article,
       status: 'draft',
       updated_at: now,
     };
-    
+
     await kv.set(`article:${id}`, updated);
 
     // Audit trail (non-blocking — §12.2)
@@ -1555,7 +1561,7 @@ publications.post('/articles/:id/unarchive', async (c) => {
       entityType: 'article',
       entityId: id,
     }).catch(() => {});
-    
+
     return c.json({ success: true, data: updated });
   } catch (error) {
     log.error('Error unarchiving article', error);
@@ -1567,13 +1573,13 @@ publications.post('/articles/:id/unpublish', async (c) => {
   try {
     const id = c.req.param('id');
     const article = await kv.get(`article:${id}`);
-    
+
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     const now = new Date().toISOString();
-    
+
     const updated: Article = {
       ...article,
       status: 'draft',
@@ -1581,7 +1587,7 @@ publications.post('/articles/:id/unpublish', async (c) => {
       // Usually "unpublish" means reverting to draft.
       updated_at: now,
     };
-    
+
     await kv.set(`article:${id}`, updated);
 
     // Audit trail (non-blocking — §12.2)
@@ -1596,7 +1602,7 @@ publications.post('/articles/:id/unpublish', async (c) => {
       entityId: id,
       metadata: { originalPublishedAt: article.published_at },
     }).catch(() => {});
-    
+
     return c.json({ success: true, data: updated });
   } catch (error) {
     log.error('Error unpublishing article', error);
@@ -1609,28 +1615,28 @@ publications.post('/articles/:id/schedule', async (c) => {
     const id = c.req.param('id');
     const body = await c.req.json();
     const { scheduled_publish_at } = body;
-    
+
     if (!scheduled_publish_at) {
       return c.json({ success: false, error: 'Scheduled date is required' }, 400);
     }
 
     const article = await kv.get(`article:${id}`);
-    
+
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     const now = new Date().toISOString();
-    
+
     const updated: Article = {
       ...article,
       status: 'scheduled',
       scheduled_for: scheduled_publish_at,
       updated_at: now,
     };
-    
+
     await kv.set(`article:${id}`, updated);
-    
+
     return c.json({ success: true, data: updated });
   } catch (error) {
     log.error('Error scheduling article', error);
@@ -1641,7 +1647,7 @@ publications.post('/articles/:id/schedule', async (c) => {
 publications.delete('/articles/:id', async (c) => {
   try {
     const id = c.req.param('id');
-    const article = await kv.get(`article:${id}`) as Article | null;
+    const article = (await kv.get(`article:${id}`)) as Article | null;
 
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
@@ -1660,7 +1666,7 @@ publications.delete('/articles/:id', async (c) => {
 
     await kv.set(`article_deleted:${id}`, deletedArticle);
     await kv.del(`article:${id}`);
-    
+
     // Also delete any tag links
     const tagLinks = await kv.getByPrefix(`article_tag_link:${id}:`);
     for (const link of tagLinks) {
@@ -1683,7 +1689,7 @@ publications.delete('/articles/:id', async (c) => {
         deletedAt,
       },
     }).catch(() => {});
-    
+
     return c.json({ success: true });
   } catch (error) {
     log.error('Error deleting article', error);
@@ -1695,14 +1701,14 @@ publications.post('/articles/:id/duplicate', async (c) => {
   try {
     const id = c.req.param('id');
     const existing = await kv.get(`article:${id}`);
-    
+
     if (!existing) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     const newId = generateId();
     const now = new Date().toISOString();
-    
+
     const duplicated: Article = {
       ...existing,
       id: newId,
@@ -1715,9 +1721,9 @@ publications.post('/articles/:id/duplicate', async (c) => {
       created_at: now,
       updated_at: now,
     };
-    
+
     await kv.set(`article:${newId}`, duplicated);
-    
+
     return c.json({ success: true, data: duplicated }, 201);
   } catch (error) {
     log.error('Error duplicating article', error);
@@ -1729,14 +1735,14 @@ publications.post('/articles/:id/increment-views', async (c) => {
   try {
     const id = c.req.param('id');
     const article = await kv.get(`article:${id}`);
-    
+
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     article.view_count = (article.view_count || 0) + 1;
     await kv.set(`article:${id}`, article);
-    
+
     return c.json({ success: true, data: { view_count: article.view_count } });
   } catch (error) {
     log.error('Error incrementing views', error);
@@ -1748,14 +1754,14 @@ publications.post('/articles/:id/view', async (c) => {
   try {
     const id = c.req.param('id');
     const article = await kv.get(`article:${id}`);
-    
+
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     article.view_count = (article.view_count || 0) + 1;
     await kv.set(`article:${id}`, article);
-    
+
     return c.json({ success: true, data: { view_count: article.view_count } });
   } catch (error) {
     log.error('Error incrementing views', error);
@@ -1763,49 +1769,65 @@ publications.post('/articles/:id/view', async (c) => {
   }
 });
 
-publications.post('/email-engagement/open', asyncHandler(async (c) => {
-  const parsed = ArticleEmailEngagementEventSchema.safeParse(await c.req.json().catch(() => ({})));
-  if (!parsed.success) {
-    return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
+publications.post(
+  '/email-engagement/open',
+  asyncHandler(async (c) => {
+    const parsed = ArticleEmailEngagementEventSchema.safeParse(
+      await c.req.json().catch(() => ({})),
+    );
+    if (!parsed.success) {
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
+    }
 
-  const record = await markArticleEmailOpened(parsed.data.token);
-  if (!record) {
-    return c.json({ success: true, data: { tracked: false } });
-  }
+    const record = await markArticleEmailOpened(parsed.data.token);
+    if (!record) {
+      return c.json({ success: true, data: { tracked: false } });
+    }
 
-  return c.json({
-    success: true,
-    data: {
-      tracked: true,
-      articleId: record.articleId,
-      openedAt: record.openedAt,
-      openCount: record.openCount,
-    },
-  });
-}));
+    return c.json({
+      success: true,
+      data: {
+        tracked: true,
+        articleId: record.articleId,
+        openedAt: record.openedAt,
+        openCount: record.openCount,
+      },
+    });
+  }),
+);
 
-publications.post('/email-engagement/read', asyncHandler(async (c) => {
-  const parsed = ArticleEmailEngagementEventSchema.safeParse(await c.req.json().catch(() => ({})));
-  if (!parsed.success) {
-    return c.json({ success: false, error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-  }
+publications.post(
+  '/email-engagement/read',
+  asyncHandler(async (c) => {
+    const parsed = ArticleEmailEngagementEventSchema.safeParse(
+      await c.req.json().catch(() => ({})),
+    );
+    if (!parsed.success) {
+      return c.json(
+        { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+        400,
+      );
+    }
 
-  const record = await markArticleEmailRead(parsed.data.token);
-  if (!record) {
-    return c.json({ success: true, data: { tracked: false } });
-  }
+    const record = await markArticleEmailRead(parsed.data.token);
+    if (!record) {
+      return c.json({ success: true, data: { tracked: false } });
+    }
 
-  return c.json({
-    success: true,
-    data: {
-      tracked: true,
-      articleId: record.articleId,
-      readAt: record.readAt,
-      readCount: record.readCount,
-    },
-  });
-}));
+    return c.json({
+      success: true,
+      data: {
+        tracked: true,
+        articleId: record.articleId,
+        readAt: record.readAt,
+        readCount: record.readCount,
+      },
+    });
+  }),
+);
 
 // ============================================================================
 // TAGS ROUTES
@@ -1825,15 +1847,15 @@ publications.post('/tags', async (c) => {
   try {
     const body = await c.req.json();
     const { name } = body;
-    
+
     if (!name) {
       return c.json({ success: false, error: 'Name is required' }, 400);
     }
-    
+
     const id = generateId();
     const slug = generateSlug(name);
     const now = new Date().toISOString();
-    
+
     const tag: ArticleTag = {
       id,
       name,
@@ -1841,9 +1863,9 @@ publications.post('/tags', async (c) => {
       created_at: now,
       updated_at: now,
     };
-    
+
     await kv.set(`article_tag:${id}`, tag);
-    
+
     return c.json({ success: true, data: tag }, 201);
   } catch (error) {
     log.error('Error creating tag', error);
@@ -1855,14 +1877,14 @@ publications.post('/articles/:articleId/tags/:tagId', async (c) => {
   try {
     const articleId = c.req.param('articleId');
     const tagId = c.req.param('tagId');
-    
+
     const link: ArticleTagLink = {
       article_id: articleId,
       tag_id: tagId,
     };
-    
+
     await kv.set(`article_tag_link:${articleId}:${tagId}`, link);
-    
+
     return c.json({ success: true, data: link }, 201);
   } catch (error) {
     log.error('Error linking tag', error);
@@ -1874,9 +1896,9 @@ publications.delete('/articles/:articleId/tags/:tagId', async (c) => {
   try {
     const articleId = c.req.param('articleId');
     const tagId = c.req.param('tagId');
-    
+
     await kv.del(`article_tag_link:${articleId}:${tagId}`);
-    
+
     return c.json({ success: true });
   } catch (error) {
     log.error('Error unlinking tag', error);
@@ -1888,7 +1910,7 @@ publications.get('/articles/:articleId/tags', async (c) => {
   try {
     const articleId = c.req.param('articleId');
     const links = await kv.getByPrefix(`article_tag_link:${articleId}:`);
-    
+
     const tags = [];
     for (const link of links) {
       const tag = await kv.get(`article_tag:${link.tag_id}`);
@@ -1896,7 +1918,7 @@ publications.get('/articles/:articleId/tags', async (c) => {
         tags.push(tag);
       }
     }
-    
+
     return c.json({ success: true, data: tags });
   } catch (error) {
     log.error('Error fetching article tags', error);
@@ -1920,7 +1942,7 @@ publications.post('/cron/process-scheduled', async (c) => {
     const token = authHeader.replace(/^Bearer\s+/i, '');
     const sharedCronToken = c.req.header(PUBLICATIONS_CRON_SHARED_HEADER) || '';
 
-    if (!await isAuthorizedPublicationsCronRequest(token, sharedCronToken)) {
+    if (!(await isAuthorizedPublicationsCronRequest(token, sharedCronToken))) {
       return c.json({ error: 'Unauthorized - cron auth required' }, 401);
     }
 
@@ -1958,10 +1980,12 @@ publications.post('/cron/process-scheduled', async (c) => {
               });
               let notificationJob = publishResult.retryJob;
               if (notificationJob && notificationJob.recipientCount > 0) {
-                notificationJob = await kickArticleNotificationJob(notificationJob.id) ?? notificationJob;
+                notificationJob =
+                  (await kickArticleNotificationJob(notificationJob.id)) ?? notificationJob;
               }
-              const notificationCampaign = publishResult.publishCampaign
-                ?? (notificationJob ? await getArticleNotificationCampaign(notificationJob.id) : null);
+              const notificationCampaign =
+                publishResult.publishCampaign ??
+                (notificationJob ? await getArticleNotificationCampaign(notificationJob.id) : null);
               log.info(`Scheduled article notifications complete for ${article.id}`, {
                 recipientCount: publishResult.blast.recipientCount,
                 notificationJobId: notificationJob?.id ?? null,
@@ -1970,15 +1994,24 @@ publications.post('/cron/process-scheduled', async (c) => {
                 status: notificationJob?.status ?? null,
               });
             } catch (notificationError) {
-              log.error(`Failed to send notifications for scheduled article ${article.id}`, notificationError);
-              await createArticleNotificationQueueFailedCampaign({
-                id: article.id,
-                title: article.title,
-                slug: article.slug,
-                excerpt: article.excerpt,
-              }, {
-                lastError: notificationError instanceof Error ? notificationError.message : 'Notification delivery failed',
-              });
+              log.error(
+                `Failed to send notifications for scheduled article ${article.id}`,
+                notificationError,
+              );
+              await createArticleNotificationQueueFailedCampaign(
+                {
+                  id: article.id,
+                  title: article.title,
+                  slug: article.slug,
+                  excerpt: article.excerpt,
+                },
+                {
+                  lastError:
+                    notificationError instanceof Error
+                      ? notificationError.message
+                      : 'Notification delivery failed',
+                },
+              );
             }
           }
         }
@@ -2010,21 +2043,21 @@ publications.post('/process-scheduled', async (c) => {
     const articles = await kv.getByPrefix('article:');
     const now = new Date();
     let processedCount = 0;
-    
+
     for (const article of articles) {
       if (article.status === 'scheduled' && article.scheduled_for) {
         const scheduledDate = new Date(article.scheduled_for);
-        
+
         if (scheduledDate <= now) {
           article.status = 'published';
           article.published_at = article.scheduled_for;
           article.scheduled_for = undefined;
           article.updated_at = now.toISOString();
-          
+
           // Preserve the notify_on_publish preference, then clear it after use
           const shouldNotify = article.notify_on_publish !== false; // Default true for backward compatibility
           delete article.notify_on_publish;
-          
+
           await kv.set(`article:${article.id}`, article);
           processedCount++;
 
@@ -2039,10 +2072,12 @@ publications.post('/process-scheduled', async (c) => {
               });
               let notificationJob = publishResult.retryJob;
               if (notificationJob && notificationJob.recipientCount > 0) {
-                notificationJob = await kickArticleNotificationJob(notificationJob.id) ?? notificationJob;
+                notificationJob =
+                  (await kickArticleNotificationJob(notificationJob.id)) ?? notificationJob;
               }
-              const notificationCampaign = publishResult.publishCampaign
-                ?? (notificationJob ? await getArticleNotificationCampaign(notificationJob.id) : null);
+              const notificationCampaign =
+                publishResult.publishCampaign ??
+                (notificationJob ? await getArticleNotificationCampaign(notificationJob.id) : null);
               log.info(`Scheduled article notifications complete for ${article.id}`, {
                 recipientCount: publishResult.blast.recipientCount,
                 notificationJobId: notificationJob?.id ?? null,
@@ -2051,27 +2086,38 @@ publications.post('/process-scheduled', async (c) => {
                 status: notificationJob?.status ?? null,
               });
             } catch (notificationError) {
-              log.error(`Failed to send notifications for scheduled article ${article.id}`, notificationError);
-              await createArticleNotificationQueueFailedCampaign({
-                id: article.id,
-                title: article.title,
-                slug: article.slug,
-                excerpt: article.excerpt,
-              }, {
-                lastError: notificationError instanceof Error ? notificationError.message : 'Notification delivery failed',
-              });
+              log.error(
+                `Failed to send notifications for scheduled article ${article.id}`,
+                notificationError,
+              );
+              await createArticleNotificationQueueFailedCampaign(
+                {
+                  id: article.id,
+                  title: article.title,
+                  slug: article.slug,
+                  excerpt: article.excerpt,
+                },
+                {
+                  lastError:
+                    notificationError instanceof Error
+                      ? notificationError.message
+                      : 'Notification delivery failed',
+                },
+              );
             }
           } else {
-            log.info(`Skipping email notifications for scheduled article ${article.id} — notify_on_publish was disabled`);
+            log.info(
+              `Skipping email notifications for scheduled article ${article.id} — notify_on_publish was disabled`,
+            );
           }
         }
       }
     }
-    
-    return c.json({ 
-      success: true, 
+
+    return c.json({
+      success: true,
       data: { processed: processedCount },
-      message: `Processed ${processedCount} scheduled articles` 
+      message: `Processed ${processedCount} scheduled articles`,
     });
   } catch (error) {
     log.error('Error processing scheduled articles', error);
@@ -2104,11 +2150,9 @@ publications.get('/stats', async (c) => {
     // Recent activity (last 7 days)
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const recentPublished = articles.filter(
-      (a: Article) => a.status === 'published' && a.published_at && a.published_at >= sevenDaysAgo
+      (a: Article) => a.status === 'published' && a.published_at && a.published_at >= sevenDaysAgo,
     ).length;
-    const recentUpdated = articles.filter(
-      (a: Article) => a.updated_at >= sevenDaysAgo
-    ).length;
+    const recentUpdated = articles.filter((a: Article) => a.updated_at >= sevenDaysAgo).length;
 
     const stats = {
       total: articles.length,
@@ -2248,17 +2292,17 @@ publications.get('/export', async (c) => {
     const articles = await kv.getByPrefix('article:');
     const categories = await kv.getByPrefix('article_category:');
     const types = await kv.getByPrefix('article_type:');
-    
+
     const exportData = {
       version: '1.0.0',
       exported_at: new Date().toISOString(),
       data: {
         articles: articles || [],
         categories: categories || [],
-        types: types || []
-      }
+        types: types || [],
+      },
     };
-    
+
     return c.json({ success: true, data: exportData });
   } catch (error) {
     log.error('Error exporting data:', error);
@@ -2270,17 +2314,17 @@ publications.get('/export', async (c) => {
 publications.post('/import', async (c) => {
   try {
     const body = await c.req.json();
-    
+
     if (!body.data) {
       return c.json({ success: false, error: 'Invalid import data format' }, 400);
     }
-    
+
     let imported = {
       articles: 0,
       categories: 0,
-      types: 0
+      types: 0,
     };
-    
+
     // Import categories
     if (body.data.categories && Array.isArray(body.data.categories)) {
       for (const category of body.data.categories) {
@@ -2288,7 +2332,7 @@ publications.post('/import', async (c) => {
         imported.categories++;
       }
     }
-    
+
     // Import types
     if (body.data.types && Array.isArray(body.data.types)) {
       for (const type of body.data.types) {
@@ -2296,7 +2340,7 @@ publications.post('/import', async (c) => {
         imported.types++;
       }
     }
-    
+
     // Import articles
     if (body.data.articles && Array.isArray(body.data.articles)) {
       for (const article of body.data.articles) {
@@ -2304,11 +2348,11 @@ publications.post('/import', async (c) => {
         imported.articles++;
       }
     }
-    
-    return c.json({ 
-      success: true, 
+
+    return c.json({
+      success: true,
       message: 'Data imported successfully',
-      imported 
+      imported,
     });
   } catch (error) {
     log.error('Error importing data:', error);
@@ -2321,17 +2365,17 @@ publications.delete('/maintenance/clear-drafts', async (c) => {
   try {
     const articles = await kv.getByPrefix('article:');
     let deleted = 0;
-    
+
     for (const article of articles) {
       if (article.status === 'draft') {
         await kv.del(`article:${article.id}`);
         deleted++;
       }
     }
-    
-    return c.json({ 
-      success: true, 
-      message: `Deleted ${deleted} draft articles` 
+
+    return c.json({
+      success: true,
+      message: `Deleted ${deleted} draft articles`,
     });
   } catch (error) {
     log.error('Error clearing drafts:', error);
@@ -2343,75 +2387,73 @@ publications.delete('/maintenance/clear-drafts', async (c) => {
 publications.post('/upload-image', async (c) => {
   try {
     const bucketName = 'make-91ed8379-publications';
-    
+
     // Ensure bucket exists
     const { data: buckets } = await getSupabase().storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
-    
+    const bucketExists = buckets?.some((bucket) => bucket.name === bucketName);
+
     if (!bucketExists) {
       const { error: createError } = await getSupabase().storage.createBucket(bucketName, {
         public: true,
-        fileSizeLimit: 5242880 // 5MB
+        fileSizeLimit: 5242880, // 5MB
       });
-      
+
       if (createError) {
         log.error('Error creating bucket:', createError);
         return c.json({ success: false, error: 'Failed to create storage bucket' }, 500);
       }
     }
-    
+
     // Get form data
     const formData = await c.req.formData();
     const file = formData.get('file') as File;
-    
+
     if (!file) {
       return c.json({ success: false, error: 'No file provided' }, 400);
     }
-    
+
     // Validate file type
     if (!file.type.startsWith('image/')) {
       return c.json({ success: false, error: 'File must be an image' }, 400);
     }
-    
+
     // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
       return c.json({ success: false, error: 'File size must be less than 5MB' }, 400);
     }
-    
+
     // Generate unique filename
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = `articles/${fileName}`;
-    
+
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = new Uint8Array(arrayBuffer);
-    
+
     // Upload to Supabase Storage
-    const { data, error: uploadError } = await getSupabase().storage
-      .from(bucketName)
+    const { data, error: uploadError } = await getSupabase()
+      .storage.from(bucketName)
       .upload(filePath, buffer, {
         contentType: file.type,
         cacheControl: '3600',
-        upsert: false
+        upsert: false,
       });
-    
+
     if (uploadError) {
       log.error('Upload error:', uploadError);
       return c.json({ success: false, error: uploadError.message }, 500);
     }
-    
+
     // Get public URL
-    const { data: urlData } = getSupabase().storage
-      .from(bucketName)
-      .getPublicUrl(filePath);
-    
-    return c.json({ 
-      success: true, 
-      data: { 
+    const { data: urlData } = getSupabase().storage.from(bucketName).getPublicUrl(filePath);
+
+    return c.json({
+      success: true,
+      data: {
         url: urlData.publicUrl,
-        path: filePath
-      } 
+        path: filePath,
+      },
     });
   } catch (error) {
     log.error('Error uploading image:', error);
@@ -2425,49 +2467,68 @@ publications.post('/articles/:id/send-notifications', async (c) => {
     const articleId = c.req.param('id');
     const body = await c.req.json();
     const { groupIds } = body;
-    
+
     if (!groupIds || !Array.isArray(groupIds) || groupIds.length === 0) {
       return c.json({ success: false, error: 'At least one group must be selected' }, 400);
     }
-    
+
     // Get article
     const article = await kv.get(`article:${articleId}`);
     if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
-    
+
     // Build article URL
     const articleUrl = `https://www.navigatewealth.co/resources/article/${article.slug}`;
-    
+
     // Get all users from Supabase Auth
-    const { data: { users }, error: usersError } = await getSupabase().auth.admin.listUsers();
+    const {
+      data: { users },
+      error: usersError,
+    } = await getSupabase().auth.admin.listUsers();
     if (usersError) {
       log.error('Error fetching users:', usersError);
       return c.json({ success: false, error: 'Failed to fetch users' }, 500);
     }
-    
+
     // Create a map of users by ID for quick lookup
-    const userMap = new Map<string, { id: string; email: string; emailVerified: boolean; firstName: string; lastName: string }>();
-    users.forEach((user: { id: string; email: string; email_confirmed_at: string | null; user_metadata?: Record<string, unknown> }) => {
-      userMap.set(user.id, {
-        id: user.id,
-        email: user.email,
-        emailVerified: user.email_confirmed_at !== null,
-        firstName: (user.user_metadata?.firstName as string) || (user.user_metadata?.first_name as string) || 'Valued Client',
-        lastName: (user.user_metadata?.surname as string) || (user.user_metadata?.lastName as string) || ''
-      });
-    });
-    
+    const userMap = new Map<
+      string,
+      { id: string; email: string; emailVerified: boolean; firstName: string; lastName: string }
+    >();
+    users.forEach(
+      (user: {
+        id: string;
+        email: string;
+        email_confirmed_at: string | null;
+        user_metadata?: Record<string, unknown>;
+      }) => {
+        userMap.set(user.id, {
+          id: user.id,
+          email: user.email,
+          emailVerified: user.email_confirmed_at !== null,
+          firstName:
+            (user.user_metadata?.firstName as string) ||
+            (user.user_metadata?.first_name as string) ||
+            'Valued Client',
+          lastName:
+            (user.user_metadata?.surname as string) ||
+            (user.user_metadata?.lastName as string) ||
+            '',
+        });
+      },
+    );
+
     // Collect recipients from all groups
     const recipientMap = new Map();
-    
+
     for (const groupId of groupIds) {
       const group = await kv.get(`communication:groups:${groupId}`);
       if (!group) {
         log.warn(`Group ${groupId} not found, skipping`);
         continue;
       }
-      
+
       // Get recipients from group clientIds
       if (group.clientIds && Array.isArray(group.clientIds)) {
         for (const clientId of group.clientIds) {
@@ -2475,27 +2536,30 @@ publications.post('/articles/:id/send-notifications', async (c) => {
           if (user && user.email && user.emailVerified) {
             recipientMap.set(user.email, {
               email: user.email,
-              firstName: user.firstName
+              firstName: user.firstName,
             });
           }
         }
       }
     }
-    
+
     const recipients = Array.from(recipientMap.values());
-    
+
     if (recipients.length === 0) {
-      return c.json({ 
-        success: false, 
-        error: 'No verified recipients found in the selected groups' 
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: 'No verified recipients found in the selected groups',
+        },
+        400,
+      );
     }
-    
+
     // Send emails
     let successCount = 0;
     let failedCount = 0;
     const errors: string[] = [];
-    
+
     for (const recipient of recipients) {
       try {
         const unsubscribeUrl = `https://www.navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(recipient.email)}`;
@@ -2506,14 +2570,14 @@ publications.post('/articles/:id/send-notifications', async (c) => {
           articleUrl,
           unsubscribeUrl,
         });
-        
+
         await sendEmail({
           to: recipient.email,
           subject: `New article: ${article.title}`,
           html,
           text,
         });
-        
+
         successCount++;
         log.info(`✅ Article notification sent to ${recipient.email}`);
       } catch (err) {
@@ -2523,15 +2587,15 @@ publications.post('/articles/:id/send-notifications', async (c) => {
         log.error(`❌ Failed to send to ${recipient.email}:`, errorMsg);
       }
     }
-    
+
     return c.json({
       success: true,
       data: {
         total: recipients.length,
         sent: successCount,
         failed: failedCount,
-        errors: errors.length > 0 ? errors : undefined
-      }
+        errors: errors.length > 0 ? errors : undefined,
+      },
     });
   } catch (error) {
     log.error('Error sending article notifications:', error);
@@ -2699,44 +2763,57 @@ publications.post('/versions/:articleId/:versionId/restore', async (c) => {
  * GET /publications/press/config
  * Returns the current press page config (admin only).
  */
-publications.get('/press/config', requireAuth, asyncHandler(async (c) => {
-  const config = await kv.get('config:press_stats');
-  return c.json({
-    success: true,
-    data: {
-      aum: (config as any)?.aum || 'R500 mil+',
-      yearsInBusiness: (config as any)?.yearsInBusiness || '15+',
-      combinedExperience: (config as any)?.combinedExperience || '55+',
-    },
-  });
-}));
+publications.get(
+  '/press/config',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const config = await kv.get('config:press_stats');
+    return c.json({
+      success: true,
+      data: {
+        aum: (config as any)?.aum || 'R500 mil+',
+        yearsInBusiness: (config as any)?.yearsInBusiness || '15+',
+        combinedExperience: (config as any)?.combinedExperience || '55+',
+      },
+    });
+  }),
+);
 
 /**
  * PUT /publications/press/config
  * Updates the config:press_stats KV entry (admin only).
  * Body: { aum?: string, yearsInBusiness?: string, combinedExperience?: string }
  */
-publications.put('/press/config', requireAuth, asyncHandler(async (c) => {
-  const body = await c.req.json();
-  const { aum, yearsInBusiness, combinedExperience } = body;
+publications.put(
+  '/press/config',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
+    const { aum, yearsInBusiness, combinedExperience } = body;
 
-  // Fetch existing config to merge
-  const existing = (await kv.get('config:press_stats') as Record<string, unknown>) || {};
+    // Fetch existing config to merge
+    const existing = ((await kv.get('config:press_stats')) as Record<string, unknown>) || {};
 
-  const updated = {
-    ...existing,
-    ...(aum !== undefined ? { aum: String(aum).trim() } : {}),
-    ...(yearsInBusiness !== undefined ? { yearsInBusiness: String(yearsInBusiness).trim() } : {}),
-    ...(combinedExperience !== undefined ? { combinedExperience: String(combinedExperience).trim() } : {}),
-    updatedAt: new Date().toISOString(),
-  };
+    const updated = {
+      ...existing,
+      ...(aum !== undefined ? { aum: String(aum).trim() } : {}),
+      ...(yearsInBusiness !== undefined ? { yearsInBusiness: String(yearsInBusiness).trim() } : {}),
+      ...(combinedExperience !== undefined
+        ? { combinedExperience: String(combinedExperience).trim() }
+        : {}),
+      updatedAt: new Date().toISOString(),
+    };
 
-  await kv.set('config:press_stats', updated);
+    await kv.set('config:press_stats', updated);
 
-  log.info('Press stats config updated', { aum: updated.aum, yearsInBusiness: updated.yearsInBusiness });
+    log.info('Press stats config updated', {
+      aum: updated.aum,
+      yearsInBusiness: updated.yearsInBusiness,
+    });
 
-  return c.json({ success: true, data: updated });
-}));
+    return c.json({ success: true, data: updated });
+  }),
+);
 
 // ============================================================================
 // PUBLIC PRESS PAGE ENDPOINTS (No auth required)
@@ -2765,19 +2842,26 @@ publications.get('/press/stats', async (c) => {
       data: {
         aum: (config.aum as string) || 'R500 mil+',
         activeClients,
-        activeClientsLabel: activeClients >= 1000
-          ? `${Math.floor(activeClients / 1000)},${String(activeClients % 1000).padStart(3, '0')}+`
-          : `${activeClients}+`,
+        activeClientsLabel:
+          activeClients >= 1000
+            ? `${Math.floor(activeClients / 1000)},${String(activeClients % 1000).padStart(3, '0')}+`
+            : `${activeClients}+`,
         yearsInBusiness: (config.yearsInBusiness as string) || '15+',
         combinedExperience: (config.combinedExperience as string) || '55+',
       },
     });
   } catch (error) {
     log.error('Error fetching press stats', error);
-    return c.json({ success: true, data: {
-      aum: 'R500 mil+', activeClients: 0, activeClientsLabel: '—',
-      yearsInBusiness: '15+', combinedExperience: '55+',
-    }});
+    return c.json({
+      success: true,
+      data: {
+        aum: 'R500 mil+',
+        activeClients: 0,
+        activeClientsLabel: '—',
+        yearsInBusiness: '15+',
+        combinedExperience: '55+',
+      },
+    });
   }
 });
 
@@ -2792,8 +2876,8 @@ publications.get('/press/articles', async (c) => {
     const articles = await kv.getByPrefix('article:');
 
     // Filter to published articles with a press_category set
-    let pressArticles = articles.filter((a: Article) =>
-      a.status === 'published' && a.press_category
+    let pressArticles = articles.filter(
+      (a: Article) => a.status === 'published' && a.press_category,
     );
 
     if (categoryFilter && categoryFilter !== 'all') {
@@ -2869,110 +2953,136 @@ publications.get('/team', async (c) => {
 /**
  * GET /publications/team/admin — Admin endpoint returning all team members (including inactive)
  */
-publications.get('/team/admin', requireAuth, asyncHandler(async (c) => {
-  const entries = await kv.getByPrefix('team_member:');
-  const members = (entries as TeamMember[])
-    .filter((m) => m && m.id)
-    .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
+publications.get(
+  '/team/admin',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const entries = await kv.getByPrefix('team_member:');
+    const members = (entries as TeamMember[])
+      .filter((m) => m && m.id)
+      .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
 
-  return c.json({ success: true, data: members, total: members.length });
-}));
+    return c.json({ success: true, data: members, total: members.length });
+  }),
+);
 
 /**
  * POST /publications/team/admin — Create a new team member
  */
-publications.post('/team/admin', requireAuth, asyncHandler(async (c) => {
-  const body = await c.req.json();
-  const { name, title: role, credentials, bio, specialties, image, linkedinUrl, email: memberEmail, sortOrder } = body;
+publications.post(
+  '/team/admin',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
+    const {
+      name,
+      title: role,
+      credentials,
+      bio,
+      specialties,
+      image,
+      linkedinUrl,
+      email: memberEmail,
+      sortOrder,
+    } = body;
 
-  if (!name || typeof name !== 'string' || name.trim().length < 2) {
-    return c.json({ error: 'Name is required (min 2 characters)' }, 400);
-  }
-  if (!role || typeof role !== 'string') {
-    return c.json({ error: 'Title/role is required' }, 400);
-  }
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      return c.json({ error: 'Name is required (min 2 characters)' }, 400);
+    }
+    if (!role || typeof role !== 'string') {
+      return c.json({ error: 'Title/role is required' }, 400);
+    }
 
-  const id = crypto.randomUUID();
-  const timestamp = new Date().toISOString();
+    const id = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
 
-  const member: TeamMember = {
-    id,
-    name: name.trim(),
-    title: role.trim(),
-    credentials: credentials?.trim() || '',
-    bio: bio?.trim() || '',
-    specialties: Array.isArray(specialties) ? specialties : [],
-    image: image?.trim() || '',
-    linkedinUrl: linkedinUrl?.trim() || '',
-    email: memberEmail?.trim() || '',
-    sortOrder: typeof sortOrder === 'number' ? sortOrder : 99,
-    active: true,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
+    const member: TeamMember = {
+      id,
+      name: name.trim(),
+      title: role.trim(),
+      credentials: credentials?.trim() || '',
+      bio: bio?.trim() || '',
+      specialties: Array.isArray(specialties) ? specialties : [],
+      image: image?.trim() || '',
+      linkedinUrl: linkedinUrl?.trim() || '',
+      email: memberEmail?.trim() || '',
+      sortOrder: typeof sortOrder === 'number' ? sortOrder : 99,
+      active: true,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
 
-  await kv.set(`team_member:${id}`, member);
-  log.info('Team member created', { id, name: member.name });
+    await kv.set(`team_member:${id}`, member);
+    log.info('Team member created', { id, name: member.name });
 
-  return c.json({ success: true, data: member });
-}));
+    return c.json({ success: true, data: member });
+  }),
+);
 
 /**
  * PUT /publications/team/admin/:id — Update a team member
  */
-publications.put('/team/admin/:id', requireAuth, asyncHandler(async (c) => {
-  const { id } = c.req.param();
-  const existing = await kv.get(`team_member:${id}`) as TeamMember | null;
+publications.put(
+  '/team/admin/:id',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const { id } = c.req.param();
+    const existing = (await kv.get(`team_member:${id}`)) as TeamMember | null;
 
-  if (!existing) {
-    return c.json({ error: 'Team member not found' }, 404);
-  }
+    if (!existing) {
+      return c.json({ error: 'Team member not found' }, 404);
+    }
 
-  const body = await c.req.json();
-  const updated: TeamMember = {
-    ...existing,
-    name: body.name?.trim() ?? existing.name,
-    title: body.title?.trim() ?? existing.title,
-    credentials: body.credentials?.trim() ?? existing.credentials,
-    bio: body.bio?.trim() ?? existing.bio,
-    specialties: Array.isArray(body.specialties) ? body.specialties : existing.specialties,
-    image: body.image?.trim() ?? existing.image,
-    linkedinUrl: body.linkedinUrl?.trim() ?? existing.linkedinUrl,
-    email: body.email?.trim() ?? existing.email,
-    sortOrder: typeof body.sortOrder === 'number' ? body.sortOrder : existing.sortOrder,
-    active: typeof body.active === 'boolean' ? body.active : existing.active,
-    updatedAt: new Date().toISOString(),
-  };
+    const body = await c.req.json();
+    const updated: TeamMember = {
+      ...existing,
+      name: body.name?.trim() ?? existing.name,
+      title: body.title?.trim() ?? existing.title,
+      credentials: body.credentials?.trim() ?? existing.credentials,
+      bio: body.bio?.trim() ?? existing.bio,
+      specialties: Array.isArray(body.specialties) ? body.specialties : existing.specialties,
+      image: body.image?.trim() ?? existing.image,
+      linkedinUrl: body.linkedinUrl?.trim() ?? existing.linkedinUrl,
+      email: body.email?.trim() ?? existing.email,
+      sortOrder: typeof body.sortOrder === 'number' ? body.sortOrder : existing.sortOrder,
+      active: typeof body.active === 'boolean' ? body.active : existing.active,
+      updatedAt: new Date().toISOString(),
+    };
 
-  await kv.set(`team_member:${id}`, updated);
-  log.info('Team member updated', { id, name: updated.name });
+    await kv.set(`team_member:${id}`, updated);
+    log.info('Team member updated', { id, name: updated.name });
 
-  return c.json({ success: true, data: updated });
-}));
+    return c.json({ success: true, data: updated });
+  }),
+);
 
 /**
  * DELETE /publications/team/admin/:id — Soft-delete a team member
  */
-publications.delete('/team/admin/:id', requireAuth, asyncHandler(async (c) => {
-  const { id } = c.req.param();
-  const existing = await kv.get(`team_member:${id}`) as TeamMember | null;
+publications.delete(
+  '/team/admin/:id',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const { id } = c.req.param();
+    const existing = (await kv.get(`team_member:${id}`)) as TeamMember | null;
 
-  if (!existing) {
-    return c.json({ error: 'Team member not found' }, 404);
-  }
+    if (!existing) {
+      return c.json({ error: 'Team member not found' }, 404);
+    }
 
-  const updated = {
-    ...existing,
-    active: false,
-    deletedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+    const updated = {
+      ...existing,
+      active: false,
+      deletedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-  await kv.set(`team_member:${id}`, updated);
-  log.info('Team member soft-deleted', { id, name: existing.name });
+    await kv.set(`team_member:${id}`, updated);
+    log.info('Team member soft-deleted', { id, name: existing.name });
 
-  return c.json({ success: true, message: `${existing.name} removed from team page` });
-}));
+    return c.json({ success: true, message: `${existing.name} removed from team page` });
+  }),
+);
 
 // ============================================================================
 // CAREERS / JOB LISTING ENDPOINTS
@@ -3013,100 +3123,125 @@ publications.get('/careers', async (c) => {
 /**
  * GET /publications/careers/admin — Admin endpoint returning all job listings
  */
-publications.get('/careers/admin', requireAuth, asyncHandler(async (c) => {
-  const entries = await kv.getByPrefix('job_listing:');
-  const listings = (entries as JobListing[])
-    .filter((j) => j && j.id)
-    .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
-  return c.json({ success: true, data: listings, total: listings.length });
-}));
+publications.get(
+  '/careers/admin',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const entries = await kv.getByPrefix('job_listing:');
+    const listings = (entries as JobListing[])
+      .filter((j) => j && j.id)
+      .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
+    return c.json({ success: true, data: listings, total: listings.length });
+  }),
+);
 
 /**
  * POST /publications/careers/admin — Create a new job listing
  */
-publications.post('/careers/admin', requireAuth, asyncHandler(async (c) => {
-  const body = await c.req.json();
-  const { title, category, location, type: jobType, description, requirements, benefits, closingDate, sortOrder } = body;
+publications.post(
+  '/careers/admin',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const body = await c.req.json();
+    const {
+      title,
+      category,
+      location,
+      type: jobType,
+      description,
+      requirements,
+      benefits,
+      closingDate,
+      sortOrder,
+    } = body;
 
-  if (!title || typeof title !== 'string' || title.trim().length < 3) {
-    return c.json({ error: 'Title is required (min 3 characters)' }, 400);
-  }
-  if (!category || typeof category !== 'string') {
-    return c.json({ error: 'Category is required' }, 400);
-  }
+    if (!title || typeof title !== 'string' || title.trim().length < 3) {
+      return c.json({ error: 'Title is required (min 3 characters)' }, 400);
+    }
+    if (!category || typeof category !== 'string') {
+      return c.json({ error: 'Category is required' }, 400);
+    }
 
-  const id = crypto.randomUUID();
-  const timestamp = new Date().toISOString();
+    const id = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
 
-  const listing: JobListing = {
-    id,
-    title: title.trim(),
-    category: category.trim(),
-    location: location?.trim() || 'Pretoria, South Africa',
-    type: jobType?.trim() || 'full-time',
-    description: description?.trim() || '',
-    requirements: Array.isArray(requirements) ? requirements : [],
-    benefits: Array.isArray(benefits) ? benefits : [],
-    closingDate: closingDate || '',
-    active: true,
-    sortOrder: typeof sortOrder === 'number' ? sortOrder : 99,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
+    const listing: JobListing = {
+      id,
+      title: title.trim(),
+      category: category.trim(),
+      location: location?.trim() || 'Pretoria, South Africa',
+      type: jobType?.trim() || 'full-time',
+      description: description?.trim() || '',
+      requirements: Array.isArray(requirements) ? requirements : [],
+      benefits: Array.isArray(benefits) ? benefits : [],
+      closingDate: closingDate || '',
+      active: true,
+      sortOrder: typeof sortOrder === 'number' ? sortOrder : 99,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
 
-  await kv.set(`job_listing:${id}`, listing);
-  log.info('Job listing created', { id, title: listing.title });
-  return c.json({ success: true, data: listing });
-}));
+    await kv.set(`job_listing:${id}`, listing);
+    log.info('Job listing created', { id, title: listing.title });
+    return c.json({ success: true, data: listing });
+  }),
+);
 
 /**
  * PUT /publications/careers/admin/:id — Update a job listing
  */
-publications.put('/careers/admin/:id', requireAuth, asyncHandler(async (c) => {
-  const { id } = c.req.param();
-  const existing = await kv.get(`job_listing:${id}`) as JobListing | null;
-  if (!existing) return c.json({ error: 'Job listing not found' }, 404);
+publications.put(
+  '/careers/admin/:id',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const { id } = c.req.param();
+    const existing = (await kv.get(`job_listing:${id}`)) as JobListing | null;
+    if (!existing) return c.json({ error: 'Job listing not found' }, 404);
 
-  const body = await c.req.json();
-  const updated: JobListing = {
-    ...existing,
-    title: body.title?.trim() ?? existing.title,
-    category: body.category?.trim() ?? existing.category,
-    location: body.location?.trim() ?? existing.location,
-    type: body.type?.trim() ?? existing.type,
-    description: body.description?.trim() ?? existing.description,
-    requirements: Array.isArray(body.requirements) ? body.requirements : existing.requirements,
-    benefits: Array.isArray(body.benefits) ? body.benefits : existing.benefits,
-    closingDate: body.closingDate ?? existing.closingDate,
-    active: typeof body.active === 'boolean' ? body.active : existing.active,
-    sortOrder: typeof body.sortOrder === 'number' ? body.sortOrder : existing.sortOrder,
-    updatedAt: new Date().toISOString(),
-  };
+    const body = await c.req.json();
+    const updated: JobListing = {
+      ...existing,
+      title: body.title?.trim() ?? existing.title,
+      category: body.category?.trim() ?? existing.category,
+      location: body.location?.trim() ?? existing.location,
+      type: body.type?.trim() ?? existing.type,
+      description: body.description?.trim() ?? existing.description,
+      requirements: Array.isArray(body.requirements) ? body.requirements : existing.requirements,
+      benefits: Array.isArray(body.benefits) ? body.benefits : existing.benefits,
+      closingDate: body.closingDate ?? existing.closingDate,
+      active: typeof body.active === 'boolean' ? body.active : existing.active,
+      sortOrder: typeof body.sortOrder === 'number' ? body.sortOrder : existing.sortOrder,
+      updatedAt: new Date().toISOString(),
+    };
 
-  await kv.set(`job_listing:${id}`, updated);
-  log.info('Job listing updated', { id, title: updated.title });
-  return c.json({ success: true, data: updated });
-}));
+    await kv.set(`job_listing:${id}`, updated);
+    log.info('Job listing updated', { id, title: updated.title });
+    return c.json({ success: true, data: updated });
+  }),
+);
 
 /**
  * DELETE /publications/careers/admin/:id — Soft-delete a job listing
  */
-publications.delete('/careers/admin/:id', requireAuth, asyncHandler(async (c) => {
-  const { id } = c.req.param();
-  const existing = await kv.get(`job_listing:${id}`) as JobListing | null;
-  if (!existing) return c.json({ error: 'Job listing not found' }, 404);
+publications.delete(
+  '/careers/admin/:id',
+  requireAuth,
+  asyncHandler(async (c) => {
+    const { id } = c.req.param();
+    const existing = (await kv.get(`job_listing:${id}`)) as JobListing | null;
+    if (!existing) return c.json({ error: 'Job listing not found' }, 404);
 
-  const updated = {
-    ...existing,
-    active: false,
-    deletedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+    const updated = {
+      ...existing,
+      active: false,
+      deletedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-  await kv.set(`job_listing:${id}`, updated);
-  log.info('Job listing soft-deleted', { id, title: existing.title });
-  return c.json({ success: true, message: `"${existing.title}" removed from careers page` });
-}));
+    await kv.set(`job_listing:${id}`, updated);
+    log.info('Job listing soft-deleted', { id, title: existing.title });
+    return c.json({ success: true, message: `"${existing.title}" removed from careers page` });
+  }),
+);
 
 export default publications;
-
