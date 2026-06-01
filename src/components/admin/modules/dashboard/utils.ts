@@ -1,51 +1,29 @@
 import type { TaskPriority, BadgeVariant, TrendDirection, TaskDueToday } from './types';
+import {
+  formatNumber,
+  formatCurrency,
+  formatCurrencyCompact,
+  formatPercentage,
+  formatDate,
+  formatTime,
+  formatDateTime,
+} from '@/shared/formatting/format';
 
-export function formatNumber(value: number, locale: string = 'en-ZA'): string {
-  // Use manual formatting to ensure consistent comma-separated thousands
-  if (isNaN(value)) return '0';
-  const isNeg = value < 0;
-  const parts = Math.abs(value).toString().split('.');
-  const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `${isNeg ? '-' : ''}${intPart}${parts.length > 1 ? '.' + parts[1] : ''}`;
-}
-
-export function formatCurrency(
-  value: number, 
-  currency: string = 'ZAR',
-  _locale: string = 'en-ZA'
-): string {
-  if (isNaN(value)) return 'R0.00';
-  const isNeg = value < 0;
-  const fixed = Math.abs(value).toFixed(2);
-  const [intPart, decPart] = fixed.split('.');
-  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  const symbol = currency === 'ZAR' ? 'R' : currency;
-  return `${isNeg ? '-' : ''}${symbol}${withCommas}.${decPart}`;
-}
-
-export function formatCurrencyCompact(
-  value: number,
-  currency: string = 'ZAR',
-  _locale: string = 'en-ZA'
-): string {
-  const symbol = currency === 'ZAR' ? 'R' : currency;
-  const abs = Math.abs(value);
-  const isNeg = value < 0;
-  const sign = isNeg ? '-' : '';
-  
-  if (abs >= 1_000_000_000) return `${sign}${symbol}${(abs / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `${sign}${symbol}${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}${symbol}${(abs / 1_000).toFixed(1)}K`;
-  return `${sign}${symbol}${abs.toFixed(0)}`;
-}
-
-export function formatPercentage(value: number, decimals: number = 1): string {
-  return `${value.toFixed(decimals)}%`;
-}
+// Canonical formatters now live in the shared formatting layer (Phase 6c);
+// re-exported here so the dashboard's long-standing import paths keep working.
+export {
+  formatNumber,
+  formatCurrency,
+  formatCurrencyCompact,
+  formatPercentage,
+  formatDate,
+  formatTime,
+  formatDateTime,
+};
 
 export function formatKPIValue(
   value: string | number,
-  format?: 'number' | 'currency' | 'percentage'
+  format?: 'number' | 'currency' | 'percentage',
 ): string {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
 
@@ -78,10 +56,7 @@ export function calculatePercentageOfTotal(value: number, total: number): number
   return (value / total) * 100;
 }
 
-export function getTrendDirection(
-  growth: number,
-  threshold: number = 0
-): TrendDirection {
+export function getTrendDirection(growth: number, threshold: number = 0): TrendDirection {
   if (growth > threshold) return 'up';
   if (growth < -threshold) return 'down';
   return 'neutral';
@@ -103,30 +78,6 @@ export function getPriorityVariant(priority: TaskPriority): BadgeVariant {
 
 export function getPriorityLabel(priority: TaskPriority): string {
   return priority.charAt(0).toUpperCase() + priority.slice(1);
-}
-
-export function formatDate(
-  date: string | Date,
-  options?: Intl.DateTimeFormatOptions
-): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toLocaleDateString('en-ZA', options);
-}
-
-export function formatTime(
-  date: string | Date,
-  options?: Intl.DateTimeFormatOptions
-): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toLocaleTimeString('en-ZA', {
-    hour: '2-digit',
-    minute: '2-digit',
-    ...options,
-  });
-}
-
-export function formatDateTime(date: string | Date): string {
-  return `${formatDate(date)} ${formatTime(date)}`;
 }
 
 export function getRelativeTime(date: string | Date): string {
@@ -165,10 +116,7 @@ export function isToday(date: string | Date): boolean {
   );
 }
 
-export function isOverdue(
-  dueDate: string | Date,
-  status?: string
-): boolean {
+export function isOverdue(dueDate: string | Date, status?: string): boolean {
   if (status && ['completed', 'cancelled'].includes(status.toLowerCase())) {
     return false;
   }
@@ -184,7 +132,7 @@ export function isTaskOverdue(task: TaskDueToday): boolean {
 
 export function groupBy<T, K extends string | number>(
   items: T[],
-  keyFn: (item: T) => K
+  keyFn: (item: T) => K,
 ): Map<K, T[]> {
   const map = new Map<K, T[]>();
   for (const item of items) {
@@ -196,9 +144,7 @@ export function groupBy<T, K extends string | number>(
   return map;
 }
 
-export function sortByPriority<T extends { priority: TaskPriority }>(
-  items: T[]
-): T[] {
+export function sortByPriority<T extends { priority: TaskPriority }>(items: T[]): T[] {
   const priorityOrder: Record<TaskPriority, number> = {
     critical: 0,
     high: 1,
