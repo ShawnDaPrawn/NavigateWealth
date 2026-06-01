@@ -80,16 +80,16 @@ export default defineConfig({
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
       // Ratcheted as characterization tests land. Latest (2026-06-02, after the
-      // queryKeys factory + esignSignerService tests — 98% / 82%): measured
-      // statements 8.67 / lines 8.71 / branches 7.67 / functions 6.88 across ~953
-      // tests. Floor raised from 7.9/7.9/7.2/5.55, kept ~0.35 below measured for
+      // communication-utils + key-manager-utils tests — 96% / 95%): measured
+      // statements 8.93 / lines 8.94 / branches 7.85 / functions 7.24 across ~981
+      // tests. Floor raised from 8.3/8.3/7.35/6.5, kept ~0.35 below measured for
       // headroom against the actively churning tree. The 70/65/70/70 end-goal is
       // long-horizon — this floor only ratchets up.
       thresholds: {
-        lines: 8.3,
-        functions: 6.5,
-        branches: 7.35,
-        statements: 8.3,
+        lines: 8.55,
+        functions: 6.9,
+        branches: 7.5,
+        statements: 8.55,
       },
     },
   },
