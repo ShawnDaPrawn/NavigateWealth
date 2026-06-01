@@ -13,7 +13,7 @@ import { getAuthContext, AuthError } from './auth-mw.ts';
 import type { EsignEnvelope, EsignField, EsignSigner } from './esign-types.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { 
+import {
   createEnvelope,
   createDocument,
   getEnvelopeDetails,
@@ -66,17 +66,11 @@ import {
   generateAndStoreOTP,
   verifyAccessCode,
 } from './esign-otp.ts';
-import { generateCompletionCertificate } from "./esign-certificates.ts";
-import {
-  createSigningInviteEmail,
-  createOTPEmail,
-} from './esign-email-templates.ts';
+import { generateCompletionCertificate } from './esign-certificates.ts';
+import { createSigningInviteEmail, createOTPEmail } from './esign-email-templates.ts';
 import { getCertificate } from './esign-certificates.ts';
 import { completeEnvelope } from './esign-workflow.ts';
-import {
-  getReminderConfig,
-  setReminderConfig,
-} from './esign-automation.ts';
+import { getReminderConfig, setReminderConfig } from './esign-automation.ts';
 import { runExpirySweep } from './esign-expiry-service.ts';
 import { runReminderSweep } from './esign-reminder-service.ts';
 import {
@@ -111,32 +105,21 @@ import {
   listPacketRuns,
   cancelPacketRun,
 } from './esign-packet-service.ts';
-import { 
-  checkRateLimit, 
-  clearRateLimit,
-  RATE_LIMITS 
-} from './rateLimiter.ts';
+import { checkRateLimit, clearRateLimit, RATE_LIMITS } from './rateLimiter.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { withCtx } from './esign-request-context.ts';
-import { 
+import {
   sendEmail,
   sendSigningInvitation,
   sendSigningReminder,
   sendRecallNotification,
   sendCompletionNotification,
 } from './email-service.ts';
-import {
-  sendInviteSms,
-  sendOtpSms,
-  sendReminderSms,
-  getSmsProviderStatus,
-} from './sms-service.ts';
+import { sendInviteSms, sendOtpSms, sendReminderSms, getSmsProviderStatus } from './sms-service.ts';
 import {
   shouldDeliverSenderEvent,
   queueForDigest,
-  getPreferences as getNotifPrefs,
-  setPreferences as setNotifPrefs,
   type SenderEvent,
 } from './esign-notification-prefs.ts';
 import {
@@ -162,12 +145,8 @@ import {
   resolveApiKey,
   redactApiKey,
 } from './api-key-service.ts';
-import {
-  enqueue as enqueueInAppNotification,
-  list as listInAppNotifications,
-  markRead as markInAppRead,
-  markAllRead as markAllInAppRead,
-} from './esign-inapp-notifications.ts';
+import { enqueue as enqueueInAppNotification } from './esign-inapp-notifications.ts';
+import meRoutes from './esign-me-routes.ts';
 import {
   getActiveConsent,
   getConsentByVersion,
@@ -175,10 +154,7 @@ import {
   publishConsentVersion,
   setActiveConsent,
 } from './esign-consent-registry.ts';
-import {
-  runKbaCheck,
-  getKbaStatus,
-} from './kba-service.ts';
+import { runKbaCheck, getKbaStatus } from './kba-service.ts';
 import { buildEvidencePack } from './esign-evidence-export.ts';
 import {
   listRecoveryBin,
@@ -187,10 +163,7 @@ import {
   purgeExpiredDeletedEnvelopes,
   RECOVERY_RETENTION_DAYS,
 } from './esign-recovery-bin.ts';
-import {
-  resolveFirmId as resolveFirmIdShared,
-  belongsToFirm,
-} from './esign-firm-scope.ts';
+import { resolveFirmId as resolveFirmIdShared, belongsToFirm } from './esign-firm-scope.ts';
 import { getEsignMetrics } from './esign-metrics-service.ts';
 import { runStuckAlertSweep } from './esign-stuck-alert-service.ts';
 import { searchAuditEvents } from './esign-audit-search-service.ts';
@@ -229,14 +202,15 @@ const log = createModuleLogger('esign-routes');
 
 // Lazy Supabase client for admin operations (e.g. getUserById)
 // Must NOT be top-level to avoid deployment crashes in edge functions.
-const getSupabase = () => createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 // Root handlers
 esignRoutes.get('/', (c) => c.json({ service: 'esign', status: 'active' }));
 esignRoutes.get('', (c) => c.json({ service: 'esign', status: 'active' }));
+
+// --- /me/* sender self-service routes (extracted to esign-me-routes.ts) ---
+esignRoutes.route('/', meRoutes);
 
 // Start the background expiry sweep scheduler on first module load.
 // Safe to call multiple times — internally deduped.
@@ -248,8 +222,28 @@ startExpirySweepScheduler();
  * Extract client IP and User Agent from request
  */
 /** Shared callback types for e-sign route operations */
-interface SignerRecord { id: string; name: string; email: string; phone?: string; role?: string; order?: number; status?: string; access_token?: string; requiresOtp?: boolean; accessCode?: string; clientId?: string; [key: string]: unknown }
-interface FieldRecord { id?: string; type?: string; signerId?: string; signerIndex?: number; signer_id?: string; [key: string]: unknown }
+interface SignerRecord {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role?: string;
+  order?: number;
+  status?: string;
+  access_token?: string;
+  requiresOtp?: boolean;
+  accessCode?: string;
+  clientId?: string;
+  [key: string]: unknown;
+}
+interface FieldRecord {
+  id?: string;
+  type?: string;
+  signerId?: string;
+  signerIndex?: number;
+  signer_id?: string;
+  [key: string]: unknown;
+}
 
 function getRequestMetadata(c: { req: { header: (name: string) => string | undefined } }) {
   return {
@@ -293,91 +287,14 @@ async function ensureStorageBuckets(): Promise<void> {
  * Health check endpoint
  */
 esignRoutes.get('/health', (c) => {
-  return c.json({ 
-    status: 'ok', 
+  return c.json({
+    status: 'ok',
     service: 'esign',
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString(),
   });
 });
 
 // ==================== MAINTENANCE ROUTES (§14.2 — before parameterised routes) ====================
-
-/**
- * P5.2 — Sender notification preferences.
- * GET  /me/notification-prefs   → current user's prefs
- * PUT  /me/notification-prefs   → { mode, perEvent? }
- */
-esignRoutes.get('/me/notification-prefs', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const prefs = await getNotifPrefs(ctx.user.id);
-    return c.json({ success: true, preferences: prefs });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
-  }
-});
-
-esignRoutes.put('/me/notification-prefs', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const body = await c.req.json().catch(() => ({}));
-    const allowedModes = new Set(['every_event', 'completion_only', 'digest', 'off']);
-    const mode = typeof body.mode === 'string' && allowedModes.has(body.mode)
-      ? body.mode
-      : undefined;
-    const updated = await setNotifPrefs(ctx.user.id, {
-      mode,
-      perEvent: typeof body.perEvent === 'object' ? body.perEvent : undefined,
-    });
-    return c.json({ success: true, preferences: updated });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
-  }
-});
-
-/**
- * P5.7 — In-app notifications (bell UI).
- * GET  /me/notifications              → recent items + unread counter
- * POST /me/notifications/:id/read     → mark one as read
- * POST /me/notifications/read-all     → mark everything read
- */
-esignRoutes.get('/me/notifications', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const limit = Number(c.req.query('limit') ?? 25);
-    const unreadOnly = c.req.query('unreadOnly') === 'true';
-    const result = await listInAppNotifications(ctx.user.id, { limit, unreadOnly });
-    return c.json({ success: true, ...result });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
-  }
-});
-
-esignRoutes.post('/me/notifications/:id/read', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const id = c.req.param('id');
-    const ok = await markInAppRead(ctx.user.id, id);
-    return c.json({ success: ok });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
-  }
-});
-
-esignRoutes.post('/me/notifications/read-all', async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const updated = await markAllInAppRead(ctx.user.id);
-    return c.json({ success: true, updated });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed' }, status);
-  }
-});
 
 /**
  * P5.1 — SMS provider health check. Lets admin UI render
@@ -423,7 +340,10 @@ esignRoutes.post('/maintenance/expiry-sweep', async (c) => {
   } catch (error: unknown) {
     log.error('Expiry sweep error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Expiry sweep failed' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Expiry sweep failed' },
+      status,
+    );
   }
 });
 
@@ -467,11 +387,16 @@ esignRoutes.post('/cron/expiry-sweep', async (c) => {
       },
     });
 
-    log.info(`CRON expiry sweep complete: expired=${result.expiredCount}, errors=${result.errors.length}`);
+    log.info(
+      `CRON expiry sweep complete: expired=${result.expiredCount}, errors=${result.errors.length}`,
+    );
     return c.json({ success: true, ...result });
   } catch (error: unknown) {
     log.error('CRON expiry sweep error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'CRON expiry sweep failed' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'CRON expiry sweep failed' },
+      500,
+    );
   }
 });
 
@@ -507,7 +432,10 @@ esignRoutes.post('/maintenance/reminder-sweep', async (c) => {
   } catch (error: unknown) {
     log.error('Reminder sweep error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Reminder sweep failed' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Reminder sweep failed' },
+      status,
+    );
   }
 });
 
@@ -544,7 +472,10 @@ esignRoutes.post('/cron/reminder-sweep', async (c) => {
     return c.json({ success: true, ...result });
   } catch (error: unknown) {
     log.error('CRON reminder sweep error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'CRON reminder sweep failed' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'CRON reminder sweep failed' },
+      500,
+    );
   }
 });
 
@@ -575,25 +506,46 @@ esignRoutes.post('/maintenance/bulk-remind', rateLimit('SENDER_BULK'), async (c)
       try {
         const envelope = await getEnvelopeDetails(envelopeId);
         if (!envelope) {
-          results.push({ envelopeId, title: 'Unknown', pendingSigners: [], remindersSent: 0, error: 'Envelope not found' });
+          results.push({
+            envelopeId,
+            title: 'Unknown',
+            pendingSigners: [],
+            remindersSent: 0,
+            error: 'Envelope not found',
+          });
           continue;
         }
         if (!['sent', 'viewed', 'partially_signed'].includes(envelope.status)) {
-          results.push({ envelopeId, title: envelope.title, pendingSigners: [], remindersSent: 0, error: `Status '${envelope.status}' is not remindable` });
+          results.push({
+            envelopeId,
+            title: envelope.title,
+            pendingSigners: [],
+            remindersSent: 0,
+            error: `Status '${envelope.status}' is not remindable`,
+          });
           continue;
         }
 
         const signers = await getEnvelopeSigners(envelopeId);
         const pendingSigners = signers.filter((s: { status: string }) =>
-          ['pending', 'sent', 'viewed', 'otp_verified'].includes(s.status)
+          ['pending', 'sent', 'viewed', 'otp_verified'].includes(s.status),
         );
 
         if (pendingSigners.length === 0) {
-          results.push({ envelopeId, title: envelope.title, pendingSigners: [], remindersSent: 0, error: 'No pending signers' });
+          results.push({
+            envelopeId,
+            title: envelope.title,
+            pendingSigners: [],
+            remindersSent: 0,
+            error: 'No pending signers',
+          });
           continue;
         }
 
-        const pending = pendingSigners.map((s: { name: string; email: string }) => ({ name: s.name, email: s.email }));
+        const pending = pendingSigners.map((s: { name: string; email: string }) => ({
+          name: s.name,
+          email: s.email,
+        }));
 
         if (!dryRun) {
           for (const signer of pendingSigners) {
@@ -610,9 +562,20 @@ esignRoutes.post('/maintenance/bulk-remind', rateLimit('SENDER_BULK'), async (c)
           }
         }
 
-        results.push({ envelopeId, title: envelope.title, pendingSigners: pending, remindersSent: dryRun ? 0 : pendingSigners.length });
+        results.push({
+          envelopeId,
+          title: envelope.title,
+          pendingSigners: pending,
+          remindersSent: dryRun ? 0 : pendingSigners.length,
+        });
       } catch (err) {
-        results.push({ envelopeId, title: 'Unknown', pendingSigners: [], remindersSent: 0, error: getErrMsg(err) });
+        results.push({
+          envelopeId,
+          title: 'Unknown',
+          pendingSigners: [],
+          remindersSent: 0,
+          error: getErrMsg(err),
+        });
       }
     }
 
@@ -674,16 +637,31 @@ esignRoutes.post('/maintenance/bulk-void', rateLimit('SENDER_BULK'), async (c) =
       try {
         const envelope = await getEnvelopeDetails(envelopeId);
         if (!envelope) {
-          results.push({ envelopeId, title: 'Unknown', previousStatus: '', voided: false, error: 'Envelope not found' });
+          results.push({
+            envelopeId,
+            title: 'Unknown',
+            previousStatus: '',
+            voided: false,
+            error: 'Envelope not found',
+          });
           continue;
         }
         if (!voidableStatuses.includes(envelope.status)) {
-          results.push({ envelopeId, title: envelope.title, previousStatus: envelope.status, voided: false, error: `Status '${envelope.status}' cannot be voided` });
+          results.push({
+            envelopeId,
+            title: envelope.title,
+            previousStatus: envelope.status,
+            voided: false,
+            error: `Status '${envelope.status}' cannot be voided`,
+          });
           continue;
         }
 
         if (!dryRun) {
-          await updateEnvelopeStatus(envelopeId, 'voided', { voided_at: new Date().toISOString(), void_reason: reason });
+          await updateEnvelopeStatus(envelopeId, 'voided', {
+            voided_at: new Date().toISOString(),
+            void_reason: reason,
+          });
           await logAuditEvent({
             envelopeId,
             actorType: 'sender_user',
@@ -693,9 +671,20 @@ esignRoutes.post('/maintenance/bulk-void', rateLimit('SENDER_BULK'), async (c) =
           });
         }
 
-        results.push({ envelopeId, title: envelope.title, previousStatus: envelope.status, voided: !dryRun });
+        results.push({
+          envelopeId,
+          title: envelope.title,
+          previousStatus: envelope.status,
+          voided: !dryRun,
+        });
       } catch (err) {
-        results.push({ envelopeId, title: 'Unknown', previousStatus: '', voided: false, error: getErrMsg(err) });
+        results.push({
+          envelopeId,
+          title: 'Unknown',
+          previousStatus: '',
+          voided: false,
+          error: getErrMsg(err),
+        });
       }
     }
 
@@ -706,10 +695,14 @@ esignRoutes.post('/maintenance/bulk-void', rateLimit('SENDER_BULK'), async (c) =
         actorRole: 'admin',
         category: 'bulk_operation',
         action: 'esign_bulk_void',
-        summary: `Bulk void: ${results.filter(r => r.voided).length} of ${envelopeIds.length} envelopes voided`,
+        summary: `Bulk void: ${results.filter((r) => r.voided).length} of ${envelopeIds.length} envelopes voided`,
         severity: 'critical',
         entityType: 'envelope',
-        metadata: { reason, envelopeCount: envelopeIds.length, voidedCount: results.filter(r => r.voided).length },
+        metadata: {
+          reason,
+          envelopeCount: envelopeIds.length,
+          voidedCount: results.filter((r) => r.voided).length,
+        },
       }).catch(() => {});
     }
 
@@ -717,7 +710,9 @@ esignRoutes.post('/maintenance/bulk-void', rateLimit('SENDER_BULK'), async (c) =
       success: true,
       dryRun,
       envelopeCount: envelopeIds.length,
-      voidedCount: dryRun ? results.filter(r => !r.error).length : results.filter(r => r.voided).length,
+      voidedCount: dryRun
+        ? results.filter((r) => !r.error).length
+        : results.filter((r) => r.voided).length,
       results,
     });
   } catch (error: unknown) {
@@ -743,12 +738,17 @@ esignRoutes.post('/verify-hash', async (c) => {
     //   1. envelope.signed_document_hash — the sealed final PDF hash (most common for verification)
     //   2. document.hash — the original uploaded PDF hash
     const allValues = await kv.getByPrefix(EsignKeys.PREFIX_ENVELOPE);
-    const envelopes = allValues.filter((item: Record<string, unknown>) =>
-      item && typeof item === 'object' && !Array.isArray(item) && item.id && item.status &&
-      // P6.8 — soft-deleted envelopes don't take part in verify-hash
-      // lookups. The document still exists in storage but is logically
-      // gone from the user's perspective.
-      !item.deleted_at
+    const envelopes = allValues.filter(
+      (item: Record<string, unknown>) =>
+        item &&
+        typeof item === 'object' &&
+        !Array.isArray(item) &&
+        item.id &&
+        item.status &&
+        // P6.8 — soft-deleted envelopes don't take part in verify-hash
+        // lookups. The document still exists in storage but is logically
+        // gone from the user's perspective.
+        !item.deleted_at,
     );
 
     let matchedEnvelope: Record<string, unknown> | null = null;
@@ -780,14 +780,17 @@ esignRoutes.post('/verify-hash', async (c) => {
     if (!matchedEnvelope) {
       return c.json({
         verified: false,
-        message: 'No matching document found. The file may have been modified after signing, or it was not signed through this platform.',
+        message:
+          'No matching document found. The file may have been modified after signing, or it was not signed through this platform.',
       });
     }
 
     // Fetch signers
     const rawSIds = await kv.get(EsignKeys.envelopeSigners(matchedEnvelope.id as string));
     const signerIds = Array.isArray(rawSIds) ? rawSIds : [];
-    const signers = await Promise.all(signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id)));
+    const signers = await Promise.all(
+      signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id)),
+    );
     const validSigners = signers.filter(Boolean);
 
     return c.json({
@@ -806,11 +809,12 @@ esignRoutes.post('/verify-hash', async (c) => {
         status: s.status,
         signedAt: s.signed_at || null,
       })),
-      message: matchedEnvelope.status === 'completed'
-        ? matchType === 'signed'
-          ? 'Document verified. This is an authentic signed and sealed document from Navigate Wealth.'
-          : 'Document verified. This matches the original uploaded document. The signed copy may have additional content (signatures, certificate).'
-        : `Document found but envelope status is "${matchedEnvelope.status}". Signing may not be complete.`,
+      message:
+        matchedEnvelope.status === 'completed'
+          ? matchType === 'signed'
+            ? 'Document verified. This is an authentic signed and sealed document from Navigate Wealth.'
+            : 'Document verified. This matches the original uploaded document. The signed copy may have additional content (signatures, certificate).'
+          : `Document found but envelope status is "${matchedEnvelope.status}". Signing may not be complete.`,
     });
   } catch (error: unknown) {
     log.error('Verify hash error:', error);
@@ -828,10 +832,10 @@ esignRoutes.get('/envelopes', async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
-    
+
     // Get query params
     const status = c.req.query('status');
-    
+
     const envelopes = await getAllEnvelopes(status);
 
     // P6.9 — enforce firm scope on every read of the aggregate
@@ -846,7 +850,10 @@ esignRoutes.get('/envelopes', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get all envelopes error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to fetch envelopes' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch envelopes' },
+      status,
+    );
   }
 });
 
@@ -859,7 +866,7 @@ esignRoutes.delete('/envelopes', async (c) => {
     // Authenticate
     const ctx = await getAuthContext(c);
     const user = ctx.user;
-    
+
     // Safety check - require a confirmation query param
     const confirm = c.req.query('confirm');
     if (confirm !== 'true') {
@@ -867,7 +874,7 @@ esignRoutes.delete('/envelopes', async (c) => {
     }
 
     await clearAllEsignData();
-    
+
     // Log audit event for the wipe
     const { ip, userAgent } = getRequestMetadata(c);
     await logAuditEvent({
@@ -896,7 +903,10 @@ esignRoutes.delete('/envelopes', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Clear all data error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to clear data' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to clear data' },
+      status,
+    );
   }
 });
 
@@ -904,239 +914,247 @@ esignRoutes.delete('/envelopes', async (c) => {
  * POST /envelopes/upload
  * Upload a PDF document and create an envelope
  */
-esignRoutes.post('/envelopes/upload', requireIdempotency(), rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    // Authenticate
-    const ctx = await getAuthContext(c);
-    const user = ctx.user;
-
-    // Ensure storage buckets exist (lazy init)
-    await ensureStorageBuckets();
-
-    // Parse multipart form data — use { all: true } so duplicate keys
-    // (e.g. multiple files under 'files') are returned as arrays.
-    // Wrap in try/catch because Hono's parseBody calls formData.forEach()
-    // internally, which throws if the body cannot be parsed as FormData
-    // (e.g. missing/malformed Content-Type boundary, already-consumed stream).
-    let body: Record<string, unknown>;
+esignRoutes.post(
+  '/envelopes/upload',
+  requireIdempotency(),
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
     try {
-      body = await c.req.parseBody({ all: true });
-    } catch (parseErr: unknown) {
-      log.error('Failed to parse multipart form data:', parseErr);
-      return c.json({ 
-        error: 'Invalid form data. Ensure the request uses multipart/form-data encoding.',
-        details: parseErr?.message || String(parseErr)
-      }, 400);
-    }
-    
-    // With { all: true }, duplicate keys become arrays.
-    // Single values remain as-is, so normalise both cases.
-    let files: File[] = [];
-    
-    const rawFiles = body['files'] ?? body['file'];
-    if (rawFiles) {
-      if (Array.isArray(rawFiles)) {
-        files = rawFiles.filter((f: unknown): f is File => f instanceof File);
-      } else if (rawFiles instanceof File) {
-        files = [rawFiles];
+      // Authenticate
+      const ctx = await getAuthContext(c);
+      const user = ctx.user;
+
+      // Ensure storage buckets exist (lazy init)
+      await ensureStorageBuckets();
+
+      // Parse multipart form data — use { all: true } so duplicate keys
+      // (e.g. multiple files under 'files') are returned as arrays.
+      // Wrap in try/catch because Hono's parseBody calls formData.forEach()
+      // internally, which throws if the body cannot be parsed as FormData
+      // (e.g. missing/malformed Content-Type boundary, already-consumed stream).
+      let body: Record<string, unknown>;
+      try {
+        body = await c.req.parseBody({ all: true });
+      } catch (parseErr: unknown) {
+        log.error('Failed to parse multipart form data:', parseErr);
+        return c.json(
+          {
+            error: 'Invalid form data. Ensure the request uses multipart/form-data encoding.',
+            details: parseErr?.message || String(parseErr),
+          },
+          400,
+        );
       }
-    }
 
-    // contextStr may also be wrapped in an array by { all: true }
-    const contextStr: string | undefined = Array.isArray(body['context'])
-      ? (body['context'][0] as string)
-      : (body['context'] as string);
+      // With { all: true }, duplicate keys become arrays.
+      // Single values remain as-is, so normalise both cases.
+      let files: File[] = [];
 
-    if (files.length === 0 || !contextStr) {
-      return c.json({ error: 'Files and context required' }, 400);
-    }
+      const rawFiles = body['files'] ?? body['file'];
+      if (rawFiles) {
+        if (Array.isArray(rawFiles)) {
+          files = rawFiles.filter((f: unknown): f is File => f instanceof File);
+        } else if (rawFiles instanceof File) {
+          files = [rawFiles];
+        }
+      }
 
-    const context = JSON.parse(contextStr);
-    const {
-      clientId,
-      adviceCaseId,
-      requestId,
-      productId,
-      title,
-      message,
-      expiryDays,
-      // P4.1 / P4.2 — when uploading from the express wizard the
-      // template id + version are forwarded so the envelope record
-      // pins the exact snapshot it was materialised from.
-      templateId,
-      templateVersion,
-      // P4.7 / P4.8 — bulk-send and packet provenance (ignored when
-      // not present; populated by the campaign worker / packet runner).
-      campaignId,
-      packetRunId,
-      packetStepIndex,
-    } = context;
+      // contextStr may also be wrapped in an array by { all: true }
+      const contextStr: string | undefined = Array.isArray(body['context'])
+        ? (body['context'][0] as string)
+        : (body['context'] as string);
 
-    if (!title) {
-      return c.json({ error: 'title required in context' }, 400);
-    }
+      if (files.length === 0 || !contextStr) {
+        return c.json({ error: 'Files and context required' }, 400);
+      }
 
-    // Use 'standalone' as clientId if not provided (for standalone e-sign module)
-    const effectiveClientId = clientId || 'standalone';
+      const context = JSON.parse(contextStr);
+      const {
+        clientId,
+        adviceCaseId,
+        requestId,
+        productId,
+        title,
+        message,
+        expiryDays,
+        // P4.1 / P4.2 — when uploading from the express wizard the
+        // template id + version are forwarded so the envelope record
+        // pins the exact snapshot it was materialised from.
+        templateId,
+        templateVersion,
+        // P4.7 / P4.8 — bulk-send and packet provenance (ignored when
+        // not present; populated by the campaign worker / packet runner).
+        campaignId,
+        packetRunId,
+        packetStepIndex,
+      } = context;
 
-    // Process files
-    let finalFileBuffer: Uint8Array;
-    let finalFileName: string;
+      if (!title) {
+        return c.json({ error: 'title required in context' }, 400);
+      }
 
-    if (files.length === 1) {
-       const file = files[0];
-       finalFileName = file.name;
-       const arrayBuffer = await file.arrayBuffer();
-       finalFileBuffer = new Uint8Array(arrayBuffer);
-    } else {
-       // Merge files
-       log.info(`Merging ${files.length} files for envelope: ${title}`);
-       const buffers: Uint8Array[] = [];
-       // Sort files if needed? For now assume client sends them in order.
-       for (const file of files) {
+      // Use 'standalone' as clientId if not provided (for standalone e-sign module)
+      const effectiveClientId = clientId || 'standalone';
+
+      // Process files
+      let finalFileBuffer: Uint8Array;
+      let finalFileName: string;
+
+      if (files.length === 1) {
+        const file = files[0];
+        finalFileName = file.name;
+        const arrayBuffer = await file.arrayBuffer();
+        finalFileBuffer = new Uint8Array(arrayBuffer);
+      } else {
+        // Merge files
+        log.info(`Merging ${files.length} files for envelope: ${title}`);
+        const buffers: Uint8Array[] = [];
+        // Sort files if needed? For now assume client sends them in order.
+        for (const file of files) {
           const arrayBuffer = await file.arrayBuffer();
           buffers.push(new Uint8Array(arrayBuffer));
-       }
-       finalFileBuffer = await PDFService.mergeDocuments(buffers);
-       // Create a meaningful name for the merged file
-       finalFileName = `${title.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
-    }
+        }
+        finalFileBuffer = await PDFService.mergeDocuments(buffers);
+        // Create a meaningful name for the merged file
+        finalFileName = `${title.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
+      }
 
-    // Validate Document
-    const validation = validateDocument(finalFileBuffer, finalFileName);
-    if (!validation.valid) {
-      return c.json({ error: validation.error }, 400);
-    }
+      // Validate Document
+      const validation = validateDocument(finalFileBuffer, finalFileName);
+      if (!validation.valid) {
+        return c.json({ error: validation.error }, 400);
+      }
 
-    // Calculate hash and page count
-    const hash = await calculateHash(finalFileBuffer);
-    const pageCount = extractPageCount(finalFileBuffer);
+      // Calculate hash and page count
+      const hash = await calculateHash(finalFileBuffer);
+      const pageCount = extractPageCount(finalFileBuffer);
 
-    // Generate IDs. New e-sign records must live in the authenticated
-    // sender's firm scope or the dashboard history list will immediately
-    // filter them back out as "not mine".
-    const documentId = crypto.randomUUID();
-    const firmId = resolveFirmId(user);
+      // Generate IDs. New e-sign records must live in the authenticated
+      // sender's firm scope or the dashboard history list will immediately
+      // filter them back out as "not mine".
+      const documentId = crypto.randomUUID();
+      const firmId = resolveFirmId(user);
 
-    // Determine MIME type (Always PDF for merged or single PDF, but if single was docx we might have issues)
-    // The current validateDocument allows PDF. If we merged, it's definitely PDF.
-    // If it was a single file, it could be DOC/DOCX but validateDocument might catch it if it expects PDF headers?
-    // Let's assume input is PDF for now as PDFService expects PDF.
-    let mimeType = 'application/pdf';
-    
-    // Upload to storage
-    const { path, error: uploadError } = await uploadDocument(
-      firmId,
-      documentId,
-      finalFileBuffer,
-      finalFileName,
-      mimeType
-    );
+      // Determine MIME type (Always PDF for merged or single PDF, but if single was docx we might have issues)
+      // The current validateDocument allows PDF. If we merged, it's definitely PDF.
+      // If it was a single file, it could be DOC/DOCX but validateDocument might catch it if it expects PDF headers?
+      // Let's assume input is PDF for now as PDFService expects PDF.
+      let mimeType = 'application/pdf';
 
-    if (uploadError || !path) {
-      return c.json({ error: uploadError || 'Upload failed' }, 500);
-    }
-
-    // Create document record
-    await createDocument({
-      id: documentId,
-      firm_id: firmId,
-      storage_path: path,
-      original_filename: finalFileName,
-      page_count: pageCount,
-      hash,
-      created_at: new Date().toISOString(),
-    });
-
-    // Create envelope
-    const { envelopeId, error: envError } = await createEnvelope({
-      firmId,
-      clientId: effectiveClientId,
-      title,
-      documentId,
-      createdByUserId: user.id,
-      adviceCaseId,
-      requestId,
-      productId,
-      signers: [],
-      message,
-      expiryDays,
-      signingMode: context.signingMode || 'sequential',
-      templateId,
-      templateVersion,
-      campaignId,
-      packetRunId,
-      packetStepIndex,
-    });
-
-    if (envError || !envelopeId) {
-      return c.json({ error: envError || 'Failed to create envelope' }, 500);
-    }
-
-    // Get envelope details
-    const envelope = await getEnvelopeDetails(envelopeId);
-    const documentUrl = await getDocumentUrl(path);
-
-    // Log audit event
-    const { ip, userAgent } = getRequestMetadata(c);
-    await logAuditEvent({
-      envelopeId,
-      actorType: 'sender_user',
-      actorId: user.id,
-      action: 'document_uploaded',
-      ip,
-      userAgent,
-      email: user.email,
-      metadata: { filename: finalFileName, pageCount, hash, fileCount: files.length },
-    });
-
-    // Admin audit trail (non-blocking — §12.2)
-    AdminAuditService.record({
-      actorId: user.id,
-      actorRole: 'admin',
-      category: 'configuration',
-      action: 'esign_envelope_created',
-      summary: `E-signature envelope created: ${title || finalFileName}`,
-      severity: 'info',
-      entityType: 'envelope',
-      entityId: envelopeId,
-      metadata: { fileName: finalFileName, pageCount },
-    }).catch(() => {});
-
-    // ── Phase 3.1 + 3.2 — surface field-placement suggestions ──
-    // Best-effort: never block upload on analysis failure. The studio shows
-    // these as opt-in suggestions ("From PDF form" / "Smart anchor") that
-    // the sender can accept individually or via "Accept all".
-    let fieldCandidates: Awaited<ReturnType<typeof analyzeUploadedPdf>>['candidates'] = [];
-    try {
-      const analysis = await analyzeUploadedPdf(finalFileBuffer);
-      fieldCandidates = analysis.candidates;
-      log.info(
-        `Upload analysis: ${fieldCandidates.length} candidate(s) in ${analysis.durationMs}ms (ok=${analysis.ok})`,
+      // Upload to storage
+      const { path, error: uploadError } = await uploadDocument(
+        firmId,
+        documentId,
+        finalFileBuffer,
+        finalFileName,
+        mimeType,
       );
-    } catch (analysisErr) {
-      log.warn('PDF analysis threw (non-fatal):', analysisErr);
-    }
 
-    return c.json({
-      envelope: {
-        ...envelope,
-        document: {
-          ...envelope.document,
-          url: documentUrl,
+      if (uploadError || !path) {
+        return c.json({ error: uploadError || 'Upload failed' }, 500);
+      }
+
+      // Create document record
+      await createDocument({
+        id: documentId,
+        firm_id: firmId,
+        storage_path: path,
+        original_filename: finalFileName,
+        page_count: pageCount,
+        hash,
+        created_at: new Date().toISOString(),
+      });
+
+      // Create envelope
+      const { envelopeId, error: envError } = await createEnvelope({
+        firmId,
+        clientId: effectiveClientId,
+        title,
+        documentId,
+        createdByUserId: user.id,
+        adviceCaseId,
+        requestId,
+        productId,
+        signers: [],
+        message,
+        expiryDays,
+        signingMode: context.signingMode || 'sequential',
+        templateId,
+        templateVersion,
+        campaignId,
+        packetRunId,
+        packetStepIndex,
+      });
+
+      if (envError || !envelopeId) {
+        return c.json({ error: envError || 'Failed to create envelope' }, 500);
+      }
+
+      // Get envelope details
+      const envelope = await getEnvelopeDetails(envelopeId);
+      const documentUrl = await getDocumentUrl(path);
+
+      // Log audit event
+      const { ip, userAgent } = getRequestMetadata(c);
+      await logAuditEvent({
+        envelopeId,
+        actorType: 'sender_user',
+        actorId: user.id,
+        action: 'document_uploaded',
+        ip,
+        userAgent,
+        email: user.email,
+        metadata: { filename: finalFileName, pageCount, hash, fileCount: files.length },
+      });
+
+      // Admin audit trail (non-blocking — §12.2)
+      AdminAuditService.record({
+        actorId: user.id,
+        actorRole: 'admin',
+        category: 'configuration',
+        action: 'esign_envelope_created',
+        summary: `E-signature envelope created: ${title || finalFileName}`,
+        severity: 'info',
+        entityType: 'envelope',
+        entityId: envelopeId,
+        metadata: { fileName: finalFileName, pageCount },
+      }).catch(() => {});
+
+      // ── Phase 3.1 + 3.2 — surface field-placement suggestions ──
+      // Best-effort: never block upload on analysis failure. The studio shows
+      // these as opt-in suggestions ("From PDF form" / "Smart anchor") that
+      // the sender can accept individually or via "Accept all".
+      let fieldCandidates: Awaited<ReturnType<typeof analyzeUploadedPdf>>['candidates'] = [];
+      try {
+        const analysis = await analyzeUploadedPdf(finalFileBuffer);
+        fieldCandidates = analysis.candidates;
+        log.info(
+          `Upload analysis: ${fieldCandidates.length} candidate(s) in ${analysis.durationMs}ms (ok=${analysis.ok})`,
+        );
+      } catch (analysisErr) {
+        log.warn('PDF analysis threw (non-fatal):', analysisErr);
+      }
+
+      return c.json({
+        envelope: {
+          ...envelope,
+          document: {
+            ...envelope.document,
+            url: documentUrl,
+          },
         },
-      },
-      // Frontend studio reads `field_candidates` and offers "Accept" /
-      // "Accept all" / "Dismiss" actions per candidate. Empty list = no
-      // suggestions; the studio still works as before.
-      field_candidates: fieldCandidates,
-    });
-  } catch (error: unknown) {
-    log.error('❌ Upload error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Upload failed' }, status);
-  }
-});
+        // Frontend studio reads `field_candidates` and offers "Accept" /
+        // "Accept all" / "Dismiss" actions per candidate. Empty list = no
+        // suggestions; the studio still works as before.
+        field_candidates: fieldCandidates,
+      });
+    } catch (error: unknown) {
+      log.error('❌ Upload error:', error);
+      const status = error instanceof AuthError ? error.statusCode : 500;
+      return c.json({ error: error instanceof Error ? error.message : 'Upload failed' }, status);
+    }
+  },
+);
 
 /**
  * GET /envelopes/:envelopeId
@@ -1182,7 +1200,10 @@ esignRoutes.get('/envelopes/:envelopeId', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get envelope error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to fetch envelope' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch envelope' },
+      status,
+    );
   }
 });
 
@@ -1231,7 +1252,10 @@ esignRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
   } catch (error: unknown) {
     log.error('Save draft signers error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to save draft signers' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to save draft signers' },
+      status,
+    );
   }
 });
 
@@ -1254,7 +1278,7 @@ esignRoutes.patch('/envelopes/:envelopeId/draft-settings', async (c) => {
     const user = ctx.user;
     const envelopeId = c.req.param('envelopeId');
 
-    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
 
     const envelope = await kv.get(EsignKeys.envelope(envelopeId));
     if (!envelope) {
@@ -1306,9 +1330,15 @@ esignRoutes.patch('/envelopes/:envelopeId/draft-settings', async (c) => {
       updates.expires_at = nextExpiresAt;
     }
 
-    if (typeof body.signing_mode === 'string' && ['sequential', 'parallel'].includes(body.signing_mode)) {
+    if (
+      typeof body.signing_mode === 'string' &&
+      ['sequential', 'parallel'].includes(body.signing_mode)
+    ) {
       if (body.signing_mode !== envelope.signing_mode) {
-        changed.signing_mode = { from: envelope.signing_mode ?? 'sequential', to: body.signing_mode };
+        changed.signing_mode = {
+          from: envelope.signing_mode ?? 'sequential',
+          to: body.signing_mode,
+        };
         updates.signing_mode = body.signing_mode;
       }
     }
@@ -1340,7 +1370,10 @@ esignRoutes.patch('/envelopes/:envelopeId/draft-settings', async (c) => {
   } catch (error: unknown) {
     log.error('Update draft settings error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to update draft settings' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to update draft settings' },
+      status,
+    );
   }
 });
 
@@ -1368,7 +1401,10 @@ esignRoutes.get('/envelopes/:envelopeId/manifest', async (c) => {
   } catch (err) {
     log.error('Get manifest error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to load manifest' }, status);
+    return c.json(
+      { error: err instanceof Error ? err.message : 'Failed to load manifest' },
+      status,
+    );
   }
 });
 
@@ -1418,7 +1454,10 @@ esignRoutes.put(
     } catch (err) {
       log.error('Save manifest error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
-      return c.json({ error: err instanceof Error ? err.message : 'Failed to save manifest' }, status);
+      return c.json(
+        { error: err instanceof Error ? err.message : 'Failed to save manifest' },
+        status,
+      );
     }
   },
 );
@@ -1443,7 +1482,10 @@ esignRoutes.delete('/envelopes/:envelopeId/manifest', async (c) => {
   } catch (err) {
     log.error('Clear manifest error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to clear manifest' }, status);
+    return c.json(
+      { error: err instanceof Error ? err.message : 'Failed to clear manifest' },
+      status,
+    );
   }
 });
 
@@ -1475,8 +1517,7 @@ esignRoutes.post(
       // Allow callers to override the saved manifest with one in the body —
       // this lets the studio preview unsaved edits.
       const body = await c.req.json().catch(() => ({}));
-      const manifest =
-        body?.manifest ?? (await kv.get(EsignKeys.envelopeManifest(envelopeId)));
+      const manifest = body?.manifest ?? (await kv.get(EsignKeys.envelopeManifest(envelopeId)));
       if (!manifest) return c.json({ error: 'No manifest to materialise' }, 400);
 
       const validationErr = validateManifest(manifest, document.page_count);
@@ -1534,9 +1575,7 @@ esignRoutes.get('/envelopes/:envelopeId/documents', async (c) => {
   try {
     await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
-    const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as
-      | EsignEnvelope
-      | null;
+    const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     const documents = await getEnvelopeDocuments(envelope);
     // Hydrate each ref with a presigned URL so the studio can render
@@ -1572,18 +1611,13 @@ esignRoutes.post(
     try {
       const ctx = await getAuthContext(c);
       const envelopeId = c.req.param('envelopeId');
-      const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as
-        | EsignEnvelope
-        | null;
+      const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
       if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
       if (envelope.status !== 'draft') {
-        return c.json(
-          { error: 'Documents can only be added to envelopes in draft status' },
-          409,
-        );
+        return c.json({ error: 'Documents can only be added to envelopes in draft status' }, 409);
       }
       await ensureStorageBuckets();
-      const body = await c.req.parseBody().catch(() => ({} as Record<string, unknown>));
+      const body = await c.req.parseBody().catch(() => ({}) as Record<string, unknown>);
       const file = body['file'];
       if (!(file instanceof File)) return c.json({ error: 'file required' }, 400);
 
@@ -1645,7 +1679,10 @@ esignRoutes.post(
       const hydrated = await Promise.all(
         documents.map(async (d) => ({ ...d, url: await getDocumentUrl(d.storage_path) })),
       );
-      return c.json({ documents: hydrated, added: { document_id: documentId, page_count: pageCount } });
+      return c.json({
+        documents: hydrated,
+        added: { document_id: documentId, page_count: pageCount },
+      });
     } catch (err) {
       log.error('Add envelope document error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
@@ -1668,15 +1705,10 @@ esignRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c) => 
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
     const documentId = c.req.param('documentId');
-    const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as
-      | EsignEnvelope
-      | null;
+    const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.status !== 'draft') {
-      return c.json(
-        { error: 'Documents can only be removed from envelopes in draft status' },
-        409,
-      );
+      return c.json({ error: 'Documents can only be removed from envelopes in draft status' }, 409);
     }
     const documents = await removeEnvelopeDocument(envelopeId, documentId);
     const { ip, userAgent } = getRequestMetadata(c);
@@ -1693,11 +1725,12 @@ esignRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c) => 
     return c.json({ documents });
   } catch (err) {
     log.error('Remove envelope document error:', err);
-    const status = err instanceof AuthError
-      ? err.statusCode
-      : err instanceof Error && /last document/i.test(err.message)
-        ? 409
-        : 500;
+    const status =
+      err instanceof AuthError
+        ? err.statusCode
+        : err instanceof Error && /last document/i.test(err.message)
+          ? 409
+          : 500;
     return c.json(
       { error: err instanceof Error ? err.message : 'Failed to remove document' },
       status,
@@ -1717,15 +1750,10 @@ esignRoutes.put('/envelopes/:envelopeId/documents/order', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
-    const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as
-      | EsignEnvelope
-      | null;
+    const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     if (envelope.status !== 'draft') {
-      return c.json(
-        { error: 'Document order can only be changed on draft envelopes' },
-        409,
-      );
+      return c.json({ error: 'Document order can only be changed on draft envelopes' }, 409);
     }
     const body = await c.req.json().catch(() => ({}));
     const orderedIds: unknown = body?.order;
@@ -1756,344 +1784,363 @@ esignRoutes.put('/envelopes/:envelopeId/documents/order', async (c) => {
  * POST /envelopes/:envelopeId/invites
  * Send signing invitations to signers
  */
-esignRoutes.post('/envelopes/:envelopeId/invites', requireIdempotency(), rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    // Authenticate
-    const ctx = await getAuthContext(c);
-    const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+esignRoutes.post(
+  '/envelopes/:envelopeId/invites',
+  requireIdempotency(),
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      // Authenticate
+      const ctx = await getAuthContext(c);
+      const user = ctx.user;
+      const envelopeId = c.req.param('envelopeId');
 
-    const body = await c.req.json();
-    const { signers, fields, expiryDays, message, signingMode } = body;
+      const body = await c.req.json();
+      const { signers, fields, expiryDays, message, signingMode } = body;
 
-    if (!signers || signers.length === 0) {
-      return c.json({ error: 'At least one signer required' }, 400);
-    }
-
-    // Get envelope details
-    const envelope = await getEnvelopeDetails(envelopeId);
-
-    if (!envelope) {
-      return c.json({ error: 'Envelope not found' }, 404);
-    }
-
-    // Determine signing mode: sequential (default) or parallel
-    const effectiveMode = signingMode || envelope.signing_mode || 'sequential';
-
-    // Add signers
-    const { signerIds, error: signerError } = await addSignersToEnvelope(
-      envelopeId,
-      signers.map((s: SignerRecord, index: number) => ({
-        name: s.name,
-        email: s.email,
-        phone: s.phone,
-        role: s.role || 'Signer',
-        // P2.5 2.8 — pass through kind ('signer' | 'witness' | 'cc') so the
-        // audit trail tags witness attestations distinctly. Defaults to
-        // 'signer' inside addSignersToEnvelope when undefined.
-        kind: (s as { kind?: 'signer' | 'witness' | 'cc' }).kind,
-        requiresOtp: s.requiresOtp !== false,
-        accessCode: s.accessCode,
-        clientId: s.clientId,
-        // P5.1 — propagate SMS opt-in; only honoured on the server when a
-        // phone number is also present (see addSignersToEnvelope).
-        smsOptIn: (s as { smsOptIn?: boolean }).smsOptIn === true,
-      }))
-    );
-
-    if (signerError) {
-      return c.json({ error: signerError }, 500);
-    }
-
-    // ── P3.3 + P3.4 — Materialise envelope at send-time ──
-    // Two paths converge here:
-    //   • Multi-document envelopes (P3.4): concatenate every document
-    //     in order, applying any per-document page manifest along the
-    //     way. Field (document_id, page) tuples are remapped onto the
-    //     concatenated page index.
-    //   • Single-document envelopes: honour the legacy envelope-level
-    //     manifest exactly as before so existing drafts keep working.
-    //
-    // Both branches replace the document the signer sees with a
-    // materialised PDF; the originals stay on disk for the audit trail.
-    let materialisedFields: FieldRecord[] = Array.isArray(fields) ? fields : [];
-    const fullEnvelopeRecord = (await kv.get(EsignKeys.envelope(envelopeId))) as
-      | EsignEnvelope
-      | null;
-    const envelopeDocs = fullEnvelopeRecord
-      ? await getEnvelopeDocuments(fullEnvelopeRecord)
-      : [];
-    if (envelopeDocs.length > 1) {
-      try {
-        const result = await materialiseEnvelope(envelopeId);
-        const { remapped, dropped } = remapFieldsForConcatenation(
-          materialisedFields as EsignField[],
-          result.pageMap,
-          envelope.document_id,
-        );
-        materialisedFields = remapped as FieldRecord[];
-        await logAuditEvent({
-          envelopeId,
-          actorType: 'system',
-          action: 'envelope_materialised',
-          metadata: {
-            documentCount: envelopeDocs.length,
-            totalPageCount: result.totalPageCount,
-            droppedFields: dropped.length,
-            perDocumentPageCounts: result.perDocumentPageCounts,
-          },
-        });
-      } catch (matErr) {
-        log.warn(
-          `Multi-doc materialisation failed (sending primary only): ${matErr instanceof Error ? matErr.message : String(matErr)}`,
-        );
-      }
-    } else {
-      try {
-      const manifest = await kv.get(EsignKeys.envelopeManifest(envelopeId));
-      if (manifest && envelope?.document?.storage_path) {
-        const sourceBuffer = await downloadDocument(envelope.document.storage_path);
-        if (sourceBuffer) {
-          const result = await applyManifest(sourceBuffer, manifest);
-          // Upload the materialised PDF under a deterministic path so we
-          // can look it up at certificate-generation time.
-          const materialisedPath = `materialised/${envelope.document_id}/signing.pdf`;
-          await uploadDocument(
-            envelope.firm_id ?? 'standalone',
-            envelope.document_id,
-            result.pdfBuffer,
-            materialisedPath,
-            'application/pdf',
-          );
-          // Update document record: storage_path now points at the
-          // materialised file; original_storage_path keeps the original
-          // pointer for audit. page_count reflects the new doc.
-          const document = await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id);
-          if (document) {
-            await kv.set(EsignKeys.PREFIX_DOCUMENT + envelope.document_id, {
-              ...document,
-              original_storage_path: document.original_storage_path ?? document.storage_path,
-              storage_path: materialisedPath,
-              page_count: result.pageCount,
-              hash: await calculateHash(result.pdfBuffer),
-              materialised_at: new Date().toISOString(),
-            });
-          }
-          // Remap supplied fields to the new page numbering. Drop fields
-          // whose source page was deleted — they have no destination.
-          if (materialisedFields.length > 0) {
-            materialisedFields = materialisedFields
-              .map((f) => {
-                const oldPage = (f as { page?: number }).page;
-                if (!oldPage) return f;
-                const newPage = result.pageMap[oldPage];
-                if (newPage == null) return null;
-                return { ...f, page: newPage };
-              })
-              .filter((f): f is FieldRecord => f !== null);
-          }
-          await logAuditEvent({
-            envelopeId,
-            actorType: 'system',
-            action: 'page_manifest_materialised',
-            metadata: {
-              originalPageCount: envelope.document.page_count,
-              materialisedPageCount: result.pageCount,
-              droppedFields: (Array.isArray(fields) ? fields.length : 0) - materialisedFields.length,
-            },
-          });
-        }
-      }
-      } catch (matErr) {
-        // Manifest application failure must not block sending — fall back
-        // to the original document. The sender's intent (re-ordered pages)
-        // is lost but the envelope is still sendable.
-        log.warn(`Manifest materialisation failed (sending original): ${matErr instanceof Error ? matErr.message : String(matErr)}`);
-      }
-    }
-
-    // Add fields if provided
-    if (materialisedFields.length > 0) {
-      // First, clear any existing fields (e.g. from draft saves) to avoid duplicates
-      // and ensure we have clean fields with correct signer IDs
-      await kv.del(EsignKeys.envelopeFields(envelopeId));
-      
-      // Map signer indices to actual signer IDs
-      const fieldsWithSignerIds = materialisedFields.map((field: FieldRecord) => ({
-        ...field,
-        signerId: signerIds[field.signerIndex as number] || signerIds[0],
-      }));
-
-      await addFieldsToEnvelope(envelopeId, fieldsWithSignerIds);
-
-      // ── P3.6 — Resolve CRM prefill bindings ──
-      // For each signer, find their fields and stamp resolved values from
-      // the CRM (`client.*` tokens) and envelope context (`envelope.*`).
-      // Best-effort: missing bindings yield empty values which the signer
-      // can fill in by hand. We deliberately do this AFTER persistence so
-      // the resolved values are visible on the existing reads path.
-      try {
-        const allSigners = await getEnvelopeSigners(envelopeId);
-        const allFields: EsignField[] = (await kv.get(EsignKeys.envelopeFields(envelopeId))) ?? [];
-        let totalResolved = 0;
-        for (const s of allSigners) {
-          const ownFields = allFields.filter((f) => f.signer_id === s.id);
-          if (ownFields.length === 0) continue;
-          const resolved = await resolvePrefilledFields(ownFields, {
-            signer: s as EsignSigner,
-            envelope: {
-              advice_case_id: envelope.advice_case_id,
-              product_id: envelope.product_id,
-              request_id: envelope.request_id,
-            },
-          });
-          totalResolved += resolved;
-        }
-        if (totalResolved > 0) {
-          // Persist back the mutated fields list (resolvePrefilledFields
-          // mutates in place, but we need the storage to reflect the new
-          // values).
-          await kv.set(EsignKeys.envelopeFields(envelopeId), allFields);
-          await logAuditEvent({
-            envelopeId,
-            actorType: 'system',
-            action: 'prefill_resolved',
-            metadata: { resolvedFieldCount: totalResolved },
-          });
-        }
-      } catch (prefillErr) {
-        // Non-blocking — see esign-prefill.ts contract notes.
-        log.warn(`Prefill resolution failed: ${prefillErr instanceof Error ? prefillErr.message : String(prefillErr)}`);
-      }
-    }
-
-    // P6.4 — pin the ECTA consent version in effect at send-time, if one
-    // wasn't already stamped at create-time. This keeps the evidence
-    // trail stable even if a legal revision to the consent text is
-    // published while the envelope is in flight.
-    const pinnedConsent = (envelope.consent_version as string | undefined)
-      ?? (await getActiveConsent()).id;
-
-    // Update envelope status and persist signing mode + consent pin
-    await updateEnvelopeStatus(envelopeId, 'sent', {
-      sent_at: new Date().toISOString(),
-      signing_mode: effectiveMode,
-      consent_version: pinnedConsent,
-    });
-
-    // Determine which signers to invite based on signing mode:
-    // - sequential: only first signer (subsequent signers notified when previous completes)
-    // - parallel: all signers at once
-    const createdSigners = await getEnvelopeSigners(envelopeId);
-    const sortedSigners = [...createdSigners].sort((a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0));
-    const invitesSent: Array<{ signerId: string; email: string; success: boolean }> = [];
-    const { ip, userAgent } = getRequestMetadata(c);
-
-    const signersToInvite = effectiveMode === 'parallel'
-      ? sortedSigners
-      : sortedSigners.slice(0, 1); // Sequential: first signer only
-
-    for (const targetSigner of signersToInvite) {
-      const signingUrl = `https://www.navigatewealth.co/sign?token=${targetSigner.access_token}`;
-
-      const emailContent = createSigningInviteEmail({
-        signerName: targetSigner.name,
-        envelopeTitle: envelope.title,
-        senderName: user.email || 'Navigate Wealth',
-        signingLink: signingUrl,
-        message,
-      });
-
-      const emailSent = await sendEmail({
-        to: targetSigner.email,
-        subject: `Signature Request: ${envelope.title}`,
-        html: emailContent.html,
-        text: emailContent.text,
-      });
-
-      if (emailSent) {
-        await updateSignerStatus(targetSigner.id, 'sent', {
-          invite_sent_at: new Date().toISOString(),
-        });
-        invitesSent.push({ signerId: targetSigner.id, email: targetSigner.email });
+      if (!signers || signers.length === 0) {
+        return c.json({ error: 'At least one signer required' }, 400);
       }
 
-      await logAuditEvent({
+      // Get envelope details
+      const envelope = await getEnvelopeDetails(envelopeId);
+
+      if (!envelope) {
+        return c.json({ error: 'Envelope not found' }, 404);
+      }
+
+      // Determine signing mode: sequential (default) or parallel
+      const effectiveMode = signingMode || envelope.signing_mode || 'sequential';
+
+      // Add signers
+      const { signerIds, error: signerError } = await addSignersToEnvelope(
         envelopeId,
-        actorType: 'system',
-        action: 'invite_sent',
-        email: targetSigner.email,
-        ip,
-        userAgent,
-        metadata: {
-          signerId: targetSigner.id,
-          signerName: targetSigner.name,
-          signingMode: effectiveMode,
-          totalSigners: sortedSigners.length,
-        },
-      });
+        signers.map((s: SignerRecord, index: number) => ({
+          name: s.name,
+          email: s.email,
+          phone: s.phone,
+          role: s.role || 'Signer',
+          // P2.5 2.8 — pass through kind ('signer' | 'witness' | 'cc') so the
+          // audit trail tags witness attestations distinctly. Defaults to
+          // 'signer' inside addSignersToEnvelope when undefined.
+          kind: (s as { kind?: 'signer' | 'witness' | 'cc' }).kind,
+          requiresOtp: s.requiresOtp !== false,
+          accessCode: s.accessCode,
+          clientId: s.clientId,
+          // P5.1 — propagate SMS opt-in; only honoured on the server when a
+          // phone number is also present (see addSignersToEnvelope).
+          smsOptIn: (s as { smsOptIn?: boolean }).smsOptIn === true,
+        })),
+      );
 
-      // P5.1 — parallel SMS delivery (opt-in only; best-effort, never
-      // blocks email). We don't fail the invite if SMS bounces — email
-      // is still the legally defensible channel.
-      if (targetSigner.sms_opt_in && targetSigner.phone) {
+      if (signerError) {
+        return c.json({ error: signerError }, 500);
+      }
+
+      // ── P3.3 + P3.4 — Materialise envelope at send-time ──
+      // Two paths converge here:
+      //   • Multi-document envelopes (P3.4): concatenate every document
+      //     in order, applying any per-document page manifest along the
+      //     way. Field (document_id, page) tuples are remapped onto the
+      //     concatenated page index.
+      //   • Single-document envelopes: honour the legacy envelope-level
+      //     manifest exactly as before so existing drafts keep working.
+      //
+      // Both branches replace the document the signer sees with a
+      // materialised PDF; the originals stay on disk for the audit trail.
+      let materialisedFields: FieldRecord[] = Array.isArray(fields) ? fields : [];
+      const fullEnvelopeRecord = (await kv.get(
+        EsignKeys.envelope(envelopeId),
+      )) as EsignEnvelope | null;
+      const envelopeDocs = fullEnvelopeRecord ? await getEnvelopeDocuments(fullEnvelopeRecord) : [];
+      if (envelopeDocs.length > 1) {
         try {
-          const smsResult = await sendInviteSms({
-            to: targetSigner.phone,
-            signerName: targetSigner.name,
-            envelopeTitle: envelope.title,
-            signingUrl: signingUrl,
+          const result = await materialiseEnvelope(envelopeId);
+          const { remapped, dropped } = remapFieldsForConcatenation(
+            materialisedFields as EsignField[],
+            result.pageMap,
+            envelope.document_id,
+          );
+          materialisedFields = remapped as FieldRecord[];
+          await logAuditEvent({
+            envelopeId,
+            actorType: 'system',
+            action: 'envelope_materialised',
+            metadata: {
+              documentCount: envelopeDocs.length,
+              totalPageCount: result.totalPageCount,
+              droppedFields: dropped.length,
+              perDocumentPageCounts: result.perDocumentPageCounts,
+            },
           });
-          if (smsResult.delivered) {
+        } catch (matErr) {
+          log.warn(
+            `Multi-doc materialisation failed (sending primary only): ${matErr instanceof Error ? matErr.message : String(matErr)}`,
+          );
+        }
+      } else {
+        try {
+          const manifest = await kv.get(EsignKeys.envelopeManifest(envelopeId));
+          if (manifest && envelope?.document?.storage_path) {
+            const sourceBuffer = await downloadDocument(envelope.document.storage_path);
+            if (sourceBuffer) {
+              const result = await applyManifest(sourceBuffer, manifest);
+              // Upload the materialised PDF under a deterministic path so we
+              // can look it up at certificate-generation time.
+              const materialisedPath = `materialised/${envelope.document_id}/signing.pdf`;
+              await uploadDocument(
+                envelope.firm_id ?? 'standalone',
+                envelope.document_id,
+                result.pdfBuffer,
+                materialisedPath,
+                'application/pdf',
+              );
+              // Update document record: storage_path now points at the
+              // materialised file; original_storage_path keeps the original
+              // pointer for audit. page_count reflects the new doc.
+              const document = await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id);
+              if (document) {
+                await kv.set(EsignKeys.PREFIX_DOCUMENT + envelope.document_id, {
+                  ...document,
+                  original_storage_path: document.original_storage_path ?? document.storage_path,
+                  storage_path: materialisedPath,
+                  page_count: result.pageCount,
+                  hash: await calculateHash(result.pdfBuffer),
+                  materialised_at: new Date().toISOString(),
+                });
+              }
+              // Remap supplied fields to the new page numbering. Drop fields
+              // whose source page was deleted — they have no destination.
+              if (materialisedFields.length > 0) {
+                materialisedFields = materialisedFields
+                  .map((f) => {
+                    const oldPage = (f as { page?: number }).page;
+                    if (!oldPage) return f;
+                    const newPage = result.pageMap[oldPage];
+                    if (newPage == null) return null;
+                    return { ...f, page: newPage };
+                  })
+                  .filter((f): f is FieldRecord => f !== null);
+              }
+              await logAuditEvent({
+                envelopeId,
+                actorType: 'system',
+                action: 'page_manifest_materialised',
+                metadata: {
+                  originalPageCount: envelope.document.page_count,
+                  materialisedPageCount: result.pageCount,
+                  droppedFields:
+                    (Array.isArray(fields) ? fields.length : 0) - materialisedFields.length,
+                },
+              });
+            }
+          }
+        } catch (matErr) {
+          // Manifest application failure must not block sending — fall back
+          // to the original document. The sender's intent (re-ordered pages)
+          // is lost but the envelope is still sendable.
+          log.warn(
+            `Manifest materialisation failed (sending original): ${matErr instanceof Error ? matErr.message : String(matErr)}`,
+          );
+        }
+      }
+
+      // Add fields if provided
+      if (materialisedFields.length > 0) {
+        // First, clear any existing fields (e.g. from draft saves) to avoid duplicates
+        // and ensure we have clean fields with correct signer IDs
+        await kv.del(EsignKeys.envelopeFields(envelopeId));
+
+        // Map signer indices to actual signer IDs
+        const fieldsWithSignerIds = materialisedFields.map((field: FieldRecord) => ({
+          ...field,
+          signerId: signerIds[field.signerIndex as number] || signerIds[0],
+        }));
+
+        await addFieldsToEnvelope(envelopeId, fieldsWithSignerIds);
+
+        // ── P3.6 — Resolve CRM prefill bindings ──
+        // For each signer, find their fields and stamp resolved values from
+        // the CRM (`client.*` tokens) and envelope context (`envelope.*`).
+        // Best-effort: missing bindings yield empty values which the signer
+        // can fill in by hand. We deliberately do this AFTER persistence so
+        // the resolved values are visible on the existing reads path.
+        try {
+          const allSigners = await getEnvelopeSigners(envelopeId);
+          const allFields: EsignField[] =
+            (await kv.get(EsignKeys.envelopeFields(envelopeId))) ?? [];
+          let totalResolved = 0;
+          for (const s of allSigners) {
+            const ownFields = allFields.filter((f) => f.signer_id === s.id);
+            if (ownFields.length === 0) continue;
+            const resolved = await resolvePrefilledFields(ownFields, {
+              signer: s as EsignSigner,
+              envelope: {
+                advice_case_id: envelope.advice_case_id,
+                product_id: envelope.product_id,
+                request_id: envelope.request_id,
+              },
+            });
+            totalResolved += resolved;
+          }
+          if (totalResolved > 0) {
+            // Persist back the mutated fields list (resolvePrefilledFields
+            // mutates in place, but we need the storage to reflect the new
+            // values).
+            await kv.set(EsignKeys.envelopeFields(envelopeId), allFields);
             await logAuditEvent({
               envelopeId,
               actorType: 'system',
-              action: 'invite_sms_sent',
-              email: targetSigner.email,
-              phone: targetSigner.phone,
-              ip,
-              userAgent,
-              metadata: {
-                signerId: targetSigner.id,
-                provider: smsResult.provider,
-                messageId: smsResult.messageId,
-              },
+              action: 'prefill_resolved',
+              metadata: { resolvedFieldCount: totalResolved },
             });
           }
-        } catch (smsErr) {
-          log.warn(`SMS invite failed for signer ${targetSigner.id}: ${getErrMsg(smsErr)}`);
+        } catch (prefillErr) {
+          // Non-blocking — see esign-prefill.ts contract notes.
+          log.warn(
+            `Prefill resolution failed: ${prefillErr instanceof Error ? prefillErr.message : String(prefillErr)}`,
+          );
         }
       }
+
+      // P6.4 — pin the ECTA consent version in effect at send-time, if one
+      // wasn't already stamped at create-time. This keeps the evidence
+      // trail stable even if a legal revision to the consent text is
+      // published while the envelope is in flight.
+      const pinnedConsent =
+        (envelope.consent_version as string | undefined) ?? (await getActiveConsent()).id;
+
+      // Update envelope status and persist signing mode + consent pin
+      await updateEnvelopeStatus(envelopeId, 'sent', {
+        sent_at: new Date().toISOString(),
+        signing_mode: effectiveMode,
+        consent_version: pinnedConsent,
+      });
+
+      // Determine which signers to invite based on signing mode:
+      // - sequential: only first signer (subsequent signers notified when previous completes)
+      // - parallel: all signers at once
+      const createdSigners = await getEnvelopeSigners(envelopeId);
+      const sortedSigners = [...createdSigners].sort(
+        (a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0),
+      );
+      const invitesSent: Array<{ signerId: string; email: string; success: boolean }> = [];
+      const { ip, userAgent } = getRequestMetadata(c);
+
+      const signersToInvite =
+        effectiveMode === 'parallel' ? sortedSigners : sortedSigners.slice(0, 1); // Sequential: first signer only
+
+      for (const targetSigner of signersToInvite) {
+        const signingUrl = `https://www.navigatewealth.co/sign?token=${targetSigner.access_token}`;
+
+        const emailContent = createSigningInviteEmail({
+          signerName: targetSigner.name,
+          envelopeTitle: envelope.title,
+          senderName: user.email || 'Navigate Wealth',
+          signingLink: signingUrl,
+          message,
+        });
+
+        const emailSent = await sendEmail({
+          to: targetSigner.email,
+          subject: `Signature Request: ${envelope.title}`,
+          html: emailContent.html,
+          text: emailContent.text,
+        });
+
+        if (emailSent) {
+          await updateSignerStatus(targetSigner.id, 'sent', {
+            invite_sent_at: new Date().toISOString(),
+          });
+          invitesSent.push({ signerId: targetSigner.id, email: targetSigner.email });
+        }
+
+        await logAuditEvent({
+          envelopeId,
+          actorType: 'system',
+          action: 'invite_sent',
+          email: targetSigner.email,
+          ip,
+          userAgent,
+          metadata: {
+            signerId: targetSigner.id,
+            signerName: targetSigner.name,
+            signingMode: effectiveMode,
+            totalSigners: sortedSigners.length,
+          },
+        });
+
+        // P5.1 — parallel SMS delivery (opt-in only; best-effort, never
+        // blocks email). We don't fail the invite if SMS bounces — email
+        // is still the legally defensible channel.
+        if (targetSigner.sms_opt_in && targetSigner.phone) {
+          try {
+            const smsResult = await sendInviteSms({
+              to: targetSigner.phone,
+              signerName: targetSigner.name,
+              envelopeTitle: envelope.title,
+              signingUrl: signingUrl,
+            });
+            if (smsResult.delivered) {
+              await logAuditEvent({
+                envelopeId,
+                actorType: 'system',
+                action: 'invite_sms_sent',
+                email: targetSigner.email,
+                phone: targetSigner.phone,
+                ip,
+                userAgent,
+                metadata: {
+                  signerId: targetSigner.id,
+                  provider: smsResult.provider,
+                  messageId: smsResult.messageId,
+                },
+              });
+            }
+          } catch (smsErr) {
+            log.warn(`SMS invite failed for signer ${targetSigner.id}: ${getErrMsg(smsErr)}`);
+          }
+        }
+      }
+
+      log.info(
+        `Invites sent for envelope ${envelopeId} in ${effectiveMode} mode: ${invitesSent.length} of ${sortedSigners.length} signers`,
+      );
+
+      // Admin audit trail (non-blocking — §12.2)
+      AdminAuditService.record({
+        actorId: user.id,
+        actorRole: 'admin',
+        category: 'communication',
+        action: 'esign_invites_sent',
+        summary: `Signing invitations sent (${invitesSent.length} of ${sortedSigners.length} signers)`,
+        severity: 'warning',
+        entityType: 'envelope',
+        entityId: envelopeId,
+        metadata: {
+          signingMode: effectiveMode,
+          inviteCount: invitesSent.length,
+          totalSigners: sortedSigners.length,
+        },
+      }).catch(() => {});
+
+      return c.json({
+        success: true,
+        invitesSent,
+        envelopeId,
+        totalSigners: sortedSigners.length,
+        signingMode: effectiveMode,
+      });
+    } catch (error: unknown) {
+      log.error('❌ Send invites error:', error);
+      const status = error instanceof AuthError ? error.statusCode : 500;
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Failed to send invites' },
+        status,
+      );
     }
-
-    log.info(`Invites sent for envelope ${envelopeId} in ${effectiveMode} mode: ${invitesSent.length} of ${sortedSigners.length} signers`);
-
-    // Admin audit trail (non-blocking — §12.2)
-    AdminAuditService.record({
-      actorId: user.id,
-      actorRole: 'admin',
-      category: 'communication',
-      action: 'esign_invites_sent',
-      summary: `Signing invitations sent (${invitesSent.length} of ${sortedSigners.length} signers)`,
-      severity: 'warning',
-      entityType: 'envelope',
-      entityId: envelopeId,
-      metadata: { signingMode: effectiveMode, inviteCount: invitesSent.length, totalSigners: sortedSigners.length },
-    }).catch(() => {});
-
-    return c.json({
-      success: true,
-      invitesSent,
-      envelopeId,
-      totalSigners: sortedSigners.length,
-      signingMode: effectiveMode,
-    });
-  } catch (error: unknown) {
-    log.error('❌ Send invites error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to send invites' }, status);
-  }
-});
+  },
+);
 
 /**
  * PUT /envelopes/:envelopeId/fields
@@ -2123,14 +2170,14 @@ esignRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
     // Get existing field IDs to clean up
     const fieldsListKey = EsignKeys.envelopeFields(envelopeId);
     const existingFieldIds = await kv.get(fieldsListKey);
-    
+
     // If existingFieldIds is an array of strings (correct format), delete those fields
     if (Array.isArray(existingFieldIds)) {
-       for (const item of existingFieldIds) {
-          if (typeof item === 'string') {
-             await kv.del(EsignKeys.field(item));
-          }
-       }
+      for (const item of existingFieldIds) {
+        if (typeof item === 'string') {
+          await kv.del(EsignKeys.field(item));
+        }
+      }
     }
 
     // Prepare new fields
@@ -2139,7 +2186,7 @@ esignRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
 
     for (const field of fields) {
       const fieldId = field.id || `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
+
       const fieldData = {
         id: fieldId,
         envelope_id: envelopeId,
@@ -2186,7 +2233,10 @@ esignRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Update fields error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to update fields' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to update fields' },
+      status,
+    );
   }
 });
 
@@ -2215,7 +2265,10 @@ esignRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get fields error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to fetch fields' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch fields' },
+      status,
+    );
   }
 });
 
@@ -2242,10 +2295,11 @@ esignRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
 
     // Retrieve current fields list (IDs or Objects)
     const kvKey = EsignKeys.envelopeFields(envelopeId);
-    const fieldsList = await kv.get(kvKey) || [];
+    const fieldsList = (await kv.get(kvKey)) || [];
 
     // Check if we are dealing with a list of IDs or Objects
-    const isIdList = Array.isArray(fieldsList) && fieldsList.length > 0 && typeof fieldsList[0] === 'string';
+    const isIdList =
+      Array.isArray(fieldsList) && fieldsList.length > 0 && typeof fieldsList[0] === 'string';
 
     if (isIdList) {
       // New format: List of IDs
@@ -2253,11 +2307,11 @@ esignRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
       if (!fieldsList.includes(fieldId)) {
         return c.json({ error: 'Field not found' }, 404);
       }
-      
+
       // Get the individual field object
       const fieldKey = EsignKeys.field(fieldId);
       const field = await kv.get(fieldKey);
-      
+
       if (!field) {
         return c.json({ error: 'Field data not found' }, 404);
       }
@@ -2276,11 +2330,10 @@ esignRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
         success: true,
         field: updatedField,
       });
-
     } else {
       // Legacy format: List of Objects
       const fieldIndex = fieldsList.findIndex((f: FieldRecord) => f.id === fieldId);
-      
+
       if (fieldIndex === -1) {
         return c.json({ error: 'Field not found' }, 404);
       }
@@ -2303,7 +2356,10 @@ esignRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Update field error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to update field' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to update field' },
+      status,
+    );
   }
 });
 
@@ -2328,35 +2384,37 @@ esignRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
 
     // Retrieve current fields list
     const kvKey = EsignKeys.envelopeFields(envelopeId);
-    const fieldsList = await kv.get(kvKey) || [];
-    
+    const fieldsList = (await kv.get(kvKey)) || [];
+
     // Check format
-    const isIdList = Array.isArray(fieldsList) && fieldsList.some((item: unknown) => typeof item === 'string');
+    const isIdList =
+      Array.isArray(fieldsList) && fieldsList.some((item: unknown) => typeof item === 'string');
 
     if (isIdList) {
-       // Filter out the deleted ID
-       const updatedIds = fieldsList.filter((id: unknown) => id !== fieldId && typeof id === 'string');
-       
-       if (fieldsList.length === updatedIds.length) {
-         return c.json({ error: 'Field not found' }, 404);
-       }
-       
-       // Update list
-       await kv.set(kvKey, updatedIds);
-       
-       // Delete individual object
-       await kv.del(EsignKeys.field(fieldId));
+      // Filter out the deleted ID
+      const updatedIds = fieldsList.filter(
+        (id: unknown) => id !== fieldId && typeof id === 'string',
+      );
 
+      if (fieldsList.length === updatedIds.length) {
+        return c.json({ error: 'Field not found' }, 404);
+      }
+
+      // Update list
+      await kv.set(kvKey, updatedIds);
+
+      // Delete individual object
+      await kv.del(EsignKeys.field(fieldId));
     } else {
-       // Legacy: Filter objects
-       const updatedFields = fieldsList.filter((f: FieldRecord) => f.id !== fieldId);
+      // Legacy: Filter objects
+      const updatedFields = fieldsList.filter((f: FieldRecord) => f.id !== fieldId);
 
-       if (fieldsList.length === updatedFields.length) {
-         return c.json({ error: 'Field not found' }, 404);
-       }
+      if (fieldsList.length === updatedFields.length) {
+        return c.json({ error: 'Field not found' }, 404);
+      }
 
-       // Save back to KV store
-       await kv.set(kvKey, updatedFields);
+      // Save back to KV store
+      await kv.set(kvKey, updatedFields);
     }
 
     // Log audit event
@@ -2379,7 +2437,10 @@ esignRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Delete field error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to delete field' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete field' },
+      status,
+    );
   }
 });
 
@@ -2413,7 +2474,10 @@ esignRoutes.get('/clients/:clientId/envelopes', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get client envelopes error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to fetch envelopes' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch envelopes' },
+      status,
+    );
   }
 });
 
@@ -2421,313 +2485,335 @@ esignRoutes.get('/clients/:clientId/envelopes', async (c) => {
  * POST /envelopes/:envelopeId/signers/:signerId/otp/send
  * Send OTP to signer
  */
-esignRoutes.post('/envelopes/:envelopeId/signers/:signerId/otp/send', rateLimit('OTP_SEND'), async (c) => {
-  try {
-    const envelopeId = c.req.param('envelopeId');
-    const signerId = c.req.param('signerId');
+esignRoutes.post(
+  '/envelopes/:envelopeId/signers/:signerId/otp/send',
+  rateLimit('OTP_SEND'),
+  async (c) => {
+    try {
+      const envelopeId = c.req.param('envelopeId');
+      const signerId = c.req.param('signerId');
 
-    // Check if OTP is required
-    const required = await isOTPRequired(signerId);
-    if (!required) {
-      return c.json({ error: 'OTP not required for this signer' }, 400);
-    }
+      // Check if OTP is required
+      const required = await isOTPRequired(signerId);
+      if (!required) {
+        return c.json({ error: 'OTP not required for this signer' }, 400);
+      }
 
-    // Generate and store OTP
-    const { otp, error } = await generateAndStoreOTP(signerId);
+      // Generate and store OTP
+      const { otp, error } = await generateAndStoreOTP(signerId);
 
-    if (error || !otp) {
-      return c.json({ error: error || 'Failed to generate OTP' }, 500);
-    }
+      if (error || !otp) {
+        return c.json({ error: error || 'Failed to generate OTP' }, 500);
+      }
 
-    // Get signer info
-    const signers = await getEnvelopeSigners(envelopeId);
-    const signer = signers.find(s => s.id === signerId);
+      // Get signer info
+      const signers = await getEnvelopeSigners(envelopeId);
+      const signer = signers.find((s) => s.id === signerId);
 
-    if (!signer) {
-      return c.json({ error: 'Signer not found' }, 404);
-    }
+      if (!signer) {
+        return c.json({ error: 'Signer not found' }, 404);
+      }
 
-    // Send OTP via email
-    const emailSent = await sendEmail({
-      to: signer.email,
-      subject: `Your Verification Code for Navigate Wealth E-Signature`,
-      html: `
+      // Send OTP via email
+      const emailSent = await sendEmail({
+        to: signer.email,
+        subject: `Your Verification Code for Navigate Wealth E-Signature`,
+        html: `
         <h2>Your Verification Code</h2>
         <p>Hi ${signer.name},</p>
         <p>Your one-time verification code is: <strong>${otp}</strong></p>
         <p>This code will expire in 15 minutes.</p>
         <p>If you didn't request this code, please ignore this email.</p>
       `,
-    });
+      });
 
-    if (!emailSent) {
-      return c.json({ error: 'Failed to send OTP email' }, 500);
-    }
-
-    // Log audit event
-    const { ip, userAgent } = getRequestMetadata(c);
-    await logAuditEvent({
-      envelopeId,
-      actorType: 'system',
-      action: 'otp_sent',
-      email: signer.email,
-      ip,
-      userAgent,
-      metadata: { signerId, channel: 'email' },
-    });
-
-    // P5.1 — parallel OTP delivery via SMS (opt-in + phone required).
-    // Email remains the primary channel so the audit trail always shows
-    // an `otp_sent` event even when SMS is offline.
-    let smsChannel: { delivered: boolean; provider: string } | null = null;
-    if (signer.sms_opt_in && signer.phone) {
-      try {
-        const envelope = await getEnvelopeDetails(envelopeId);
-        const smsResult = await sendOtpSms({
-          to: signer.phone,
-          otp,
-          envelopeTitle: envelope?.title,
-        });
-        smsChannel = { delivered: smsResult.delivered, provider: smsResult.provider };
-        if (smsResult.delivered) {
-          await logAuditEvent({
-            envelopeId,
-            actorType: 'system',
-            action: 'otp_sent',
-            email: signer.email,
-            phone: signer.phone,
-            ip,
-            userAgent,
-            metadata: {
-              signerId,
-              channel: 'sms',
-              provider: smsResult.provider,
-              messageId: smsResult.messageId,
-            },
-          });
-        }
-      } catch (smsErr) {
-        log.warn(`SMS OTP failed for signer ${signerId}: ${getErrMsg(smsErr)}`);
+      if (!emailSent) {
+        return c.json({ error: 'Failed to send OTP email' }, 500);
       }
-    }
 
-    return c.json({
-      success: true,
-      channels: { email: true, sms: smsChannel?.delivered ?? false },
-    });
-  } catch (error: unknown) {
-    log.error('❌ Send OTP error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to send OTP' }, 500);
-  }
-});
+      // Log audit event
+      const { ip, userAgent } = getRequestMetadata(c);
+      await logAuditEvent({
+        envelopeId,
+        actorType: 'system',
+        action: 'otp_sent',
+        email: signer.email,
+        ip,
+        userAgent,
+        metadata: { signerId, channel: 'email' },
+      });
+
+      // P5.1 — parallel OTP delivery via SMS (opt-in + phone required).
+      // Email remains the primary channel so the audit trail always shows
+      // an `otp_sent` event even when SMS is offline.
+      let smsChannel: { delivered: boolean; provider: string } | null = null;
+      if (signer.sms_opt_in && signer.phone) {
+        try {
+          const envelope = await getEnvelopeDetails(envelopeId);
+          const smsResult = await sendOtpSms({
+            to: signer.phone,
+            otp,
+            envelopeTitle: envelope?.title,
+          });
+          smsChannel = { delivered: smsResult.delivered, provider: smsResult.provider };
+          if (smsResult.delivered) {
+            await logAuditEvent({
+              envelopeId,
+              actorType: 'system',
+              action: 'otp_sent',
+              email: signer.email,
+              phone: signer.phone,
+              ip,
+              userAgent,
+              metadata: {
+                signerId,
+                channel: 'sms',
+                provider: smsResult.provider,
+                messageId: smsResult.messageId,
+              },
+            });
+          }
+        } catch (smsErr) {
+          log.warn(`SMS OTP failed for signer ${signerId}: ${getErrMsg(smsErr)}`);
+        }
+      }
+
+      return c.json({
+        success: true,
+        channels: { email: true, sms: smsChannel?.delivered ?? false },
+      });
+    } catch (error: unknown) {
+      log.error('❌ Send OTP error:', error);
+      return c.json({ error: error instanceof Error ? error.message : 'Failed to send OTP' }, 500);
+    }
+  },
+);
 
 /**
  * POST /envelopes/:envelopeId/signers/:signerId/verify
  * Verify OTP and access code
  */
-esignRoutes.post('/envelopes/:envelopeId/signers/:signerId/verify', rateLimit('OTP_VERIFY'), async (c) => {
-  try {
-    const envelopeId = c.req.param('envelopeId');
-    const signerId = c.req.param('signerId');
+esignRoutes.post(
+  '/envelopes/:envelopeId/signers/:signerId/verify',
+  rateLimit('OTP_VERIFY'),
+  async (c) => {
+    try {
+      const envelopeId = c.req.param('envelopeId');
+      const signerId = c.req.param('signerId');
 
-    const body = await c.req.json();
-    const { otp, accessCode } = body;
+      const body = await c.req.json();
+      const { otp, accessCode } = body;
 
-    // Verify access code (if provided)
-    if (accessCode) {
-      const accessCodeResult = await verifyAccessCode(signerId, accessCode);
-      if (!accessCodeResult.valid) {
-        return c.json({ error: accessCodeResult.error || 'Invalid access code' }, 401);
+      // Verify access code (if provided)
+      if (accessCode) {
+        const accessCodeResult = await verifyAccessCode(signerId, accessCode);
+        if (!accessCodeResult.valid) {
+          return c.json({ error: accessCodeResult.error || 'Invalid access code' }, 401);
+        }
       }
+
+      // Verify OTP
+      const otpResult = await verifyOTP(signerId, otp);
+      if (!otpResult.valid) {
+        return c.json({ error: otpResult.error || 'Invalid OTP' }, 401);
+      }
+
+      // Mark as verified
+      await markOTPVerified(signerId);
+      await clearOTP(signerId);
+
+      // Update signer status
+      await updateSignerStatus(signerId, 'viewed', {
+        viewed_at: new Date().toISOString(),
+      });
+
+      // Log audit event
+      const signers = await getEnvelopeSigners(envelopeId);
+      const signer = signers.find((s) => s.id === signerId);
+      const { ip, userAgent } = getRequestMetadata(c);
+
+      await logAuditEvent({
+        envelopeId,
+        actorType: audActor(signer),
+        actorId: signerId,
+        action: 'otp_verified',
+        email: signer?.email,
+        ip,
+        userAgent,
+        metadata: { signerId },
+      });
+
+      return c.json({ success: true, verified: true });
+    } catch (error: unknown) {
+      log.error('❌ Verify OTP error:', error);
+      return c.json({ error: error instanceof Error ? error.message : 'Verification failed' }, 500);
     }
-
-    // Verify OTP
-    const otpResult = await verifyOTP(signerId, otp);
-    if (!otpResult.valid) {
-      return c.json({ error: otpResult.error || 'Invalid OTP' }, 401);
-    }
-
-    // Mark as verified
-    await markOTPVerified(signerId);
-    await clearOTP(signerId);
-
-    // Update signer status
-    await updateSignerStatus(signerId, 'viewed', {
-      viewed_at: new Date().toISOString(),
-    });
-
-    // Log audit event
-    const signers = await getEnvelopeSigners(envelopeId);
-    const signer = signers.find(s => s.id === signerId);
-    const { ip, userAgent } = getRequestMetadata(c);
-    
-    await logAuditEvent({
-      envelopeId,
-      actorType: audActor(signer),
-      actorId: signerId,
-      action: 'otp_verified',
-      email: signer?.email,
-      ip,
-      userAgent,
-      metadata: { signerId },
-    });
-
-    return c.json({ success: true, verified: true });
-  } catch (error: unknown) {
-    log.error('❌ Verify OTP error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Verification failed' }, 500);
-  }
-});
+  },
+);
 
 /**
  * POST /envelopes/:envelopeId/sign
  * Submit signature
  */
-esignRoutes.post('/envelopes/:envelopeId/sign', requireIdempotency(), rateLimit('SIGNER_SUBMIT'), async (c) => {
-  try {
-    const envelopeId = c.req.param('envelopeId');
+esignRoutes.post(
+  '/envelopes/:envelopeId/sign',
+  requireIdempotency(),
+  rateLimit('SIGNER_SUBMIT'),
+  async (c) => {
+    try {
+      const envelopeId = c.req.param('envelopeId');
 
-    const body = await c.req.json();
-    const parsed = SignEnvelopeSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-    }
-    const { signerId, signatureData, fieldValues } = parsed.data;
-
-    if (!signatureData) {
-      return c.json({ error: 'signatureData required' }, 400);
-    }
-
-    // Get signer
-    const signers = await getEnvelopeSigners(envelopeId);
-    const signer = signers.find(s => s.id === signerId);
-
-    if (!signer) {
-      return c.json({ error: 'Signer not found' }, 404);
-    }
-
-    // Check if already signed
-    if (signer.status === 'signed') {
-      return c.json({ error: 'Already signed' }, 400);
-    }
-
-    // Update field values
-    if (fieldValues && Array.isArray(fieldValues)) {
-      for (const fv of fieldValues) {
-        if (fv.fieldId && fv.value !== undefined) {
-          await updateFieldValue(fv.fieldId, fv.value);
-        }
+      const body = await c.req.json();
+      const parsed = SignEnvelopeSchema.safeParse(body);
+      if (!parsed.success) {
+        return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
       }
-    }
+      const { signerId, signatureData, fieldValues } = parsed.data;
 
-    // Update signer status
-    const { ip, userAgent } = getRequestMetadata(c);
-    await updateSignerStatus(signerId, 'signed', {
-      signed_at: new Date().toISOString(),
-      signature_data: signatureData,
-      ip_address: ip,
-      user_agent: userAgent,
-    });
+      if (!signatureData) {
+        return c.json({ error: 'signatureData required' }, 400);
+      }
 
-    // Log audit event
-    await logAuditEvent({
-      envelopeId,
-      actorType: audActor(signer),
-      actorId: signerId,
-      action: 'signed',
-      email: signer.email,
-      ip,
-      userAgent,
-      metadata: { signerId, signerName: signer.name },
-    });
+      // Get signer
+      const signers = await getEnvelopeSigners(envelopeId);
+      const signer = signers.find((s) => s.id === signerId);
 
-    // Check if envelope is complete
-    const isComplete = await checkEnvelopeCompletion(envelopeId);
+      if (!signer) {
+        return c.json({ error: 'Signer not found' }, 404);
+      }
 
-    if (isComplete) {
-      // P7.5 — enqueue the expensive completion workflow (burn-in +
-      // certificate + seal + upload) for the background drainer. The
-      // signer request returns in < 1s even for large PDFs; the UI
-      // observes a `completing` envelope until the drainer finishes.
-      await enqueueCompletion(envelopeId);
+      // Check if already signed
+      if (signer.status === 'signed') {
+        return c.json({ error: 'Already signed' }, 400);
+      }
 
-      await logAuditEvent({
-        envelopeId,
-        actorType: 'system',
-        action: 'envelope_completion_queued',
-        ip,
-        userAgent,
-        metadata: { allSignersCompleted: true, queued: true },
-      });
-    } else {
-      // Not all signers have signed — handle next-signer notification based on signing mode
-      const envelopeForMode = await getEnvelopeDetails(envelopeId);
-      const adminSignMode = envelopeForMode?.signing_mode || 'sequential';
-
-      // Update envelope to partially_signed
-      await updateEnvelopeStatus(envelopeId, 'partially_signed');
-
-      // Sequential mode: notify next pending signer in order
-      if (adminSignMode === 'sequential') {
-        const allSigners = await getEnvelopeSigners(envelopeId);
-        const sorted = [...allSigners].sort((a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0));
-        const nextSigner = sorted.find((s: SignerRecord) => s.status === 'pending');
-
-        if (nextSigner) {
-          try {
-            const signingUrl = `https://www.navigatewealth.co/sign?token=${nextSigner.access_token}`;
-
-            const emailContent = createSigningInviteEmail({
-              signerName: nextSigner.name,
-              envelopeTitle: envelopeForMode?.title || 'Document',
-              senderName: 'Navigate Wealth',
-              signingLink: signingUrl,
-              message: envelopeForMode?.message,
-            });
-
-            const emailSent = await sendEmail({
-              to: nextSigner.email,
-              subject: `Signature Request: ${envelopeForMode?.title || 'Document'}`,
-              html: emailContent.html,
-              text: emailContent.text,
-            });
-
-            if (emailSent) {
-              await updateSignerStatus(nextSigner.id, 'sent', {
-                invite_sent_at: new Date().toISOString(),
-              });
-            }
-
-            await logAuditEvent({
-              envelopeId,
-              actorType: 'system',
-              action: 'invite_sent',
-              email: nextSigner.email,
-              ip,
-              userAgent,
-              metadata: { signerId: nextSigner.id, signerName: nextSigner.name, signingMode: 'sequential', triggeredBy: signerId },
-            });
-
-            log.info(`Sequential signing: notified next signer ${nextSigner.email} (order ${nextSigner.order})`);
-          } catch (notifyErr) {
-            log.error('Failed to notify next signer:', notifyErr);
-            // Non-critical: signing still succeeded
+      // Update field values
+      if (fieldValues && Array.isArray(fieldValues)) {
+        for (const fv of fieldValues) {
+          if (fv.fieldId && fv.value !== undefined) {
+            await updateFieldValue(fv.fieldId, fv.value);
           }
         }
       }
-      // Parallel mode: no next-signer notification needed (all already invited)
-    }
 
-    return c.json({
-      success: true,
-      signed: true,
-      envelopeComplete: isComplete,
-    });
-  } catch (error: unknown) {
-    log.error('❌ Sign error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Signing failed' }, 500);
-  }
-});
+      // Update signer status
+      const { ip, userAgent } = getRequestMetadata(c);
+      await updateSignerStatus(signerId, 'signed', {
+        signed_at: new Date().toISOString(),
+        signature_data: signatureData,
+        ip_address: ip,
+        user_agent: userAgent,
+      });
+
+      // Log audit event
+      await logAuditEvent({
+        envelopeId,
+        actorType: audActor(signer),
+        actorId: signerId,
+        action: 'signed',
+        email: signer.email,
+        ip,
+        userAgent,
+        metadata: { signerId, signerName: signer.name },
+      });
+
+      // Check if envelope is complete
+      const isComplete = await checkEnvelopeCompletion(envelopeId);
+
+      if (isComplete) {
+        // P7.5 — enqueue the expensive completion workflow (burn-in +
+        // certificate + seal + upload) for the background drainer. The
+        // signer request returns in < 1s even for large PDFs; the UI
+        // observes a `completing` envelope until the drainer finishes.
+        await enqueueCompletion(envelopeId);
+
+        await logAuditEvent({
+          envelopeId,
+          actorType: 'system',
+          action: 'envelope_completion_queued',
+          ip,
+          userAgent,
+          metadata: { allSignersCompleted: true, queued: true },
+        });
+      } else {
+        // Not all signers have signed — handle next-signer notification based on signing mode
+        const envelopeForMode = await getEnvelopeDetails(envelopeId);
+        const adminSignMode = envelopeForMode?.signing_mode || 'sequential';
+
+        // Update envelope to partially_signed
+        await updateEnvelopeStatus(envelopeId, 'partially_signed');
+
+        // Sequential mode: notify next pending signer in order
+        if (adminSignMode === 'sequential') {
+          const allSigners = await getEnvelopeSigners(envelopeId);
+          const sorted = [...allSigners].sort(
+            (a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0),
+          );
+          const nextSigner = sorted.find((s: SignerRecord) => s.status === 'pending');
+
+          if (nextSigner) {
+            try {
+              const signingUrl = `https://www.navigatewealth.co/sign?token=${nextSigner.access_token}`;
+
+              const emailContent = createSigningInviteEmail({
+                signerName: nextSigner.name,
+                envelopeTitle: envelopeForMode?.title || 'Document',
+                senderName: 'Navigate Wealth',
+                signingLink: signingUrl,
+                message: envelopeForMode?.message,
+              });
+
+              const emailSent = await sendEmail({
+                to: nextSigner.email,
+                subject: `Signature Request: ${envelopeForMode?.title || 'Document'}`,
+                html: emailContent.html,
+                text: emailContent.text,
+              });
+
+              if (emailSent) {
+                await updateSignerStatus(nextSigner.id, 'sent', {
+                  invite_sent_at: new Date().toISOString(),
+                });
+              }
+
+              await logAuditEvent({
+                envelopeId,
+                actorType: 'system',
+                action: 'invite_sent',
+                email: nextSigner.email,
+                ip,
+                userAgent,
+                metadata: {
+                  signerId: nextSigner.id,
+                  signerName: nextSigner.name,
+                  signingMode: 'sequential',
+                  triggeredBy: signerId,
+                },
+              });
+
+              log.info(
+                `Sequential signing: notified next signer ${nextSigner.email} (order ${nextSigner.order})`,
+              );
+            } catch (notifyErr) {
+              log.error('Failed to notify next signer:', notifyErr);
+              // Non-critical: signing still succeeded
+            }
+          }
+        }
+        // Parallel mode: no next-signer notification needed (all already invited)
+      }
+
+      return c.json({
+        success: true,
+        signed: true,
+        envelopeComplete: isComplete,
+      });
+    } catch (error: unknown) {
+      log.error('❌ Sign error:', error);
+      return c.json({ error: error instanceof Error ? error.message : 'Signing failed' }, 500);
+    }
+  },
+);
 
 /**
  * POST /envelopes/:envelopeId/reject
@@ -2746,7 +2832,7 @@ esignRoutes.post('/envelopes/:envelopeId/reject', async (c) => {
 
     // Get signer
     const signers = await getEnvelopeSigners(envelopeId);
-    const signer = signers.find(s => s.id === signerId);
+    const signer = signers.find((s) => s.id === signerId);
 
     if (!signer) {
       return c.json({ error: 'Signer not found' }, 404);
@@ -2797,7 +2883,10 @@ esignRoutes.get('/envelopes/:envelopeId/audit', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get audit trail error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to fetch audit trail' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch audit trail' },
+      status,
+    );
   }
 });
 
@@ -2823,7 +2912,10 @@ esignRoutes.get('/envelopes/:envelopeId/document', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get document URL error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to get document URL' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to get document URL' },
+      status,
+    );
   }
 });
 
@@ -2849,7 +2941,10 @@ esignRoutes.get('/envelopes/:envelopeId/certificate', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Get certificate URL error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to get certificate URL' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to get certificate URL' },
+      status,
+    );
   }
 });
 
@@ -2919,7 +3014,10 @@ esignRoutes.get('/sign-by-token/:token', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Get signing info error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to fetch signing information' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch signing information' },
+      500,
+    );
   }
 });
 
@@ -2942,7 +3040,7 @@ esignRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
     const { ip } = getRequestMetadata(c);
     const rateLimit = await checkRateLimit(ip, 'esign_token_validate', {
       maxAttempts: 60, // 1 per minute on average
-      windowMs: 60 * 60 * 1000, 
+      windowMs: 60 * 60 * 1000,
       blockDurationMs: 15 * 60 * 1000,
     });
 
@@ -2981,17 +3079,20 @@ esignRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
 
     // Determine if it's this signer's turn based on signing mode
     const allSigners = envelope.signers || [];
-    const sortedAllSigners = [...allSigners].sort((a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0));
+    const sortedAllSigners = [...allSigners].sort(
+      (a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0),
+    );
     const signerOrder = signer.order || 1;
     const signingMode = envelope.signing_mode || 'sequential';
 
     // In parallel mode, all signers can sign at any time.
     // In sequential mode, a signer can only sign when all lower-order signers have signed.
-    const isTurn = signingMode === 'parallel'
-      ? true
-      : sortedAllSigners
-          .filter((s: SignerRecord) => (s.order || 0) < signerOrder)
-          .every((s: SignerRecord) => s.status === 'signed');
+    const isTurn =
+      signingMode === 'parallel'
+        ? true
+        : sortedAllSigners
+            .filter((s: SignerRecord) => (s.order || 0) < signerOrder)
+            .every((s: SignerRecord) => s.status === 'signed');
 
     // Build a summary of all signers (non-sensitive) for the waiting UI
     const signersSummary = sortedAllSigners.map((s: SignerRecord) => ({
@@ -3009,7 +3110,10 @@ esignRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
     let savedInitials: string | null = null;
     try {
       const profileKey = `esign:signer-profile:${(signer.email || '').toLowerCase().trim()}`;
-      const profile = await kv.get(profileKey) as { signature?: string; initials?: string } | null;
+      const profile = (await kv.get(profileKey)) as {
+        signature?: string;
+        initials?: string;
+      } | null;
       if (profile && typeof profile === 'object') {
         savedSignature = typeof profile.signature === 'string' ? profile.signature : null;
         savedInitials = typeof profile.initials === 'string' ? profile.initials : null;
@@ -3023,23 +3127,23 @@ esignRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       try {
         // Generate OTP
         const { otp, error: otpError } = await generateAndStoreOTP(signer.id);
-        
+
         if (!otpError && otp) {
           // Send OTP Email
           const emailContent = createOTPEmail({
             signerName: signer.name,
             otp,
             envelopeTitle: envelope.title,
-            expiresInMinutes: 15
+            expiresInMinutes: 15,
           });
 
           await sendEmail({
             to: signer.email,
             subject: `Verification Code: ${envelope.title}`,
             html: emailContent.html,
-            text: emailContent.text
+            text: emailContent.text,
           });
-          
+
           // Log audit event
           const { ip, userAgent } = getRequestMetadata(c);
           await logAuditEvent({
@@ -3049,9 +3153,9 @@ esignRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
             email: signer.email,
             ip,
             userAgent,
-            metadata: { signerId: signer.id, note: 'Auto-sent on access' }
+            metadata: { signerId: signer.id, note: 'Auto-sent on access' },
           });
-          
+
           log.info(`✅ Auto-sent OTP to ${signer.email} for signer ${signer.id}`);
         }
       } catch (err) {
@@ -3110,7 +3214,10 @@ esignRoutes.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Validate token error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to validate token' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to validate token' },
+      500,
+    );
   }
 });
 
@@ -3125,7 +3232,13 @@ esignRoutes.post('/signer/verify-otp', rateLimit('OTP_VERIFY'), async (c) => {
     const otpParsed = OtpVerifySchema.safeParse({ otp: body.otp });
 
     if (!access_token || !otpParsed.success) {
-      return c.json({ error: 'access_token and valid otp required', ...(otpParsed.success ? {} : formatZodError(otpParsed.error)) }, 400);
+      return c.json(
+        {
+          error: 'access_token and valid otp required',
+          ...(otpParsed.success ? {} : formatZodError(otpParsed.error)),
+        },
+        400,
+      );
     }
     const otp = otpParsed.data.otp;
 
@@ -3137,7 +3250,11 @@ esignRoutes.post('/signer/verify-otp', rateLimit('OTP_VERIFY'), async (c) => {
     }
 
     // Rate limit check (Per signer to prevent OTP guessing)
-    const rateLimit = await checkRateLimit(signer.id, 'esign_otp_verify', RATE_LIMITS.EMAIL_VERIFICATION);
+    const rateLimit = await checkRateLimit(
+      signer.id,
+      'esign_otp_verify',
+      RATE_LIMITS.EMAIL_VERIFICATION,
+    );
 
     if (!rateLimit.allowed) {
       return c.json({ error: rateLimit.reason }, 429);
@@ -3179,10 +3296,10 @@ esignRoutes.post('/signer/verify-otp', rateLimit('OTP_VERIFY'), async (c) => {
       metadata: { signerId: signer.id },
     });
 
-    return c.json({ 
-      success: true, 
+    return c.json({
+      success: true,
       verified: true,
-      message: 'OTP verified successfully' 
+      message: 'OTP verified successfully',
     });
   } catch (error: unknown) {
     log.error('❌ Verify OTP error:', error);
@@ -3213,9 +3330,9 @@ esignRoutes.post('/signer/resend-otp', rateLimit('OTP_SEND'), async (c) => {
     // Rate limit check (Per signer to prevent email spam)
     // Using slightly different config than verification
     const rateLimit = await checkRateLimit(signer.id, 'esign_otp_resend', {
-        maxAttempts: 3, 
-        windowMs: 60 * 60 * 1000, // 3 per hour
-        blockDurationMs: 60 * 60 * 1000 
+      maxAttempts: 3,
+      windowMs: 60 * 60 * 1000, // 3 per hour
+      blockDurationMs: 60 * 60 * 1000,
     });
 
     if (!rateLimit.allowed) {
@@ -3243,7 +3360,7 @@ esignRoutes.post('/signer/resend-otp', rateLimit('OTP_SEND'), async (c) => {
       signerName: signer.name,
       otp,
       envelopeTitle,
-      expiresInMinutes: 15
+      expiresInMinutes: 15,
     });
 
     const emailSent = await sendEmail({
@@ -3301,8 +3418,8 @@ esignRoutes.post('/signer/resend-otp', rateLimit('OTP_SEND'), async (c) => {
       }
     }
 
-    return c.json({ 
-      success: true, 
+    return c.json({
+      success: true,
       message: 'OTP sent successfully',
       channels: { email: true, sms: smsDelivered },
     });
@@ -3381,16 +3498,25 @@ esignRoutes.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMI
       ip_address: ip,
       user_agent: userAgent,
       consent_version: typeof consent_version === 'string' ? consent_version : undefined,
-      consent_accepted_at: typeof consent_accepted_at === 'string' ? consent_accepted_at : new Date().toISOString(),
-      signing_reason: typeof signing_reason === 'string' ? signing_reason.trim() || undefined : undefined,
-      signature_telemetry: signature_telemetry && typeof signature_telemetry === 'object' ? signature_telemetry : undefined,
+      consent_accepted_at:
+        typeof consent_accepted_at === 'string' ? consent_accepted_at : new Date().toISOString(),
+      signing_reason:
+        typeof signing_reason === 'string' ? signing_reason.trim() || undefined : undefined,
+      signature_telemetry:
+        signature_telemetry && typeof signature_telemetry === 'object'
+          ? signature_telemetry
+          : undefined,
     });
 
     // P5.6 — single-use semantics: once a signer has successfully submitted,
     // rotate their access token so the original invite link cannot be
     // replayed to re-open the signing UI. The fresh token is indexed but
     // not communicated anywhere, effectively burning the URL.
-    try { await rotateSignerToken(signer.id, 'post_submit'); } catch { /* best-effort */ }
+    try {
+      await rotateSignerToken(signer.id, 'post_submit');
+    } catch {
+      /* best-effort */
+    }
 
     // Log audit event
     await logAuditEvent({
@@ -3403,7 +3529,6 @@ esignRoutes.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMI
       userAgent,
       metadata: { signerId: signer.id, signerName: signer.name },
     });
-
 
     // Check if envelope is complete
     const isComplete = await checkEnvelopeCompletion(signer.envelope_id);
@@ -3428,7 +3553,9 @@ esignRoutes.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMI
       const envelopeForProgress = await getEnvelopeDetails(signer.envelope_id);
       const currentMode = envelopeForProgress?.signing_mode || 'sequential';
       const allSigners = await getEnvelopeSigners(signer.envelope_id);
-      const sorted = [...allSigners].sort((a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0));
+      const sorted = [...allSigners].sort(
+        (a: SignerRecord, b: SignerRecord) => (a.order || 0) - (b.order || 0),
+      );
       const signedCount = sorted.filter((s: SignerRecord) => s.status === 'signed').length;
       const totalSigners = sorted.length;
 
@@ -3479,7 +3606,9 @@ esignRoutes.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMI
               },
             });
 
-            log.info(`Sequential signing: notified next signer ${nextSigner.email} (order ${nextSigner.order})`);
+            log.info(
+              `Sequential signing: notified next signer ${nextSigner.email} (order ${nextSigner.order})`,
+            );
           } catch (notifyErr) {
             log.error('Failed to notify next signer after public submit:', notifyErr);
             // Non-critical: signing still succeeded, don't fail the response
@@ -3494,7 +3623,9 @@ esignRoutes.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMI
       // nightly tick rather than blasting every signer event to inbox.
       try {
         if (envelopeForProgress?.created_by_user_id) {
-          const { data: senderUser } = await getSupabase().auth.admin.getUserById(envelopeForProgress.created_by_user_id);
+          const { data: senderUser } = await getSupabase().auth.admin.getUserById(
+            envelopeForProgress.created_by_user_id,
+          );
           const senderEmail = senderUser?.user?.email;
 
           if (senderEmail) {
@@ -3569,8 +3700,16 @@ esignRoutes.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMI
           envelopeId: envelopeForProgress.id,
           payload: {
             signer: { id: signer.id, name: signer.name, email: signer.email, order: signer.order },
-            envelope: { id: envelopeForProgress.id, title: envelopeForProgress.title, status: envelopeForProgress.status },
-            progress: { signed_count: signedCount, total_signers: totalSigners, complete: isComplete },
+            envelope: {
+              id: envelopeForProgress.id,
+              title: envelopeForProgress.title,
+              status: envelopeForProgress.status,
+            },
+            progress: {
+              signed_count: signedCount,
+              total_signers: totalSigners,
+              complete: isComplete,
+            },
           },
         });
       }
@@ -3588,7 +3727,10 @@ esignRoutes.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMI
     });
   } catch (error: unknown) {
     log.error('❌ Submit signature error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to submit signature' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to submit signature' },
+      500,
+    );
   }
 });
 
@@ -3642,7 +3784,9 @@ esignRoutes.post('/signer/reject', requireIdempotency(), rateLimit('SIGNER_SUBMI
     try {
       const envelopeForNotify = await getEnvelopeDetails(signer.envelope_id);
       if (envelopeForNotify?.created_by_user_id) {
-        const { data: senderUser } = await getSupabase().auth.admin.getUserById(envelopeForNotify.created_by_user_id);
+        const { data: senderUser } = await getSupabase().auth.admin.getUserById(
+          envelopeForNotify.created_by_user_id,
+        );
         const senderEmail = senderUser?.user?.email;
 
         if (senderEmail) {
@@ -3661,11 +3805,15 @@ esignRoutes.post('/signer/reject', requireIdempotency(), rateLimit('SIGNER_SUBMI
                 <p style="color: #374151; margin: 0 0 16px;">
                   <strong>${signer.name}</strong> (${signer.email}) has declined to sign <strong>${envelopeForNotify.title}</strong>.
                 </p>
-                ${reason ? `
+                ${
+                  reason
+                    ? `
                 <div style="background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 8px; padding: 16px; margin: 16px 0;">
                   <p style="margin: 0 0 4px; color: #92400E; font-size: 12px; font-weight: 600;">Reason provided:</p>
                   <p style="margin: 0; color: #78350F; font-size: 14px;">${reason}</p>
-                </div>` : ''}
+                </div>`
+                    : ''
+                }
                 <p style="color: #6B7280; font-size: 13px; margin: 16px 0 0;">
                   The envelope status has been updated to <strong>Declined</strong>. You may void this envelope and create a new one if needed.
                 </p>
@@ -3738,7 +3886,10 @@ esignRoutes.post('/signer/reject', requireIdempotency(), rateLimit('SIGNER_SUBMI
     });
   } catch (error: unknown) {
     log.error('❌ Reject document error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to reject document' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to reject document' },
+      500,
+    );
   }
 });
 
@@ -3756,32 +3907,32 @@ esignRoutes.get('/signer/download/:token', async (c) => {
     if (!signer) {
       return c.json({ error: 'Invalid or expired signing link' }, 404);
     }
-    
+
     // Get envelope details
     const envelopeId = signer.envelope_id;
     const envelope = await getEnvelopeDetails(envelopeId);
 
     if (!envelope) {
-       return c.json({ error: 'Envelope not found' }, 404);
+      return c.json({ error: 'Envelope not found' }, 404);
     }
-    
+
     // Only allow download if completed
     if (envelope.status !== 'completed') {
-       return c.json({ error: 'Document not completed yet' }, 400);
+      return c.json({ error: 'Document not completed yet' }, 400);
     }
 
     // Check if we have a pre-generated signed document
     if (envelope.signed_document_path) {
-       const signedPdfBuffer = await downloadDocument(envelope.signed_document_path);
-       
-       if (signedPdfBuffer) {
-         return new Response(signedPdfBuffer, {
-            headers: {
-              'Content-Type': 'application/pdf',
-              'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
-            },
-         });
-       }
+      const signedPdfBuffer = await downloadDocument(envelope.signed_document_path);
+
+      if (signedPdfBuffer) {
+        return new Response(signedPdfBuffer, {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
+          },
+        });
+      }
     }
 
     // FALLBACK: On-the-fly generation
@@ -3793,7 +3944,7 @@ esignRoutes.get('/signer/download/:token', async (c) => {
     // 1. Download original PDF
     const pdfBuffer = await downloadDocument(documentPath);
     if (!pdfBuffer) {
-       return c.json({ error: 'Failed to retrieve source document' }, 500);
+      return c.json({ error: 'Failed to retrieve source document' }, 500);
     }
 
     // 2. Get signers
@@ -3804,18 +3955,18 @@ esignRoutes.get('/signer/download/:token', async (c) => {
       const { pdfBuffer: burnedPdfBuffer } = await PDFService.burnIn(
         pdfBuffer,
         envelope.fields || [],
-        signers
+        signers,
       );
-      
+
       let finalPdfBuffer = burnedPdfBuffer;
-      
+
       try {
-         const { pdfBuffer: certBuffer } = await generateCompletionCertificate(envelopeId);
-         if (certBuffer) {
-            finalPdfBuffer = await PDFService.mergeCertificate(burnedPdfBuffer, certBuffer);
-         }
+        const { pdfBuffer: certBuffer } = await generateCompletionCertificate(envelopeId);
+        if (certBuffer) {
+          finalPdfBuffer = await PDFService.mergeCertificate(burnedPdfBuffer, certBuffer);
+        }
       } catch (certError) {
-         log.warn('Certificate merge failed during fallback download', certError);
+        log.warn('Certificate merge failed during fallback download', certError);
       }
 
       return new Response(finalPdfBuffer, {
@@ -3824,15 +3975,16 @@ esignRoutes.get('/signer/download/:token', async (c) => {
           'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
         },
       });
-
     } catch (burnInError: unknown) {
       log.error('❌ Burn-in error:', burnInError);
       return c.json({ error: 'Failed to generate signed PDF' }, 500);
     }
-
   } catch (error: unknown) {
     log.error('❌ Signer download error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to download document' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to download document' },
+      500,
+    );
   }
 });
 
@@ -3846,7 +3998,7 @@ esignRoutes.get('/signer/download/:token', async (c) => {
  */
 esignRoutes.post('/signer/saved-signature', async (c) => {
   try {
-    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
     const accessToken = typeof body.access_token === 'string' ? body.access_token : '';
     const signature = typeof body.signature === 'string' ? body.signature : null;
     const initials = typeof body.initials === 'string' ? body.initials : null;
@@ -3896,7 +4048,10 @@ esignRoutes.post('/signer/saved-signature', async (c) => {
     return c.json({ success: true });
   } catch (error: unknown) {
     log.error('❌ Save signer signature error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to save signature' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to save signature' },
+      500,
+    );
   }
 });
 
@@ -3914,7 +4069,10 @@ esignRoutes.get('/envelopes/:envelopeId/attachments', async (c) => {
   try {
     await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId');
-    const records = ((await kv.get(EsignKeys.envelopeAttachments(envelopeId))) as Array<Record<string, unknown>>) ?? [];
+    const records =
+      ((await kv.get(EsignKeys.envelopeAttachments(envelopeId))) as Array<
+        Record<string, unknown>
+      >) ?? [];
     const enriched = await Promise.all(
       records.map(async (r) => ({
         ...r,
@@ -3925,7 +4083,10 @@ esignRoutes.get('/envelopes/:envelopeId/attachments', async (c) => {
   } catch (err) {
     log.error('List attachments error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to list attachments' }, status);
+    return c.json(
+      { error: err instanceof Error ? err.message : 'Failed to list attachments' },
+      status,
+    );
   }
 });
 
@@ -3957,8 +4118,9 @@ esignRoutes.get('/envelopes/:envelopeId/attachments', async (c) => {
  */
 esignRoutes.post('/signer/attachment', rateLimit('SIGNER_SUBMIT'), async (c) => {
   try {
-    const body = await c.req.parseBody().catch(() => ({} as Record<string, unknown>));
-    const accessToken = typeof body['access_token'] === 'string' ? (body['access_token'] as string) : '';
+    const body = await c.req.parseBody().catch(() => ({}) as Record<string, unknown>);
+    const accessToken =
+      typeof body['access_token'] === 'string' ? (body['access_token'] as string) : '';
     const fieldId = typeof body['field_id'] === 'string' ? (body['field_id'] as string) : '';
     const file = body['file'];
 
@@ -3971,10 +4133,12 @@ esignRoutes.post('/signer/attachment', rateLimit('SIGNER_SUBMIT'), async (c) => 
     if (signer.status === 'signed') return c.json({ error: 'Already signed' }, 409);
 
     // Confirm the field exists and is the attachment type assigned to this signer.
-    const fields = ((await kv.get(EsignKeys.envelopeFields(signer.envelope_id))) as EsignField[]) ?? [];
+    const fields =
+      ((await kv.get(EsignKeys.envelopeFields(signer.envelope_id))) as EsignField[]) ?? [];
     const field = fields.find((f) => f.id === fieldId);
     if (!field) return c.json({ error: 'Field not found' }, 404);
-    if (field.type !== 'attachment') return c.json({ error: 'Field is not an attachment field' }, 400);
+    if (field.type !== 'attachment')
+      return c.json({ error: 'Field is not an attachment field' }, 400);
     if (field.signer_id !== signer.id && field.signer_id !== signer.email) {
       return c.json({ error: 'Field is not assigned to this signer' }, 403);
     }
@@ -4055,7 +4219,7 @@ esignRoutes.post('/signer/attachment', rateLimit('SIGNER_SUBMIT'), async (c) => 
  */
 esignRoutes.post('/signer/pause', async (c) => {
   try {
-    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
     const accessToken = typeof body.access_token === 'string' ? body.access_token : '';
     if (!accessToken) {
       return c.json({ error: 'access_token required' }, 400);
@@ -4067,8 +4231,12 @@ esignRoutes.post('/signer/pause', async (c) => {
     }
 
     const { ip, userAgent } = getRequestMetadata(c);
-    const completedCount = Number.isFinite(body.completed_count as number) ? body.completed_count as number : undefined;
-    const requiredCount = Number.isFinite(body.required_count as number) ? body.required_count as number : undefined;
+    const completedCount = Number.isFinite(body.completed_count as number)
+      ? (body.completed_count as number)
+      : undefined;
+    const requiredCount = Number.isFinite(body.required_count as number)
+      ? (body.required_count as number)
+      : undefined;
 
     await logAuditEvent({
       envelopeId: signer.envelope_id,
@@ -4089,7 +4257,10 @@ esignRoutes.post('/signer/pause', async (c) => {
     return c.json({ success: true });
   } catch (error: unknown) {
     log.error('❌ Signer pause error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to record pause' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to record pause' },
+      500,
+    );
   }
 });
 
@@ -4145,15 +4316,22 @@ esignRoutes.delete('/envelopes/:envelopeId', async (c) => {
 
     const discardableStatuses = ['draft', 'sent', 'viewed'];
     if (!discardableStatuses.includes(envelope.status)) {
-      return c.json({
-        error: `Cannot discard an envelope with status "${envelope.status}". Use void for completed or partially-signed envelopes.`,
-      }, 400);
+      return c.json(
+        {
+          error: `Cannot discard an envelope with status "${envelope.status}". Use void for completed or partially-signed envelopes.`,
+        },
+        400,
+      );
     }
 
     if (anyoneSigned) {
-      return c.json({
-        error: 'Cannot discard this envelope because one or more recipients have already signed. Use void instead.',
-      }, 400);
+      return c.json(
+        {
+          error:
+            'Cannot discard this envelope because one or more recipients have already signed. Use void instead.',
+        },
+        400,
+      );
     }
 
     // P6.9 — firm scope check before any mutating action.
@@ -4185,7 +4363,11 @@ esignRoutes.delete('/envelopes/:envelopeId', async (c) => {
       // links are inert even if the envelope is later restored and
       // resent (new tokens would be issued on resend).
       for (const s of signers) {
-        try { await rotateSignerToken(s.id, 'soft_deleted'); } catch { /* best-effort */ }
+        try {
+          await rotateSignerToken(s.id, 'soft_deleted');
+        } catch {
+          /* best-effort */
+        }
       }
     }
 
@@ -4220,7 +4402,9 @@ esignRoutes.delete('/envelopes/:envelopeId', async (c) => {
       },
     });
 
-    log.info(`Envelope ${envelopeId} soft-deleted (was ${envelope.status}, ${signers.length} signers)`);
+    log.info(
+      `Envelope ${envelopeId} soft-deleted (was ${envelope.status}, ${signers.length} signers)`,
+    );
 
     // Admin audit trail (non-blocking — §12.2)
     AdminAuditService.record({
@@ -4245,7 +4429,10 @@ esignRoutes.delete('/envelopes/:envelopeId', async (c) => {
   } catch (error: unknown) {
     log.error('Delete envelope error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to delete envelope' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete envelope' },
+      status,
+    );
   }
 });
 
@@ -4253,227 +4440,251 @@ esignRoutes.delete('/envelopes/:envelopeId', async (c) => {
  * POST /envelopes/:envelopeId/recall
  * Recall a sent envelope (stops the signing process)
  */
-esignRoutes.post('/envelopes/:envelopeId/recall', requireIdempotency(), rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    // Authenticate
-    const ctx = await getAuthContext(c);
-    const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
-    const body = await c.req.json();
-    const { reason } = body;
+esignRoutes.post(
+  '/envelopes/:envelopeId/recall',
+  requireIdempotency(),
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      // Authenticate
+      const ctx = await getAuthContext(c);
+      const user = ctx.user;
+      const envelopeId = c.req.param('envelopeId');
+      const body = await c.req.json();
+      const { reason } = body;
 
-    // Get envelope details
-    const envelope = await getEnvelopeDetails(envelopeId);
+      // Get envelope details
+      const envelope = await getEnvelopeDetails(envelopeId);
 
-    if (!envelope) {
-      return c.json({ error: 'Envelope not found' }, 404);
-    }
-
-    // Only allow recall of sent/viewed/partially_signed envelopes
-    const recallableStatuses = ['sent', 'viewed', 'partially_signed'];
-    if (!recallableStatuses.includes(envelope.status)) {
-      return c.json({ 
-        error: `Cannot recall envelope with status: ${envelope.status}. Only sent, viewed, or partially signed envelopes can be recalled.` 
-      }, 400);
-    }
-
-    // Update envelope status to recalled
-    await updateEnvelopeStatus(envelopeId, 'voided', {
-      voided_at: new Date().toISOString(),
-      void_reason: reason || 'Recalled by admin',
-    });
-
-    // Update all pending signers to declined status and rotate their
-    // access tokens so stale signing URLs become inert. (P5.6)
-    const signers = await getEnvelopeSigners(envelopeId);
-    for (const signer of signers) {
-      if (signer.status === 'pending' || signer.status === 'viewed') {
-        await updateSignerStatus(signer.id, 'declined', {
-          declined_at: new Date().toISOString(),
-          decline_reason: 'Envelope recalled by admin',
-        });
+      if (!envelope) {
+        return c.json({ error: 'Envelope not found' }, 404);
       }
-      try { await rotateSignerToken(signer.id, 'envelope_recalled'); } catch { /* best-effort */ }
-    }
 
-    // Log audit event
-    const { ip, userAgent } = getRequestMetadata(c);
-    await logAuditEvent({
-      envelopeId,
-      actorType: 'admin',
-      actorId: user.id,
-      action: 'recalled',
-      email: user.email || 'admin@system',
-      ip,
-      userAgent,
-      metadata: { 
-        recalledAt: new Date().toISOString(),
-        reason: reason || 'No reason provided',
-      },
-    });
-
-    // Send recall notification emails to all signers
-    log.info(`📧 Sending recall notifications to ${signers.length} signers`);
-    for (const signer of signers) {
-      try {
-        await sendRecallNotification({
-          signerEmail: signer.email,
-          signerName: signer.name,
-          envelopeTitle: envelope.title,
-          reason,
-        });
-        log.info('✅ Recall notification sent to:', { email: signer.email });
-      } catch (emailError) {
-        log.error(`❌ Failed to send recall notification to ${signer.email}:`, emailError);
-        // Continue with other signers even if one fails
+      // Only allow recall of sent/viewed/partially_signed envelopes
+      const recallableStatuses = ['sent', 'viewed', 'partially_signed'];
+      if (!recallableStatuses.includes(envelope.status)) {
+        return c.json(
+          {
+            error: `Cannot recall envelope with status: ${envelope.status}. Only sent, viewed, or partially signed envelopes can be recalled.`,
+          },
+          400,
+        );
       }
-    }
 
-    // Admin audit trail (non-blocking — §12.2)
-    AdminAuditService.record({
-      actorId: user.id,
-      actorRole: 'admin',
-      category: 'security',
-      action: 'esign_envelope_recalled',
-      summary: `Envelope recalled: ${envelope.title}`,
-      severity: 'warning',
-      entityType: 'envelope',
-      entityId: envelopeId,
-      metadata: { reason: reason || 'No reason provided', signerCount: signers.length },
-    }).catch(() => {});
-
-    // P5.4 — webhook fan-out for recall.
-    void emitWebhookEvent({
-      firmId: envelope.firm_id || 'standalone',
-      eventType: 'envelope.recalled',
-      envelopeId,
-      payload: {
-        envelope: { id: envelope.id, title: envelope.title, status: 'voided' },
-        reason: reason || null,
-        signer_count: signers.length,
-      },
-    });
-
-    // P5.7 — bell-UI copy for the actor (typically the sender).
-    if (envelope.created_by_user_id) {
-      void enqueueInAppNotification({
-        userId: envelope.created_by_user_id,
-        type: 'envelope.recalled',
-        title: 'Envelope recalled',
-        body: `You recalled "${envelope.title}".${reason ? ` Reason: ${reason}` : ''}`,
-        envelopeId,
-        metadata: { reason: reason || null },
+      // Update envelope status to recalled
+      await updateEnvelopeStatus(envelopeId, 'voided', {
+        voided_at: new Date().toISOString(),
+        void_reason: reason || 'Recalled by admin',
       });
-    }
 
-    return c.json({
-      success: true,
-      recalled: true,
-      envelope: await getEnvelopeDetails(envelopeId),
-    });
-  } catch (error: unknown) {
-    log.error('❌ Recall envelope error:', error);
-    const status = error instanceof AuthError ? error.status : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to recall envelope' }, status);
-  }
-});
+      // Update all pending signers to declined status and rotate their
+      // access tokens so stale signing URLs become inert. (P5.6)
+      const signers = await getEnvelopeSigners(envelopeId);
+      for (const signer of signers) {
+        if (signer.status === 'pending' || signer.status === 'viewed') {
+          await updateSignerStatus(signer.id, 'declined', {
+            declined_at: new Date().toISOString(),
+            decline_reason: 'Envelope recalled by admin',
+          });
+        }
+        try {
+          await rotateSignerToken(signer.id, 'envelope_recalled');
+        } catch {
+          /* best-effort */
+        }
+      }
+
+      // Log audit event
+      const { ip, userAgent } = getRequestMetadata(c);
+      await logAuditEvent({
+        envelopeId,
+        actorType: 'admin',
+        actorId: user.id,
+        action: 'recalled',
+        email: user.email || 'admin@system',
+        ip,
+        userAgent,
+        metadata: {
+          recalledAt: new Date().toISOString(),
+          reason: reason || 'No reason provided',
+        },
+      });
+
+      // Send recall notification emails to all signers
+      log.info(`📧 Sending recall notifications to ${signers.length} signers`);
+      for (const signer of signers) {
+        try {
+          await sendRecallNotification({
+            signerEmail: signer.email,
+            signerName: signer.name,
+            envelopeTitle: envelope.title,
+            reason,
+          });
+          log.info('✅ Recall notification sent to:', { email: signer.email });
+        } catch (emailError) {
+          log.error(`❌ Failed to send recall notification to ${signer.email}:`, emailError);
+          // Continue with other signers even if one fails
+        }
+      }
+
+      // Admin audit trail (non-blocking — §12.2)
+      AdminAuditService.record({
+        actorId: user.id,
+        actorRole: 'admin',
+        category: 'security',
+        action: 'esign_envelope_recalled',
+        summary: `Envelope recalled: ${envelope.title}`,
+        severity: 'warning',
+        entityType: 'envelope',
+        entityId: envelopeId,
+        metadata: { reason: reason || 'No reason provided', signerCount: signers.length },
+      }).catch(() => {});
+
+      // P5.4 — webhook fan-out for recall.
+      void emitWebhookEvent({
+        firmId: envelope.firm_id || 'standalone',
+        eventType: 'envelope.recalled',
+        envelopeId,
+        payload: {
+          envelope: { id: envelope.id, title: envelope.title, status: 'voided' },
+          reason: reason || null,
+          signer_count: signers.length,
+        },
+      });
+
+      // P5.7 — bell-UI copy for the actor (typically the sender).
+      if (envelope.created_by_user_id) {
+        void enqueueInAppNotification({
+          userId: envelope.created_by_user_id,
+          type: 'envelope.recalled',
+          title: 'Envelope recalled',
+          body: `You recalled "${envelope.title}".${reason ? ` Reason: ${reason}` : ''}`,
+          envelopeId,
+          metadata: { reason: reason || null },
+        });
+      }
+
+      return c.json({
+        success: true,
+        recalled: true,
+        envelope: await getEnvelopeDetails(envelopeId),
+      });
+    } catch (error: unknown) {
+      log.error('❌ Recall envelope error:', error);
+      const status = error instanceof AuthError ? error.status : 500;
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Failed to recall envelope' },
+        status,
+      );
+    }
+  },
+);
 
 /**
  * POST /envelopes/:envelopeId/remind
  * Send reminder to pending signers
  */
-esignRoutes.post('/envelopes/:envelopeId/remind', requireIdempotency(), rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    // Authenticate
-    const ctx = await getAuthContext(c);
-    const user = ctx.user;
-    const envelopeId = c.req.param('envelopeId');
+esignRoutes.post(
+  '/envelopes/:envelopeId/remind',
+  requireIdempotency(),
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      // Authenticate
+      const ctx = await getAuthContext(c);
+      const user = ctx.user;
+      const envelopeId = c.req.param('envelopeId');
 
-    // Get envelope details
-    const envelope = await getEnvelopeDetails(envelopeId);
+      // Get envelope details
+      const envelope = await getEnvelopeDetails(envelopeId);
 
-    if (!envelope) {
-      return c.json({ error: 'Envelope not found' }, 404);
-    }
-
-    // Only allow reminders for active envelopes
-    const remindableStatuses = ['sent', 'viewed', 'partially_signed'];
-    if (!remindableStatuses.includes(envelope.status)) {
-      return c.json({ 
-        error: `Cannot send reminders for envelope with status: ${envelope.status}` 
-      }, 400);
-    }
-
-    // Get all signers who haven't signed yet
-    const signers = await getEnvelopeSigners(envelopeId);
-    const pendingSigners = signers.filter(s => 
-      s.status === 'pending' || s.status === 'viewed'
-    );
-
-    if (pendingSigners.length === 0) {
-      return c.json({ error: 'No pending signers to remind' }, 400);
-    }
-
-    // Send reminder emails to pending signers
-    log.info(`📧 Sending reminders to ${pendingSigners.length} pending signers`);
-    const remindersSent: Array<{ signerId: string; email: string; success: boolean }> = [];
-
-    for (const signer of pendingSigners) {
-      try {
-        // P5.6 — rotate the signer's token on every manual reminder so any
-        // leaked or cached previous link is invalidated.
-        const rotated = await rotateSignerToken(signer.id, 'manual_reminder');
-        const tokenForLink = rotated?.access_token ?? signer.access_token;
-        const signingUrl = `https://www.navigatewealth.co/sign?token=${tokenForLink}`;
-
-        await sendSigningReminder({
-          signerEmail: signer.email,
-          signerName: signer.name,
-          envelopeTitle: envelope.title,
-          signingUrl,
-          expiresAt: envelope.expires_at,
-        });
-
-        remindersSent.push({ 
-          signerId: signer.id, 
-          email: signer.email,
-          name: signer.name,
-        });
-        log.info('✅ Reminder sent to:', { email: signer.email });
-
-        // Log audit event for each reminder
-        const { ip, userAgent } = getRequestMetadata(c);
-        await logAuditEvent({
-          envelopeId,
-          actorType: 'admin',
-          actorId: user.id,
-          action: 'reminder_sent',
-          email: signer.email,
-          ip,
-          userAgent,
-          metadata: { 
-            signerId: signer.id,
-            signerName: signer.name,
-            sentAt: new Date().toISOString(),
-          },
-        });
-      } catch (emailError) {
-        log.error(`❌ Failed to send reminder to ${signer.email}:`, emailError);
-        // Continue with other signers even if one fails
+      if (!envelope) {
+        return c.json({ error: 'Envelope not found' }, 404);
       }
-    }
 
-    return c.json({
-      success: true,
-      remindersSent,
-      totalReminders: remindersSent.length,
-    });
-  } catch (error: unknown) {
-    log.error('❌ Send reminder error:', error);
-    const status = error instanceof AuthError ? error.status : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to send reminders' }, status);
-  }
-});
+      // Only allow reminders for active envelopes
+      const remindableStatuses = ['sent', 'viewed', 'partially_signed'];
+      if (!remindableStatuses.includes(envelope.status)) {
+        return c.json(
+          {
+            error: `Cannot send reminders for envelope with status: ${envelope.status}`,
+          },
+          400,
+        );
+      }
+
+      // Get all signers who haven't signed yet
+      const signers = await getEnvelopeSigners(envelopeId);
+      const pendingSigners = signers.filter((s) => s.status === 'pending' || s.status === 'viewed');
+
+      if (pendingSigners.length === 0) {
+        return c.json({ error: 'No pending signers to remind' }, 400);
+      }
+
+      // Send reminder emails to pending signers
+      log.info(`📧 Sending reminders to ${pendingSigners.length} pending signers`);
+      const remindersSent: Array<{ signerId: string; email: string; success: boolean }> = [];
+
+      for (const signer of pendingSigners) {
+        try {
+          // P5.6 — rotate the signer's token on every manual reminder so any
+          // leaked or cached previous link is invalidated.
+          const rotated = await rotateSignerToken(signer.id, 'manual_reminder');
+          const tokenForLink = rotated?.access_token ?? signer.access_token;
+          const signingUrl = `https://www.navigatewealth.co/sign?token=${tokenForLink}`;
+
+          await sendSigningReminder({
+            signerEmail: signer.email,
+            signerName: signer.name,
+            envelopeTitle: envelope.title,
+            signingUrl,
+            expiresAt: envelope.expires_at,
+          });
+
+          remindersSent.push({
+            signerId: signer.id,
+            email: signer.email,
+            name: signer.name,
+          });
+          log.info('✅ Reminder sent to:', { email: signer.email });
+
+          // Log audit event for each reminder
+          const { ip, userAgent } = getRequestMetadata(c);
+          await logAuditEvent({
+            envelopeId,
+            actorType: 'admin',
+            actorId: user.id,
+            action: 'reminder_sent',
+            email: signer.email,
+            ip,
+            userAgent,
+            metadata: {
+              signerId: signer.id,
+              signerName: signer.name,
+              sentAt: new Date().toISOString(),
+            },
+          });
+        } catch (emailError) {
+          log.error(`❌ Failed to send reminder to ${signer.email}:`, emailError);
+          // Continue with other signers even if one fails
+        }
+      }
+
+      return c.json({
+        success: true,
+        remindersSent,
+        totalReminders: remindersSent.length,
+      });
+    } catch (error: unknown) {
+      log.error('❌ Send reminder error:', error);
+      const status = error instanceof AuthError ? error.status : 500;
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Failed to send reminders' },
+        status,
+      );
+    }
+  },
+);
 
 /**
  * GET /envelopes/:envelopeId/download
@@ -4494,24 +4705,27 @@ esignRoutes.get('/envelopes/:envelopeId/download', async (c) => {
 
     // Only allow download of completed envelopes
     if (envelope.status !== 'completed') {
-      return c.json({ 
-        error: 'Only completed envelopes can be downloaded' 
-      }, 400);
+      return c.json(
+        {
+          error: 'Only completed envelopes can be downloaded',
+        },
+        400,
+      );
     }
 
     // Check if we have a pre-generated signed document
     if (envelope.signed_document_path) {
-       const signedPdfBuffer = await downloadDocument(envelope.signed_document_path);
-       
-       if (signedPdfBuffer) {
-         return new Response(signedPdfBuffer, {
-            headers: {
-              'Content-Type': 'application/pdf',
-              'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
-            },
-         });
-       }
-       // If buffer is null (file missing), fall back to on-the-fly generation below
+      const signedPdfBuffer = await downloadDocument(envelope.signed_document_path);
+
+      if (signedPdfBuffer) {
+        return new Response(signedPdfBuffer, {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
+          },
+        });
+      }
+      // If buffer is null (file missing), fall back to on-the-fly generation below
     }
 
     // FALLBACK: On-the-fly generation (for legacy envelopes or if artifact missing)
@@ -4525,7 +4739,7 @@ esignRoutes.get('/envelopes/:envelopeId/download', async (c) => {
     // 1. Download original PDF
     const pdfBuffer = await downloadDocument(documentPath);
     if (!pdfBuffer) {
-       return c.json({ error: 'Failed to retrieve source document' }, 500);
+      return c.json({ error: 'Failed to retrieve source document' }, 500);
     }
 
     // 2. Get signers to cross-reference
@@ -4536,21 +4750,23 @@ esignRoutes.get('/envelopes/:envelopeId/download', async (c) => {
       const { pdfBuffer: burnedPdfBuffer } = await PDFService.burnIn(
         pdfBuffer,
         envelope.fields || [],
-        signers
+        signers,
       );
-      
+
       // Try to merge certificate if available, otherwise just return burned PDF
       let finalPdfBuffer = burnedPdfBuffer;
-      
+
       // Try to generate/fetch cert
       // We don't want to fail the download if cert generation fails here, just return the signed doc
       try {
-         const { pdfBuffer: certBuffer } = await generateCompletionCertificate(envelopeId);
-         if (certBuffer) {
-            finalPdfBuffer = await PDFService.mergeCertificate(burnedPdfBuffer, certBuffer);
-         }
+        const { pdfBuffer: certBuffer } = await generateCompletionCertificate(envelopeId);
+        if (certBuffer) {
+          finalPdfBuffer = await PDFService.mergeCertificate(burnedPdfBuffer, certBuffer);
+        }
       } catch (certError) {
-         log.warn('Certificate merge failed during fallback download, returning signed doc only', { error: certError });
+        log.warn('Certificate merge failed during fallback download, returning signed doc only', {
+          error: certError,
+        });
       }
 
       return new Response(finalPdfBuffer, {
@@ -4559,7 +4775,6 @@ esignRoutes.get('/envelopes/:envelopeId/download', async (c) => {
           'Content-Disposition': `attachment; filename="${envelope.document?.original_filename?.replace('.pdf', '_signed.pdf') || 'signed_document.pdf'}"`,
         },
       });
-
     } catch (burnInError: unknown) {
       log.error('❌ Burn-in error:', burnInError);
       return c.json({ error: 'Failed to generate signed PDF' }, 500);
@@ -4567,7 +4782,10 @@ esignRoutes.get('/envelopes/:envelopeId/download', async (c) => {
   } catch (error: unknown) {
     log.error('❌ Download envelope error:', error);
     const status = error instanceof AuthError ? error.status : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to download envelope' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to download envelope' },
+      status,
+    );
   }
 });
 
@@ -4614,7 +4832,10 @@ esignRoutes.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
   } catch (error: unknown) {
     log.error('Evidence pack export error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to build evidence pack' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to build evidence pack' },
+      status,
+    );
   }
 });
 
@@ -4680,7 +4901,10 @@ esignRoutes.get('/audit/search', async (c) => {
   } catch (error: unknown) {
     log.error('Audit search failed:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Audit search failed' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Audit search failed' },
+      status,
+    );
   }
 });
 
@@ -4693,14 +4917,14 @@ esignRoutes.get('/audit/search', async (c) => {
 esignRoutes.get('/diagnostics/synthetic', async (c) => {
   try {
     await getAuthContext(c);
-    const [latest, history] = await Promise.all([
-      getLatestProbe(),
-      getProbeHistory(),
-    ]);
+    const [latest, history] = await Promise.all([getLatestProbe(), getProbeHistory()]);
     return c.json({ latest, history });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to read probe state' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to read probe state' },
+      status,
+    );
   }
 });
 
@@ -4742,7 +4966,10 @@ esignRoutes.get('/retention', async (c) => {
     return c.json({ policy });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Retention read failed' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Retention read failed' },
+      status,
+    );
   }
 });
 
@@ -4761,7 +4988,10 @@ esignRoutes.put('/retention', async (c) => {
     return c.json({ policy: saved });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Retention write failed' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Retention write failed' },
+      status,
+    );
   }
 });
 
@@ -4774,7 +5004,10 @@ esignRoutes.delete('/retention', async (c) => {
     return c.json({ ok: true });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Retention delete failed' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Retention delete failed' },
+      status,
+    );
   }
 });
 
@@ -4786,7 +5019,10 @@ esignRoutes.post('/maintenance/retention-sweep', async (c) => {
     return c.json(result);
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Retention sweep failed' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Retention sweep failed' },
+      status,
+    );
   }
 });
 
@@ -4805,7 +5041,10 @@ esignRoutes.get('/branding', async (c) => {
     return c.json({ branding: record });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Branding read failed' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Branding read failed' },
+      status,
+    );
   }
 });
 
@@ -4847,7 +5086,10 @@ esignRoutes.delete('/branding', async (c) => {
     return c.json({ ok: true });
   } catch (error: unknown) {
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Branding delete failed' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Branding delete failed' },
+      status,
+    );
   }
 });
 
@@ -4871,7 +5113,10 @@ esignRoutes.get('/metrics', async (c) => {
   } catch (error: unknown) {
     log.error('Metrics aggregation error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to compute metrics' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to compute metrics' },
+      status,
+    );
   }
 });
 
@@ -4890,7 +5135,10 @@ esignRoutes.get('/recovery-bin', async (c) => {
   } catch (error: unknown) {
     log.error('Recovery bin list error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to list recovery bin' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to list recovery bin' },
+      status,
+    );
   }
 });
 
@@ -4938,7 +5186,10 @@ esignRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTATE')
   } catch (error: unknown) {
     log.error('Restore envelope error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to restore envelope' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to restore envelope' },
+      status,
+    );
   }
 });
 
@@ -4977,7 +5228,10 @@ esignRoutes.delete('/recovery-bin/:envelopeId', rateLimit('SENDER_MUTATE'), asyn
   } catch (error: unknown) {
     log.error('Purge envelope error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to purge envelope' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to purge envelope' },
+      status,
+    );
   }
 });
 
@@ -4990,7 +5244,10 @@ esignRoutes.post('/maintenance/recovery-sweep', async (c) => {
   } catch (error: unknown) {
     log.error('Recovery sweep error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to run recovery sweep' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to run recovery sweep' },
+      status,
+    );
   }
 });
 
@@ -5009,7 +5266,10 @@ esignRoutes.get('/envelopes/:envelopeId/reminder-config', async (c) => {
   } catch (error: unknown) {
     log.error('Get reminder config error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to get reminder config' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to get reminder config' },
+      status,
+    );
   }
 });
 
@@ -5059,7 +5319,10 @@ esignRoutes.put('/envelopes/:envelopeId/reminder-config', async (c) => {
   } catch (error: unknown) {
     log.error('Update reminder config error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to update reminder config' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to update reminder config' },
+      status,
+    );
   }
 });
 
@@ -5087,7 +5350,10 @@ esignRoutes.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
 
     // Only allow changing mode on draft or sent envelopes
     if (!['draft', 'sent'].includes(envelope.status)) {
-      return c.json({ error: `Cannot change signing mode for envelope with status: ${envelope.status}` }, 400);
+      return c.json(
+        { error: `Cannot change signing mode for envelope with status: ${envelope.status}` },
+        400,
+      );
     }
 
     await updateEnvelopeStatus(envelopeId, envelope.status, { signing_mode });
@@ -5108,7 +5374,10 @@ esignRoutes.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
   } catch (error: unknown) {
     log.error('Update signing mode error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to update signing mode' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to update signing mode' },
+      status,
+    );
   }
 });
 
@@ -5131,10 +5400,16 @@ esignRoutes.get('/envelopes/:envelopeId/audit/export', async (c) => {
     // Build CSV
     const headers = ['Timestamp', 'Action', 'Actor Type', 'Actor Email', 'IP Address', 'Details'];
     const rows = events
-      .sort((a: Record<string, unknown>, b: Record<string, unknown>) => new Date(String(a.at || a.created_at || 0)).getTime() - new Date(String(b.at || b.created_at || 0)).getTime())
+      .sort(
+        (a: Record<string, unknown>, b: Record<string, unknown>) =>
+          new Date(String(a.at || a.created_at || 0)).getTime() -
+          new Date(String(b.at || b.created_at || 0)).getTime(),
+      )
       .map((e: Record<string, unknown>) => {
         const timestamp = String(e.at || e.created_at || '');
-        const action = String(e.action || '').replace(/_/g, ' ').toUpperCase();
+        const action = String(e.action || '')
+          .replace(/_/g, ' ')
+          .toUpperCase();
         const actorType = String(e.actor_type || '');
         const actorEmail = String(e.email || '');
         const ip = String(e.ip || '');
@@ -5156,7 +5431,10 @@ esignRoutes.get('/envelopes/:envelopeId/audit/export', async (c) => {
   } catch (error: unknown) {
     log.error('Audit export error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to export audit trail' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to export audit trail' },
+      status,
+    );
   }
 });
 
@@ -5211,7 +5489,10 @@ esignRoutes.post('/templates', requireIdempotency(), rateLimit('SENDER_MUTATE'),
       return c.json({ error: 'Unauthorized' }, 401);
     }
     log.error('Create template error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to create template' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to create template' },
+      500,
+    );
   }
 });
 
@@ -5229,7 +5510,10 @@ esignRoutes.get('/templates', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
     log.error('List templates error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to list templates' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to list templates' },
+      500,
+    );
   }
 });
 
@@ -5253,7 +5537,10 @@ esignRoutes.get('/templates/:templateId', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
     log.error('Get template error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to get template' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to get template' },
+      500,
+    );
   }
 });
 
@@ -5278,7 +5565,10 @@ esignRoutes.put('/templates/:templateId', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
     log.error('Update template error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to update template' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to update template' },
+      500,
+    );
   }
 });
 
@@ -5291,7 +5581,7 @@ esignRoutes.post('/templates/:templateId/from-envelope', async (c) => {
   try {
     await getAuthContext(c);
     const templateId = c.req.param('templateId');
-    const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body) {
       return c.json({ error: 'Invalid JSON body' }, 400);
     }
@@ -5319,7 +5609,10 @@ esignRoutes.post('/templates/:templateId/from-envelope', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
     log.error('Sync template from envelope error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to sync template' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to sync template' },
+      500,
+    );
   }
 });
 
@@ -5333,7 +5626,7 @@ esignRoutes.post('/templates/:templateId/materialise-draft', async (c) => {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
     const templateId = c.req.param('templateId');
-    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
 
     const template = await getTemplate(templateId);
     if (!template) {
@@ -5346,18 +5639,17 @@ esignRoutes.post('/templates/:templateId/materialise-draft', async (c) => {
     await ensureStorageBuckets();
 
     const firmId = resolveFirmId(user);
-    const title = typeof body.title === 'string' && body.title.trim()
-      ? body.title.trim()
-      : template.name;
-    const message = typeof body.message === 'string'
-      ? body.message
-      : template.defaultMessage;
-    const expiryDays = typeof body.expiryDays === 'number' && Number.isFinite(body.expiryDays)
-      ? Math.max(1, Math.round(body.expiryDays))
-      : (template.defaultExpiryDays || 30);
-    const clientId = typeof body.clientId === 'string' && body.clientId.trim()
-      ? body.clientId.trim()
-      : 'standalone';
+    const title =
+      typeof body.title === 'string' && body.title.trim() ? body.title.trim() : template.name;
+    const message = typeof body.message === 'string' ? body.message : template.defaultMessage;
+    const expiryDays =
+      typeof body.expiryDays === 'number' && Number.isFinite(body.expiryDays)
+        ? Math.max(1, Math.round(body.expiryDays))
+        : template.defaultExpiryDays || 30;
+    const clientId =
+      typeof body.clientId === 'string' && body.clientId.trim()
+        ? body.clientId.trim()
+        : 'standalone';
 
     const cloned = await cloneTemplateDocumentsToEnvelope({
       template,
@@ -5416,7 +5708,10 @@ esignRoutes.post('/templates/:templateId/materialise-draft', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
     log.error('Materialise template draft error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to start from template' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to start from template' },
+      500,
+    );
   }
 });
 
@@ -5440,7 +5735,10 @@ esignRoutes.delete('/templates/:templateId', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
     log.error('Delete template error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to delete template' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete template' },
+      500,
+    );
   }
 });
 
@@ -5474,7 +5772,10 @@ esignRoutes.post('/templates/:templateId/use', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
     log.error('Use template error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to use template' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to use template' },
+      500,
+    );
   }
 });
 
@@ -5493,7 +5794,10 @@ esignRoutes.get('/templates/:templateId/versions', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
     log.error('List template versions error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to list versions' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to list versions' },
+      500,
+    );
   }
 });
 
@@ -5521,7 +5825,10 @@ esignRoutes.get('/templates/:templateId/versions/:version', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
     log.error('Get template version error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to load version' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to load version' },
+      500,
+    );
   }
 });
 
@@ -5602,7 +5909,10 @@ esignRoutes.post('/campaigns', requireIdempotency(), rateLimit('SENDER_MUTATE'),
   } catch (error: unknown) {
     if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
     log.error('Create campaign error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to create campaign' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to create campaign' },
+      500,
+    );
   }
 });
 
@@ -5680,49 +5990,54 @@ esignRoutes.post('/campaigns/:id/cancel', rateLimit('SENDER_MUTATE'), async (c) 
  * advancement loop can spawn step-N envelopes without further user
  * interaction.
  */
-esignRoutes.post('/documents/upload', requireIdempotency(), rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const formData = await c.req.formData();
-    const file = formData.get('file') as File | null;
-    if (!file) return c.json({ error: 'file required' }, 400);
+esignRoutes.post(
+  '/documents/upload',
+  requireIdempotency(),
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      const ctx = await getAuthContext(c);
+      const formData = await c.req.formData();
+      const file = formData.get('file') as File | null;
+      if (!file) return c.json({ error: 'file required' }, 400);
 
-    const buffer = new Uint8Array(await file.arrayBuffer());
-    const validation = validateDocument(buffer, file.name);
-    if (!validation.valid) return c.json({ error: validation.error }, 400);
+      const buffer = new Uint8Array(await file.arrayBuffer());
+      const validation = validateDocument(buffer, file.name);
+      if (!validation.valid) return c.json({ error: validation.error }, 400);
 
-    const hash = await calculateHash(buffer);
-    const pageCount = extractPageCount(buffer);
-    const documentId = crypto.randomUUID();
-    const firmId = resolveFirmId(ctx.user);
+      const hash = await calculateHash(buffer);
+      const pageCount = extractPageCount(buffer);
+      const documentId = crypto.randomUUID();
+      const firmId = resolveFirmId(ctx.user);
 
-    const { path, error: uploadError } = await uploadDocument(
-      firmId,
-      documentId,
-      buffer,
-      file.name,
-      'application/pdf',
-    );
-    if (uploadError || !path) return c.json({ error: uploadError || 'Upload failed' }, 500);
+      const { path, error: uploadError } = await uploadDocument(
+        firmId,
+        documentId,
+        buffer,
+        file.name,
+        'application/pdf',
+      );
+      if (uploadError || !path) return c.json({ error: uploadError || 'Upload failed' }, 500);
 
-    await createDocument({
-      id: documentId,
-      firm_id: firmId,
-      storage_path: path,
-      original_filename: file.name,
-      page_count: pageCount,
-      hash,
-      created_at: new Date().toISOString(),
-    });
+      await createDocument({
+        id: documentId,
+        firm_id: firmId,
+        storage_path: path,
+        original_filename: file.name,
+        page_count: pageCount,
+        hash,
+        created_at: new Date().toISOString(),
+      });
 
-    log.info(`Document ${documentId} uploaded by ${ctx.user.email} (${pageCount} pages)`);
-    return c.json({ documentId, pageCount, hash });
-  } catch (error: unknown) {
-    if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
-    log.error('Standalone document upload error:', error);
-    return c.json({ error: 'Failed to upload document' }, 500);
-  }
-});
+      log.info(`Document ${documentId} uploaded by ${ctx.user.email} (${pageCount} pages)`);
+      return c.json({ documentId, pageCount, hash });
+    } catch (error: unknown) {
+      if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
+      log.error('Standalone document upload error:', error);
+      return c.json({ error: 'Failed to upload document' }, 500);
+    }
+  },
+);
 
 /**
  * POST /packets
@@ -5922,8 +6237,9 @@ esignRoutes.post('/webhooks', rateLimit('SENDER_MUTATE'), async (c) => {
     if (!Array.isArray(events) || events.length === 0) {
       return c.json({ error: 'At least one event subscription is required' }, 400);
     }
-    const filtered = events.filter((e): e is SenderEvent =>
-      typeof e === 'string' && (KNOWN_WEBHOOK_EVENTS as string[]).includes(e),
+    const filtered = events.filter(
+      (e): e is SenderEvent =>
+        typeof e === 'string' && (KNOWN_WEBHOOK_EVENTS as string[]).includes(e),
     );
     if (filtered.length === 0) {
       return c.json({ error: 'No recognised events' }, 400);
@@ -5950,7 +6266,10 @@ esignRoutes.post('/webhooks', rateLimit('SENDER_MUTATE'), async (c) => {
   } catch (error: unknown) {
     log.error('Create webhook error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to create subscription' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to create subscription' },
+      status,
+    );
   }
 });
 
@@ -5964,7 +6283,10 @@ esignRoutes.get('/webhooks', async (c) => {
   } catch (error: unknown) {
     log.error('List webhooks error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to list subscriptions' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to list subscriptions' },
+      status,
+    );
   }
 });
 
@@ -5980,11 +6302,17 @@ esignRoutes.patch('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const patch: Partial<{ url: string; events: SenderEvent[]; active: boolean; description: string }> = {};
+    const patch: Partial<{
+      url: string;
+      events: SenderEvent[];
+      active: boolean;
+      description: string;
+    }> = {};
     if (typeof body.url === 'string' && /^https?:\/\//i.test(body.url)) patch.url = body.url;
     if (Array.isArray(body.events)) {
-      patch.events = body.events.filter((e: unknown): e is SenderEvent =>
-        typeof e === 'string' && (KNOWN_WEBHOOK_EVENTS as string[]).includes(e),
+      patch.events = body.events.filter(
+        (e: unknown): e is SenderEvent =>
+          typeof e === 'string' && (KNOWN_WEBHOOK_EVENTS as string[]).includes(e),
       );
     }
     if (typeof body.active === 'boolean') patch.active = body.active;
@@ -6002,7 +6330,10 @@ esignRoutes.patch('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   } catch (error: unknown) {
     log.error('Update webhook error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to update subscription' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to update subscription' },
+      status,
+    );
   }
 });
 
@@ -6028,7 +6359,10 @@ esignRoutes.post('/webhooks/:id/rotate-secret', rateLimit('SENDER_MUTATE'), asyn
   } catch (error: unknown) {
     log.error('Rotate webhook secret error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to rotate secret' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to rotate secret' },
+      status,
+    );
   }
 });
 
@@ -6054,7 +6388,10 @@ esignRoutes.delete('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   } catch (error: unknown) {
     log.error('Delete webhook error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to delete subscription' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete subscription' },
+      status,
+    );
   }
 });
 
@@ -6073,7 +6410,10 @@ esignRoutes.get('/webhooks/deliveries', async (c) => {
   } catch (error: unknown) {
     log.error('List webhook deliveries error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to list deliveries' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to list deliveries' },
+      status,
+    );
   }
 });
 
@@ -6087,7 +6427,10 @@ esignRoutes.get('/webhooks/dead-letters', async (c) => {
   } catch (error: unknown) {
     log.error('List webhook dead-letters error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to list dead-letters' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to list dead-letters' },
+      status,
+    );
   }
 });
 
@@ -6112,7 +6455,10 @@ esignRoutes.post('/webhooks/deliveries/:id/replay', rateLimit('SENDER_MUTATE'), 
   } catch (error: unknown) {
     log.error('Replay webhook delivery error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to replay delivery' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to replay delivery' },
+      status,
+    );
   }
 });
 
@@ -6136,11 +6482,19 @@ esignRoutes.post('/api-keys', rateLimit('SENDER_MUTATE'), async (c) => {
     const body = await c.req.json().catch(() => ({}));
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name) return c.json({ error: 'A name is required' }, 400);
-    const scopes = Array.isArray(body.scopes) ? body.scopes.filter((s: unknown) => typeof s === 'string') : undefined;
+    const scopes = Array.isArray(body.scopes)
+      ? body.scopes.filter((s: unknown) => typeof s === 'string')
+      : undefined;
     const expiresAt = typeof body.expiresAt === 'string' ? body.expiresAt : undefined;
     const firmId = resolveFirmId(ctx.user);
 
-    const { key, token } = await createApiKey({ firmId, userId: ctx.user.id, name, scopes, expiresAt });
+    const { key, token } = await createApiKey({
+      firmId,
+      userId: ctx.user.id,
+      name,
+      scopes,
+      expiresAt,
+    });
     await logAuditEvent({
       envelopeId: 'system',
       actorType: 'sender_user',
@@ -6153,7 +6507,10 @@ esignRoutes.post('/api-keys', rateLimit('SENDER_MUTATE'), async (c) => {
   } catch (error: unknown) {
     log.error('Create API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to create API key' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to create API key' },
+      status,
+    );
   }
 });
 
@@ -6167,7 +6524,10 @@ esignRoutes.get('/api-keys', async (c) => {
   } catch (error: unknown) {
     log.error('List API keys error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to list API keys' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to list API keys' },
+      status,
+    );
   }
 });
 
@@ -6183,11 +6543,14 @@ esignRoutes.patch('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const patch: Partial<{ name: string; active: boolean; scopes: string[]; expires_at?: string }> = {};
+    const patch: Partial<{ name: string; active: boolean; scopes: string[]; expires_at?: string }> =
+      {};
     if (typeof body.name === 'string') patch.name = body.name.trim();
     if (typeof body.active === 'boolean') patch.active = body.active;
-    if (Array.isArray(body.scopes)) patch.scopes = body.scopes.filter((s: unknown) => typeof s === 'string') as string[];
-    if (typeof body.expiresAt === 'string' || body.expiresAt === null) patch.expires_at = body.expiresAt ?? undefined;
+    if (Array.isArray(body.scopes))
+      patch.scopes = body.scopes.filter((s: unknown) => typeof s === 'string') as string[];
+    if (typeof body.expiresAt === 'string' || body.expiresAt === null)
+      patch.expires_at = body.expiresAt ?? undefined;
 
     const updated = await updateApiKey(id, patch);
     await logAuditEvent({
@@ -6201,7 +6564,10 @@ esignRoutes.patch('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   } catch (error: unknown) {
     log.error('Update API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to update API key' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to update API key' },
+      status,
+    );
   }
 });
 
@@ -6228,7 +6594,10 @@ esignRoutes.post('/api-keys/:id/rotate', rateLimit('SENDER_MUTATE'), async (c) =
   } catch (error: unknown) {
     log.error('Rotate API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to rotate API key' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to rotate API key' },
+      status,
+    );
   }
 });
 
@@ -6254,7 +6623,10 @@ esignRoutes.delete('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
   } catch (error: unknown) {
     log.error('Delete API key error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to delete API key' }, status);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete API key' },
+      status,
+    );
   }
 });
 
@@ -6267,10 +6639,9 @@ esignRoutes.delete('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
 // `rateLimit` helper keyed off the key prefix so one noisy integration
 // doesn't starve another.
 
-async function requireApiKey(c: Context): Promise<
-  | { ok: true; firmId: string; keyId: string }
-  | { ok: false; response: Response }
-> {
+async function requireApiKey(
+  c: Context,
+): Promise<{ ok: true; firmId: string; keyId: string } | { ok: false; response: Response }> {
   const header = c.req.header('Authorization');
   const token = header?.startsWith('Bearer ') ? header.slice(7).trim() : null;
   if (!token) {
@@ -6431,16 +6802,19 @@ esignRoutes.post('/v1/envelopes/from-template', rateLimit('SENDER_MUTATE'), asyn
   const auth = await requireApiKey(c);
   if (!auth.ok) return auth.response;
   try {
-    const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
 
     const templateId = String(body.templateId ?? '').trim();
     const documentBase64 = String(body.documentBase64 ?? '').trim();
-    const recipients = Array.isArray(body.recipients) ? body.recipients as Array<Record<string, unknown>> : [];
+    const recipients = Array.isArray(body.recipients)
+      ? (body.recipients as Array<Record<string, unknown>>)
+      : [];
 
     if (!templateId) return c.json({ error: 'templateId required' }, 400);
     if (!documentBase64) return c.json({ error: 'documentBase64 required' }, 400);
-    if (recipients.length === 0) return c.json({ error: 'At least one recipient is required' }, 400);
+    if (recipients.length === 0)
+      return c.json({ error: 'At least one recipient is required' }, 400);
 
     const template = await getTemplate(templateId);
     if (!template) return c.json({ error: 'Template not found' }, 404);
@@ -6450,9 +6824,12 @@ esignRoutes.post('/v1/envelopes/from-template', rateLimit('SENDER_MUTATE'), asyn
     }
 
     if (template.recipients.length > 0 && recipients.length < template.recipients.length) {
-      return c.json({
-        error: `Template requires ${template.recipients.length} recipient(s); received ${recipients.length}.`,
-      }, 400);
+      return c.json(
+        {
+          error: `Template requires ${template.recipients.length} recipient(s); received ${recipients.length}.`,
+        },
+        400,
+      );
     }
 
     let buffer: Uint8Array;
@@ -6496,7 +6873,8 @@ esignRoutes.post('/v1/envelopes/from-template', rateLimit('SENDER_MUTATE'), asyn
     const title = String(body.title ?? template.name ?? 'Envelope from template');
     const clientId = String(body.clientId ?? 'standalone');
     const message = typeof body.message === 'string' ? body.message : template.defaultMessage;
-    const expiryDays = typeof body.expiryDays === 'number' ? body.expiryDays : template.defaultExpiryDays;
+    const expiryDays =
+      typeof body.expiryDays === 'number' ? body.expiryDays : template.defaultExpiryDays;
 
     const { envelopeId, error: envError } = await createEnvelope({
       firmId: auth.firmId,
@@ -6577,17 +6955,23 @@ esignRoutes.post('/v1/envelopes/from-template', rateLimit('SENDER_MUTATE'), asyn
       },
     });
 
-    return c.json({
-      envelope_id: envelopeId,
-      status: 'draft',
-      document_id: documentId,
-      signer_ids: signerIds,
-      template_id: template.id,
-      template_version: template.version,
-    }, 201);
+    return c.json(
+      {
+        envelope_id: envelopeId,
+        status: 'draft',
+        document_id: documentId,
+        signer_ids: signerIds,
+        template_id: template.id,
+        template_version: template.version,
+      },
+      201,
+    );
   } catch (error: unknown) {
     log.error('v1 create from template error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Failed to create envelope' }, 500);
+    return c.json(
+      { error: error instanceof Error ? error.message : 'Failed to create envelope' },
+      500,
+    );
   }
 });
 
@@ -6623,7 +7007,7 @@ esignRoutes.get('/consent/versions', async (c) => {
 esignRoutes.post('/consent/versions', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
-    const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
     const id = String(body.id ?? '').trim();
     const text = String(body.text ?? '').trim();
@@ -6670,7 +7054,7 @@ esignRoutes.get('/diagnostics/kba', async (c) => {
  */
 esignRoutes.post('/signer/kba', rateLimit('SIGNER_ACCESS'), async (c) => {
   try {
-    const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
     const token = String(body.access_token ?? '').trim();
     if (!token) return c.json({ error: 'access_token required' }, 400);
