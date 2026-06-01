@@ -77,6 +77,7 @@ import {
   isEditableTarget,
   buildPageReplicas,
 } from './prepareFormStudioUtils';
+import { useFieldHistory } from './useFieldHistory';
 
 interface PrepareFormStudioProps {
   envelope: EsignEnvelope;
@@ -206,9 +207,12 @@ export function PrepareFormStudio({
   // it). On paste, fields are placed at +20px offset from their originals.
   const fieldClipboardRef = useRef<EsignField[] | null>(null);
 
-  // History for Undo/Redo
-  const [history, setHistory] = useState<EsignField[][]>([envelope.fields || []]);
-  const [historyIndex, setHistoryIndex] = useState(0);
+  // Undo/redo history (owns the stack + cursor; drives setFields on undo/redo)
+  const { pushToHistory, undo, redo, canUndo, canRedo } = useFieldHistory(
+    envelope.fields || [],
+    setFields,
+    setHasUnsavedChanges,
+  );
 
   // Auto-save tracking — `lastSavedFieldsRef` is the canonical record of the
   // most recently persisted state so we can short-circuit redundant saves and
@@ -403,33 +407,6 @@ export function PrepareFormStudio({
     }
   }, [selectedSignerId, signers, eligibleSigners]);
 
-  // ==================== HISTORY MANAGEMENT ====================
-
-  const pushToHistory = (newFields: EsignField[]) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(newFields);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-    setFields(newFields);
-    setHasUnsavedChanges(true);
-  };
-
-  const undo = () => {
-    if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      setFields(history[historyIndex - 1]);
-      setHasUnsavedChanges(true);
-    }
-  };
-
-  const redo = () => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex(historyIndex + 1);
-      setFields(history[historyIndex + 1]);
-      setHasUnsavedChanges(true);
-    }
-  };
-
   // ==================== FIELD OPERATIONS ====================
 
   const handleFieldPlace = useCallback(
@@ -474,8 +451,7 @@ export function PrepareFormStudio({
       signers,
       eligibleSigners,
       fields,
-      history,
-      historyIndex,
+      pushToHistory,
       activeDocumentId,
     ],
   );
@@ -584,7 +560,7 @@ export function PrepareFormStudio({
     setSelectedFieldIds(newIds);
     setPrimarySelectedId(newFields[newFields.length - 1]?.id);
     toast.success(`Pasted ${newFields.length} field${newFields.length === 1 ? '' : 's'}`);
-  }, [fields, history, historyIndex]);
+  }, [fields, pushToHistory]);
 
   /** Duplicate selection in-place (cmd+d) — a copy + paste in one step. */
   const handleDuplicate = useCallback(() => {
@@ -628,7 +604,7 @@ export function PrepareFormStudio({
       pushToHistory([...fields, newField]);
       setCandidates((prev) => prev.filter((c) => c.id !== candidateId));
     },
-    [candidates, selectedSignerId, eligibleSigners, fields, envelope.id, history, historyIndex],
+    [candidates, selectedSignerId, eligibleSigners, fields, envelope.id, pushToHistory],
   );
 
   /**
@@ -660,8 +636,7 @@ export function PrepareFormStudio({
     eligibleSigners,
     buildFieldsFromCandidates,
     fields,
-    history,
-    historyIndex,
+    pushToHistory,
   ]);
 
   useEffect(() => {
@@ -700,8 +675,7 @@ export function PrepareFormStudio({
     buildFieldsFromCandidates,
     envelope.id,
     fields,
-    history,
-    historyIndex,
+    pushToHistory,
   ]);
 
   const dismissCandidate = useCallback(
@@ -721,7 +695,7 @@ export function PrepareFormStudio({
     pushToHistory(remaining);
     setSelectedFieldIds(new Set());
     setPrimarySelectedId(undefined);
-  }, [fields, selectedFieldIds, history, historyIndex]);
+  }, [fields, selectedFieldIds, pushToHistory]);
 
   // ── P2.5 2.2 — Bulk reassign / required toggle ──
   /**
@@ -740,7 +714,7 @@ export function PrepareFormStudio({
         `Reassigned ${selectedFieldIds.size} field${selectedFieldIds.size === 1 ? '' : 's'}`,
       );
     },
-    [fields, selectedFieldIds, history, historyIndex],
+    [fields, selectedFieldIds, pushToHistory],
   );
 
   /** Toggle the `required` flag on every selected field to a single value. */
@@ -753,7 +727,7 @@ export function PrepareFormStudio({
         `${selectedFieldIds.size} field${selectedFieldIds.size === 1 ? '' : 's'} marked ${required ? 'required' : 'optional'}`,
       );
     },
-    [fields, selectedFieldIds, history, historyIndex],
+    [fields, selectedFieldIds, pushToHistory],
   );
 
   // ── P2.5 2.3 — Apply to all pages ──
@@ -775,7 +749,7 @@ export function PrepareFormStudio({
     toast.success(
       `Replicated to ${replicas.length} field${replicas.length === 1 ? '' : 's'} across ${pageCount - 1} other page${pageCount - 1 === 1 ? '' : 's'}`,
     );
-  }, [fields, selectedFieldIds, pageCount, history, historyIndex]);
+  }, [fields, selectedFieldIds, pageCount, pushToHistory]);
 
   // ==================== ACTIONS ====================
 
@@ -1169,22 +1143,10 @@ export function PrepareFormStudio({
 
           <div className="h-6 w-px bg-gray-200 mx-1" />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={undo}
-            disabled={historyIndex === 0}
-            aria-label="Undo"
-          >
+          <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo">
             <Undo className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={redo}
-            disabled={historyIndex === history.length - 1}
-            aria-label="Redo"
-          >
+          <Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo">
             <Redo className="h-4 w-4" />
           </Button>
 
