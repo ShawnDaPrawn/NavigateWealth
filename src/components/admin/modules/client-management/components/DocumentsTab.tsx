@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { filterDocuments, groupDocumentsByPack, type DocumentItem } from './documentsUtils';
 import { DocumentStatsCards } from './DocumentStatsCards';
 import { DocumentFiltersBar } from './DocumentFiltersBar';
-import ReactQuill from 'react-quill-new';
-import 'react-quill-new/dist/quill.snow.css';
+import {
+  DeleteDocumentDialog,
+  DeletePackDialog,
+  ResendPackDialog,
+  UploadSuccessDialog,
+  EmailComposeDialog,
+} from './DocumentDialogs';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
@@ -20,7 +25,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '../../../../ui/dialog';
@@ -42,27 +46,14 @@ import {
   Activity,
   Briefcase,
   Home,
-  Calendar,
   ChevronDown,
   ChevronRight,
   Files,
-  ArrowRight,
   Mail,
 } from 'lucide-react';
 import { api } from '../../../../../utils/api';
 import { toast } from 'sonner';
 import { useAuth } from '../../../../auth/AuthContext';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../../../ui/alert-dialog';
-import { Checkbox } from '../../../../ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
@@ -1454,225 +1445,58 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
       </Dialog>
 
       {/* Delete Confirmation */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Document</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this document? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteDocumentDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDelete}
+      />
 
       {/* Pack Delete Confirmation */}
-      <Dialog open={packDeleteDialogOpen} onOpenChange={setPackDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Document Pack</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this pack? This will delete all{' '}
-              <strong>{packToDelete?.count || 0}</strong> documents in it.
-              <br />
-              <br />
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPackDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeletePack}>
-              Delete Pack
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeletePackDialog
+        open={packDeleteDialogOpen}
+        onOpenChange={setPackDeleteDialogOpen}
+        count={packToDelete?.count || 0}
+        onConfirm={handleDeletePack}
+      />
 
       {/* Resend Pack Dialog */}
-      <Dialog open={resendDialogOpen} onOpenChange={setResendDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Resend Document Pack</DialogTitle>
-            <DialogDescription>
-              Resend this document pack to the client via email.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Message to Client</Label>
-              <div className="h-64 mb-12">
-                <ReactQuill
-                  value={resendMessage}
-                  onChange={setResendMessage}
-                  theme="snow"
-                  placeholder="Enter a message to the client..."
-                  style={{ height: '200px' }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground pt-4">
-                This message will be included in the email body. The documents will be attached as
-                an encrypted ZIP file.
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="cc-admin-resend"
-                checked={ccAdmin}
-                onCheckedChange={(checked) => setCcAdmin(checked as boolean)}
-              />
-              <Label
-                htmlFor="cc-admin-resend"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                CC info@navigatewealth.co
-              </Label>
-            </div>
-          </div>
-          <DialogFooter className="mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setResendDialogOpen(false)}
-              disabled={sendingEmail}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmResend}
-              disabled={sendingEmail}
-              className="bg-[#6d28d9] hover:bg-[#5b21b6]"
-            >
-              {sendingEmail ? 'Sending...' : 'Send Email'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ResendPackDialog
+        open={resendDialogOpen}
+        onOpenChange={setResendDialogOpen}
+        message={resendMessage}
+        onMessageChange={setResendMessage}
+        ccAdmin={ccAdmin}
+        onCcAdminChange={setCcAdmin}
+        sending={sendingEmail}
+        onConfirm={handleConfirmResend}
+      />
 
       {/* Step 1: Upload Success & Prompt */}
-      <Dialog open={uploadSuccessDialogOpen} onOpenChange={setUploadSuccessDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <div className="p-2 bg-green-100 rounded-full">
-                <FileText className="h-5 w-5 text-green-600" />
-              </div>
-              Documents Uploaded Successfully
-            </DialogTitle>
-            <DialogDescription>
-              {uploadedDocIds.length} document(s) have been added to the client's profile.
-              <br />
-              <br />
-              Would you like to email the client to notify them?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setUploadSuccessDialogOpen(false);
-                setUploadedDocIds([]); // Clear state if skipping
-              }}
-            >
-              Skip
-            </Button>
-            <Button
-              onClick={() => {
-                setUploadSuccessDialogOpen(false);
-                setEmailComposeDialogOpen(true);
-              }}
-              className="bg-[#6d28d9] hover:bg-[#5b21b6]"
-            >
-              <Mail className="h-4 w-4 mr-2" />
-              Yes, Notify Client
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UploadSuccessDialog
+        open={uploadSuccessDialogOpen}
+        onOpenChange={setUploadSuccessDialogOpen}
+        uploadedCount={uploadedDocIds.length}
+        onSkip={() => {
+          setUploadSuccessDialogOpen(false);
+          setUploadedDocIds([]); // Clear state if skipping
+        }}
+        onNotify={() => {
+          setUploadSuccessDialogOpen(false);
+          setEmailComposeDialogOpen(true);
+        }}
+      />
 
       {/* Step 2: Compose Email (WYSIWYG) */}
-      <Dialog open={emailComposeDialogOpen} onOpenChange={setEmailComposeDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Email Documents to Client</DialogTitle>
-            <DialogDescription>
-              Notify the client that new documents have been added to their profile.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800">
-              <p className="font-medium mb-1">Secure Attachment</p>
-              <p>
-                The documents will be attached as an <strong>encrypted ZIP file</strong>.
-              </p>
-              <p className="mt-1 text-xs opacity-90">Password: Client's National ID Number</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Custom Message</Label>
-              <div className="h-64 mb-12">
-                <ReactQuill
-                  value={uploadEmailMessage}
-                  onChange={setUploadEmailMessage}
-                  theme="snow"
-                  placeholder="Enter a personal message to the client..."
-                  style={{ height: '200px' }}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 pt-4">
-              <Checkbox
-                id="cc-admin"
-                checked={ccAdmin}
-                onCheckedChange={(checked) => setCcAdmin(checked as boolean)}
-              />
-              <Label
-                htmlFor="cc-admin"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                CC info@navigatewealth.co
-              </Label>
-            </div>
-          </div>
-
-          <DialogFooter className="mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setEmailComposeDialogOpen(false)}
-              disabled={sendingEmail}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSendEmail}
-              disabled={sendingEmail}
-              className="bg-[#6d28d9] hover:bg-[#5b21b6]"
-            >
-              {sendingEmail ? (
-                <div className="contents">
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Sending...
-                </div>
-              ) : (
-                <div className="contents">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
-                </div>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EmailComposeDialog
+        open={emailComposeDialogOpen}
+        onOpenChange={setEmailComposeDialogOpen}
+        message={uploadEmailMessage}
+        onMessageChange={setUploadEmailMessage}
+        ccAdmin={ccAdmin}
+        onCcAdminChange={setCcAdmin}
+        sending={sendingEmail}
+        onSend={handleSendEmail}
+      />
     </div>
   );
 }
