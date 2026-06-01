@@ -2,19 +2,21 @@
  * PrepareFormStudio — Render / Characterization Test (Phase 4)
  * ============================================================
  *
- * Locks the baseline mount + document-load contract of PrepareFormStudio
- * (2,064 lines, a Phase 6 decomposition target — the "42-state-variable blob")
- * so a regression during its extraction into composed hooks fails CI.
+ * Locks the mount + document-load contract AND the editor chrome (field
+ * palette, recipient legend, toolbar actions) of PrepareFormStudio — a Phase 6
+ * decomposition target (the "42-state-variable blob" being pulled into composed
+ * hooks) — so a regression during extraction fails CI.
  *
  * Notes:
- *   • PDFViewer is stubbed — it drives pdfjs/canvas rendering which jsdom does
- *     not implement. It's rendered unconditionally by the studio, so the stub
- *     doubles as the "studio mounted" anchor.
+ *   • PDFViewer is stubbed — it drives pdfjs/canvas rendering jsdom does not
+ *     implement. It renders unconditionally, so the stub doubles as the
+ *     "studio mounted" anchor.
  *   • esignApi is mocked; the studio calls listEnvelopeDocuments(envelope.id)
  *     on mount (failure there is non-fatal by design).
+ *   • Imports RTL helpers from the shared `@/test/utils` module.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@/test/utils';
 import type { EsignEnvelope, SignerFormData } from '@/components/admin/modules/esign/types';
 
 vi.mock('@/components/admin/modules/esign/components/PDFViewer', () => ({
@@ -56,7 +58,7 @@ describe('PrepareFormStudio', () => {
     render(<PrepareFormStudio envelope={envelope} signers={signers} />);
 
     // The studio always renders the PDF surface — its presence proves the
-    // 2,064-line component mounted without throwing.
+    // 1,800-line component mounted without throwing.
     expect(screen.getByTestId('pdf-viewer-stub')).toBeTruthy();
 
     await waitFor(() => {
@@ -67,5 +69,36 @@ describe('PrepareFormStudio', () => {
   it('renders without throwing when there are no signers', () => {
     render(<PrepareFormStudio envelope={envelope} signers={[]} />);
     expect(screen.getByTestId('pdf-viewer-stub')).toBeTruthy();
+  });
+
+  it('renders the field palette with the placeable field types', () => {
+    render(<PrepareFormStudio envelope={envelope} signers={signers} />);
+
+    expect(screen.getAllByText('Signature').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Date').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Checkbox').length).toBeGreaterThan(0);
+  });
+
+  it('lists the envelope signers in the recipient legend', () => {
+    render(<PrepareFormStudio envelope={envelope} signers={signers} />);
+    expect(screen.getAllByText('Signer One').length).toBeGreaterThan(0);
+  });
+
+  it('labels the send action from the sendActionLabel prop', () => {
+    render(
+      <PrepareFormStudio
+        envelope={envelope}
+        signers={signers}
+        sendActionLabel="Send for Signature"
+      />,
+    );
+    expect(screen.getByText('Send for Signature')).toBeTruthy();
+  });
+
+  it('starts with undo and redo disabled (empty history)', () => {
+    render(<PrepareFormStudio envelope={envelope} signers={signers} />);
+
+    expect((screen.getByRole('button', { name: 'Undo' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Redo' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

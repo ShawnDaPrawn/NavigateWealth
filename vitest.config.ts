@@ -36,6 +36,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    setupFiles: ['./src/test/setup.ts'],
     css: false,
     // v8 coverage instrumentation makes the suite run ~2-3x slower, which pushes
     // a few dialog/interaction tests past the 5s Vitest default and flakes the
@@ -78,17 +79,17 @@ export default defineConfig({
       // only go UP. Ratchet these toward the 70/65/70/70 target as
       // characterization tests are added for the Phase 5/6 decomposition files.
       //
-      // Ratcheted as characterization tests land. Latest (2026-06-01, after a
-      // Phase 4 pure-logic batch — validationHelpers / documents-utils /
-      // portfolio-utils): measured statements 7.42 / lines 7.44 / branches 6.8 /
-      // functions 5.44. Floor kept ~0.5 below measured this round (wider margin
-      // than usual) because the working tree had concurrent untracked tests whose
-      // coverage may not be present on the committed tree CI runs.
+      // Ratcheted as characterization tests land. Latest (2026-06-01, after the
+      // PrepareFormStudio render tests + the shared src/test setup/utils):
+      // measured statements 7.47 / lines 7.45 / branches 6.85 / functions 5.50
+      // across 826 tests. Floor raised from 6.9/6.9/6.3/4.9, kept ~0.35 below
+      // measured for headroom against the actively churning tree. The 70/65/70/70
+      // end-goal is long-horizon — this floor only ratchets up, it never jumps.
       thresholds: {
-        lines: 6.9,
-        functions: 4.9,
-        branches: 6.3,
-        statements: 6.9,
+        lines: 7.1,
+        functions: 5.2,
+        branches: 6.5,
+        statements: 7.1,
       },
     },
   },
